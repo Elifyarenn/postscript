@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1788657026282,
+      "tag": "0000_keen_agent_brand",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788657034322,
+      "tag": "0001_immutable_audit_tables",
+      "breakpoints": true
+    }
+  ]
+}
