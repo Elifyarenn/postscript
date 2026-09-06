@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { requireSession } from "@/lib/auth/guard";
-import { PanelShell } from "@/components/shell";
+import { PanelShell, READER_NAV } from "@/components/shell";
 
 /**
  * The reading area, and the only area a plain reader has.
@@ -13,15 +13,7 @@ export default async function MagazineLayout({ children }: { children: ReactNode
   const { user } = await requireSession();
 
   return (
-    <PanelShell
-      user={user}
-      area="dergi"
-      items={[
-        { href: "/magazine", label: "Dergi" },
-        { href: "/magazine/issues", label: "Sayılar" },
-        { href: "/account", label: "Hesabım" },
-      ]}
-    >
+    <PanelShell user={user} area="dergi" items={READER_NAV}>
       {children}
     </PanelShell>
   );

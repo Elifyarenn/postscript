@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { guardPanel } from "@/lib/auth/guard";
 import { pendingAcknowledgements } from "@/services/announcements";
 import { hasRole } from "@/lib/auth/rbac";
-import { PanelShell } from "@/components/shell";
+import { PanelShell, writerNav } from "@/components/shell";
 
 /**
  * Writer panel shell.
@@ -23,19 +23,7 @@ export default async function WriterLayout({ children }: { children: ReactNode }
   const locked = lockedByStatus || pending.length > 0;
 
   return (
-    <PanelShell
-      user={user}
-      area="yazar paneli"
-      items={[
-        { href: "/writer", label: "Genel bakış" },
-        { href: "/writer/announcements", label: "Duyurular" },
-        { href: "/writer/agreement", label: "Sözleşme" },
-        { href: "/writer/approvals", label: "Eser Onayları", disabled: locked },
-        { href: "/writer/articles", label: "Makalelerim", disabled: locked },
-        { href: "/writer/profile", label: "Profil ve güvenlik" },
-        { href: "/magazine", label: "Dergi" },
-      ]}
-    >
+    <PanelShell user={user} area="yazar paneli" items={writerNav(locked)}>
       {children}
     </PanelShell>
   );

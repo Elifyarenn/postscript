@@ -7,6 +7,62 @@ import type { SessionUser } from "@/lib/auth/session";
 export type NavItem = { href: string; label: string; disabled?: boolean };
 
 /**
+ * The sidebar of each area, defined once.
+ *
+ * `/account` is reachable from every role, so it has to render the navigation
+ * the signed-in role expects rather than the reader's; sharing the lists here
+ * is what keeps the two from drifting apart.
+ */
+export const ADMIN_NAV: NavItem[] = [
+  { href: "/admin", label: "Genel bakış" },
+  { href: "/admin/users", label: "Kullanıcılar" },
+  { href: "/admin/agreements", label: "Sözleşme sürümleri" },
+  { href: "/admin/settings", label: "Sistem" },
+  { href: "/admin/audit", label: "Denetim kaydı" },
+  { href: "/editor", label: "Editör paneli" },
+  { href: "/magazine", label: "Dergi" },
+  { href: "/account", label: "Hesabım" },
+];
+
+export const EDITOR_NAV: NavItem[] = [
+  { href: "/editor", label: "Genel bakış" },
+  { href: "/editor/articles", label: "Makaleler" },
+  { href: "/editor/issues", label: "Sayılar" },
+  { href: "/editor/media", label: "Medya kütüphanesi" },
+  { href: "/editor/announcements", label: "Duyurular" },
+  { href: "/editor/approvals", label: "Eser Onayı takibi" },
+  { href: "/magazine", label: "Dergi" },
+  { href: "/account", label: "Hesabım" },
+];
+
+export const READER_NAV: NavItem[] = [
+  { href: "/magazine", label: "Dergi" },
+  { href: "/magazine/issues", label: "Sayılar" },
+  { href: "/account", label: "Hesabım" },
+];
+
+/** `locked` only greys the links out; each page checks the rule itself. */
+export function writerNav(locked: boolean): NavItem[] {
+  return [
+    { href: "/writer", label: "Genel bakış" },
+    { href: "/writer/announcements", label: "Duyurular" },
+    { href: "/writer/agreement", label: "Sözleşme" },
+    { href: "/writer/approvals", label: "Eser Onayları", disabled: locked },
+    { href: "/writer/articles", label: "Makalelerim", disabled: locked },
+    { href: "/writer/profile", label: "Profil ve güvenlik" },
+    { href: "/magazine", label: "Dergi" },
+  ];
+}
+
+/** The area a signed-in user belongs in, used by pages every role can open. */
+export function navForRole(role: SessionUser["role"]): { area: string; items: NavItem[] } {
+  if (role === "admin") return { area: "yönetim", items: ADMIN_NAV };
+  if (role === "editor") return { area: "editör paneli", items: EDITOR_NAV };
+  if (role === "writer") return { area: "yazar paneli", items: writerNav(false) };
+  return { area: "dergi", items: READER_NAV };
+}
+
+/**
  * The frame every panel page sits in: a sidebar of links, a header naming the
  * signed-in user and their role, and the content column.
  *

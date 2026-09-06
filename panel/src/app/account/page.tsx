@@ -4,7 +4,7 @@ import { users } from "@/db/schema";
 import { requireSession } from "@/lib/auth/guard";
 import { listSessions } from "@/lib/auth/session";
 import { readCsrfToken } from "@/lib/csrf";
-import { PanelShell } from "@/components/shell";
+import { navForRole, PanelShell } from "@/components/shell";
 import { ActionButton } from "@/components/form";
 import { Alert, Card, PageHeader } from "@/components/ui";
 import { PasswordCard, ProfileCard, SessionsCard } from "@/components/account-forms";
@@ -30,15 +30,12 @@ export default async function AccountPage({
   const profile = rows[0]!;
   const sessions = await listSessions(context.user.id);
 
+  // Every role can open this page, so the sidebar has to be the one that role
+  // came from; otherwise an admin loses the panel navigation on the way here.
+  const nav = navForRole(context.user.role);
+
   return (
-    <PanelShell
-      user={context.user}
-      area="hesabım"
-      items={[
-        { href: "/magazine", label: "Dergi" },
-        { href: "/account", label: "Hesabım" },
-      ]}
-    >
+    <PanelShell user={context.user} area={nav.area} items={nav.items}>
       <PageHeader
         title="Hesabım"
         description="Profil bilgileriniz, şifreniz ve açık oturumlarınız."
