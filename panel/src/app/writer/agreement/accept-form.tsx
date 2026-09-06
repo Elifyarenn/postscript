@@ -1,12 +1,16 @@
 "use client";
 
 /**
- * Agreement acceptance with the scroll gate from §7.1.
+ * Contract acceptance with the read gate from §6.2.
  *
- * The full text is shown in a scrollable panel and the confirm control stays
- * disabled until the reader reaches the bottom. This is a courtesy, not the
- * guarantee: the server still compares the hash of the text that was displayed
- * with the hash of the stored version before it records anything.
+ * The confirm control stays shut until the last paragraph has actually been on
+ * screen — watched with an IntersectionObserver rather than a scroll position,
+ * so it works the same whether the reader scrolls, drags the bar or uses a
+ * keyboard. A text short enough to need no scrolling counts as read, otherwise
+ * the gate could never open.
+ *
+ * This is a courtesy, not the guarantee: the server renders the contract again
+ * and refuses the acceptance if its hash differs from the one echoed here.
  */
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
@@ -26,44 +30,55 @@ export function AgreementAcceptForm({
   action,
   csrfToken,
   agreementVersionId,
-  bodyHash,
+  renderedHash,
   html,
 }: {
   action: ServerAction;
   csrfToken: string;
   agreementVersionId: string;
-  bodyHash: string;
+  renderedHash: string;
   html: string;
 }) {
   const [state, formAction] = useActionState<ActionState, FormData>(action, null);
   const [reachedEnd, setReachedEnd] = useState(false);
   const [checked, setChecked] = useState(false);
+
   const scrollRef = useRef<HTMLDivElement>(null);
+  const endRef = useRef<HTMLDivElement>(null);
 
-  function handleScroll() {
-    const element = scrollRef.current;
-    if (!element) return;
-    // A few pixels of tolerance, because sub-pixel heights never land exactly
-    const atBottom = element.scrollHeight - element.scrollTop - element.clientHeight < 24;
-    if (atBottom) setReachedEnd(true);
-  }
-
-  // A text short enough to fit without scrolling has already been seen in full,
-  // and would otherwise never fire a scroll event and never unlock the checkbox
   useEffect(() => {
-    const element = scrollRef.current;
-    if (element && element.scrollHeight <= element.clientHeight + 24) setReachedEnd(true);
+    const container = scrollRef.current;
+    const sentinel = endRef.current;
+    if (!container || !sentinel) return;
+
+    // Nothing to scroll: the whole text is already visible
+    if (container.scrollHeight <= container.clientHeight + 24) {
+      setReachedEnd(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) setReachedEnd(true);
+      },
+      { root: container, threshold: 0.5 },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
   }, [html]);
 
   return (
     <div className="space-y-4">
       <div
         ref={scrollRef}
-        onScroll={handleScroll}
-        className="prose-panel max-h-[28rem] overflow-y-auto rounded-md border border-line bg-surface p-5 text-sm"
-        // Rendered and sanitised on the server
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
+        className="max-h-[30rem] overflow-y-auto rounded-md border border-line bg-surface p-5"
+      >
+        {/* Rendered and sanitised on the server */}
+        <div className="prose-panel text-sm" dangerouslySetInnerHTML={{ __html: html }} />
+        {/* Watched by the observer above: reaching this means the end was seen */}
+        <div ref={endRef} aria-hidden className="h-px" />
+      </div>
 
       {!reachedEnd && (
         <p className="text-xs text-muted">
@@ -74,7 +89,8 @@ export function AgreementAcceptForm({
       <form action={formAction} className="space-y-4">
         <input type="hidden" name="csrfToken" value={csrfToken} />
         <input type="hidden" name="agreementVersionId" value={agreementVersionId} />
-        <input type="hidden" name="bodyHash" value={bodyHash} />
+        {/* Echoed back; the server re-renders and compares before accepting */}
+        <input type="hidden" name="renderedHash" value={renderedHash} />
 
         {state?.error && <Alert tone="danger">{state.error}</Alert>}
         {state?.success && <Alert tone="success">{state.success}</Alert>}

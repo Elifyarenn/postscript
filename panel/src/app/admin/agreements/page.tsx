@@ -1,27 +1,35 @@
 import { guardPanel } from "@/lib/auth/guard";
 import { acceptanceReport, listAgreementVersions } from "@/services/agreements";
+import { getSiteSettings, PLACEHOLDER_BY_KEY, SETTING_LABELS } from "@/services/site-settings";
+import { readAgreementTemplate, templateHash, TEMPLATE_FILE } from "@/lib/agreement/template";
+import { extractPlaceholders } from "@/lib/agreement/render";
 import { readCsrfToken } from "@/lib/csrf";
 import { ActionButton, PanelForm } from "@/components/form";
-import {
-  Alert,
-  Card,
-  EmptyState,
-  Field,
-  Input,
-  PageHeader,
-  Table,
-  Td,
-  Textarea,
-  Th,
-} from "@/components/ui";
+import { Alert, Card, EmptyState, PageHeader, Table, Td, Th } from "@/components/ui";
 import { formatDate, formatDateTime } from "@/lib/utils";
-import {
-  createAgreementDraftAction,
-  publishAgreementAction,
-  updateAgreementDraftAction,
-} from "../actions";
+import { createVersionFromTemplateAction, publishAgreementAction } from "../actions";
 
 export const metadata = { title: "Sözleşme sürümleri" };
+
+/** Every placeholder the dictionary can fill, in the order §3 lists them. */
+const KNOWN_PLACEHOLDERS = [
+  "agreement.version",
+  "agreement.published_at",
+  "agreement.body_hash",
+  "dergi.ortak_1",
+  "dergi.ortak_2",
+  "dergi.adres",
+  "dergi.eposta",
+  "dergi.domain",
+  "dergi.sehir",
+  "yazar.ad_soyad",
+  "yazar.dogum_tarihi",
+  "yazar.eposta",
+  "yazar.mahlas",
+  "kvkk.version",
+  "acceptance.accepted_at",
+  "acceptance.ip",
+];
 
 export default async function AdminAgreementsPage() {
   const { user } = await guardPanel("admin");
@@ -30,89 +38,113 @@ export default async function AdminAgreementsPage() {
 
   const versions = await listAgreementVersions(actor);
   const report = await acceptanceReport(actor);
+  const settings = await getSiteSettings();
 
+  const template = readAgreementTemplate();
+  const hash = templateHash();
+  const used = extractPlaceholders(template);
+  const unknown = used.filter((name) => !KNOWN_PLACEHOLDERS.includes(name));
+
+  const alreadyVersioned = versions.some((version) => version.bodyHash === hash);
   const drafts = versions.filter((version) => version.publishedAt === null);
+
+  // Which publisher details are still missing; without them nothing renders
+  const missingSettings = Object.entries(settings)
+    .filter(([, value]) => !value)
+    .map(([key]) => key as keyof typeof SETTING_LABELS);
 
   return (
     <>
       <PageHeader
-        title="Çerçeve sözleşme sürümleri"
-        description="Yayınlanmış bir sürüm değiştirilemez; değişiklik yeni sürüm demektir."
+        title="Sözleşme sürümleri"
+        description="Sözleşme metni depodaki şablon dosyasıdır. Metin değişikliği yeni sürüm demektir."
       />
 
       <div className="space-y-6">
         <Alert tone="warning" title="Yayınlamanın sonuçları">
           Yeni bir sürüm yayınlandığında önceki onaylar &ldquo;değiştirildi&rdquo; olarak
-          işaretlenir, tüm aktif yazarlar sözleşme bekliyor durumuna düşer ve kendilerine e-posta
-          gönderilir.
+          işaretlenir, tüm aktif yazarlar sözleşme bekliyor durumuna düşer, bekleyen Eser
+          Onayları yeni sürüm onaylanana kadar verilemez ve yazarlara e-posta gönderilir.
         </Alert>
 
         <Card>
-          <h2 className="mb-4 font-serif text-lg">Yeni taslak</h2>
+          <h2 className="mb-4 font-serif text-lg">Şablon</h2>
 
-          <PanelForm
-            action={createAgreementDraftAction}
-            csrfToken={csrfToken}
-            submitLabel="Taslak oluştur"
-          >
-              <>
-                <Field label="Başlık" htmlFor="title">
-                  <Input
-                    id="title"
-                    name="title"
-                    required
-                    defaultValue="postscript Çerçeve Sözleşmesi"
-                  />
-                </Field>
+          <dl className="mb-5 grid gap-2 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-muted">Dosya</dt>
+              <dd>
+                <code>contracts/{TEMPLATE_FILE}</code>
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted">Metin özeti (sha256)</dt>
+              <dd className="font-mono text-[11px] break-all">{hash}</dd>
+            </div>
+          </dl>
 
-                <Field
-                  label="Metin (markdown)"
-                  htmlFor="bodyMarkdown"
+          <h3 className="mb-2 text-sm font-medium">Yer tutucular ({used.length})</h3>
+          <ul className="mb-5 flex flex-wrap gap-1.5">
+            {used.map((name) => {
+              const isKnown = KNOWN_PLACEHOLDERS.includes(name);
+              return (
+                <li
+                  key={name}
+                  className={
+                    isKnown
+                      ? "rounded border border-line bg-paper px-2 py-0.5 font-mono text-[11px] text-muted"
+                      : "rounded border border-danger/40 bg-danger-soft px-2 py-0.5 font-mono text-[11px] text-danger"
+                  }
                 >
-                  <Textarea id="bodyMarkdown" name="bodyMarkdown" rows={16} required />
-                </Field>
-              </>
-          </PanelForm>
+                  {name}
+                </li>
+              );
+            })}
+          </ul>
+
+          {unknown.length > 0 ? (
+            <Alert tone="danger" title="Sözlük dışı yer tutucu var">
+              Şablon şu yer tutucuları kullanıyor ama sözlükte karşılıkları yok:{" "}
+              {unknown.join(", ")}. Bu hâliyle yayınlanamaz.
+            </Alert>
+          ) : missingSettings.length > 0 ? (
+            <Alert tone="warning" title="Yayıncı bilgileri eksik">
+              <ul className="mt-1 list-disc pl-5">
+                {missingSettings.map((key) => (
+                  <li key={key}>
+                    {SETTING_LABELS[key]} <code>({PLACEHOLDER_BY_KEY[key]})</code>
+                  </li>
+                ))}
+              </ul>
+              Sistem sayfasından doldurulmadan hiçbir sözleşme render edilemez.
+            </Alert>
+          ) : alreadyVersioned ? (
+            <Alert tone="info">
+              Bu şablon metni zaten bir sürüm olarak kayıtlı. Yeni sürüm için önce dosyayı
+              değiştirin.
+            </Alert>
+          ) : (
+            <PanelForm
+              action={createVersionFromTemplateAction}
+              csrfToken={csrfToken}
+              submitLabel="Şablondan sürüm oluştur"
+            />
+          )}
         </Card>
 
         {drafts.map((draft) => (
           <Card key={draft.id}>
-            <h2 className="mb-4 font-serif text-lg">Taslak v{draft.version}</h2>
+            <h2 className="mb-1 font-serif text-lg">Taslak v{draft.version}</h2>
+            <p className="mb-4 font-mono text-[11px] break-all text-muted">{draft.bodyHash}</p>
 
-            <PanelForm
-              action={updateAgreementDraftAction}
+            <ActionButton
+              action={publishAgreementAction}
               csrfToken={csrfToken}
-              submitLabel="Taslağı kaydet"
-              submitVariant="secondary"
-            >
-              <input type="hidden" name="versionId" value={draft.id} />
-              <Field label="Başlık" htmlFor={`title-${draft.id}`}>
-                <Input id={`title-${draft.id}`} name="title" defaultValue={draft.title} required />
-              </Field>
-              <Field label="Metin (markdown)" htmlFor={`body-${draft.id}`}>
-                <Textarea
-                  id={`body-${draft.id}`}
-                  name="bodyMarkdown"
-                  rows={16}
-                  defaultValue={draft.bodyMarkdown}
-                  required
-                />
-              </Field>
-            </PanelForm>
-
-            {/* Publishing is its own form: a form nested inside another one is
-                dropped by the browser, and the button would submit the outer
-                form instead of this action */}
-            <div className="mt-5 border-t border-line pt-4">
-              <ActionButton
-                action={publishAgreementAction}
-                csrfToken={csrfToken}
-                label="Bu sürümü yayınla"
-                variant="primary"
-                fields={{ versionId: draft.id }}
-                confirmMessage="Bu sürüm yayınlanacak ve tüm aktif yazarlar yeniden onay verene kadar kilitlenecek. Devam edilsin mi?"
-              />
-            </div>
+              label="Bu sürümü yayınla"
+              variant="primary"
+              fields={{ versionId: draft.id }}
+              confirmMessage="Bu sürüm yayınlanacak ve tüm aktif yazarlar yeniden onay verene kadar kilitlenecek. Devam edilsin mi?"
+            />
           </Card>
         ))}
 
@@ -128,8 +160,7 @@ export default async function AdminAgreementsPage() {
                   <Th>Sürüm</Th>
                   <Th>Durum</Th>
                   <Th>Yayın</Th>
-                  <Th>sha256</Th>
-                  <Th>PDF</Th>
+                  <Th>Şablon özeti</Th>
                 </tr>
               </thead>
               <tbody>
@@ -148,20 +179,6 @@ export default async function AdminAgreementsPage() {
                     <Td className="text-xs">{formatDate(version.publishedAt)}</Td>
                     <Td className="max-w-[12rem] truncate font-mono text-[10px]">
                       {version.bodyHash}
-                    </Td>
-                    <Td>
-                      {version.pdfMediaId ? (
-                        <a
-                          href={`/api/media/${version.pdfMediaId}`}
-                          className="text-xs text-accent underline"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          İndir
-                        </a>
-                      ) : (
-                        <span className="text-xs text-muted">—</span>
-                      )}
                     </Td>
                   </tr>
                 ))}

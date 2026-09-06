@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { guardPanel } from "@/lib/auth/guard";
 import { pendingAcknowledgements } from "@/services/announcements";
-import { listGrantsForWriter } from "@/services/rights";
+import { listApprovalsForWriter } from "@/services/rights";
 import { listArticlesForWriter } from "@/services/articles";
 import { getCurrentAgreement, listAcceptancesForUser } from "@/services/agreements";
 import { Alert, Card, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
@@ -12,15 +12,15 @@ export const metadata = { title: "Yazar paneli" };
 export default async function WriterDashboard() {
   const { user } = await guardPanel("writer");
 
-  const [pending, grants, articles, current, acceptances] = await Promise.all([
+  const [pending, approvals, articles, current, acceptances] = await Promise.all([
     pendingAcknowledgements({ ...user }),
-    listGrantsForWriter({ ...user }),
+    listApprovalsForWriter({ ...user }),
     listArticlesForWriter({ ...user }),
     getCurrentAgreement(),
     listAcceptancesForUser(user.id),
   ]);
 
-  const pendingGrants = grants.filter((grant) => grant.status === "pending");
+  const pendingApprovals = approvals.filter((approval) => approval.status === "pending");
   const agreementAccepted =
     current !== null && acceptances.some((row) => row.version === current.version);
 
@@ -75,15 +75,15 @@ export default async function WriterDashboard() {
           </Card>
 
           <Card>
-            <h2 className="mb-3 font-serif text-lg">Bekleyen devir formları</h2>
-            {pendingGrants.length === 0 ? (
-              <p className="text-sm text-muted">İmzanızı bekleyen form yok.</p>
+            <h2 className="mb-3 font-serif text-lg">Bekleyen Eser Onayları</h2>
+            {pendingApprovals.length === 0 ? (
+              <p className="text-sm text-muted">Onayınızı bekleyen eser yok.</p>
             ) : (
               <ul className="space-y-2 text-sm">
-                {pendingGrants.map((grant) => (
-                  <li key={grant.id}>
-                    <Link href={`/writer/rights/${grant.id}`} className="text-accent underline">
-                      {grant.articleTitle}
+                {pendingApprovals.map((approval) => (
+                  <li key={approval.id}>
+                    <Link href="/writer/approvals" className="text-accent underline">
+                      {approval.articleTitle}
                     </Link>
                   </li>
                 ))}

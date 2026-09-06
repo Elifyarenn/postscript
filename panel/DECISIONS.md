@@ -363,3 +363,77 @@ göstermek listeyi sızdırmak olurdu.
 **Gerekçe:** Ürün sahibinin derginin fiilen kullandığı mecralara göre isteği.
 Alan `jsonb` olduğu için migration gerekmedi; eski anahtarlar taşıyan kayıtlar
 varsa okunmaz hâle gelir, form kaydedildiğinde temizlenir.
+
+---
+
+## D-028 — Sözleşme metni depoda, sürüm onun anlık görüntüsü
+
+**Karar:** Sözleşme metni `contracts/yazar-sozlesmesi-ve-ruhsat-taahhudu.md`
+dosyasıdır. Panelde sözleşme metni yazılmaz; yönetici "şablondan sürüm oluştur"
+der, sistem dosyayı okur, ham metnin SHA-256'sını `body_hash` olarak,
+metnin kendisini `body_markdown` olarak kaydeder. Aynı metinden ikinci bir sürüm
+oluşturulamaz (409). Şablon her render'da diskten okunur, önbelleğe alınmaz.
+
+**Gerekçe:** Sözleşme sürüm prompt'unun §11'i şablonun koddan değiştirilmesini
+yasaklıyor ve her metin değişikliğini yeni sürüm sayıyor. Dosya olması
+değişikliği gözden geçirilebilir bir diff hâline getirir. Sürümün metni
+kopyalaması şart: dosya ilerlerse imzalanmış sözleşmelerin dayandığı metin
+değişmemelidir. Önbellek kaldırıldı çünkü dosya değiştiği anda bayat kalıyordu
+ve yeni sürüm oluşturmayı imkânsız hâle getiriyordu.
+
+---
+
+## D-029 — `{{kvkk.version}}` kaynağı
+
+**Karar:** Yer tutucu, spesifikasyondaki `site_settings.kvkk_current_version`
+yerine `kvkk_versions` tablosundaki güncel sürümden okunur.
+
+**Gerekçe:** Sistemde zaten sürümlenen, hash'lenen ve yayın tarihi tutulan bir
+KVKK tablosu var. Aynı bilgiyi ikinci kez elle yazılan bir ayar olarak tutmak,
+iki kaynağın birbirinden sapmasına açık kapı bırakırdı: sözleşme, yayında
+olmayan bir aydınlatma metni sürümüne atıf yapabilirdi. Yayınlanmış bir KVKK
+metni yoksa render başarısız olur ve terfi reddedilir — sessizce yanlış sürüm
+yazmaktansa açıkça durmak doğru.
+
+---
+
+## D-030 — Yayımlanmış eserin metni yerinde değiştirilemez
+
+**Karar:** Editör, `published` veya `archived` bir eseri "içerik değişikliği"
+olarak kaydetmeye çalışırsa 409 alır: önce geri çekmesi gerekir. `scheduled` bir
+eserde içerik değişikliği onayı iptal eder ve eser `awaiting_rights`'a döner;
+daha erken durumlarda yalnızca onay yenilenir.
+
+**Gerekçe:** §7.5 içerik değişikliğinde eserin `awaiting_rights`'a dönmesini
+istiyor ama durum makinesinde `published → awaiting_rights` kenarı yok ve
+olmamalı. Yayındaki bir sayfayı tek adımda sessizce yeniden yazmak, o an
+yayında olan metni kapsayan ruhsatın dışına çıkmak demektir. Geri çekmeyi
+zorunlu kılmak bu kararı editörün önüne açıkça koyar.
+
+---
+
+## D-031 — Sözleşme PDF'lerine erişim
+
+**Karar:** `license_type = contract_pdf` olan medya yalnızca üzerinde adı geçen
+yazar ve admin tarafından okunabilir; editör erişemez. Depolama sürücüsü imzalı
+URL üretebiliyorsa (S3/MinIO) 5 dakikalık imzalı URL'ye yönlendirilir, aksi
+hâlde dosya oturum doğrulanmış rota üzerinden akıtılır.
+
+**Gerekçe:** §8 imzalı URL istiyor; yerel disk sürücüsü imza üretemiyor.
+Oturum doğrulanmış akıtma en az imzalı URL kadar kısıtlayıcı — hatta daha
+fazlası, çünkü sunucudan oturumsuz çalışan hiçbir bağlantı çıkmıyor. Her iki
+yolda da editör kapının dışında.
+
+---
+
+## D-032 — "Yayıncı ayarı eksik" senaryosu uçtan uca değil, entegrasyonda
+
+**Karar:** §10'un "site_settings.publisher_partner_2 boş → terfi reddedilir,
+gerekçe dergi.ortak_2" senaryosu Playwright yerine entegrasyon testinde.
+
+**Gerekçe:** Ayarı boşaltmak için ya form doğrulamasını kırmak ya da testten
+veritabanına ikinci bir bağlantı açmak gerekiyordu; PGlite dizini sunucu
+tarafından kilitli olduğu için ikincisi mümkün değil, birincisi de test uğruna
+üretim davranışını gevşetmek olurdu. Aynı kural entegrasyon testinde tam olarak
+doğrulanıyor: eksik ayarla terfi reddediliyor ve gerekçe `dergi.ortak_2` yer
+tutucusunu adıyla söylüyor.

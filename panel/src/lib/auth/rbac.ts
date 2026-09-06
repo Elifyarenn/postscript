@@ -66,8 +66,11 @@ export function canAccessAdminPanel(actor: Actor): boolean {
   return isOperational(actor) && hasRole(actor.role, "admin");
 }
 
-/** Contract PDFs, identity documents and user management are admin-only (§3). */
-export function canViewIdentityDocuments(actor: Actor): boolean {
+/**
+ * Contract and approval PDFs are for the writer they belong to and for an
+ * admin. An editor never sees them (§11 of the contract specification).
+ */
+export function canViewContractDocuments(actor: Actor): boolean {
   return canAccessAdminPanel(actor);
 }
 
@@ -84,10 +87,10 @@ export function canManageAgreements(actor: Actor): boolean {
 }
 
 /** Writers may read their own article records; editors may read all of them. */
-export function canReadArticle(actor: Actor, article: { authorId: string | null; coAuthorIds: string[] }): boolean {
+export function canReadArticle(actor: Actor, article: { authorId: string | null }): boolean {
   if (canAccessEditorPanel(actor)) return true;
   if (!canAccessRestrictedWriterPages(actor)) return false;
-  return article.authorId === actor.id || article.coAuthorIds.includes(actor.id);
+  return article.authorId === actor.id;
 }
 
 /** Only the writer named on a rights grant may sign or decline it. */

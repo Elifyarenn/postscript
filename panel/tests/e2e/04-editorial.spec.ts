@@ -1,9 +1,9 @@
 /**
  * §13.2 — the editorial lifecycle through the interface.
  *
- * accepted → a rights grant opens → scheduling is refused with 409 while it is
- * unsigned → the writer signs → scheduled → published → withdrawn answers 410
- * from the public API.
+ * accepted → a work approval opens → scheduling is refused while it is
+ * unapproved → the writer approves → scheduled → published → withdrawn answers
+ * 410 from the public API.
  */
 import { expect, test, type Page } from "@playwright/test";
 import { loginElevated, logout, SEED, submitLogin } from "./helpers";
@@ -55,10 +55,10 @@ test("takes an article from draft to published and then withdraws it", async ({ 
 
   await transitionTo(page, "İncelemede");
 
-  // Acceptance is not a resting state: it opens the rights grant and the
-  // article moves on to "awaiting rights" by itself (§7.2)
+  // Acceptance is not a resting state: it opens the work approval and the
+  // article moves on to "awaiting rights" by itself (§7.1)
   await transitionTo(page, "Kabul edildi", "Devir formu bekleniyor");
-  await expect(page.getByText("Hak devri formu:")).toBeVisible();
+  await expect(page.getByText("Eser Onayı:")).toBeVisible();
 
   /* ---------- scheduling is refused without a signature ---------- */
 
@@ -73,26 +73,31 @@ test("takes an article from draft to published and then withdraws it", async ({ 
 
   await logout(page);
 
-  /* ---------- the writer signs ---------- */
+  /* ---------- the writer approves the work ---------- */
 
   await submitLogin(page, SEED.writer);
   await page.waitForURL("**/writer**");
 
-  await page.goto("/writer/rights");
-  await page.getByRole("link", { name: "Formu aç" }).first().click();
+  await page.goto("/writer/approvals");
 
-  // FSEK art. 52: every right is named individually on the form
-  await expect(page.getByText("İşleme hakkı (FSEK m.21)")).toBeVisible();
-  await expect(page.getByText("Çoğaltma hakkı (FSEK m.22)")).toBeVisible();
-  await expect(page.getByText("Yayma hakkı (FSEK m.23)")).toBeVisible();
-  await expect(page.getByText("Umuma iletim hakkı (FSEK m.25)")).toBeVisible();
-  await expect(page.getByText("Bedel: Yok")).toBeVisible();
+  // §7.2: the screen shows the title, the hash of the accepted text, the
+  // contract version and the sentence being agreed to
+  await expect(page.getByText(ARTICLE_TITLE)).toBeVisible();
+  await expect(page.getByText(/Kabul edilen metnin özeti/)).toBeVisible();
+  await expect(page.getByText(/Sözleşme sürümü: v1/)).toBeVisible();
+  await expect(
+    page.getByText("Bu eseri Sözleşme'nin 4. maddesindeki şartlarla ruhsatlıyorum."),
+  ).toBeVisible();
 
-  await expect(page.getByRole("button", { name: "İmzala" })).toBeDisabled();
+  const approve = page.getByRole("button", { name: "Onayla" });
+  await expect(approve).toBeDisabled();
   await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: "İmzala" }).click();
+  await approve.click();
 
-  await expect(page.getByText("Bu formu imzaladınız")).toBeVisible();
+  // The row leaves the pending list for the history, where the record and its
+  // PDF live; that move is the outcome, not a transient message
+  await expect(page.getByText("Onayınızı bekleyen eser yok.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Onay kaydı (PDF)" })).toBeVisible();
 
   await logout(page);
 
@@ -125,4 +130,77 @@ test("takes an article from draft to published and then withdraws it", async ({ 
   // Something that was never published is a 404, not a 410
   const missing = await page.request.get("/api/public/articles/hic-yayinlanmamis-yazi");
   expect(missing.status()).toBe(404);
+});
+
+test("a content change revokes the approval and asks for a new one", async ({ page }) => {
+  const title = "İçerik Değişikliği Denemesi";
+
+  /* ---------- editor creates and accepts ---------- */
+
+  await loginElevated(page, "editor", SEED.editor);
+
+  await page.goto("/editor/articles");
+  await page.getByLabel("Başlık").fill(title);
+  await page.locator("#newAuthorId").selectOption({ label: "Ada Y." });
+  await page.getByLabel("Gövde (markdown)").fill("## İlk\n\nİlk gövde.\n");
+  await page.getByRole("button", { name: "Oluştur" }).click();
+
+  await page.waitForURL(/\/editor\/articles\/[0-9a-f-]{36}$/);
+  const articleUrl = page.url();
+
+  await transitionTo(page, "İncelemede");
+  await transitionTo(page, "Kabul edildi", "Devir formu bekleniyor");
+
+  /* ---------- the writer approves ---------- */
+
+  await logout(page);
+  await submitLogin(page, SEED.writer);
+  await page.waitForURL("**/writer**");
+
+  await page.goto("/writer/approvals");
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Onayla" }).click();
+  await expect(page.getByText("Onayınızı bekleyen eser yok.")).toBeVisible();
+
+  await logout(page);
+
+  /* ---------- a correction leaves the approval alone ---------- */
+
+  await loginElevated(page, "editor", SEED.editor);
+  await page.goto(articleUrl);
+
+  await page.getByLabel("Gövde (markdown)").fill("## İlk\n\nİlk gövde, yazımı düzeltildi.\n");
+  await page.getByLabel("Değişikliğin türü").selectOption("correction");
+  await page
+    .locator("form")
+    .filter({ has: page.getByLabel("Değişikliğin türü") })
+    .getByRole("button", { name: "Kaydet" })
+    .click();
+  await expect(page.getByText("Makale kaydedildi")).toBeVisible();
+
+  await page.goto(articleUrl);
+  await expect(page.getByText("Eser Onayı: signed")).toBeVisible();
+
+  /* ---------- a content change revokes it ---------- */
+
+  await page.getByLabel("Gövde (markdown)").fill("## Bambaşka\n\nAnlamı değişmiş bir gövde.\n");
+  await page.getByLabel("Değişikliğin türü").selectOption("content_change");
+  await page
+    .locator("form")
+    .filter({ has: page.getByLabel("Değişikliğin türü") })
+    .getByRole("button", { name: "Kaydet" })
+    .click();
+
+  await page.goto(articleUrl);
+  await expect(page.getByText("Eser Onayı: pending")).toBeVisible();
+
+  // And the writer is asked again, for the new text
+  await logout(page);
+  await submitLogin(page, SEED.writer);
+  await page.waitForURL("**/writer**");
+
+  await page.goto("/writer/approvals");
+  // The heading belongs to the pending row; the revoked one sits in the history
+  await expect(page.getByRole("heading", { name: title })).toBeVisible();
+  await expect(page.getByText("İptal edildi")).toBeVisible();
 });

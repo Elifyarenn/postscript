@@ -8,16 +8,18 @@ import "server-only";
 import { and, desc, eq, ilike, isNull, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { media, users, type Role, type User } from "@/db/schema";
+import { users, type Role, type User } from "@/db/schema";
 import { isAdult, MINIMUM_WRITER_AGE, parseIsoDate } from "@/lib/age";
 import { recordRoleChange, writeAudit } from "@/lib/audit";
-import { canManageUsers, canViewIdentityDocuments, type Actor } from "@/lib/auth/rbac";
+import { canManageUsers, type Actor } from "@/lib/auth/rbac";
 import { revokeAllSessions } from "@/lib/auth/session";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { env } from "@/lib/env";
 import { sendMail } from "@/lib/mail/transport";
 import { slugify } from "@/lib/slug";
 import * as templates from "@emails/templates";
+import { AgreementRenderError } from "@/lib/agreement/render";
+import { renderAgreementForWriter } from "./agreements";
 import type { RequestMeta } from "./auth";
 
 /* ------------------------------------------------------------------ */
@@ -28,17 +30,19 @@ export type EligibilityProblem =
   | "email_not_verified"
   | "birth_date_missing"
   | "under_age"
-  | "identity_not_verified"
   | "kvkk_consent_missing"
-  | "banned";
+  | "banned"
+  | "no_agreement_version"
+  | "agreement_not_renderable";
 
 const PROBLEM_LABELS: Record<EligibilityProblem, string> = {
   email_not_verified: "E-posta adresi doğrulanmamış.",
   birth_date_missing: "Doğum tarihi girilmemiş.",
   under_age: `Kullanıcı ${MINIMUM_WRITER_AGE} yaşından küçük.`,
-  identity_not_verified: "Kimlik doğrulaması yapılmamış.",
   kvkk_consent_missing: "KVKK onayı alınmamış.",
   banned: "Kullanıcı yasaklı.",
+  no_agreement_version: "Yayınlanmış bir sözleşme sürümü yok.",
+  agreement_not_renderable: "Sözleşme bu kullanıcı için render edilemiyor.",
 };
 
 export type Eligibility = {
@@ -49,8 +53,10 @@ export type Eligibility = {
 };
 
 /**
- * The five preconditions from §6, evaluated in one place so the UI and the
- * mutation cannot drift apart. `at` is injectable so the age rule is testable.
+ * The preconditions that can be judged from the user row alone, in one place so
+ * the screen and the mutation cannot drift apart. `at` is injectable so the age
+ * rule is testable. The contract render check is asynchronous and lives in
+ * `checkPromotionReadiness`.
  */
 export function checkWriterEligibility(user: User, at: Date = new Date()): Eligibility {
   const problems: EligibilityProblem[] = [];
@@ -63,7 +69,6 @@ export function checkWriterEligibility(user: User, at: Date = new Date()): Eligi
     problems.push("under_age");
   }
 
-  if (!user.identityVerifiedAt) problems.push("identity_not_verified");
   if (!user.kvkkConsentAt) problems.push("kvkk_consent_missing");
   if (user.isBanned) problems.push("banned");
 
@@ -120,7 +125,6 @@ export async function listUsers(actor: Actor, filters: UserListFilters = {}) {
       role: users.role,
       writerStatus: users.writerStatus,
       emailVerifiedAt: users.emailVerifiedAt,
-      identityVerifiedAt: users.identityVerifiedAt,
       birthDate: users.birthDate,
       isBanned: users.isBanned,
       createdAt: users.createdAt,
@@ -136,6 +140,36 @@ export async function listUsers(actor: Actor, filters: UserListFilters = {}) {
 /* Promotion and demotion (§6)                                         */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The full precondition check, including the one that needs the database and
+ * the contract template: can this user's contract actually be rendered?
+ *
+ * Returning the reason matters — "sözleşme ayarları eksik: dergi.ortak_2" tells
+ * an admin exactly what to go and fill in (§6.1).
+ */
+export async function checkPromotionReadiness(
+  user: User,
+  at: Date = new Date(),
+): Promise<Eligibility> {
+  const base = checkWriterEligibility(user, at);
+  const problems = [...base.problems];
+  const messages = [...base.messages];
+
+  try {
+    await renderAgreementForWriter(user);
+  } catch (error) {
+    if (error instanceof AgreementRenderError) {
+      const missingVersion = error.placeholders.includes("agreement.version");
+      problems.push(missingVersion ? "no_agreement_version" : "agreement_not_renderable");
+      messages.push(missingVersion ? PROBLEM_LABELS.no_agreement_version : error.message);
+    } else {
+      throw error;
+    }
+  }
+
+  return { eligible: problems.length === 0, problems, messages };
+}
+
 export async function promoteToWriter(
   actor: Actor,
   targetUserId: string,
@@ -147,7 +181,7 @@ export async function promoteToWriter(
   const target = await findUserById(targetUserId);
   if (target.role !== "user") throw conflict("Bu kullanıcı zaten yazar veya üzeri bir role sahip.");
 
-  const eligibility = checkWriterEligibility(target);
+  const eligibility = await checkPromotionReadiness(target);
   if (!eligibility.eligible) {
     // The admin screen shows exactly what is missing rather than a bare refusal
     throw conflict("Yazar terfisi için ön koşullar sağlanmıyor.", {
@@ -193,7 +227,7 @@ export async function changeRole(
 
   // Anything at or above writer must clear the same bar as a writer promotion
   if (newRole !== "user") {
-    const eligibility = checkWriterEligibility(target);
+    const eligibility = await checkPromotionReadiness(target);
     if (!eligibility.eligible) {
       throw conflict("Bu rol için ön koşullar sağlanmıyor.", {
         requirements: eligibility.messages,
@@ -296,60 +330,6 @@ export async function setBanned(
   });
 
   return updated!;
-}
-
-/**
- * The admin marks identity as verified after looking at the uploaded document.
- * The document itself is deleted after 90 days; this timestamp is what remains.
- */
-export async function markIdentityVerified(
-  actor: Actor,
-  targetUserId: string,
-  meta: RequestMeta,
-): Promise<User> {
-  if (!canViewIdentityDocuments(actor)) throw forbidden();
-
-  const target = await findUserById(targetUserId);
-
-  const [updated] = await db
-    .update(users)
-    .set({ identityVerifiedAt: new Date(), identityVerifiedBy: actor.id, updatedAt: new Date() })
-    .where(eq(users.id, target.id))
-    .returning();
-
-  await writeAudit({
-    actorId: actor.id,
-    action: "user.identity_verified",
-    entityType: "users",
-    entityId: target.id,
-    ip: meta.ip,
-  });
-
-  return updated!;
-}
-
-/** Lists identity documents for one user. Admin only, and never linked publicly. */
-export async function listIdentityDocuments(actor: Actor, targetUserId: string) {
-  if (!canViewIdentityDocuments(actor)) throw forbidden();
-
-  return db
-    .select({
-      id: media.id,
-      storageKey: media.storageKey,
-      mime: media.mime,
-      createdAt: media.createdAt,
-      autoDeleteAt: media.autoDeleteAt,
-      purgedAt: media.purgedAt,
-    })
-    .from(media)
-    .where(
-      and(
-        eq(media.uploadedBy, targetUserId),
-        eq(media.isIdentityDocument, true),
-        isNull(media.deletedAt),
-      ),
-    )
-    .orderBy(desc(media.createdAt));
 }
 
 /* ------------------------------------------------------------------ */

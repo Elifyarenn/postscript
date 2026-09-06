@@ -11,19 +11,13 @@ import { revalidatePath } from "next/cache";
 import {
   changeRole,
   exportUserData,
-  markIdentityVerified,
   promoteToWriter,
   setBanned,
   setBirthDateAsAdmin,
   setWriterStatus,
 } from "@/services/users";
-import {
-  createAgreementDraft,
-  publishAgreementVersion,
-  updateAgreementDraft,
-} from "@/services/agreements";
-import { setRightsTemplate } from "@/services/settings";
-import { uploadIdentityDocument } from "@/services/media";
+import { createVersionFromTemplate, publishAgreementVersion } from "@/services/agreements";
+import { saveSiteSettings, SITE_SETTING_KEYS } from "@/services/site-settings";
 import { requestMetadata, requireRole, revokeAllSessions } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
 import { db } from "@/db/client";
@@ -32,7 +26,6 @@ import { sha256Hex } from "@/lib/crypto";
 import { and, eq, ne, desc } from "drizzle-orm";
 import {
   checkbox,
-  numberField,
   optionalText,
   runAction,
   text,
@@ -133,52 +126,6 @@ export async function setBannedAction(
   });
 }
 
-export async function verifyIdentityAction(
-  _state: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  return runAction(async () => {
-    await assertCsrfFromForm(formData);
-    const { user } = await requireRole("admin");
-    const meta = await requestMetadata();
-
-    const targetId = text(formData, "userId");
-    await markIdentityVerified({ ...user }, targetId, meta);
-
-    revalidatePath(`/admin/users/${targetId}`);
-    return { success: "Kimlik doğrulandı olarak işaretlendi." };
-  });
-}
-
-export async function uploadIdentityDocumentAction(
-  _state: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  return runAction(async () => {
-    await assertCsrfFromForm(formData);
-    const { user } = await requireRole("admin");
-    const meta = await requestMetadata();
-
-    const file = formData.get("file");
-    if (!(file instanceof File) || file.size === 0) throw badRequest("Dosya seçilmedi.");
-
-    const targetId = text(formData, "userId");
-    await uploadIdentityDocument(
-      { ...user },
-      {
-        buffer: Buffer.from(await file.arrayBuffer()),
-        fileName: file.name,
-        declaredMime: file.type,
-        subjectUserId: targetId,
-      },
-      meta,
-    );
-
-    revalidatePath(`/admin/users/${targetId}`);
-    return { success: "Belge yüklendi. 90 gün sonra otomatik silinecek." };
-  });
-}
-
 export async function setBirthDateAction(
   _state: ActionState,
   formData: FormData,
@@ -227,7 +174,11 @@ export async function exportUserDataAction(
 /* Agreements                                                          */
 /* ------------------------------------------------------------------ */
 
-export async function createAgreementDraftAction(
+/**
+ * Creates a version from the template file in `contracts/` (§11: the text is
+ * never typed into the panel; a change to the file is a new version).
+ */
+export async function createVersionFromTemplateAction(
   _state: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -236,35 +187,10 @@ export async function createAgreementDraftAction(
     const { user } = await requireRole("admin");
     const meta = await requestMetadata();
 
-    await createAgreementDraft(
-      { ...user },
-      { title: text(formData, "title"), bodyMarkdown: text(formData, "bodyMarkdown") },
-      meta,
-    );
+    const draft = await createVersionFromTemplate({ ...user }, meta);
 
     revalidatePath("/admin/agreements");
-    return { success: "Taslak oluşturuldu." };
-  });
-}
-
-export async function updateAgreementDraftAction(
-  _state: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  return runAction(async () => {
-    await assertCsrfFromForm(formData);
-    const { user } = await requireRole("admin");
-    const meta = await requestMetadata();
-
-    await updateAgreementDraft(
-      { ...user },
-      text(formData, "versionId"),
-      { title: text(formData, "title"), bodyMarkdown: text(formData, "bodyMarkdown") },
-      meta,
-    );
-
-    revalidatePath("/admin/agreements");
-    return { success: "Taslak güncellendi." };
+    return { success: `Şablondan ${draft.version}. sürüm taslağı oluşturuldu.` };
   });
 }
 
@@ -291,7 +217,8 @@ export async function publishAgreementAction(
 /* Settings                                                            */
 /* ------------------------------------------------------------------ */
 
-export async function setRightsTemplateAction(
+/** Publisher details the contract template needs (§9, Sistem ekranı). */
+export async function saveSiteSettingsAction(
   _state: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -300,24 +227,12 @@ export async function setRightsTemplateAction(
     const { user } = await requireRole("admin");
     const meta = await requestMetadata();
 
-    await setRightsTemplate(
-      { ...user },
-      {
-        grantType: text(formData, "grantType"),
-        rightAdaptation: checkbox(formData, "rightAdaptation"),
-        rightReproduction: checkbox(formData, "rightReproduction"),
-        rightDistribution: checkbox(formData, "rightDistribution"),
-        rightCommunicationToPublic: checkbox(formData, "rightCommunicationToPublic"),
-        channels: formData.getAll("channels").filter((v): v is string => typeof v === "string"),
-        exclusivityMonths: numberField(formData, "exclusivityMonths"),
-        territory: text(formData, "territory") || "worldwide",
-        commercialUseIncluded: checkbox(formData, "commercialUseIncluded"),
-      },
-      meta,
-    );
+    const input = Object.fromEntries(SITE_SETTING_KEYS.map((key) => [key, text(formData, key)]));
+    await saveSiteSettings({ ...user }, input, meta);
 
     revalidatePath("/admin/settings");
-    return { success: "Form şablonu güncellendi." };
+    revalidatePath("/admin/users", "layout");
+    return { success: "Yayıncı bilgileri kaydedildi." };
   });
 }
 

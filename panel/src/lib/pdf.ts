@@ -76,23 +76,15 @@ export async function renderDocumentPdf(input: PdfDocumentInput): Promise<Buffer
   const headingFont = await pdf.embedFont(bold, { subset: true });
 
   const usableWidth = PAGE_WIDTH - MARGIN * 2;
+  const pages: PDFPage[] = [];
+
   let page: PDFPage = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  pages.push(page);
   let cursorY = PAGE_HEIGHT - MARGIN;
 
-  const drawFooter = (target: PDFPage) => {
-    target.drawText(input.footerNote, {
-      x: MARGIN,
-      y: MARGIN / 2,
-      size: 7,
-      font: bodyFont,
-      color: rgb(0.45, 0.45, 0.45),
-      maxWidth: usableWidth,
-    });
-  };
-
   const newPage = () => {
-    drawFooter(page);
     page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    pages.push(page);
     cursorY = PAGE_HEIGHT - MARGIN;
   };
 
@@ -115,6 +107,26 @@ export async function renderDocumentPdf(input: PdfDocumentInput): Promise<Buffer
     write(section.body, bodyFont, BODY_SIZE, 10);
   }
 
-  drawFooter(page);
+  // Footers last, so every page can carry its number out of the total (§8)
+  pages.forEach((target, index) => {
+    target.drawText(input.footerNote, {
+      x: MARGIN,
+      y: MARGIN / 2,
+      size: 7,
+      font: bodyFont,
+      color: rgb(0.45, 0.45, 0.45),
+      maxWidth: usableWidth - 60,
+    });
+
+    const label = `${index + 1} / ${pages.length}`;
+    target.drawText(label, {
+      x: PAGE_WIDTH - MARGIN - bodyFont.widthOfTextAtSize(label, 7),
+      y: MARGIN / 2,
+      size: 7,
+      font: bodyFont,
+      color: rgb(0.45, 0.45, 0.45),
+    });
+  });
+
   return Buffer.from(await pdf.save());
 }

@@ -63,19 +63,32 @@ export function newAgreementVersion(input: {
   };
 }
 
+export function agreementAccepted(input: { displayName: string; version: number }): Template {
+  return {
+    subject: `postscript · Sözleşme onayınız kaydedildi (v${input.version})`,
+    text:
+      `Merhaba ${input.displayName},\n\n` +
+      `Yazar sözleşmesinin ${input.version}. sürümünü onayladınız. Onayladığınız metnin ` +
+      "tam kopyası PDF olarak bu iletiye eklendi; kayıtlarınız için saklayın.\n\n" +
+      "Yazar sayfalarınız açıldı." +
+      signature,
+  };
+}
+
 export function rightsGrantPending(input: {
   displayName: string;
   articleTitle: string;
   url: string;
 }): Template {
   return {
-    subject: `postscript · Hak devri formu bekliyor: ${input.articleTitle}`,
+    subject: `postscript · Eser Onayı bekliyor: ${input.articleTitle}`,
     text:
       `Merhaba ${input.displayName},\n\n` +
-      `"${input.articleTitle}" başlıklı yazınız için bir mali hak devri formu oluşturuldu. ` +
-      "Formu okuyup imzalayabilir veya gerekçe belirterek reddedebilirsiniz:\n" +
+      `"${input.articleTitle}" başlıklı yazınız yayına kabul edildi ve Eser Onayınızı ` +
+      "bekliyor. Onay ekranında eserin metin özetini ve sözleşme sürümünü görecek, " +
+      "adınızın nasıl görüneceğini seçeceksiniz:\n" +
       `${input.url}\n\n` +
-      "Form imzalanmadan yazı yayına alınamaz." +
+      "Onay verilmeden eser hiçbir mecrada yayımlanmaz (Sözleşme m. 5.4)." +
       signature,
   };
 }
@@ -86,10 +99,10 @@ export function rightsGrantReminder(input: {
   url: string;
 }): Template {
   return {
-    subject: `postscript · Hatırlatma: ${input.articleTitle} için devir formu`,
+    subject: `postscript · Hatırlatma: ${input.articleTitle} için Eser Onayı`,
     text:
       `Merhaba ${input.displayName},\n\n` +
-      `"${input.articleTitle}" başlıklı yazınızın hak devri formu hâlâ imzanızı bekliyor:\n` +
+      `"${input.articleTitle}" başlıklı yazınız hâlâ Eser Onayınızı bekliyor:\n` +
       `${input.url}` +
       signature,
   };
@@ -100,11 +113,11 @@ export function rightsGrantSigned(input: {
   articleTitle: string;
 }): Template {
   return {
-    subject: `postscript · Devir formu imzalandı: ${input.articleTitle}`,
+    subject: `postscript · Eser Onayı kaydedildi: ${input.articleTitle}`,
     text:
       `Merhaba ${input.displayName},\n\n` +
-      `"${input.articleTitle}" başlıklı yazınız için hak devri formunu imzaladınız. ` +
-      "İmzalı formun PDF kopyası bu iletiye eklendi; kayıtlarınız için saklayabilirsiniz." +
+      `"${input.articleTitle}" başlıklı eseriniz için ruhsat onayı verdiniz. ` +
+      "Onay kaydının PDF kopyası bu iletiye eklendi; kayıtlarınız için saklayın." +
       signature,
   };
 }

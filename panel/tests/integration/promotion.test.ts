@@ -16,7 +16,7 @@ import {
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import { isAppError } from "@/lib/errors";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
-import { actorOf, createUser, noMeta, reloadUser } from "../helpers/factories";
+import { actorOf, createUser, noMeta, publishContract, reloadUser } from "../helpers/factories";
 
 let database: Database;
 const mailbox = new MemoryMailAdapter();
@@ -54,7 +54,7 @@ function birthDateForAge(years: number, offsetDays = 0): string {
 }
 
 describe("eligibility", () => {
-  it("passes a verified adult with identity and consent", async () => {
+  it("passes a verified adult with consent", async () => {
     const candidate = await createUser();
     expect(checkWriterEligibility(candidate).eligible).toBe(true);
   });
@@ -62,7 +62,6 @@ describe("eligibility", () => {
   it("lists every missing prerequisite at once", async () => {
     const candidate = await createUser({
       emailVerified: false,
-      identityVerified: false,
       kvkkConsent: false,
       birthDate: null,
     });
@@ -72,15 +71,21 @@ describe("eligibility", () => {
     expect(result.problems).toEqual([
       "email_not_verified",
       "birth_date_missing",
-      "identity_not_verified",
       "kvkk_consent_missing",
     ]);
   });
 });
 
 describe("promoteToWriter", () => {
-  it("promotes an eligible user and records the role change", async () => {
+  /** An admin, with the publisher details and a published contract in place. */
+  async function adminWithContract() {
     const admin = await createUser({ role: "admin" });
+    await publishContract(actorOf(admin));
+    return admin;
+  }
+
+  it("promotes an eligible user and records the role change", async () => {
+    const admin = await adminWithContract();
     const candidate = await createUser();
 
     const promoted = await promoteToWriter(actorOf(admin), candidate.id, noMeta);
@@ -100,7 +105,7 @@ describe("promoteToWriter", () => {
   });
 
   it("refuses a seventeen year old and says why", async () => {
-    const admin = await createUser({ role: "admin" });
+    const admin = await adminWithContract();
     // One day short of the eighteenth birthday
     const minor = await createUser({ birthDate: birthDateForAge(18, 1) });
 
@@ -118,23 +123,45 @@ describe("promoteToWriter", () => {
   });
 
   it("accepts someone who turned eighteen today", async () => {
-    const admin = await createUser({ role: "admin" });
+    const admin = await adminWithContract();
     const justAdult = await createUser({ birthDate: birthDateForAge(18) });
 
     const promoted = await promoteToWriter(actorOf(admin), justAdult.id, noMeta);
     expect(promoted.role).toBe("writer");
   });
 
-  it("refuses when identity is not verified", async () => {
+  it("refuses when no contract version has been published (§6.1 rule 5)", async () => {
     const admin = await createUser({ role: "admin" });
-    const candidate = await createUser({ identityVerified: false });
+    const candidate = await createUser();
 
     const error = await captureError(promoteToWriter(actorOf(admin), candidate.id, noMeta));
-    expect(error.details?.requirements).toContain("Kimlik doğrulaması yapılmamış.");
+    expect(error.details?.requirements).toContain("Yayınlanmış bir sözleşme sürümü yok.");
+  });
+
+  it("refuses when a publisher setting is missing, and names the placeholder", async () => {
+    const admin = await adminWithContract();
+
+    const { clearSiteSetting } = await import("@/services/site-settings");
+    await clearSiteSetting("publisher_partner_2");
+
+    const candidate = await createUser();
+    const error = await captureError(promoteToWriter(actorOf(admin), candidate.id, noMeta));
+
+    // §10: the refusal names the placeholder the admin has to go and fill in
+    expect(error.details?.requirements?.join(" ")).toContain("dergi.ortak_2");
+  });
+
+  it("refuses when the writer has no birth date, and names that placeholder", async () => {
+    const admin = await adminWithContract();
+
+    const candidate = await createUser({ birthDate: null });
+    const error = await captureError(promoteToWriter(actorOf(admin), candidate.id, noMeta));
+
+    expect(error.details?.requirements).toContain("Doğum tarihi girilmemiş.");
   });
 
   it("refuses a banned user", async () => {
-    const admin = await createUser({ role: "admin" });
+    const admin = await adminWithContract();
     const candidate = await createUser({ isBanned: true });
 
     const error = await captureError(promoteToWriter(actorOf(admin), candidate.id, noMeta));

@@ -2,7 +2,14 @@ import { desc } from "drizzle-orm";
 import { db } from "@/db/client";
 import { kvkkVersions } from "@/db/schema";
 import { guardPanel } from "@/lib/auth/guard";
-import { getRightsTemplate } from "@/services/settings";
+import {
+  getSiteSettings,
+  PLACEHOLDER_BY_KEY,
+  SETTING_LABELS,
+  SITE_SETTING_KEYS,
+} from "@/services/site-settings";
+import { renderAgreementForWriter } from "@/services/agreements";
+import { AgreementRenderError } from "@/lib/agreement/render";
 import { readCsrfToken } from "@/lib/csrf";
 import { PanelForm } from "@/components/form";
 import {
@@ -12,7 +19,6 @@ import {
   Field,
   Input,
   PageHeader,
-  Select,
   Table,
   Td,
   Textarea,
@@ -20,28 +26,36 @@ import {
 } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
 import * as templates from "@emails/templates";
-import { publishKvkkVersionAction, setRightsTemplateAction } from "../actions";
+import { publishKvkkVersionAction, saveSiteSettingsAction } from "../actions";
 
 export const metadata = { title: "Sistem" };
-
-const CHANNELS = [
-  ["web", "İnternet sitesi"],
-  ["pdf_issue", "PDF sayı"],
-  ["social", "Sosyal medya"],
-  ["newsletter", "Bülten"],
-  ["future_channels", "İleride kullanılacak mecralar"],
-] as const;
 
 export default async function AdminSettingsPage() {
   await guardPanel("admin");
   const csrfToken = (await readCsrfToken()) ?? "";
 
-  const template = await getRightsTemplate();
-  const kvkk = await db
-    .select()
-    .from(kvkkVersions)
-    .orderBy(desc(kvkkVersions.version))
-    .limit(20);
+  const settings = await getSiteSettings();
+  const kvkk = await db.select().from(kvkkVersions).orderBy(desc(kvkkVersions.version)).limit(20);
+
+  // §9: prove the current values actually render a contract before trusting them
+  let renderCheck: { ok: true } | { ok: false; reason: string };
+  try {
+    await renderAgreementForWriter({
+      displayName: "Örnek Yazar",
+      birthDate: "1990-01-01",
+      email: "ornek@postscriptmag.com",
+      penName: null,
+    });
+    renderCheck = { ok: true };
+  } catch (error) {
+    renderCheck = {
+      ok: false,
+      reason:
+        error instanceof AgreementRenderError
+          ? error.message
+          : "Sözleşme render edilemedi.",
+    };
+  }
 
   // Rendered with placeholder values so an admin can see what actually goes out
   const preview = [
@@ -50,7 +64,7 @@ export default async function AdminSettingsPage() {
     templates.rightsGrantPending({
       displayName: "Ad Soyad",
       articleTitle: "Örnek Yazı",
-      url: "https://…/writer/rights/…",
+      url: "https://…/writer/approvals",
     }),
   ];
 
@@ -58,106 +72,44 @@ export default async function AdminSettingsPage() {
     <>
       <PageHeader
         title="Sistem"
-        description="Devir formu şablonu, KVKK aydınlatma metni ve e-posta şablonları."
+        description="Sözleşmenin ihtiyaç duyduğu yayıncı bilgileri, KVKK metni ve e-posta şablonları."
       />
 
       <div className="space-y-6">
         <Card>
-          <h2 className="mb-4 font-serif text-lg">Devir formu şablonu</h2>
+          <h2 className="mb-2 font-serif text-lg">Yayıncı bilgileri</h2>
           <p className="mb-4 text-sm text-muted">
-            Yeni açılan her form bu değerlerle başlar. Editör makale bazında değiştirebilir;
-            değişiklik denetim kaydına düşer.
+            Bu alanlar sözleşme şablonundaki yer tutucuları doldurur. Biri boşken hiçbir yazar
+            terfi ettirilemez, çünkü sözleşme render edilemez.
           </p>
 
+          <div className="mb-4">
+            {renderCheck.ok ? (
+              <Alert tone="success">
+                Bu değerlerle örnek sözleşme sorunsuz render ediliyor.
+              </Alert>
+            ) : (
+              <Alert tone="danger" title="Örnek sözleşme render edilemiyor">
+                {renderCheck.reason}
+              </Alert>
+            )}
+          </div>
+
           <PanelForm
-            action={setRightsTemplateAction}
+            action={saveSiteSettingsAction}
             csrfToken={csrfToken}
-            submitLabel="Şablonu kaydet"
+            submitLabel="Yayıncı bilgilerini kaydet"
           >
-              <>
-                <Field label="Sözleşme türü" htmlFor="grantType">
-                  <Select id="grantType" name="grantType" defaultValue={template.grantType}>
-                    <option value="assignment">Devir (mali hakların devri)</option>
-                    <option value="exclusive_license">Tam ruhsat (inhisari lisans)</option>
-                    <option value="non_exclusive_license">Basit ruhsat</option>
-                  </Select>
-                </Field>
-
-                <fieldset className="space-y-2">
-                  <legend className="mb-1 text-sm font-medium">Devredilen haklar</legend>
-                  {(
-                    [
-                      ["rightAdaptation", "İşleme (m.21)", template.rightAdaptation],
-                      ["rightReproduction", "Çoğaltma (m.22)", template.rightReproduction],
-                      ["rightDistribution", "Yayma (m.23)", template.rightDistribution],
-                      [
-                        "rightCommunicationToPublic",
-                        "Umuma iletim (m.25)",
-                        template.rightCommunicationToPublic,
-                      ],
-                    ] as const
-                  ).map(([name, label, checked]) => (
-                    <label key={name} className="flex items-center gap-2.5 text-sm">
-                      <input
-                        type="checkbox"
-                        name={name}
-                        defaultChecked={checked}
-                        className="size-4 rounded border-line"
-                      />
-                      {label}
-                    </label>
-                  ))}
-                </fieldset>
-
-                <fieldset className="space-y-2">
-                  <legend className="mb-1 text-sm font-medium">Mecralar</legend>
-                  {CHANNELS.map(([value, label]) => (
-                    <label key={value} className="flex items-center gap-2.5 text-sm">
-                      <input
-                        type="checkbox"
-                        name="channels"
-                        value={value}
-                        defaultChecked={template.channels.includes(value)}
-                        className="size-4 rounded border-line"
-                      />
-                      {label}
-                    </label>
-                  ))}
-                </fieldset>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field
-                    label="İnhisar süresi (ay)"
-                    htmlFor="exclusivityMonths"
-                    hint="Boş bırakılırsa süresiz."
-                  >
-                    <Input
-                      id="exclusivityMonths"
-                      name="exclusivityMonths"
-                      type="number"
-                      min={0}
-                      max={600}
-                      defaultValue={template.exclusivityMonths ?? ""}
-                    />
-                  </Field>
-
-                  <Field label="Ülke / bölge" htmlFor="territory">
-                    <Input id="territory" name="territory" defaultValue={template.territory} />
-                  </Field>
-                </div>
-
-                <label className="flex items-center gap-2.5 text-sm">
-                  <input
-                    type="checkbox"
-                    name="commercialUseIncluded"
-                    defaultChecked={template.commercialUseIncluded}
-                    className="size-4 rounded border-line"
-                  />
-                  Ticari kullanım dahil
-                </label>
-
-                <Alert tone="info">Bedel bu aşamada her zaman &ldquo;Yok&rdquo; olarak kaydedilir.</Alert>
-              </>
+            {SITE_SETTING_KEYS.map((key) => (
+              <Field
+                key={key}
+                label={SETTING_LABELS[key]}
+                htmlFor={key}
+                hint={PLACEHOLDER_BY_KEY[key]}
+              >
+                <Input id={key} name={key} defaultValue={settings[key] ?? ""} required />
+              </Field>
+            ))}
           </PanelForm>
         </Card>
 
@@ -169,22 +121,12 @@ export default async function AdminSettingsPage() {
             csrfToken={csrfToken}
             submitLabel="Yeni sürüm yayınla"
           >
-              <>
-                <Field label="Başlık" htmlFor="kvkkTitle">
-                  <Input
-                    id="kvkkTitle"
-                    name="title"
-                    defaultValue="KVKK Aydınlatma Metni"
-                    required
-                  />
-                </Field>
-                <Field
-                  label="Metin (markdown)"
-                  htmlFor="kvkkBody"
-                >
-                  <Textarea id="kvkkBody" name="bodyMarkdown" rows={12} required />
-                </Field>
-              </>
+            <Field label="Başlık" htmlFor="kvkkTitle">
+              <Input id="kvkkTitle" name="title" defaultValue="KVKK Aydınlatma Metni" required />
+            </Field>
+            <Field label="Metin (markdown)" htmlFor="kvkkBody">
+              <Textarea id="kvkkBody" name="bodyMarkdown" rows={12} required />
+            </Field>
           </PanelForm>
 
           <div className="mt-6">

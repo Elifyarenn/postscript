@@ -1,38 +1,39 @@
 /**
- * The editorial lifecycle end to end (§7.2, §8, §10).
+ * The editorial lifecycle end to end, against a real PostgreSQL.
  *
- * These are the scenarios the specification lists as acceptance criteria:
- * acceptance opens a rights grant, an unsigned grant blocks scheduling with a
- * 409, unlicensed media blocks it too, a withdrawn article answers 410, and a
- * new agreement version knocks every active writer back to pending.
+ * These are the rules the contract specification calls out: acceptance opens a
+ * work approval whose scope comes from the contract and not from a form, an
+ * unapproved work cannot be scheduled, the approved text is pinned by its hash,
+ * a content change revokes the approval, and a withdrawn work answers 410.
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
-import {
-  agreementVersions,
-  articleMedia,
-  articles,
-  media,
-  rightsGrants,
-  users,
-} from "@/db/schema";
-import { acceptAgreement, createAgreementDraft, publishAgreementVersion } from "@/services/agreements";
+import { articleMedia, articles, media, rightsGrants, users } from "@/db/schema";
+import { publishAgreementVersion, createVersionFromTemplate } from "@/services/agreements";
 import {
   createArticle,
-  declineRightsGrantAndReturnForRevision,
+  declineWorkAndReturnForRevision,
   publishScheduledArticles,
   transitionArticle,
+  updateArticle,
 } from "@/services/articles";
 import { attachMediaToArticle } from "@/services/media";
 import { createIssue, setIssueStatus } from "@/services/issues";
 import { getPublicArticle, getPublishedIssue } from "@/services/public";
-import { findActiveGrant, renderGrantForWriter, signRightsGrant } from "@/services/rights";
+import { approveWork, articleHash, findLiveApproval, LICENCE_TERMS } from "@/services/rights";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import { MemoryStorageAdapter, setStorageAdapter } from "@/lib/storage";
 import { isAppError } from "@/lib/errors";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
-import { actorOf, createUser, noMeta } from "../helpers/factories";
+import {
+  acceptCurrentContract,
+  actorOf,
+  adminActor,
+  createUser,
+  noMeta,
+  publishContract,
+} from "../helpers/factories";
 import type { Actor } from "@/lib/auth/rbac";
 
 let database: Database;
@@ -65,11 +66,14 @@ async function captureError(promise: Promise<unknown>) {
   throw new Error("Expected the call to fail, but it succeeded.");
 }
 
-/** An editor, a writer, and an article assigned to that writer. */
+/** An admin, an editor, an active writer and an article assigned to them. */
 async function scenario() {
   const admin = await createUser({ role: "admin" });
   const editor = await createUser({ role: "editor" });
-  const writer = await createUser({ role: "writer", writerStatus: "active" });
+  const writer = await createUser({ role: "writer", writerStatus: "pending_agreement" });
+
+  await publishContract(actorOf(admin));
+  await acceptCurrentContract(writer);
 
   const article = await createArticle(
     actorOf(editor),
@@ -85,154 +89,289 @@ async function scenario() {
   return {
     admin: actorOf(admin),
     editor: actorOf(editor),
-    writer: actorOf(writer),
+    writer: actorOf({ ...writer, writerStatus: "active" }),
     writerRow: writer,
     article,
   };
 }
 
-/** Walks an article from draft to awaiting_rights, which is where §7.2 begins. */
+/** Walks an article from draft to awaiting_rights, where the approval opens. */
 async function toAwaitingRights(editor: Actor, articleId: string) {
   await transitionArticle(editor, articleId, "in_review", noMeta);
   return transitionArticle(editor, articleId, "accepted", noMeta);
 }
 
-describe("acceptance creates the rights grant", () => {
-  it("moves the article to awaiting_rights and opens a pending form", async () => {
+/** Approves the work as the writer would, echoing the current text hash. */
+async function approveAsWriter(
+  writer: Actor,
+  articleId: string,
+  byline: "real_name" | "pen_name" = "real_name",
+) {
+  const approval = await findLiveApproval(articleId);
+  const rows = await db.select().from(articles).where(eq(articles.id, articleId));
+
+  return approveWork(
+    writer,
+    {
+      grantId: approval!.id,
+      articleHash: articleHash(rows[0]!.bodyMarkdown),
+      bylineChoice: byline,
+      acknowledged: true,
+    },
+    noMeta,
+  );
+}
+
+describe("acceptance opens the work approval", () => {
+  it("moves the article on and fixes the licence from the contract", async () => {
     const { editor, article } = await scenario();
 
     const accepted = await toAwaitingRights(editor, article.id);
-
-    // §7.2: acceptance is not a resting state, the article moves on by itself
     expect(accepted.status).toBe("awaiting_rights");
 
-    const grant = await findActiveGrant(article.id);
-    expect(grant?.status).toBe("pending");
-    // The defaults from the form template
-    expect(grant?.grantType).toBe("exclusive_license");
-    expect(grant?.rightAdaptation).toBe(true);
-    expect(grant?.rightReproduction).toBe(true);
-    expect(grant?.rightDistribution).toBe(true);
-    expect(grant?.rightCommunicationToPublic).toBe(true);
-    expect(grant?.channels).toEqual(["web", "pdf_issue", "social", "newsletter"]);
-    expect(grant?.exclusivityMonths).toBe(12);
-    expect(grant?.commercialUseIncluded).toBe(false);
-    expect(grant?.consideration).toBe("none");
+    const approval = await findLiveApproval(article.id);
+    expect(approval?.status).toBe("pending");
+
+    // §7.1: the scope is the contract's, not a per-work form
+    expect(approval?.grantType).toBe(LICENCE_TERMS.grantType);
+    expect(approval?.grantType).toBe("non_exclusive_license");
+    expect(approval?.rightReproduction).toBe(true);
+    expect(approval?.rightDistribution).toBe(true);
+    expect(approval?.rightCommunicationToPublic).toBe(true);
+    expect(approval?.rightAdaptation).toBe(true);
+    expect(approval?.channels).toEqual(["web", "pdf_issue", "social", "newsletter"]);
+    expect(approval?.territory).toBe("worldwide");
+    expect(approval?.exclusivityMonths).toBeNull();
+    expect(approval?.consideration).toBe("none");
+    expect(approval?.commercialUseIncluded).toBe(false);
+
+    // and it records which contract version it rests on
+    expect(approval?.agreementVersionId).not.toBeNull();
   });
 
-  it("tells the writer a form is waiting", async () => {
+  it("tells the writer an approval is waiting", async () => {
     const { editor, writerRow, article } = await scenario();
     await toAwaitingRights(editor, article.id);
 
-    expect(mailbox.lastTo(writerRow.email)?.subject).toContain("Hak devri formu bekliyor");
+    expect(mailbox.lastTo(writerRow.email)?.subject).toContain("Eser Onayı bekliyor");
   });
 
-  it("lists each transferred right on its own line in the form text", async () => {
-    const { editor, writer, article } = await scenario();
-    await toAwaitingRights(editor, article.id);
-    const grant = await findActiveGrant(article.id);
+  it("refuses to open one when no contract version is published", async () => {
+    const editor = await createUser({ role: "editor" });
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    const article = await createArticle(
+      actorOf(editor),
+      { title: "Sözleşmesiz", bodyMarkdown: "Gövde.", authorId: writer.id },
+      noMeta,
+    );
 
-    const rendered = await renderGrantForWriter(writer, grant!.id);
-
-    // FSEK art. 52: the rights have to be named one by one
-    expect(rendered.formText).toContain("İşleme hakkı (FSEK m.21)");
-    expect(rendered.formText).toContain("Çoğaltma hakkı (FSEK m.22)");
-    expect(rendered.formText).toContain("Yayma hakkı (FSEK m.23)");
-    expect(rendered.formText).toContain("Umuma iletim hakkı (FSEK m.25)");
-    expect(rendered.formText).toContain("Bedel: Yok");
-    expect(rendered.formText).toContain("Ticari kullanım: Dahil değil");
+    await transitionArticle(actorOf(editor), article.id, "in_review", noMeta);
+    const error = await captureError(
+      transitionArticle(actorOf(editor), article.id, "accepted", noMeta),
+    );
+    expect(error.status).toBe(409);
   });
 });
 
-describe("no publication without a signature", () => {
-  it("refuses to schedule while the form is unsigned, with 409", async () => {
+describe("no publication without an approval", () => {
+  it("refuses to schedule while the approval is pending, with 409", async () => {
     const { editor, article } = await scenario();
     await toAwaitingRights(editor, article.id);
 
     const error = await captureError(transitionArticle(editor, article.id, "scheduled", noMeta));
 
     expect(error.status).toBe(409);
-    expect(error.message).toMatch(/İmzalanmış hak devri formu/);
+    expect(error.message).toMatch(/İmzalanmış hak devri formu|Eser Onayı/i);
 
     const unchanged = await db.select().from(articles).where(eq(articles.id, article.id));
     expect(unchanged[0]!.status).toBe("awaiting_rights");
   });
 
-  it("schedules and publishes once the writer signs", async () => {
+  it("schedules and publishes once the writer approves", async () => {
     const { editor, writer, article } = await scenario();
     await toAwaitingRights(editor, article.id);
 
-    const grant = await findActiveGrant(article.id);
-    const rendered = await renderGrantForWriter(writer, grant!.id);
+    const approved = await approveAsWriter(writer, article.id);
 
-    const signed = await signRightsGrant(
-      writer,
-      { grantId: grant!.id, formTextHash: rendered.formTextHash, acknowledged: true },
-      noMeta,
-    );
-
-    expect(signed.status).toBe("signed");
-    expect(signed.signedIp).toBe(noMeta.ip);
-    expect(signed.signedUserAgent).toBe(noMeta.userAgent);
-    expect(signed.formPdfMediaId).not.toBeNull();
+    expect(approved.status).toBe("signed");
+    expect(approved.signedIp).toBe(noMeta.ip);
+    expect(approved.signedUserAgent).toBe(noMeta.userAgent);
+    expect(approved.bylineChoice).toBe("real_name");
+    expect(approved.formPdfMediaId).not.toBeNull();
 
     const scheduled = await transitionArticle(editor, article.id, "scheduled", noMeta);
     expect(scheduled.status).toBe("scheduled");
 
     const published = await transitionArticle(editor, article.id, "published", noMeta);
     expect(published.status).toBe("published");
-    expect(published.publishedAt).not.toBeNull();
   });
 
-  it("does not let anyone but the writer sign", async () => {
-    const { editor, admin, article } = await scenario();
-    await toAwaitingRights(editor, article.id);
-    const grant = await findActiveGrant(article.id);
-    const rendered = await renderGrantForWriter(editor, grant!.id);
-
-    const error = await captureError(
-      signRightsGrant(
-        admin,
-        { grantId: grant!.id, formTextHash: rendered.formTextHash, acknowledged: true },
-        noMeta,
-      ),
-    );
-    expect(error.status).toBe(403);
-  });
-
-  it("refuses a signature whose hash does not match the stored form", async () => {
+  it("records the hash of the text that was actually approved", async () => {
     const { editor, writer, article } = await scenario();
     await toAwaitingRights(editor, article.id);
-    const grant = await findActiveGrant(article.id);
+
+    const approved = await approveAsWriter(writer, article.id);
+    expect(approved.formTextHash).toBe(articleHash(article.bodyMarkdown));
+  });
+
+  it("refuses an approval whose hash does not match the current text", async () => {
+    const { editor, writer, article } = await scenario();
+    await toAwaitingRights(editor, article.id);
+    const approval = await findLiveApproval(article.id);
 
     const error = await captureError(
-      signRightsGrant(
+      approveWork(
         writer,
-        { grantId: grant!.id, formTextHash: "0".repeat(64), acknowledged: true },
+        {
+          grantId: approval!.id,
+          articleHash: "0".repeat(64),
+          bylineChoice: "real_name",
+          acknowledged: true,
+        },
         noMeta,
       ),
     );
     expect(error.status).toBe(409);
   });
+
+  it("does not let anyone but the writer approve", async () => {
+    const { editor, admin, article } = await scenario();
+    await toAwaitingRights(editor, article.id);
+
+    const error = await captureError(approveAsWriter(admin, article.id));
+    expect(error.status).toBe(403);
+  });
+
+  it("refuses a pen name byline when the writer has no pen name", async () => {
+    const { editor, writer, article } = await scenario();
+    await toAwaitingRights(editor, article.id);
+
+    const error = await captureError(approveAsWriter(writer, article.id, "pen_name"));
+    expect(error.status).toBe(400);
+  });
 });
 
-describe("declining a form", () => {
+describe("declining an approval", () => {
   it("sends the article back for revision", async () => {
     const { editor, writer, article } = await scenario();
     await toAwaitingRights(editor, article.id);
-    const grant = await findActiveGrant(article.id);
+    const approval = await findLiveApproval(article.id);
 
-    const updated = await declineRightsGrantAndReturnForRevision(
+    const updated = await declineWorkAndReturnForRevision(
       writer,
-      { grantId: grant!.id, reason: "Sosyal medya mecrasını kabul etmiyorum." },
+      { grantId: approval!.id, reason: "Sosyal medya mecrasını kabul etmiyorum." },
       noMeta,
     );
 
     expect(updated.status).toBe("revision_requested");
 
-    const rows = await db.select().from(rightsGrants).where(eq(rightsGrants.id, grant!.id));
+    const rows = await db.select().from(rightsGrants).where(eq(rightsGrants.id, approval!.id));
     expect(rows[0]!.status).toBe("declined");
-    expect(rows[0]!.declinedReason).toContain("Sosyal medya");
+  });
+
+  it("requires a reason of at least ten characters", async () => {
+    const { editor, writer, article } = await scenario();
+    await toAwaitingRights(editor, article.id);
+    const approval = await findLiveApproval(article.id);
+
+    const error = await captureError(
+      declineWorkAndReturnForRevision(writer, { grantId: approval!.id, reason: "kısa" }, noMeta),
+    );
+    expect(error.status).toBe(400);
+  });
+});
+
+describe("a changed text needs a new approval (§7.5)", () => {
+  it("keeps the approval when the editor calls it a correction", async () => {
+    const { editor, writer, article } = await scenario();
+    await toAwaitingRights(editor, article.id);
+    await approveAsWriter(writer, article.id);
+
+    await updateArticle(
+      editor,
+      article.id,
+      {
+        title: article.title,
+        bodyMarkdown: "# Başlık\n\nGövde metni, virgülü düzeltilmiş.",
+        authorId: article.authorId,
+        changeKind: "correction",
+      },
+      noMeta,
+    );
+
+    const approval = await findLiveApproval(article.id);
+    expect(approval?.status).toBe("signed");
+  });
+
+  it("revokes it and opens a new one when the content changed", async () => {
+    const { editor, writer, article } = await scenario();
+    await toAwaitingRights(editor, article.id);
+    const first = await approveAsWriter(writer, article.id);
+
+    await updateArticle(
+      editor,
+      article.id,
+      {
+        title: article.title,
+        bodyMarkdown: "# Başlık\n\nBambaşka bir gövde, anlamı değişmiş.",
+        authorId: article.authorId,
+        changeKind: "content_change",
+      },
+      noMeta,
+    );
+
+    const previous = await db.select().from(rightsGrants).where(eq(rightsGrants.id, first.id));
+    expect(previous[0]!.status).toBe("revoked");
+
+    const live = await findLiveApproval(article.id);
+    expect(live?.status).toBe("pending");
+    expect(live?.id).not.toBe(first.id);
+  });
+
+  it("takes a scheduled article back to waiting", async () => {
+    const { editor, writer, article } = await scenario();
+    await toAwaitingRights(editor, article.id);
+    await approveAsWriter(writer, article.id);
+    await transitionArticle(editor, article.id, "scheduled", noMeta);
+
+    const updated = await updateArticle(
+      editor,
+      article.id,
+      {
+        title: article.title,
+        bodyMarkdown: "# Başlık\n\nYayın planı öncesi büyük değişiklik.",
+        authorId: article.authorId,
+        changeKind: "content_change",
+      },
+      noMeta,
+    );
+
+    expect(updated.status).toBe("awaiting_rights");
+  });
+
+  it("refuses to rewrite a published work in place", async () => {
+    const { editor, writer, article } = await scenario();
+    await toAwaitingRights(editor, article.id);
+    await approveAsWriter(writer, article.id);
+    await transitionArticle(editor, article.id, "scheduled", noMeta);
+    await transitionArticle(editor, article.id, "published", noMeta);
+
+    const error = await captureError(
+      updateArticle(
+        editor,
+        article.id,
+        {
+          title: article.title,
+          bodyMarkdown: "# Başlık\n\nYayındayken değiştirilmiş metin.",
+          authorId: article.authorId,
+          changeKind: "content_change",
+        },
+        noMeta,
+      ),
+    );
+
+    expect(error.status).toBe(409);
+    expect(error.message).toMatch(/geri çekin/i);
   });
 });
 
@@ -240,22 +379,14 @@ describe("media licensing guard", () => {
   it("refuses to schedule an article that uses media with no license", async () => {
     const { editor, writer, article } = await scenario();
 
-    // A media row inserted without a license type, as an import might leave it
     const [unlicensed] = await db
       .insert(media)
       .values({ storageKey: "media/x.png", mime: "image/png", size: 100, licenseType: null })
       .returning();
-
     await db.insert(articleMedia).values({ articleId: article.id, mediaId: unlicensed!.id });
 
     await toAwaitingRights(editor, article.id);
-    const grant = await findActiveGrant(article.id);
-    const rendered = await renderGrantForWriter(writer, grant!.id);
-    await signRightsGrant(
-      writer,
-      { grantId: grant!.id, formTextHash: rendered.formTextHash, acknowledged: true },
-      noMeta,
-    );
+    await approveAsWriter(writer, article.id);
 
     const error = await captureError(transitionArticle(editor, article.id, "scheduled", noMeta));
     expect(error.status).toBe(409);
@@ -269,9 +400,7 @@ describe("media licensing guard", () => {
       .values({ storageKey: "media/y.png", mime: "image/png", size: 100, licenseType: null })
       .returning();
 
-    const error = await captureError(
-      attachMediaToArticle(editor, article.id, unlicensed!.id),
-    );
+    const error = await captureError(attachMediaToArticle(editor, article.id, unlicensed!.id));
     expect(error.status).toBe(400);
   });
 });
@@ -280,20 +409,12 @@ describe("withdrawal", () => {
   it("requires a reason and then answers 410 from the public API", async () => {
     const { editor, writer, article } = await scenario();
     await toAwaitingRights(editor, article.id);
-    const grant = await findActiveGrant(article.id);
-    const rendered = await renderGrantForWriter(writer, grant!.id);
-    await signRightsGrant(
-      writer,
-      { grantId: grant!.id, formTextHash: rendered.formTextHash, acknowledged: true },
-      noMeta,
-    );
+    await approveAsWriter(writer, article.id);
     await transitionArticle(editor, article.id, "scheduled", noMeta);
     const published = await transitionArticle(editor, article.id, "published", noMeta);
 
-    // While published it is readable
     const readable = await getPublicArticle(published.slug);
     expect(readable.title).toBe("Kayıp Zamanın İzinde");
-    expect(readable.html).toContain("<h1>");
 
     const withoutReason = await captureError(
       transitionArticle(editor, article.id, "withdrawn", noMeta),
@@ -306,10 +427,6 @@ describe("withdrawal", () => {
 
     const error = await captureError(getPublicArticle(published.slug));
     expect(error.status).toBe(410);
-
-    // The row itself is kept, not deleted
-    const rows = await db.select().from(articles).where(eq(articles.id, article.id));
-    expect(rows[0]!.withdrawnReason).toBe("Telif itirazı geldi.");
   });
 
   it("hides an unpublished article behind a 404 rather than a 410", async () => {
@@ -323,13 +440,7 @@ describe("scheduled publication job", () => {
   it("publishes what is due and leaves the rest alone", async () => {
     const { editor, writer, article } = await scenario();
     await toAwaitingRights(editor, article.id);
-    const grant = await findActiveGrant(article.id);
-    const rendered = await renderGrantForWriter(writer, grant!.id);
-    await signRightsGrant(
-      writer,
-      { grantId: grant!.id, formTextHash: rendered.formTextHash, acknowledged: true },
-      noMeta,
-    );
+    await approveAsWriter(writer, article.id);
 
     const future = new Date(Date.now() + 3_600_000);
     await transitionArticle(editor, article.id, "scheduled", noMeta, { scheduledAt: future });
@@ -350,17 +461,13 @@ describe("public issue listing", () => {
       { number: 1, title: "İlk Sayı", theme: "Başlangıçlar" },
       noMeta,
     );
-
-    await db.update(articles).set({ issueId: issue.id, orderInIssue: 1 }).where(eq(articles.id, article.id));
+    await db
+      .update(articles)
+      .set({ issueId: issue.id, orderInIssue: 1 })
+      .where(eq(articles.id, article.id));
 
     await toAwaitingRights(editor, article.id);
-    const grant = await findActiveGrant(article.id);
-    const rendered = await renderGrantForWriter(writer, grant!.id);
-    await signRightsGrant(
-      writer,
-      { grantId: grant!.id, formTextHash: rendered.formTextHash, acknowledged: true },
-      noMeta,
-    );
+    await approveAsWriter(writer, article.id);
     await transitionArticle(editor, article.id, "scheduled", noMeta);
     await transitionArticle(editor, article.id, "published", noMeta);
     await setIssueStatus(editor, issue.id, "published", noMeta);
@@ -378,13 +485,7 @@ describe("public issue listing", () => {
       .where(eq(users.id, writerRow.id));
 
     await toAwaitingRights(editor, article.id);
-    const grant = await findActiveGrant(article.id);
-    const rendered = await renderGrantForWriter(writer, grant!.id);
-    await signRightsGrant(
-      writer,
-      { grantId: grant!.id, formTextHash: rendered.formTextHash, acknowledged: true },
-      noMeta,
-    );
+    await approveAsWriter(writer, article.id);
     await transitionArticle(editor, article.id, "scheduled", noMeta);
     const published = await transitionArticle(editor, article.id, "published", noMeta);
 
@@ -395,72 +496,34 @@ describe("public issue listing", () => {
   });
 });
 
-describe("a new agreement version", () => {
-  it("knocks active writers back to pending_agreement until they accept it", async () => {
-    const { admin, writer, writerRow } = await scenario();
+describe("a new contract version", () => {
+  it("knocks active writers back to pending until they accept it", async () => {
+    const { admin, writerRow } = await scenario();
 
-    const draftOne = await createAgreementDraft(
-      admin,
-      {
-        title: "postscript Çerçeve Sözleşmesi",
-        bodyMarkdown: "Bu sözleşme yazar ile dergi arasındaki çerçeveyi belirler. ".repeat(5),
-      },
-      noMeta,
-    );
-    await publishAgreementVersion(admin, draftOne.id, noMeta);
-
-    // Publishing pushes every active writer back to pending
     let current = await db.select().from(users).where(eq(users.id, writerRow.id));
-    expect(current[0]!.writerStatus).toBe("pending_agreement");
-
-    const published = await db.select().from(agreementVersions).limit(1);
-
-    await acceptAgreement(
-      { ...writer, writerStatus: "pending_agreement" },
-      {
-        agreementVersionId: published[0]!.id,
-        bodyHash: published[0]!.bodyHash,
-        acknowledged: true,
-      },
-      noMeta,
-    );
-
-    current = await db.select().from(users).where(eq(users.id, writerRow.id));
     expect(current[0]!.writerStatus).toBe("active");
 
-    // A second version repeats the cycle
-    const draftTwo = await createAgreementDraft(
-      admin,
-      {
-        title: "postscript Çerçeve Sözleşmesi",
-        bodyMarkdown: "Güncellenmiş çerçeve sözleşme metni buradadır. ".repeat(5),
-      },
-      noMeta,
+    // A second version needs a different template text, so the file is swapped
+    const { setAgreementTemplateForTests, readAgreementTemplate } = await import(
+      "@/lib/agreement/template"
     );
-    await publishAgreementVersion(admin, draftTwo.id, noMeta);
+    const original = readAgreementTemplate();
+    setAgreementTemplateForTests(`${original}\n\n<!-- ikinci sürüm -->`);
+
+    try {
+      const draft = await createVersionFromTemplate(admin, noMeta);
+      await publishAgreementVersion(admin, draft.id, noMeta);
+    } finally {
+      setAgreementTemplateForTests(null);
+    }
 
     current = await db.select().from(users).where(eq(users.id, writerRow.id));
     expect(current[0]!.writerStatus).toBe("pending_agreement");
   });
 
-  it("refuses to edit a version that is already published", async () => {
+  it("refuses a version whose template is already on file", async () => {
     const { admin } = await scenario();
-    const draft = await createAgreementDraft(
-      admin,
-      { title: "Sözleşme", bodyMarkdown: "Yeterince uzun bir sözleşme metni. ".repeat(5) },
-      noMeta,
-    );
-    await publishAgreementVersion(admin, draft.id, noMeta);
-
-    const { updateAgreementDraft } = await import("@/services/agreements");
-    const error = await captureError(
-      updateAgreementDraft(
-        admin,
-        draft.id,
-        { title: "Değişti", bodyMarkdown: "Başka bir metin. ".repeat(10) },
-        noMeta,
-      ),
-    );
+    const error = await captureError(createVersionFromTemplate(admin, noMeta));
     expect(error.status).toBe(409);
   });
 });

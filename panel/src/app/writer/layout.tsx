@@ -30,7 +30,7 @@ export default async function WriterLayout({ children }: { children: ReactNode }
         { href: "/writer", label: "Genel bakış" },
         { href: "/writer/announcements", label: "Duyurular" },
         { href: "/writer/agreement", label: "Sözleşme" },
-        { href: "/writer/rights", label: "Devir formları", disabled: locked },
+        { href: "/writer/approvals", label: "Eser Onayları", disabled: locked },
         { href: "/writer/articles", label: "Makalelerim", disabled: locked },
         { href: "/writer/profile", label: "Profil ve güvenlik" },
       ]}

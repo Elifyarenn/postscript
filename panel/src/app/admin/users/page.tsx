@@ -106,9 +106,6 @@ export default async function AdminUsersPage({
                       {!row.emailVerifiedAt && (
                         <span className="text-xs text-warning">e-posta ✗</span>
                       )}
-                      {!row.identityVerifiedAt && (
-                        <span className="text-xs text-muted">kimlik ✗</span>
-                      )}
                     </Td>
                     <Td className="text-xs">{formatDate(row.createdAt)}</Td>
                   </tr>

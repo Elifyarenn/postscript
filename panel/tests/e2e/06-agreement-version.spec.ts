@@ -6,42 +6,45 @@
  * earlier scenarios rely on.
  */
 import { expect, test } from "@playwright/test";
+import { readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { loginElevated, logout, SEED, submitLogin } from "./helpers";
 
-test.describe.configure({ mode: "serial" });
+const TEMPLATE = path.join(
+  process.cwd(),
+  "contracts",
+  "yazar-sozlesmesi-ve-ruhsat-taahhudu.md",
+);
 
-const NEW_TEXT = [
-  "## 1. Güncellenmiş çerçeve",
-  "",
-  "Bu sürüm, önceki çerçeve sözleşmenin yerini alır ve yazarın yeniden onayını gerektirir.",
-  "",
-  "## 2. Mali haklar",
-  "",
-  "Mali haklar her eser için ayrı bir devir formuyla, haklar tek tek sayılarak düzenlenir.",
-  "",
-  "## 3. Bedel",
-  "",
-  "Dergi kâr amacı gütmez; eserler için bedel ödenmez.",
-].join("\n");
+test.describe.configure({ mode: "serial" });
 
 test("a new version locks active writers until they accept it again", async ({ page }) => {
   await loginElevated(page, "admin", SEED.admin);
 
   await page.goto("/admin/agreements");
-
-  // A published version can never be edited: only a new draft is offered
   await expect(page.getByText("Yayınlamanın sonuçları")).toBeVisible();
 
-  await page.getByLabel("Başlık").first().fill("postscript Çerçeve Sözleşmesi");
-  await page.getByLabel("Metin (markdown)").first().fill(NEW_TEXT);
-  await page.getByRole("button", { name: "Taslak oluştur" }).click();
-  await expect(page.getByText("Taslak oluşturuldu")).toBeVisible();
+  // v1 came from this exact file, so the panel refuses to version it again
+  await expect(page.getByText(/zaten bir sürüm olarak kayıtlı/)).toBeVisible();
 
-  page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("button", { name: "Bu sürümü yayınla" }).first().click();
+  // A new version means a changed contract text, so the file is edited
+  const original = await readFile(TEMPLATE, "utf8");
+  await writeFile(TEMPLATE, `${original}
 
-  // Wait for the action to finish before reading the result
-  await expect(page.getByText("Taslak v2")).toHaveCount(0);
+*Ek not: ikinci sürüm.*
+`, "utf8");
+
+  try {
+    await page.reload();
+    await page.getByRole("button", { name: "Şablondan sürüm oluştur" }).click();
+    await expect(page.getByText("Taslak v2")).toBeVisible();
+
+    page.once("dialog", (dialog) => dialog.accept());
+    await page.getByRole("button", { name: "Bu sürümü yayınla" }).first().click();
+    await expect(page.getByText("Taslak v2")).toHaveCount(0);
+  } finally {
+    await writeFile(TEMPLATE, original, "utf8");
+  }
 
   // Publishing removes the draft card, so the outcome is read from the page
   // that replaces it: version 2 is now the current one
@@ -63,12 +66,15 @@ test("a new version locks active writers until they accept it again", async ({ p
   await page.goto("/writer/articles");
   await page.waitForURL("**/writer/agreement");
 
-  await page.locator("div.prose-panel").evaluate((element) => {
+  await page.locator("div.overflow-y-auto").first().evaluate((element) => {
     element.scrollTop = element.scrollHeight;
   });
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: /kabul ediyorum/i }).click();
-  await expect(page.getByText("Sözleşmeyi onayladınız")).toBeVisible();
+  // The acceptance form is replaced by the accepted view; that swap is the
+  // outcome, and the record it leaves behind is what matters
+  await expect(page.getByText("Bu sürümü onayladınız")).toBeVisible();
+  await expect(page.getByRole("link", { name: "İndir" }).first()).toBeVisible();
 
   // The acceptance history keeps the earlier version, marked as superseded
   await page.goto("/writer/agreement");

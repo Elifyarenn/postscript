@@ -29,7 +29,12 @@ import { triggerRevalidate } from "@/lib/revalidate";
 import { uniqueSlug } from "@/lib/slug";
 import * as templates from "@emails/templates";
 import { allMediaLicensed } from "./media";
-import { createGrantForArticle, declineRightsGrant, findActiveGrant } from "./rights";
+import {
+  declineWork,
+  findLiveApproval,
+  openApprovalForArticle,
+  revokeApproval,
+} from "./rights";
 import type { RequestMeta } from "./auth";
 
 /* ------------------------------------------------------------------ */
@@ -41,7 +46,6 @@ export const articleInputSchema = z.strictObject({
   summary: z.string().trim().max(600).optional().nullable(),
   bodyMarkdown: z.string().max(200_000).optional(),
   authorId: z.uuid().optional().nullable(),
-  coAuthorIds: z.array(z.uuid()).max(10).optional(),
   issueId: z.uuid().optional().nullable(),
   category: z.string().trim().max(80).optional().nullable(),
   tags: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
@@ -51,6 +55,11 @@ export const articleInputSchema = z.strictObject({
     .optional()
     .nullable(),
   changeNote: z.string().trim().max(300).optional().nullable(),
+  /**
+   * Only the editor can tell a correction from a rewrite, so they say (§7.5).
+   * A content change revokes the writer's approval and asks for a new one.
+   */
+  changeKind: z.enum(["correction", "content_change"]).optional(),
 });
 
 /* ------------------------------------------------------------------ */
@@ -120,12 +129,7 @@ export async function listArticlesForWriter(actor: Actor) {
       updatedAt: articles.updatedAt,
     })
     .from(articles)
-    .where(
-      and(
-        isNull(articles.deletedAt),
-        sql`(${articles.authorId} = ${actor.id} or ${actor.id} = any(${articles.coAuthorIds}))`,
-      ),
-    )
+    .where(and(isNull(articles.deletedAt), eq(articles.authorId, actor.id)))
     .orderBy(desc(articles.updatedAt));
 }
 
@@ -169,7 +173,6 @@ export async function createArticle(
       summary: input.summary ?? null,
       bodyMarkdown: input.bodyMarkdown ?? "",
       authorId: input.authorId ?? null,
-      coAuthorIds: input.coAuthorIds ?? [],
       issueId: input.issueId ?? null,
       category: input.category ?? null,
       tags: input.tags ?? [],
@@ -238,7 +241,6 @@ export async function updateArticle(
       summary: input.summary ?? null,
       bodyMarkdown: input.bodyMarkdown ?? existing.bodyMarkdown,
       authorId: input.authorId ?? existing.authorId,
-      coAuthorIds: input.coAuthorIds ?? existing.coAuthorIds,
       issueId: input.issueId === undefined ? existing.issueId : input.issueId,
       category: input.category ?? null,
       tags: input.tags ?? existing.tags,
@@ -248,8 +250,12 @@ export async function updateArticle(
     .where(eq(articles.id, articleId))
     .returning();
 
-  if (input.bodyMarkdown !== undefined && input.bodyMarkdown !== existing.bodyMarkdown) {
-    await snapshotVersion(updated!, actor.id, input.changeNote ?? null);
+  const bodyChanged =
+    input.bodyMarkdown !== undefined && input.bodyMarkdown !== existing.bodyMarkdown;
+  const changeKind = input.changeKind ?? "correction";
+
+  if (bodyChanged) {
+    await snapshotVersion(updated!, actor.id, input.changeNote ?? null, false, changeKind);
   }
 
   await writeAudit({
@@ -258,11 +264,52 @@ export async function updateArticle(
     entityType: "articles",
     entityId: articleId,
     before: { title: existing.title, authorId: existing.authorId },
-    after: { title: updated!.title, authorId: updated!.authorId },
+    after: { title: updated!.title, authorId: updated!.authorId, changeKind },
     ip: meta.ip,
   });
 
+  // §7.5: a correction stays inside contract article 6.2 and keeps the writer's
+  // approval. A content change is a different work, so the approval it was
+  // given for no longer covers it and a fresh one has to be asked for.
+  if (bodyChanged && changeKind === "content_change") {
+    return reopenApprovalAfterContentChange(updated!, actor, meta);
+  }
+
   return updated!;
+}
+
+/**
+ * Revokes the approval a changed text has outgrown and opens a new one.
+ *
+ * A published work is refused outright rather than quietly pulled: the licence
+ * that covers what is currently on the site no longer covers the new text, and
+ * silently rewriting a published page is not something an editor should be able
+ * to do in one step. Withdrawing it first makes that decision explicit.
+ */
+async function reopenApprovalAfterContentChange(
+  article: Article,
+  actor: Actor,
+  meta: RequestMeta,
+): Promise<Article> {
+  if (article.status === "published" || article.status === "archived") {
+    throw conflict(
+      "Yayımlanmış bir eserin içeriği değiştirilemez. Önce geri çekin, sonra düzenleyin: " +
+        "değişen metin için yeni bir Eser Onayı gerekir (Sözleşme m. 6.3).",
+    );
+  }
+
+  const live = await findLiveApproval(article.id);
+  if (!live) return article;
+
+  await revokeApproval(article.id, actor.id, meta);
+  await openApprovalForArticle(article, { actorId: actor.id, ip: meta.ip });
+
+  // A scheduled work loses its slot; anything earlier is already waiting
+  if (article.status !== "scheduled") return article;
+
+  return applyStatus(article, "awaiting_rights", actor.id, meta, {
+    note: "Eser metni değiştiği için yeni Eser Onayı gerekiyor.",
+  });
 }
 
 /** Appends a numbered snapshot of the body to `article_versions`. */
@@ -271,6 +318,7 @@ async function snapshotVersion(
   changedBy: string | null,
   changeNote: string | null,
   isPublishedSnapshot = false,
+  changeKind: "correction" | "content_change" = "correction",
 ): Promise<void> {
   const latest = await db
     .select({ version: articleVersions.version })
@@ -285,6 +333,7 @@ async function snapshotVersion(
     bodyMarkdown: article.bodyMarkdown,
     changedBy,
     changeNote,
+    changeKind,
     isPublishedSnapshot,
   });
 }
@@ -324,7 +373,7 @@ export async function transitionArticle(
   if (!canAccessEditorPanel(actor)) throw forbidden();
 
   const article = await findArticleById(articleId);
-  const grant = await findActiveGrant(article.id);
+  const grant = await findLiveApproval(article.id);
 
   const check = checkTransition(article.status, to, {
     rightsGrantStatus: grant?.status ?? null,
@@ -339,7 +388,7 @@ export async function transitionArticle(
   // `accepted` immediately becomes `awaiting_rights` and opens the form (§7.2)
   const next = autoTransitionAfter(to);
   if (next) {
-    await createGrantForArticle(updated, { actorId: actor.id, ip: meta.ip });
+    await openApprovalForArticle(updated, { actorId: actor.id, ip: meta.ip });
     return applyStatus(updated, next, actor.id, meta, {});
   }
 
@@ -442,7 +491,7 @@ export async function publishScheduledArticles(now: Date = new Date()): Promise<
 
   const published: string[] = [];
   for (const article of due) {
-    const grant = await findActiveGrant(article.id);
+    const grant = await findLiveApproval(article.id);
     const check = checkTransition(article.status, "published", {
       rightsGrantStatus: grant?.status ?? null,
       allMediaLicensed: await allMediaLicensed(article.id),
@@ -458,18 +507,18 @@ export async function publishScheduledArticles(now: Date = new Date()): Promise<
 }
 
 /**
- * A writer refusing a rights grant sends the article back for revision (§7.2).
+ * A writer refusing an Eser Onayı sends the article back for revision (§7.4).
  *
  * The writer is not an editor, so this cannot go through `transitionArticle`.
  * It still consults the state machine, and the edge it uses is only legal once
- * the grant is actually declined — which the line above has just made true.
+ * the approval is actually declined — which the line above has just made true.
  */
-export async function declineRightsGrantAndReturnForRevision(
+export async function declineWorkAndReturnForRevision(
   actor: Actor,
   rawInput: unknown,
   meta: RequestMeta,
 ): Promise<Article> {
-  const grant = await declineRightsGrant(actor, rawInput, meta);
+  const grant = await declineWork(actor, rawInput, meta);
   const article = await findArticleById(grant.articleId);
 
   const check = checkTransition(article.status, "revision_requested", {
@@ -483,8 +532,8 @@ export async function declineRightsGrantAndReturnForRevision(
   });
 
   await notifyEditors(
-    "Devir formu reddedildi",
-    `"${article.title}" için hak devri formu reddedildi. Gerekçe: ${grant.declinedReason ?? "-"}`,
+    "Eser Onayı reddedildi",
+    `"${article.title}" için Eser Onayı reddedildi. Gerekçe: ${grant.declinedReason ?? "-"}`,
     `/editor/articles/${article.id}`,
   );
 

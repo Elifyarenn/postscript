@@ -24,53 +24,14 @@ import { hashPassword } from "@/lib/password";
 import { sha256Hex } from "@/lib/crypto";
 import { slugify } from "@/lib/slug";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
-import { publishAgreementVersion, createAgreementDraft, acceptAgreement } from "@/services/agreements";
+import {
+  acceptAgreement,
+  createVersionFromTemplate,
+  publishAgreementVersion,
+  renderAgreementForWriter,
+} from "@/services/agreements";
+import { saveSiteSettings } from "@/services/site-settings";
 import type { Actor } from "@/lib/auth/rbac";
-
-const AGREEMENT_TEXT = `## 1. Taraflar ve konu
-
-Bu çerçeve sözleşme, postscript e-dergisi ile dergide eser yayımlayan yazar
-arasındaki genel çalışma esaslarını belirler. Her eser için ayrıca imzalanan
-mali hak devri formu bu sözleşmenin ekidir ve öncelikli olarak uygulanır.
-
-## 2. Yazarın beyanları
-
-Yazar, gönderdiği eserin kendisine ait ve özgün olduğunu, üçüncü kişilerin
-haklarını ihlal etmediğini beyan eder. Eserde kullanılan görsel ve alıntıların
-izinleri yazarın sorumluluğundadır.
-
-## 3. Manevi haklar
-
-Eser sahibinin manevi hakları 5846 sayılı Fikir ve Sanat Eserleri Kanunu'nun
-14 ila 17. maddeleri uyarınca yazarda kalır ve devredilemez. Eser, yazarın
-belirttiği ad veya mahlasla yayımlanır.
-
-## 4. Mali haklar
-
-Mali haklar eser bazında, ayrı bir devir formuyla ve haklar tek tek sayılarak
-düzenlenir. Bu çerçeve sözleşmenin imzalanması tek başına mali hak devri
-anlamına gelmez.
-
-## 5. Bedel
-
-Dergi kâr amacı gütmez. Bu aşamada eserler için herhangi bir bedel ödenmez;
-bu durum her devir formunda ayrıca belirtilir.
-
-## 6. Yayından çekme
-
-Dergi, hukuki bir zorunluluk veya telif itirazı hâlinde eseri yayından
-çekebilir. Çekme gerekçesi kayıt altına alınır ve yazara bildirilir.
-
-## 7. Kişisel veriler
-
-Yazarın kişisel verileri KVKK aydınlatma metninde belirtilen kapsamda işlenir.
-İmza kayıtları ve devir formları, sözleşmenin ispatı amacıyla hesap silinse de
-saklanır.
-
-## 8. Yürürlük
-
-Bu sözleşme, yazarın panel üzerinden onay verdiği anda yürürlüğe girer. Dergi
-yeni bir sürüm yayınlarsa, yazarın yeniden onay vermesi istenir.`;
 
 const KVKK_TEXT = `## Veri sorumlusu
 
@@ -109,7 +70,6 @@ type SeedUser = {
   penName?: string;
   birthDate?: string | null;
   verified?: boolean;
-  identityVerified?: boolean;
 };
 
 async function upsertUser(input: SeedUser): Promise<string> {
@@ -138,7 +98,6 @@ async function upsertUser(input: SeedUser): Promise<string> {
       // writer_status belongs to writers only; editors and admins leave it null
       writerStatus: input.role === "writer" ? "pending_agreement" : null,
       emailVerifiedAt: input.verified === false ? null : now,
-      identityVerifiedAt: input.identityVerified === false ? null : now,
       kvkkConsentAt: now,
       kvkkConsentVersion: 1,
       birthDate: input.birthDate === undefined ? "1994-04-12" : input.birthDate,
@@ -228,33 +187,48 @@ async function main(): Promise<void> {
     totpConfirmedAt: new Date(),
   };
 
-  console.log("Seeding framework agreement ...");
+  console.log("Seeding publisher settings ...");
+  await saveSiteSettings(
+    adminActor,
+    {
+      publisher_partner_1: "Elif Yaren Çekiç",
+      publisher_partner_2: "Tuanna Demir",
+      publisher_address: "Konak, İzmir",
+      publisher_email: "iletisim@postscriptmag.com",
+      public_domain: "postscriptmag.com",
+      jurisdiction_city: "İzmir",
+    },
+    { ip: null, userAgent: "seed" },
+  );
+  console.log("  · saved");
+
+  console.log("Seeding the writer contract ...");
   const agreements = await db.select({ id: agreementVersions.id }).from(agreementVersions).limit(1);
   if (agreements.length === 0) {
-    const draft = await createAgreementDraft(
-      adminActor,
-      { title: "postscript Çerçeve Sözleşmesi", bodyMarkdown: AGREEMENT_TEXT },
-      { ip: null, userAgent: "seed" },
-    );
+    const draft = await createVersionFromTemplate(adminActor, { ip: null, userAgent: "seed" });
     const published = await publishAgreementVersion(adminActor, draft.id, {
       ip: null,
       userAgent: "seed",
     });
-    console.log(`  · published version ${published.version}`);
+    console.log(`  · published version ${published.version} from the template file`);
 
     // The seeded writer starts out active, so the panel is immediately usable
+    const writerActor: Actor = {
+      id: writerId,
+      role: "writer",
+      writerStatus: "pending_agreement",
+      emailVerifiedAt: new Date(),
+      isBanned: false,
+      totpConfirmedAt: null,
+    };
+    const writerRow = await db.select().from(users).where(eq(users.id, writerId)).limit(1);
+    const preview = await renderAgreementForWriter(writerRow[0]!);
+
     await acceptAgreement(
-      {
-        id: writerId,
-        role: "writer",
-        writerStatus: "pending_agreement",
-        emailVerifiedAt: new Date(),
-        isBanned: false,
-        totpConfirmedAt: null,
-      },
+      writerActor,
       {
         agreementVersionId: published.id,
-        bodyHash: published.bodyHash,
+        renderedHash: preview.hash,
         acknowledged: true,
       },
       { ip: "127.0.0.1", userAgent: "seed" },

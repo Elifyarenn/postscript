@@ -25,7 +25,7 @@ for (const area of ["/writer", "/editor", "/admin"]) {
 }
 
 test("answers 403 for the nested panel pages too", async ({ page }) => {
-  for (const area of ["/admin/users", "/editor/articles", "/writer/rights"]) {
+  for (const area of ["/admin/users", "/editor/articles", "/writer/approvals"]) {
     const response = await page.goto(area);
     expect(response?.status(), area).toBe(403);
   }

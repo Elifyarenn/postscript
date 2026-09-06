@@ -15,6 +15,20 @@
       "when": 1788657034322,
       "tag": "0001_immutable_audit_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788703191096,
+      "tag": "0002_demonic_blue_marvel",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788703200940,
+      "tag": "0003_useful_legion",
+      "breakpoints": true
     }
   ]
 }

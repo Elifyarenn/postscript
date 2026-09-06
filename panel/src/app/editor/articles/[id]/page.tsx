@@ -9,7 +9,7 @@ import {
   listComments,
 } from "@/services/articles";
 import { listIssues } from "@/services/issues";
-import { findActiveGrant } from "@/services/rights";
+import { findLiveApproval } from "@/services/rights";
 import { allMediaLicensed, listMedia } from "@/services/media";
 import { allowedTargets } from "@/lib/article-status";
 import { readCsrfToken } from "@/lib/csrf";
@@ -57,7 +57,7 @@ export default async function EditorArticleDetailPage({
 
   const [grant, versions, comments, issues, writers, library, licensed, attached] =
     await Promise.all([
-      findActiveGrant(article.id),
+      findLiveApproval(article.id),
       listArticleVersions(actor, article.id),
       listComments(actor, article.id),
       listIssues(actor),
@@ -105,8 +105,10 @@ export default async function EditorArticleDetailPage({
           {grant && (
             <div className="mb-4">
               <Alert tone={grant.status === "signed" ? "success" : "warning"}>
-                Hak devri formu: <strong>{grant.status}</strong>
-                {grant.signedAt && ` · imza: ${formatDateTime(grant.signedAt)}`}
+                Eser Onayı: <strong>{grant.status}</strong>
+                {grant.signedAt && ` · onay: ${formatDateTime(grant.signedAt)}`}
+                {grant.bylineChoice &&
+                  ` · yayın adı: ${grant.bylineChoice === "pen_name" ? "mahlas" : "gerçek ad"}`}
                 {grant.declinedReason && ` · ret gerekçesi: ${grant.declinedReason}`}
               </Alert>
             </div>
@@ -192,6 +194,21 @@ export default async function EditorArticleDetailPage({
                   hint="Gövde değiştiyse sürüm geçmişine yazılır."
                 >
                   <Input id="changeNote" name="changeNote" />
+                </Field>
+
+                <Field
+                  label="Değişikliğin türü"
+                  htmlFor="changeKind"
+                  hint="İçerik değişikliği yazarın onayını iptal eder ve yeni Eser Onayı ister (Sözleşme m. 6.3)."
+                >
+                  <Select id="changeKind" name="changeKind" defaultValue="correction">
+                    <option value="correction">
+                      Düzeltme — yazım, noktalama, dil, biçim (m. 4.2 kapsamında)
+                    </option>
+                    <option value="content_change">
+                      İçerik değişikliği — anlam, üslup veya yapı değişti
+                    </option>
+                  </Select>
                 </Field>
               </>
           </PanelForm>

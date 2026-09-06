@@ -13,7 +13,7 @@ import { z } from "zod";
 import { db } from "@/db/client";
 import { articleMedia, media, type LicenseType, type MediaRow } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
-import { canAccessEditorPanel, canViewIdentityDocuments, type Actor } from "@/lib/auth/rbac";
+import { canAccessEditorPanel, type Actor } from "@/lib/auth/rbac";
 import { badRequest, forbidden, notFound } from "@/lib/errors";
 import { buildStorageKey, getStorage } from "@/lib/storage";
 import type { RequestMeta } from "./auth";
@@ -136,53 +136,6 @@ export async function uploadMedia(
   return row!;
 }
 
-/**
- * Identity documents go to their own bucket, are flagged, and are scheduled for
- * deletion 90 days later (DECISIONS.md D-009).
- */
-export async function uploadIdentityDocument(
-  actor: Actor,
-  input: { buffer: Buffer; fileName: string; declaredMime: string; subjectUserId: string },
-  meta: RequestMeta,
-): Promise<MediaRow> {
-  if (!canViewIdentityDocuments(actor)) throw forbidden();
-
-  const detected = assertUploadAcceptable(input.buffer, input.declaredMime);
-  const storageKey = buildStorageKey(`identity/${input.subjectUserId}`, input.fileName);
-
-  await getStorage().put({
-    bucket: "identity",
-    key: storageKey,
-    body: input.buffer,
-    mime: detected.mime,
-  });
-
-  const [row] = await db
-    .insert(media)
-    .values({
-      storageKey,
-      mime: detected.mime,
-      size: input.buffer.length,
-      uploadedBy: input.subjectUserId,
-      licenseType: "other",
-      isIdentityDocument: true,
-      autoDeleteAt: new Date(Date.now() + 90 * 86_400_000),
-    })
-    .returning();
-
-  await writeAudit({
-    actorId: actor.id,
-    action: "media.identity_document_uploaded",
-    entityType: "media",
-    entityId: row!.id,
-    // The storage key is deliberately not recorded: §11 keeps it out of the logs
-    after: { subjectUserId: input.subjectUserId, mime: detected.mime },
-    ip: meta.ip,
-  });
-
-  return row!;
-}
-
 /** Stores a PDF the system generated itself (agreements, rights grant forms). */
 export async function storeGeneratedPdf(
   buffer: Buffer,
@@ -220,7 +173,7 @@ export async function listMedia(actor: Actor, limit = 60, offset = 0) {
   return db
     .select()
     .from(media)
-    .where(and(isNull(media.deletedAt), eq(media.isIdentityDocument, false)))
+    .where(isNull(media.deletedAt))
     .orderBy(desc(media.createdAt))
     .limit(limit)
     .offset(offset);

@@ -12,7 +12,7 @@ import {
   canManageUsers,
   canReadArticle,
   canSignRightsGrant,
-  canViewIdentityDocuments,
+  canViewContractDocuments,
   hasRole,
   requiresTwoFactor,
   type Actor,
@@ -69,9 +69,10 @@ describe("panel access", () => {
     expect(canAccessEditorPanel(actor({ role: "admin" }))).toBe(true);
   });
 
-  it("does not let an editor see identity documents or manage users", () => {
+  it("does not let an editor read contract PDFs or manage users", () => {
     const editor = actor({ role: "editor" });
-    expect(canViewIdentityDocuments(editor)).toBe(false);
+    // §8: contracts and approval records are for the writer and the admin
+    expect(canViewContractDocuments(editor)).toBe(false);
     expect(canManageUsers(editor)).toBe(false);
   });
 });
@@ -100,16 +101,11 @@ describe("writer_status gate", () => {
 });
 
 describe("article visibility", () => {
-  const article = { authorId: "user-1", coAuthorIds: ["user-2"] };
+  const article = { authorId: "user-1" };
 
   it("lets the author read their own article", () => {
     const author = actor({ id: "user-1", role: "writer", writerStatus: "active" });
     expect(canReadArticle(author, article)).toBe(true);
-  });
-
-  it("lets a co-author read it", () => {
-    const coAuthor = actor({ id: "user-2", role: "writer", writerStatus: "active" });
-    expect(canReadArticle(coAuthor, article)).toBe(true);
   });
 
   it("hides it from an unrelated writer", () => {

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { guardPanel } from "@/lib/auth/guard";
 import { listArticles } from "@/services/articles";
 import { listIssues } from "@/services/issues";
-import { listPendingGrants } from "@/services/rights";
+import { listPendingApprovals } from "@/services/rights";
 import { Card, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
 import type { ArticleStatus } from "@/db/schema";
@@ -24,7 +24,7 @@ export default async function EditorDashboard() {
   const [articles, issues, pendingGrants] = await Promise.all([
     listArticles(actor, { limit: 200 }),
     listIssues(actor),
-    listPendingGrants(actor),
+    listPendingApprovals(actor),
   ]);
 
   return (

@@ -7,8 +7,8 @@
 import { revalidatePath } from "next/cache";
 import { acknowledge, markRead } from "@/services/announcements";
 import { acceptAgreement } from "@/services/agreements";
-import { declineRightsGrantAndReturnForRevision } from "@/services/articles";
-import { signRightsGrant } from "@/services/rights";
+import { declineWorkAndReturnForRevision } from "@/services/articles";
+import { approveWork } from "@/services/rights";
 import { requestMetadata, requireRole } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
 import { checkbox, runAction, text, type ActionState } from "@/lib/action";
@@ -55,7 +55,7 @@ export async function acceptAgreementAction(
       { ...user },
       {
         agreementVersionId: text(formData, "agreementVersionId"),
-        bodyHash: text(formData, "bodyHash"),
+        renderedHash: text(formData, "renderedHash"),
         acknowledged: checkbox(formData, "acknowledged") as true,
       },
       meta,
@@ -67,7 +67,7 @@ export async function acceptAgreementAction(
   });
 }
 
-export async function signGrantAction(
+export async function approveWorkAction(
   _state: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -76,22 +76,23 @@ export async function signGrantAction(
     const { user } = await requireRole("writer");
     const meta = await requestMetadata();
 
-    await signRightsGrant(
+    await approveWork(
       { ...user },
       {
         grantId: text(formData, "grantId"),
-        formTextHash: text(formData, "formTextHash"),
+        articleHash: text(formData, "articleHash"),
+        bylineChoice: text(formData, "bylineChoice") as "real_name" | "pen_name",
         acknowledged: checkbox(formData, "acknowledged") as true,
       },
       meta,
     );
 
-    revalidatePath("/writer/rights");
-    return { success: "Formu imzaladınız. Bir kopyası e-posta ile gönderildi." };
+    revalidatePath("/writer/approvals");
+    return { success: "Eser Onayı kaydedildi. Kaydın PDF kopyası e-posta ile gönderildi." };
   });
 }
 
-export async function declineGrantAction(
+export async function declineWorkAction(
   _state: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -100,13 +101,13 @@ export async function declineGrantAction(
     const { user } = await requireRole("writer");
     const meta = await requestMetadata();
 
-    await declineRightsGrantAndReturnForRevision(
+    await declineWorkAndReturnForRevision(
       { ...user },
       { grantId: text(formData, "grantId"), reason: text(formData, "reason") },
       meta,
     );
 
-    revalidatePath("/writer/rights");
-    return { success: "Formu reddettiniz, editöre bildirildi." };
+    revalidatePath("/writer/approvals");
+    return { success: "Onayı reddettiniz, editöre bildirildi." };
   });
 }

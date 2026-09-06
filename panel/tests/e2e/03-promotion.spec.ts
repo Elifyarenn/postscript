@@ -27,6 +27,8 @@ test("refuses to promote someone under eighteen, and says why", async ({ page })
 
   await expect(page.getByText("Ön koşullar sağlanmıyor")).toBeVisible();
   await expect(page.getByText("Kullanıcı 18 yaşından küçük.")).toBeVisible();
+  // The age rule is crossed out in the checklist as well
+  await expect(page.getByText("18 yaşını doldurmuş")).toBeVisible();
   // There is no way to force it through: the button is not on the page at all
   await expect(page.getByRole("button", { name: "Yazar yap" })).toHaveCount(0);
 });
@@ -37,7 +39,14 @@ test("promotes an eligible reader, who then activates by accepting the agreement
   await loginElevated(page, "admin", SEED.admin);
 
   await openUser(page, SEED.reader.email);
-  await expect(page.getByText("Tüm ön koşullar sağlanıyor")).toBeVisible();
+
+  // §9: every precondition is listed with a tick or a cross
+  await expect(page.getByText("Sözleşme bu kullanıcı için render ediliyor")).toBeVisible();
+  await expect(page.getByText("sağlanmadı")).toHaveCount(0);
+
+  // and the admin can read the filled contract before promoting
+  await expect(page.getByRole("heading", { name: "Sözleşme önizlemesi" })).toBeVisible();
+  await expect(page.getByText("Ada Yazar").or(page.getByText("Kerem Okur")).first()).toBeVisible();
 
   await page.getByRole("button", { name: "Yazar yap" }).click();
 
@@ -53,14 +62,20 @@ test("promotes an eligible reader, who then activates by accepting the agreement
   await page.waitForURL("**/writer**");
   await expect(page.getByText("Yazar sayfalarınız kilitli")).toBeVisible();
 
-  await page.goto("/writer/rights");
+  // §7.2: the approvals screen is reachable but locked, with the reason shown
+  await page.goto("/writer/approvals");
+  await expect(page.getByText("Onay veremezsiniz")).toBeVisible();
+
+  await page.getByRole("link", { name: "Sözleşmeye git" }).click();
   await page.waitForURL("**/writer/agreement");
 
   // The confirm control only wakes up once the text has been read to the end
   const checkbox = page.getByRole("checkbox");
   await expect(checkbox).toBeDisabled();
 
-  await page.locator("div.prose-panel").evaluate((element) => {
+  // The gate watches the last paragraph with an IntersectionObserver, so the
+  // scroll container is the outer box rather than the prose itself
+  await page.locator("div.overflow-y-auto").first().evaluate((element) => {
     element.scrollTop = element.scrollHeight;
   });
   await expect(checkbox).toBeEnabled();
@@ -68,9 +83,13 @@ test("promotes an eligible reader, who then activates by accepting the agreement
   await checkbox.check();
   await page.getByRole("button", { name: /kabul ediyorum/i }).click();
 
-  await expect(page.getByText("Sözleşmeyi onayladınız")).toBeVisible();
+  // The acceptance form is replaced by the accepted view; that swap is the
+  // outcome, and the record it leaves behind is what matters
+  await expect(page.getByText("Bu sürümü onayladınız")).toBeVisible();
+  await expect(page.getByRole("link", { name: "İndir" }).first()).toBeVisible();
 
-  // Now the previously locked pages open
-  await page.goto("/writer/rights");
-  await expect(page).toHaveURL(/\/writer\/rights$/);
+  // Now the previously locked screen opens, with no reason banner on it
+  await page.goto("/writer/approvals");
+  await expect(page).toHaveURL(/\/writer\/approvals$/);
+  await expect(page.getByText("Onay veremezsiniz")).toHaveCount(0);
 });

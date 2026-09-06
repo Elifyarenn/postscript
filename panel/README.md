@@ -1,10 +1,11 @@
 # postscript — Yönetim Paneli
 
 Kâr amacı gütmeyen bir e-derginin yazı işleri paneli: kullanıcı ve rol yönetimi,
-çerçeve sözleşme onayı, eser bazlı mali hak devri formları, makale durum
+yazar sözleşmesi onayı, eser bazlı kullanım ruhsatı (Eser Onayı), makale durum
 makinesi, sayı planlama ve ön yüz için salt okunur bir public API.
 
-Ürün tanımı `dergi-panel-agent-prompt.md` dosyasındadır. Spesifikasyonda karara
+Ürün tanımı `dergi-panel-agent-prompt.md`, sözleşme akışı
+`doc/sozlesme-render-agent-prompt.md` dosyalarındadır. Spesifikasyonda karara
 bağlanmamış her konu, gerekçesiyle birlikte [`DECISIONS.md`](./DECISIONS.md)
 içinde kayıtlıdır.
 
@@ -108,7 +109,6 @@ pnpm dev
 | `pnpm create-admin` | CLI ile admin oluşturur veya terfi ettirir |
 | `pnpm publish-scheduled` | Zamanı gelen makaleleri yayınlar |
 | `pnpm send-reminders` | Bekleyen devir formları için hatırlatma |
-| `pnpm purge-identity-documents` | 90 günü dolan kimlik belgelerini siler |
 | `pnpm process-deletions` | 30 günü dolan hesap silme taleplerini işler |
 
 Migration'lar elle düzenlenmez: şema `src/db/schema.ts` içinde değiştirilir ve
@@ -144,8 +144,8 @@ Roller sıralıdır: her rol bir öncekinin yetkilerini kapsar.
 | Rol | Kapsam |
 |---|---|
 | `user` | Kayıtlı okuyucu. Panele erişemez; profilini ve oturumlarını yönetir. |
-| `writer` | Duyurular, sözleşme onayı, hak devri formları, kendine atanan makaleler (salt okunur), teslim takvimi. |
-| `editor` | Tüm makaleler, sayı planlama, duyuru yayını, medya kütüphanesi, yazar atama. Sözleşme PDF'lerini, kimlik belgelerini ve kullanıcı yönetimini **göremez**. |
+| `writer` | Duyurular, sözleşme onayı, Eser Onayları, kendine atanan makaleler (salt okunur), teslim takvimi. |
+| `editor` | Tüm makaleler, sayı planlama, duyuru yayını, medya kütüphanesi, yazar atama. Sözleşme ve Eser Onayı PDF'lerini ve kullanıcı yönetimini **göremez**. |
 | `admin` | Her şey. Rol değişikliği yalnızca admin yapar. |
 
 Değişmez kurallar:
@@ -154,9 +154,8 @@ Değişmez kurallar:
    Menü gizlemek yetki değildir.
 2. Kayıt endpoint'i `role` alanını kabul etmez; sunucu her zaman `user` atar.
 3. Hiçbir rol değişikliği `role_changes` kaydı olmadan gerçekleşmez.
-4. `writer` terfisi beş ön koşulu ister: e-posta doğrulanmış, doğum tarihi ve
-   ≥ 18 yaş, kimlik doğrulanmış, KVKK onayı, yasaklı değil. Eksik varsa terfi
-   reddedilir ve eksikler yöneticiye gösterilir.
+4. `writer` terfisi altı ön koşulu ister (aşağıda ayrıntılı). Eksik varsa terfi
+   reddedilir ve eksikler yöneticiye tek tek gösterilir.
 5. `writer_status = active` olmadan yazar panelinde yalnızca duyurular ve
    sözleşme sayfası açıktır.
 6. İlk admin yalnızca seed veya CLI ile oluşturulur.
@@ -164,9 +163,36 @@ Değişmez kurallar:
    rollerde yoktur (D-025, §5.2'den sapma).
 8. `audit_log` ve `role_changes` yalnızca eklenir; hem uygulama katmanında hem de
    veritabanı trigger'ıyla korunur.
-9. İmzalı `rights_grants` olmadan hiçbir makale `scheduled` veya `published`
+9. Onaylanmış bir Eser Onayı olmadan hiçbir makale `scheduled` veya `published`
    olamaz; lisans bilgisi eksik medya bağlıysa da olamaz. Kontrol durum geçiş
    fonksiyonundadır.
+
+### Sözleşme ve Eser Onayı
+
+Sözleşme metni depoda: `contracts/yazar-sozlesmesi-ve-ruhsat-taahhudu.md`.
+Panelde metin yazılmaz; yönetici "şablondan sürüm oluştur" der, sistem dosyayı
+okur ve ham metnin SHA-256'sını sürümün `body_hash`'i olarak saklar (D-028).
+
+Yazar terfisi altı ön koşula bağlıdır: e-posta doğrulanmış, doğum tarihi ve
+≥ 18 yaş, KVKK onayı, yasaklı değil, yayınlanmış bir sözleşme sürümü var, ve
+sözleşme **bu kullanıcı için render edilebiliyor**. Sonuncusu eksik yayıncı
+bilgisini adıyla söyler: "Sözleşme ayarları eksik: dergi.ortak_2".
+
+Yazar sözleşmeyi okurken metin kendi verileriyle doldurulmuş hâlde gösterilir;
+son paragraf ekranda görününceye kadar onay kutusu açılmaz. Onayda sunucu metni
+yeniden render eder, hash'i karşılaştırır, uyuşmazsa 409 verir; uyuşuyorsa onay
+anı ve IP metne işlenir, `rendered_markdown` olarak saklanır ve PDF üretilir.
+
+Her makale için ruhsat, editör makaleyi kabul ettiğinde açılan **Eser Onayı** ile
+doğar. Kapsam sözleşmenin 4. maddesinde sabittir ve eser başına
+değiştirilemez: basit ruhsat, dört mali hak (işleme yalnızca m. 4.2'deki
+işlemlerle sınırlı), dört mecra, dünya geneli, süresiz, bedelsiz, ticari
+kullanım hariç. Yazar onaylarken kabul edilen metnin özetini, sözleşme sürümünü
+ve adının nasıl görüneceğini görür.
+
+Editör kaydederken değişikliğin türünü seçer: **düzeltme** onayı korur,
+**içerik değişikliği** onayı iptal eder ve yeni onay ister. Yayımlanmış bir
+eserin içeriği yerinde değiştirilemez; önce geri çekilmesi gerekir (D-030).
 
 ### Şifre kuralları
 
@@ -181,11 +207,13 @@ işaretlenir; üçü de sağlanmadan düğme açılmaz. Sunucu aynı fonksiyonla
 ## Mimari
 
 ```
+contracts/             Sözleşme şablonu (yer tutucularla)
 src/
   app/                 Next.js App Router: sayfalar, server action'lar, route handler'lar
   components/          Panelin küçük bileşen seti (Tailwind, shadcn/ui tarzı)
   db/                  Drizzle şeması, sürücü seçimi, migration
   lib/                 Kripto, oturum, yetki, CSRF, hız sınırı, PDF, markdown, depolama, e-posta
+  lib/agreement/       Şablon okuma, yer tutucu sözlüğü, render ve hash normalizasyonu
   services/            İş kuralları. Tek doğruluk kaynağı burasıdır.
 emails/                E-posta şablonları (saf fonksiyonlar)
 drizzle/               Üretilmiş SQL migration'ları
@@ -216,7 +244,6 @@ Uygulama içinde zamanlayıcı yoktur; işler dışarıdan tetiklenir ve idempot
 ```cron
 */5 * * * *  cd /app && pnpm publish-scheduled
 0    6 * * *  cd /app && pnpm send-reminders
-30   3 * * *  cd /app && pnpm purge-identity-documents
 0    4 * * *  cd /app && pnpm process-deletions
 ```
 
@@ -266,8 +293,8 @@ Notlar:
 ## Test
 
 ```bash
-pnpm test        # 118 birim + entegrasyon testi
-pnpm test:e2e    # 15 uçtan uca senaryo
+pnpm test        # 156 birim + entegrasyon testi
+pnpm test:e2e    # 21 uçtan uca senaryo
 ```
 
 Birim ve entegrasyon testleri süreç içi PostgreSQL (PGlite) üzerinde çalışır:
@@ -283,8 +310,9 @@ senaryolar §13.2'dekilerdir:
 - `user` rolüyle `/writer`, `/editor`, `/admin` ve iç sayfalarına erişim → 403
 - 17 yaşındaki kullanıcıyı yazar yapma denemesi → reddedilir, gerekçe gösterilir
 - terfi → sözleşme onayı → `writer_status = active`
-- makale `accepted` → `rights_grants` oluşur → imzasız `scheduled` denemesi
-  reddedilir → imza → `scheduled` → `published`
+- makale `accepted` → Eser Onayı açılır → onaysız `scheduled` denemesi
+  reddedilir → onay → `scheduled` → `published`
+- editör "içerik değişikliği" ile kaydeder → onay iptal olur, yenisi açılır
 - geri çekilen makale public API'de 410, hiç yayınlanmamış olan 404
 - yüklenen dosyanın türü içeriğinden doğrulanır; lisans bilgisi kaydedilir ve
   kullanıldığı makale sayısı raporlanır

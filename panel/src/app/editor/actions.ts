@@ -22,7 +22,7 @@ import {
   createAnnouncement,
   publishAnnouncement,
 } from "@/services/announcements";
-import { sendGrantReminders, updateGrantFields } from "@/services/rights";
+import { sendApprovalReminders } from "@/services/rights";
 import { requestMetadata, requireRole } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
 import {
@@ -97,6 +97,9 @@ export async function updateArticleAction(
         tags: listField(formData, "tags"),
         dueDate: optionalText(formData, "dueDate"),
         changeNote: optionalText(formData, "changeNote"),
+        changeKind: text(formData, "changeKind") === "content_change"
+          ? "content_change"
+          : "correction",
       },
       meta,
     );
@@ -426,42 +429,6 @@ export async function publishAnnouncementAction(
   });
 }
 
-export async function updateGrantFieldsAction(
-  _state: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  return runAction(async () => {
-    await assertCsrfFromForm(formData);
-    const { user } = await requireRole("editor");
-    const meta = await requestMetadata();
-
-    const months = numberField(formData, "exclusivityMonths");
-
-    await updateGrantFields(
-      { ...user },
-      text(formData, "grantId"),
-      {
-        grantType: text(formData, "grantType") as
-          | "assignment"
-          | "exclusive_license"
-          | "non_exclusive_license",
-        rightAdaptation: checkbox(formData, "rightAdaptation"),
-        rightReproduction: checkbox(formData, "rightReproduction"),
-        rightDistribution: checkbox(formData, "rightDistribution"),
-        rightCommunicationToPublic: checkbox(formData, "rightCommunicationToPublic"),
-        channels: formData.getAll("channels").filter((v): v is string => typeof v === "string"),
-        exclusivityMonths: months,
-        territory: text(formData, "territory") || "worldwide",
-        commercialUseIncluded: checkbox(formData, "commercialUseIncluded"),
-      },
-      meta,
-    );
-
-    revalidatePath("/editor/rights");
-    return { success: "Form alanları güncellendi." };
-  });
-}
-
 export async function sendRemindersAction(
   _state: ActionState,
   formData: FormData,
@@ -470,8 +437,8 @@ export async function sendRemindersAction(
     await assertCsrfFromForm(formData);
     await requireRole("editor");
 
-    const count = await sendGrantReminders();
-    revalidatePath("/editor/rights");
+    const count = await sendApprovalReminders();
+    revalidatePath("/editor/approvals");
     return { success: `${count} yazara hatırlatma gönderildi.` };
   });
 }

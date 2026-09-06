@@ -3,8 +3,11 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { roleChanges, users } from "@/db/schema";
 import { guardPanel } from "@/lib/auth/guard";
-import { checkWriterEligibility, findUserById, listIdentityDocuments } from "@/services/users";
+import { checkPromotionReadiness, findUserById } from "@/services/users";
+import { renderAgreementForWriter } from "@/services/agreements";
+import { AgreementRenderError } from "@/lib/agreement/render";
 import { readCsrfToken } from "@/lib/csrf";
+import { renderMarkdown } from "@/lib/markdown";
 import { ActionButton, PanelForm } from "@/components/form";
 import {
   Alert,
@@ -27,24 +30,49 @@ import {
   setBannedAction,
   setBirthDateAction,
   setWriterStatusAction,
-  uploadIdentityDocumentAction,
-  verifyIdentityAction,
 } from "../../actions";
 
 export const metadata = { title: "Kullanıcı" };
+
+/** The precondition list §9 asks for: every rule with a tick or a cross. */
+const RULES = [
+  { id: "email_not_verified", label: "E-posta adresi doğrulanmış" },
+  { id: "birth_date_missing", label: "Doğum tarihi girilmiş" },
+  { id: "under_age", label: "18 yaşını doldurmuş" },
+  { id: "kvkk_consent_missing", label: "KVKK onayı alınmış" },
+  { id: "banned", label: "Yasaklı değil" },
+  { id: "no_agreement_version", label: "Yayınlanmış bir sözleşme sürümü var" },
+  { id: "agreement_not_renderable", label: "Sözleşme bu kullanıcı için render ediliyor" },
+] as const;
 
 export default async function AdminUserDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { user } = await guardPanel("admin");
+  await guardPanel("admin");
   const { id } = await params;
   const csrfToken = (await readCsrfToken()) ?? "";
 
   const target = await findUserById(id);
-  const eligibility = checkWriterEligibility(target);
-  const documents = await listIdentityDocuments({ ...user }, id);
+  const readiness = await checkPromotionReadiness(target);
+
+  // §9: the admin may look at the filled contract before promoting. This
+  // preview is never stored; it exists only to be read.
+  let preview: { html: string; hash: string } | { error: string } | null = null;
+  if (target.role === "user") {
+    try {
+      const rendered = await renderAgreementForWriter(target);
+      preview = { html: await renderMarkdown(rendered.markdown), hash: rendered.hash };
+    } catch (error) {
+      preview = {
+        error:
+          error instanceof AgreementRenderError
+            ? error.message
+            : "Sözleşme render edilemedi.",
+      };
+    }
+  }
 
   const history = await db
     .select({
@@ -84,121 +112,77 @@ export default async function AdminUserDetailPage({
           <h2 className="mb-4 font-serif text-lg">Yazar terfisi</h2>
 
           {target.role !== "user" ? (
-            <Alert tone="info">
-              Bu kullanıcı zaten &ldquo;{target.role}&rdquo; rolünde.
-            </Alert>
-          ) : eligibility.eligible ? (
+            <Alert tone="info">Bu kullanıcı zaten &ldquo;{target.role}&rdquo; rolünde.</Alert>
+          ) : (
             <>
-              <Alert tone="success">Tüm ön koşullar sağlanıyor.</Alert>
-              <div className="mt-4">
+              <ul className="mb-5 space-y-2 text-sm">
+                {RULES.map((rule) => {
+                  const failed = readiness.problems.includes(rule.id);
+                  return (
+                    <li key={rule.id} className="flex items-start gap-2.5">
+                      <span
+                        aria-hidden
+                        className={
+                          failed
+                            ? "inline-flex size-4 shrink-0 items-center justify-center rounded-full border border-danger bg-danger-soft text-[10px] leading-none text-danger"
+                            : "inline-flex size-4 shrink-0 items-center justify-center rounded-full border border-accent bg-accent text-[10px] leading-none text-white"
+                        }
+                      >
+                        {failed ? "✗" : "✓"}
+                      </span>
+                      <span className={failed ? "text-danger" : "text-ink"}>
+                        {rule.label}
+                        <span className="sr-only">{failed ? " — sağlanmadı" : " — sağlandı"}</span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              {readiness.eligible ? (
                 <PanelForm
                   action={promoteToWriterAction}
                   csrfToken={csrfToken}
                   submitLabel="Yazar yap"
                 >
-                    <>
-                      <input type="hidden" name="userId" value={target.id} />
-                      <Field label="Not" htmlFor="note" hint="Rol değişikliği kaydına yazılır.">
-                        <Input id="note" name="note" />
-                      </Field>
-                    </>
-                </PanelForm>
-              </div>
-            </>
-          ) : (
-            <Alert tone="warning" title="Ön koşullar sağlanmıyor">
-              <ul className="mt-1 list-disc pl-5">
-                {eligibility.messages.map((message) => (
-                  <li key={message}>{message}</li>
-                ))}
-              </ul>
-            </Alert>
-          )}
-        </Card>
-
-        <Card>
-          <h2 className="mb-4 font-serif text-lg">Kimlik doğrulama</h2>
-
-          {target.identityVerifiedAt ? (
-            <Alert tone="success">
-              {formatDateTime(target.identityVerifiedAt)} tarihinde doğrulandı.
-            </Alert>
-          ) : (
-            <Alert tone="warning">Kimlik henüz doğrulanmadı.</Alert>
-          )}
-
-          <div className="mt-4 space-y-5">
-            <PanelForm
-              action={uploadIdentityDocumentAction}
-              csrfToken={csrfToken}
-              submitLabel="Belge yükle"
-              submitVariant="secondary"
-            >
-                <>
                   <input type="hidden" name="userId" value={target.id} />
-                  <Field
-                    label="Kimlik belgesi"
-                    htmlFor="file"
-                    hint="Ayrı bir kovada saklanır, yalnızca yönetici görür, 90 gün sonra otomatik silinir."
-                  >
-                    <Input
-                      id="file"
-                      name="file"
-                      type="file"
-                      required
-                      accept="image/jpeg,image/png,application/pdf"
-                    />
+                  <Field label="Not" htmlFor="note" hint="Rol değişikliği kaydına yazılır.">
+                    <Input id="note" name="note" />
                   </Field>
-                </>
-            </PanelForm>
-
-            {documents.length > 0 && (
-              <Table>
-                <thead>
-                  <tr>
-                    <Th>Belge</Th>
-                    <Th>Yükleme</Th>
-                    <Th>Otomatik silme</Th>
-                    <Th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {documents.map((document) => (
-                    <tr key={document.id}>
-                      <Td className="text-xs">{document.mime}</Td>
-                      <Td className="text-xs">{formatDate(document.createdAt)}</Td>
-                      <Td className="text-xs">
-                        {document.purgedAt ? "silindi" : formatDate(document.autoDeleteAt)}
-                      </Td>
-                      <Td className="text-right">
-                        {!document.purgedAt && (
-                          <a
-                            href={`/api/media/${document.id}`}
-                            className="text-xs text-accent underline"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            Görüntüle
-                          </a>
-                        )}
-                      </Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            )}
-
-            {!target.identityVerifiedAt && (
-              <ActionButton
-                action={verifyIdentityAction}
-                csrfToken={csrfToken}
-                label="Kimliği doğrulandı olarak işaretle"
-                variant="primary"
-                fields={{ userId: target.id }}
-              />
-            )}
-          </div>
+                </PanelForm>
+              ) : (
+                <Alert tone="warning" title="Ön koşullar sağlanmıyor">
+                  <ul className="mt-1 list-disc pl-5">
+                    {readiness.messages.map((message) => (
+                      <li key={message}>{message}</li>
+                    ))}
+                  </ul>
+                </Alert>
+              )}
+            </>
+          )}
         </Card>
+
+        {preview && (
+          <Card>
+            <h2 className="mb-1 font-serif text-lg">Sözleşme önizlemesi</h2>
+            <p className="mb-4 text-sm text-muted">
+              Bu kullanıcının verileriyle doldurulmuş hâli. Önizleme kaydedilmez.
+            </p>
+
+            {"error" in preview ? (
+              <Alert tone="danger">{preview.error}</Alert>
+            ) : (
+              <>
+                <p className="mb-3 font-mono text-[11px] break-all text-muted">{preview.hash}</p>
+                <div
+                  className="prose-panel max-h-[26rem] overflow-y-auto rounded-md border border-line bg-paper p-5 text-sm"
+                  dangerouslySetInnerHTML={{ __html: preview.html }}
+                />
+              </>
+            )}
+          </Card>
+        )}
 
         <Card>
           <h2 className="mb-4 font-serif text-lg">Rol ve durum</h2>
@@ -210,20 +194,18 @@ export default async function AdminUserDetailPage({
               submitLabel="Rolü değiştir"
               submitVariant="secondary"
             >
-                <>
-                  <input type="hidden" name="userId" value={target.id} />
-                  <Field label="Rol" htmlFor="role">
-                    <Select id="role" name="role" defaultValue={target.role}>
-                      <option value="user">user</option>
-                      <option value="writer">writer</option>
-                      <option value="editor">editor</option>
-                      <option value="admin">admin</option>
-                    </Select>
-                  </Field>
-                  <Field label="Not" htmlFor="roleNote">
-                    <Input id="roleNote" name="note" />
-                  </Field>
-                </>
+              <input type="hidden" name="userId" value={target.id} />
+              <Field label="Rol" htmlFor="role">
+                <Select id="role" name="role" defaultValue={target.role}>
+                  <option value="user">user</option>
+                  <option value="writer">writer</option>
+                  <option value="editor">editor</option>
+                  <option value="admin">admin</option>
+                </Select>
+              </Field>
+              <Field label="Not" htmlFor="roleNote">
+                <Input id="roleNote" name="note" />
+              </Field>
             </PanelForm>
 
             {target.role !== "user" && (
@@ -233,20 +215,18 @@ export default async function AdminUserDetailPage({
                 submitLabel="Yazar durumunu değiştir"
                 submitVariant="secondary"
               >
-                  <>
-                    <input type="hidden" name="userId" value={target.id} />
-                    <Field label="Yazar durumu" htmlFor="writerStatus">
-                      <Select
-                        id="writerStatus"
-                        name="writerStatus"
-                        defaultValue={target.writerStatus ?? "pending_agreement"}
-                      >
-                        <option value="pending_agreement">Sözleşme bekliyor</option>
-                        <option value="active">Aktif</option>
-                        <option value="suspended">Askıda</option>
-                      </Select>
-                    </Field>
-                  </>
+                <input type="hidden" name="userId" value={target.id} />
+                <Field label="Yazar durumu" htmlFor="writerStatus">
+                  <Select
+                    id="writerStatus"
+                    name="writerStatus"
+                    defaultValue={target.writerStatus ?? "pending_agreement"}
+                  >
+                    <option value="pending_agreement">Sözleşme bekliyor</option>
+                    <option value="active">Aktif</option>
+                    <option value="suspended">Askıda</option>
+                  </Select>
+                </Field>
               </PanelForm>
             )}
           </div>
@@ -262,15 +242,13 @@ export default async function AdminUserDetailPage({
               submitLabel={target.isBanned ? "Yasağı kaldır" : "Yasakla"}
               submitVariant={target.isBanned ? "secondary" : "danger"}
             >
-                <>
-                  <input type="hidden" name="userId" value={target.id} />
-                  {!target.isBanned && <input type="hidden" name="banned" value="true" />}
-                  {!target.isBanned && (
-                    <Field label="Gerekçe" htmlFor="reason" hint="Yasaklamada zorunludur.">
-                      <Input id="reason" name="reason" required />
-                    </Field>
-                  )}
-                </>
+              <input type="hidden" name="userId" value={target.id} />
+              {!target.isBanned && <input type="hidden" name="banned" value="true" />}
+              {!target.isBanned && (
+                <Field label="Gerekçe" htmlFor="reason" hint="Yasaklamada zorunludur.">
+                  <Input id="reason" name="reason" required />
+                </Field>
+              )}
             </PanelForm>
 
             <div className="border-t border-line pt-4">
@@ -280,22 +258,20 @@ export default async function AdminUserDetailPage({
                 submitLabel="Doğum tarihini güncelle"
                 submitVariant="secondary"
               >
-                  <>
-                    <input type="hidden" name="userId" value={target.id} />
-                    <Field
-                      label="Doğum tarihi"
-                      htmlFor="birthDate"
-                      hint="Kullanıcı kendi tarihini değiştiremez; bu alan yalnızca yöneticide."
-                    >
-                      <Input
-                        id="birthDate"
-                        name="birthDate"
-                        type="date"
-                        defaultValue={target.birthDate ?? ""}
-                        required
-                      />
-                    </Field>
-                  </>
+                <input type="hidden" name="userId" value={target.id} />
+                <Field
+                  label="Doğum tarihi"
+                  htmlFor="birthDate"
+                  hint="Kullanıcı kendi tarihini değiştiremez; bu alan yalnızca yöneticide."
+                >
+                  <Input
+                    id="birthDate"
+                    name="birthDate"
+                    type="date"
+                    defaultValue={target.birthDate ?? ""}
+                    required
+                  />
+                </Field>
               </PanelForm>
             </div>
 

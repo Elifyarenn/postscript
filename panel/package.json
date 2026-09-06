@@ -19,7 +19,6 @@
     "create-admin": "tsx --tsconfig scripts/tsconfig.json scripts/create-admin.ts",
     "publish-scheduled": "tsx --tsconfig scripts/tsconfig.json scripts/publish-scheduled.ts",
     "send-reminders": "tsx --tsconfig scripts/tsconfig.json scripts/send-reminders.ts",
-    "purge-identity-documents": "tsx --tsconfig scripts/tsconfig.json scripts/purge-identity-documents.ts",
     "process-deletions": "tsx --tsconfig scripts/tsconfig.json scripts/process-deletions.ts"
   },
   "dependencies": {

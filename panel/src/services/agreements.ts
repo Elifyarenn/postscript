@@ -1,10 +1,11 @@
 /**
- * Framework agreement versions and their acceptance (§7.1).
+ * Contract versions, rendering and acceptance (§4, §5, §6).
  *
- * The point of this module is evidence. A published version can never be
- * edited; a new text means a new version. Every acceptance stores the hash of
- * the text that was actually on the writer's screen, together with the IP and
- * user agent, so it can be shown later exactly what was agreed to.
+ * The contract text is a file in the repository. A version is a snapshot of
+ * that file: `body_markdown` holds the raw template and `body_hash` its
+ * SHA-256, so a later edit to the file cannot alter what someone already
+ * signed. What the writer sees is that template filled with their own details,
+ * and it is the hash of the *filled* text that the acceptance records.
  */
 import "server-only";
 import { and, desc, eq, isNull, ne } from "drizzle-orm";
@@ -13,25 +14,29 @@ import { db } from "@/db/client";
 import {
   agreementAcceptances,
   agreementVersions,
+  kvkkVersions,
   users,
   type AgreementVersion,
+  type User,
 } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import { canManageAgreements, type Actor } from "@/lib/auth/rbac";
-import { sha256Hex } from "@/lib/crypto";
 import { env } from "@/lib/env";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { sendMail } from "@/lib/mail/transport";
-import { markdownToPlainText } from "@/lib/markdown";
 import { renderDocumentPdf } from "@/lib/pdf";
+import {
+  AgreementRenderError,
+  renderAgreement,
+  unknownPlaceholders,
+  type AgreementContext,
+} from "@/lib/agreement/render";
+import { hashDocument } from "@/lib/agreement/normalise";
+import { readAgreementTemplate } from "@/lib/agreement/template";
 import * as templates from "@emails/templates";
 import { storeGeneratedPdf } from "./media";
+import { getSiteSettings } from "./site-settings";
 import type { RequestMeta } from "./auth";
-
-export const agreementDraftSchema = z.strictObject({
-  title: z.string().trim().min(3).max(200),
-  bodyMarkdown: z.string().trim().min(50, "Sözleşme metni çok kısa."),
-});
 
 /* ------------------------------------------------------------------ */
 /* Reading                                                             */
@@ -63,9 +68,9 @@ export async function listAcceptancesForUser(userId: string) {
       acceptedAt: agreementAcceptances.acceptedAt,
       supersededAt: agreementAcceptances.supersededAt,
       bodyHashAtAcceptance: agreementAcceptances.bodyHashAtAcceptance,
+      pdfMediaId: agreementAcceptances.pdfMediaId,
       version: agreementVersions.version,
       title: agreementVersions.title,
-      pdfMediaId: agreementVersions.pdfMediaId,
       isCurrent: agreementVersions.isCurrent,
     })
     .from(agreementAcceptances)
@@ -78,19 +83,113 @@ export async function listAcceptancesForUser(userId: string) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Drafting and publishing                                             */
+/* Building the render context                                         */
 /* ------------------------------------------------------------------ */
 
-export async function createAgreementDraft(
+async function currentKvkkVersion(): Promise<number | null> {
+  const rows = await db
+    .select({ version: kvkkVersions.version })
+    .from(kvkkVersions)
+    .where(eq(kvkkVersions.isCurrent, true))
+    .limit(1);
+  return rows[0]?.version ?? null;
+}
+
+/**
+ * Gathers everything the template needs for one writer. Pure data assembly:
+ * the render itself stays deterministic and testable.
+ */
+export async function buildAgreementContext(
+  version: AgreementVersion,
+  writer: Pick<User, "displayName" | "birthDate" | "email" | "penName">,
+  acceptance: { acceptedAt: Date | null; ip: string | null } | null = null,
+): Promise<AgreementContext> {
+  const publisher = await getSiteSettings();
+
+  return {
+    agreement: {
+      version: version.version,
+      publishedAt: version.publishedAt,
+      bodyHash: version.bodyHash,
+    },
+    publisher: {
+      partner1: publisher.publisher_partner_1,
+      partner2: publisher.publisher_partner_2,
+      address: publisher.publisher_address,
+      email: publisher.publisher_email,
+      domain: publisher.public_domain,
+      jurisdictionCity: publisher.jurisdiction_city,
+    },
+    writer: {
+      displayName: writer.displayName,
+      birthDate: writer.birthDate,
+      email: writer.email,
+      penName: writer.penName,
+    },
+    kvkkVersion: await currentKvkkVersion(),
+    acceptance,
+  };
+}
+
+export type AgreementPreview = { markdown: string; hash: string; version: AgreementVersion };
+
+/**
+ * The contract as one writer would see it right now. Throws
+ * `AgreementRenderError` when anything is missing, which is exactly what the
+ * promotion check relies on (§6.1 rule 6).
+ */
+export async function renderAgreementForWriter(
+  writer: Pick<User, "displayName" | "birthDate" | "email" | "penName">,
+  acceptance: { acceptedAt: Date | null; ip: string | null } | null = null,
+): Promise<AgreementPreview> {
+  const version = await getCurrentAgreement();
+  if (!version) {
+    throw new AgreementRenderError("Yayınlanmış bir sözleşme sürümü yok.", ["agreement.version"]);
+  }
+
+  const context = await buildAgreementContext(version, writer, acceptance);
+  const rendered = renderAgreement(version.bodyMarkdown, context);
+
+  return { ...rendered, version };
+}
+
+/* ------------------------------------------------------------------ */
+/* Versions                                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Creates a draft from the template file. The admin does not type contract
+ * text: §11 makes the file the single source, and every change to it is a new
+ * version rather than an edit to an existing one.
+ */
+export async function createVersionFromTemplate(
   actor: Actor,
-  rawInput: unknown,
   meta: RequestMeta,
 ): Promise<AgreementVersion> {
   if (!canManageAgreements(actor)) throw forbidden();
 
-  const parsed = agreementDraftSchema.safeParse(rawInput);
-  if (!parsed.success) {
-    throw badRequest("Sözleşme metni geçersiz.", z.flattenError(parsed.error).fieldErrors);
+  const template = readAgreementTemplate();
+
+  // §9: a version cannot be published while the template uses a placeholder the
+  // dictionary cannot fill, so it is refused at the door
+  const sample = await buildAgreementContext(
+    { version: 1, publishedAt: new Date(), bodyHash: "0".repeat(64) } as AgreementVersion,
+    { displayName: "x", birthDate: "2000-01-01", email: "x@example.com", penName: null },
+  );
+  const unknown = unknownPlaceholders(template, sample);
+  if (unknown.length > 0) {
+    throw badRequest(`Şablonda sözlük dışı yer tutucu var: ${unknown.join(", ")}`);
+  }
+
+  const bodyHash = hashDocument(template);
+
+  const existing = await db
+    .select({ id: agreementVersions.id, version: agreementVersions.version })
+    .from(agreementVersions)
+    .where(eq(agreementVersions.bodyHash, bodyHash))
+    .limit(1);
+  if (existing[0]) {
+    throw conflict(`Bu şablon metni zaten ${existing[0].version}. sürüm olarak kayıtlı.`);
   }
 
   const latest = await db
@@ -103,9 +202,9 @@ export async function createAgreementDraft(
     .insert(agreementVersions)
     .values({
       version: (latest[0]?.version ?? 0) + 1,
-      title: parsed.data.title,
-      bodyMarkdown: parsed.data.bodyMarkdown,
-      bodyHash: sha256Hex(parsed.data.bodyMarkdown),
+      title: "postscript Yazar Sözleşmesi ve Kullanım Ruhsatı Taahhüdü",
+      bodyMarkdown: template,
+      bodyHash,
       isCurrent: false,
     })
     .returning();
@@ -115,52 +214,11 @@ export async function createAgreementDraft(
     action: "agreement.draft_created",
     entityType: "agreement_versions",
     entityId: draft!.id,
-    after: { version: draft!.version, title: draft!.title },
+    after: { version: draft!.version, bodyHash },
     ip: meta.ip,
   });
 
   return draft!;
-}
-
-/** A draft may still be edited. Once published this throws. */
-export async function updateAgreementDraft(
-  actor: Actor,
-  versionId: string,
-  rawInput: unknown,
-  meta: RequestMeta,
-): Promise<AgreementVersion> {
-  if (!canManageAgreements(actor)) throw forbidden();
-
-  const parsed = agreementDraftSchema.safeParse(rawInput);
-  if (!parsed.success) {
-    throw badRequest("Sözleşme metni geçersiz.", z.flattenError(parsed.error).fieldErrors);
-  }
-
-  const existing = await findVersion(versionId);
-  if (existing.publishedAt) {
-    throw conflict("Yayınlanmış sözleşme sürümü düzenlenemez. Yeni bir sürüm oluşturun.");
-  }
-
-  const [updated] = await db
-    .update(agreementVersions)
-    .set({
-      title: parsed.data.title,
-      bodyMarkdown: parsed.data.bodyMarkdown,
-      bodyHash: sha256Hex(parsed.data.bodyMarkdown),
-      updatedAt: new Date(),
-    })
-    .where(eq(agreementVersions.id, versionId))
-    .returning();
-
-  await writeAudit({
-    actorId: actor.id,
-    action: "agreement.draft_updated",
-    entityType: "agreement_versions",
-    entityId: versionId,
-    ip: meta.ip,
-  });
-
-  return updated!;
 }
 
 async function findVersion(versionId: string): Promise<AgreementVersion> {
@@ -177,7 +235,7 @@ async function findVersion(versionId: string): Promise<AgreementVersion> {
 /**
  * Publishing has consequences beyond this table: every earlier acceptance is
  * marked superseded and every active writer drops back to `pending_agreement`
- * until they accept the new text (§7.1).
+ * until they accept the new text (§7.1 of the base specification).
  */
 export async function publishAgreementVersion(
   actor: Actor,
@@ -190,21 +248,6 @@ export async function publishAgreementVersion(
   if (version.publishedAt) throw conflict("Bu sürüm zaten yayınlanmış.");
 
   const now = new Date();
-  // Hash the body as it stands at publication; this is what acceptances compare against
-  const bodyHash = sha256Hex(version.bodyMarkdown);
-
-  const pdf = await renderDocumentPdf({
-    title: version.title,
-    subtitle: `Sürüm ${version.version} · Yayın tarihi ${now.toISOString().slice(0, 10)}`,
-    sections: [{ body: markdownToPlainText(version.bodyMarkdown) }],
-    footerNote: `postscript çerçeve sözleşme · sürüm ${version.version} · sha256: ${bodyHash}`,
-  });
-
-  const pdfMedia = await storeGeneratedPdf(pdf, {
-    prefix: "agreements",
-    fileName: `cerceve-sozlesme-v${version.version}.pdf`,
-    uploadedBy: actor.id,
-  });
 
   const published = await db.transaction(async (tx) => {
     // The partial unique index allows only one current row, so clear it first
@@ -215,14 +258,7 @@ export async function publishAgreementVersion(
 
     const [row] = await tx
       .update(agreementVersions)
-      .set({
-        isCurrent: true,
-        publishedAt: now,
-        publishedBy: actor.id,
-        bodyHash,
-        pdfMediaId: pdfMedia.id,
-        updatedAt: now,
-      })
+      .set({ isCurrent: true, publishedAt: now, publishedBy: actor.id, updatedAt: now })
       .where(eq(agreementVersions.id, versionId))
       .returning();
 
@@ -266,7 +302,7 @@ export async function publishAgreementVersion(
     action: "agreement.published",
     entityType: "agreement_versions",
     entityId: versionId,
-    after: { version: published.version, bodyHash, notifiedWriters: writers.length },
+    after: { version: published.version, bodyHash: published.bodyHash, notified: writers.length },
     ip: meta.ip,
   });
 
@@ -274,20 +310,22 @@ export async function publishAgreementVersion(
 }
 
 /* ------------------------------------------------------------------ */
-/* Acceptance                                                          */
+/* Acceptance (§6.3)                                                   */
 /* ------------------------------------------------------------------ */
 
 export const acceptanceSchema = z.strictObject({
   agreementVersionId: z.uuid(),
-  /** The hash of the text the browser rendered, echoed back for comparison. */
-  bodyHash: z.string().length(64),
+  /** Hash of the filled text the browser displayed, re-derived server side. */
+  renderedHash: z.string().length(64),
   acknowledged: z.literal(true, { message: "Onay kutusunu işaretlemeniz gerekiyor." }),
 });
 
 /**
- * Records an acceptance and reactivates the writer. Refuses when the hash the
- * browser echoes back does not match the stored text, which would mean the
- * writer agreed to something other than what is on file.
+ * Records an acceptance and reactivates the writer, all or nothing.
+ *
+ * The hash the browser echoes is never trusted: the server renders the contract
+ * again and compares. If the two disagree, the writer was looking at something
+ * other than what is on file, and the acceptance is refused (§5.2).
  */
 export async function acceptAgreement(
   actor: Actor,
@@ -299,53 +337,115 @@ export async function acceptAgreement(
     throw badRequest("Onay isteği geçersiz.", z.flattenError(parsed.error).fieldErrors);
   }
 
+  const rows = await db.select().from(users).where(eq(users.id, actor.id)).limit(1);
+  const writer = rows[0];
+  if (!writer) throw notFound("Kullanıcı bulunamadı.");
+
   const current = await getCurrentAgreement();
   if (!current) throw notFound("Yayınlanmış bir çerçeve sözleşme yok.");
   if (current.id !== parsed.data.agreementVersionId) {
     throw conflict("Sözleşmenin daha yeni bir sürümü var. Sayfayı yenileyin.");
   }
-  if (current.bodyHash !== parsed.data.bodyHash) {
+
+  // 1. Re-render and verify the hash against what was on screen
+  const preview = await renderAgreementForWriter(writer);
+  if (preview.hash !== parsed.data.renderedHash) {
     throw conflict("Gösterilen metin ile kayıtlı metin eşleşmiyor. Sayfayı yenileyin.");
   }
 
-  const already = await db
-    .select({ id: agreementAcceptances.id })
-    .from(agreementAcceptances)
-    .where(
-      and(
-        eq(agreementAcceptances.userId, actor.id),
-        eq(agreementAcceptances.agreementVersionId, current.id),
-      ),
-    )
-    .limit(1);
+  const acceptedAt = new Date();
 
-  if (already.length === 0) {
-    await db.insert(agreementAcceptances).values({
-      userId: actor.id,
-      agreementVersionId: current.id,
-      ip: meta.ip,
-      userAgent: meta.userAgent,
-      bodyHashAtAcceptance: current.bodyHash,
-    });
-  }
+  // 2. Stamp the acceptance into the text: this is the final document
+  const final = await renderAgreementForWriter(writer, { acceptedAt, ip: meta.ip });
 
-  // Accepting the current agreement is what turns a writer active (§6)
-  await db
-    .update(users)
-    .set({ writerStatus: "active", updatedAt: new Date() })
-    .where(and(eq(users.id, actor.id), eq(users.role, "writer")));
+  // 4. The readable copy. Generated before the transaction so a slow PDF does
+  // not hold a write lock; the record below is what actually proves anything.
+  const pdf = await renderDocumentPdf({
+    title: "postscript Yazar Sözleşmesi ve Kullanım Ruhsatı Taahhüdü",
+    subtitle: `Sürüm ${current.version} · ${writer.displayName}`,
+    sections: [{ body: stripMarkdown(final.markdown) }],
+    footerNote: `Sürüm ${current.version} — ${preview.hash.slice(0, 16)} — ${acceptedAt.toISOString()}`,
+  });
 
+  const pdfMedia = await storeGeneratedPdf(pdf, {
+    prefix: "contracts",
+    fileName: `sozlesme-v${current.version}-${writer.id}.pdf`,
+    uploadedBy: writer.id,
+  });
+
+  await db.transaction(async (tx) => {
+    // 3. The acceptance record
+    await tx
+      .insert(agreementAcceptances)
+      .values({
+        userId: writer.id,
+        agreementVersionId: current.id,
+        acceptedAt,
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+        bodyHashAtAcceptance: preview.hash,
+        renderedMarkdown: final.markdown,
+        pdfMediaId: pdfMedia.id,
+      })
+      .onConflictDoNothing();
+
+    // 5. Accepting the current contract is what turns a writer active
+    await tx
+      .update(users)
+      .set({ writerStatus: "active", updatedAt: acceptedAt })
+      .where(and(eq(users.id, writer.id), eq(users.role, "writer")));
+  });
+
+  // 6. and 7.
   await writeAudit({
-    actorId: actor.id,
+    actorId: writer.id,
     action: "agreement.accepted",
     entityType: "agreement_versions",
     entityId: current.id,
-    after: { version: current.version, bodyHash: current.bodyHash },
+    after: { version: current.version, bodyHashAtAcceptance: preview.hash },
     ip: meta.ip,
+  });
+
+  const message = templates.agreementAccepted({
+    displayName: writer.displayName,
+    version: current.version,
+  });
+  await sendMail({
+    to: writer.email,
+    subject: message.subject,
+    text: message.text,
+    attachments: [
+      {
+        filename: `postscript-sozlesme-v${current.version}.pdf`,
+        content: pdf,
+        contentType: "application/pdf",
+      },
+    ],
   });
 }
 
-/** Admin report: who has accepted the current version and who has not (§9.3). */
+/**
+ * Markdown to plain text for the PDF. The evidence is `rendered_markdown`; the
+ * PDF only has to be readable, so tables become simple lines.
+ */
+function stripMarkdown(markdown: string): string {
+  return markdown
+    .replace(/^\s*\|\s*-+[-\s|:]*\|\s*$/gm, "")
+    .replace(/^\s*\|/gm, "")
+    .replace(/\|\s*$/gm, "")
+    .replace(/\s*\|\s*/g, " · ")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/\*(.+?)\*/g, "$1")
+    .replace(/\\([\\`*_{}[\]()#+\-.!|>~])/g, "$1")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** Admin report: who has accepted the current version and who has not (§9). */
 export async function acceptanceReport(actor: Actor) {
   if (!canManageAgreements(actor)) throw forbidden();
 

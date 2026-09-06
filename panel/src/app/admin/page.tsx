@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, count, eq, isNull } from "drizzle-orm";
+import { and, count, eq, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import { guardPanel } from "@/lib/auth/guard";
@@ -20,10 +20,20 @@ export default async function AdminDashboard() {
     acceptanceReport({ ...user }),
   ]);
 
-  const pendingIdentity = await db
+  // Readers who could be promoted today, if the contract settings are in place
+  const promotable = await db
     .select({ total: count() })
     .from(users)
-    .where(and(eq(users.role, "user"), isNull(users.identityVerifiedAt), isNull(users.deletedAt)));
+    .where(
+      and(
+        eq(users.role, "user"),
+        isNotNull(users.emailVerifiedAt),
+        isNotNull(users.birthDate),
+        isNotNull(users.kvkkConsentAt),
+        eq(users.isBanned, false),
+        isNull(users.deletedAt),
+      ),
+    );
 
   const counts = Object.fromEntries(byRole.map((row) => [row.role, row.total]));
 
@@ -85,10 +95,11 @@ export default async function AdminDashboard() {
         </Card>
 
         <Card>
-          <h2 className="mb-3 font-serif text-lg">Kimlik doğrulama bekleyenler</h2>
+          <h2 className="mb-3 font-serif text-lg">Terfiye hazır okuyucular</h2>
           <p className="text-sm text-muted">
-            {pendingIdentity[0]?.total ?? 0} kullanıcının kimliği doğrulanmamış. Yazar terfisi için
-            gereklidir.
+            {promotable[0]?.total ?? 0} okuyucu e-posta, doğum tarihi ve KVKK koşullarını
+            sağlıyor. Sözleşmenin bu kişiler için render edilebilmesi de gerekir; kullanıcı
+            sayfasında ön koşul listesi tek tek gösterilir.
           </p>
         </Card>
       </div>

@@ -76,6 +76,12 @@ export const grantTypeEnum = pgEnum("grant_type", [
 
 export const grantStatusEnum = pgEnum("grant_status", ["pending", "signed", "declined", "revoked"]);
 
+/** How the author is credited on a given work (§7, contract art. 7). */
+export const bylineChoiceEnum = pgEnum("byline_choice", ["real_name", "pen_name"]);
+
+/** Whether an edit stayed inside contract art. 6.2 or changed the work (§7.5). */
+export const changeKindEnum = pgEnum("change_kind", ["correction", "content_change"]);
+
 /** Only `none` for now; the column exists so a future paid model needs no change of meaning. */
 export const considerationEnum = pgEnum("consideration", ["none"]);
 
@@ -136,9 +142,6 @@ export const users = pgTable(
 
     /** Required before a promotion to writer; immutable for the user once set. */
     birthDate: date("birth_date"),
-
-    identityVerifiedAt: timestamp("identity_verified_at", { withTimezone: true }),
-    identityVerifiedBy: uuid("identity_verified_by"),
 
     role: roleEnum("role").notNull().default("user"),
     writerStatus: writerStatusEnum("writer_status"),
@@ -310,19 +313,11 @@ export const media = pgTable(
     licenseEvidenceMediaId: uuid("license_evidence_media_id"),
     altText: text("alt_text"),
 
-    /** Identity documents live in a separate bucket and self-destruct (D-009). */
-    isIdentityDocument: boolean("is_identity_document").notNull().default(false),
-    autoDeleteAt: timestamp("auto_delete_at", { withTimezone: true }),
-    purgedAt: timestamp("purged_at", { withTimezone: true }),
-
     createdAt: createdAt(),
     updatedAt: updatedAt(),
     deletedAt: deletedAt(),
   },
-  (t) => [
-    index("media_uploaded_by_idx").on(t.uploadedBy),
-    index("media_auto_delete_idx").on(t.autoDeleteAt),
-  ],
+  (t) => [index("media_uploaded_by_idx").on(t.uploadedBy)],
 );
 
 /* ------------------------------------------------------------------ */
@@ -368,6 +363,12 @@ export const agreementAcceptances = pgTable(
     userAgent: text("user_agent"),
     /** Hash of the text actually shown to the user at acceptance time. */
     bodyHashAtAcceptance: text("body_hash_at_acceptance").notNull(),
+    /**
+     * The contract exactly as it was shown, placeholders filled (§4). This is
+     * the evidence; the PDF is only a readable copy of it.
+     */
+    renderedMarkdown: text("rendered_markdown"),
+    pdfMediaId: uuid("pdf_media_id").references(() => media.id, { onDelete: "set null" }),
     /** Filled in when a newer version is published; the row is never deleted. */
     supersededAt: timestamp("superseded_at", { withTimezone: true }),
     createdAt: createdAt(),
@@ -456,10 +457,6 @@ export const articles = pgTable(
     bodyMarkdown: text("body_markdown").notNull().default(""),
 
     authorId: uuid("author_id").references(() => users.id, { onDelete: "restrict" }),
-    coAuthorIds: uuid("co_author_ids")
-      .array()
-      .notNull()
-      .default(sql`'{}'::uuid[]`),
 
     category: text("category"),
     tags: text("tags")
@@ -506,6 +503,8 @@ export const articleVersions = pgTable(
     bodyMarkdown: text("body_markdown").notNull(),
     changedBy: uuid("changed_by").references(() => users.id, { onDelete: "set null" }),
     changeNote: text("change_note"),
+    /** A content change revokes the work approval; a correction keeps it (§7.5). */
+    changeKind: changeKindEnum("change_kind").notNull().default("correction"),
     /** Marks the snapshot taken at the moment the article went public. */
     isPublishedSnapshot: boolean("is_published_snapshot").notNull().default(false),
     createdAt: createdAt(),
@@ -564,6 +563,12 @@ export const rightsGrants = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
 
+    /** The contract version whose article 4 fixes this licence's scope (§7.1). */
+    agreementVersionId: uuid("agreement_version_id").references(() => agreementVersions.id, {
+      onDelete: "restrict",
+    }),
+    bylineChoice: bylineChoiceEnum("byline_choice"),
+
     grantType: grantTypeEnum("grant_type").notNull(),
 
     // FSEK requires each economic right to be listed one by one (art. 52)
@@ -600,10 +605,10 @@ export const rightsGrants = pgTable(
     updatedAt: updatedAt(),
   },
   (t) => [
-    // One active form per article; revoked forms stay as history
+    // One live approval per article; revoked and declined ones stay as history
     uniqueIndex("rights_grants_article_active_unique")
       .on(t.articleId)
-      .where(sql`${t.revokedAt} is null`),
+      .where(sql`${t.status} in ('pending', 'signed')`),
     index("rights_grants_grantor_idx").on(t.grantorId),
     index("rights_grants_status_idx").on(t.status),
   ],
@@ -634,12 +639,18 @@ export const kvkkVersions = pgTable(
 );
 
 /* ------------------------------------------------------------------ */
-/* settings (key/value, D-008)                                         */
+/* site_settings (publisher details for the contract, §3)              */
+
 /* ------------------------------------------------------------------ */
 
-export const settings = pgTable("settings", {
+/**
+ * Values the contract template needs but the database cannot infer: who the
+ * publishing partners are, the notification address, the jurisdiction. Only an
+ * admin edits them and every change lands in the audit log.
+ */
+export const siteSettings = pgTable("site_settings", {
   key: text("key").primaryKey(),
-  value: jsonb("value").notNull(),
+  value: text("value").notNull(),
   updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: createdAt(),
   updatedAt: updatedAt(),

@@ -1,190 +1,114 @@
 /**
- * Per-work rights grant forms (§7.2).
+ * Work approvals — "Eser Onayı" (§7).
  *
- * FSEK art. 52 requires each economic right to be named individually, so the
- * form text lists them one per line and the hash of that exact text is stored
- * with the signature. After signing, the form is frozen: a change means
- * revoking it and issuing a new one.
+ * The licence scope is not negotiated per work: it is fixed by article 4 of the
+ * contract version the writer accepted. Nobody, editor included, can widen or
+ * narrow it here. What the writer actually approves is *this text, under that
+ * contract*, which is why the record stores the hash of the accepted article
+ * body and the contract version it rests on.
  */
 import "server-only";
-import { and, desc, eq, isNull, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { articles, rightsGrants, users, type Article, type RightsGrant, type User } from "@/db/schema";
+import {
+  agreementVersions,
+  articles,
+  rightsGrants,
+  users,
+  type Article,
+  type RightsGrant,
+  type User,
+} from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import { canAccessEditorPanel, canSignRightsGrant, type Actor } from "@/lib/auth/rbac";
-import { sha256Hex } from "@/lib/crypto";
+import { hashDocument } from "@/lib/agreement/normalise";
+import { formatContractDateTime } from "@/lib/agreement/render";
 import { env } from "@/lib/env";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { sendMail } from "@/lib/mail/transport";
 import { renderDocumentPdf } from "@/lib/pdf";
 import * as templates from "@emails/templates";
 import { storeGeneratedPdf } from "./media";
-import { getRightsTemplate, type RightsTemplate } from "./settings";
+import { getCurrentAgreement } from "./agreements";
 import type { RequestMeta } from "./auth";
 
-/* ------------------------------------------------------------------ */
-/* Form text                                                           */
-/* ------------------------------------------------------------------ */
-
-const RIGHT_LABELS = {
-  rightAdaptation: "İşleme hakkı (FSEK m.21)",
-  rightReproduction: "Çoğaltma hakkı (FSEK m.22)",
-  rightDistribution: "Yayma hakkı (FSEK m.23)",
-  rightCommunicationToPublic: "Umuma iletim hakkı (FSEK m.25)",
-} as const;
-
-const GRANT_TYPE_LABELS = {
-  assignment: "Devir (mali hakların tamamen devri)",
-  exclusive_license: "Tam ruhsat (inhisari lisans)",
-  non_exclusive_license: "Basit ruhsat (inhisari olmayan lisans)",
-} as const;
-
-const CHANNEL_LABELS: Record<string, string> = {
-  web: "İnternet sitesi",
-  pdf_issue: "PDF sayı",
-  social: "Sosyal medya",
-  newsletter: "Bülten",
-  future_channels: "İleride kullanılacak mecralar",
-};
-
-export type GrantFields = Pick<
-  RightsGrant,
-  | "grantType"
-  | "rightAdaptation"
-  | "rightReproduction"
-  | "rightDistribution"
-  | "rightCommunicationToPublic"
-  | "channels"
-  | "exclusivityMonths"
-  | "territory"
-  | "commercialUseIncluded"
->;
-
 /**
- * The full, human readable form. This exact string is what the writer sees and
- * what gets hashed into `form_text_hash`, so any change to it changes the hash.
+ * The licence exactly as article 4 of the contract states it. These are
+ * constants, not defaults: §11 forbids making the per-work scope editable.
  */
-export function renderGrantFormText(input: {
-  fields: GrantFields;
-  articleTitle: string;
-  writerName: string;
-}): string {
-  const { fields } = input;
+export const LICENCE_TERMS = {
+  grantType: "non_exclusive_license",
+  rightReproduction: true,
+  rightDistribution: true,
+  rightCommunicationToPublic: true,
+  // Limited to the operations listed in article 4.2
+  rightAdaptation: true,
+  channels: ["web", "pdf_issue", "social", "newsletter"],
+  territory: "worldwide",
+  exclusivityMonths: null,
+  consideration: "none",
+  commercialUseIncluded: false,
+} as const;
 
-  const grantedRights = (Object.keys(RIGHT_LABELS) as (keyof typeof RIGHT_LABELS)[])
-    .filter((key) => fields[key])
-    .map((key) => `  - ${RIGHT_LABELS[key]}`);
+/** The sentence the writer ticks; it is stored verbatim in the record PDF. */
+export const APPROVAL_STATEMENT =
+  "Bu eseri Sözleşme'nin 4. maddesindeki şartlarla ruhsatlıyorum.";
 
-  const withheldRights = (Object.keys(RIGHT_LABELS) as (keyof typeof RIGHT_LABELS)[])
-    .filter((key) => !fields[key])
-    .map((key) => `  - ${RIGHT_LABELS[key]}`);
-
-  const channels = fields.channels.map((channel) => `  - ${CHANNEL_LABELS[channel] ?? channel}`);
-
-  const lines = [
-    "ESER BAZLI MALİ HAK DEVRİ / RUHSAT FORMU",
-    "",
-    `Eser: ${input.articleTitle}`,
-    `Hak sahibi: ${input.writerName}`,
-    `Devralan: postscript e-dergi`,
-    "",
-    `Sözleşme türü: ${GRANT_TYPE_LABELS[fields.grantType]}`,
-    "",
-    "Devredilen / lisanslanan haklar:",
-    ...(grantedRights.length > 0 ? grantedRights : ["  - (yok)"]),
-    "",
-    "Devredilmeyen haklar (hak sahibinde kalır):",
-    ...(withheldRights.length > 0 ? withheldRights : ["  - (yok)"]),
-    "",
-    "Kullanım mecraları:",
-    ...(channels.length > 0 ? channels : ["  - (yok)"]),
-    "",
-    `Süre: ${
-      fields.exclusivityMonths === null || fields.exclusivityMonths === 0
-        ? "Süresiz"
-        : `${fields.exclusivityMonths} ay`
-    }`,
-    `Ülke / bölge: ${fields.territory}`,
-    `Ticari kullanım: ${fields.commercialUseIncluded ? "Dahil" : "Dahil değil"}`,
-    "Bedel: Yok",
-    "",
-    "Manevi haklar FSEK m.14-17 uyarınca eser sahibinde kalır ve devredilemez.",
-    "Bu form, imzalandığı anda geçerli olan çerçeve sözleşmenin eki niteliğindedir.",
-  ];
-
-  return lines.join("\n");
+/** The hash of an article body, under the same normalisation as the contract. */
+export function articleHash(bodyMarkdown: string): string {
+  return hashDocument(bodyMarkdown);
 }
 
 /* ------------------------------------------------------------------ */
-/* Creating the form                                                   */
+/* Opening an approval                                                 */
 /* ------------------------------------------------------------------ */
 
-export const grantFieldsSchema = z.strictObject({
-  grantType: z.enum(["assignment", "exclusive_license", "non_exclusive_license"]),
-  rightAdaptation: z.boolean(),
-  rightReproduction: z.boolean(),
-  rightDistribution: z.boolean(),
-  rightCommunicationToPublic: z.boolean(),
-  channels: z.array(z.enum(["web", "pdf_issue", "social", "newsletter", "future_channels"])),
-  exclusivityMonths: z.number().int().min(0).max(600).nullable(),
-  territory: z.string().trim().min(2).max(80),
-  commercialUseIncluded: z.boolean(),
-});
-
-function fieldsFromTemplate(template: RightsTemplate): GrantFields {
-  return {
-    grantType: template.grantType,
-    rightAdaptation: template.rightAdaptation,
-    rightReproduction: template.rightReproduction,
-    rightDistribution: template.rightDistribution,
-    rightCommunicationToPublic: template.rightCommunicationToPublic,
-    channels: template.channels,
-    exclusivityMonths: template.exclusivityMonths,
-    territory: template.territory,
-    commercialUseIncluded: template.commercialUseIncluded,
-  };
-}
-
 /**
- * Called automatically when an editor accepts an article (§7.2). Returns the
- * existing active form if one is already open, so accepting twice is harmless.
+ * Called when an editor accepts an article (§7.1). Returns the approval that is
+ * already open, if any, so accepting twice is harmless.
  */
-export async function createGrantForArticle(
+export async function openApprovalForArticle(
   article: Article,
-  options: { overrides?: Partial<GrantFields>; actorId: string | null; ip?: string | null } = {
-    actorId: null,
-  },
+  options: { actorId: string | null; ip?: string | null } = { actorId: null },
 ): Promise<RightsGrant> {
   if (!article.authorId) {
-    throw badRequest("Makaleye yazar atanmadan hak devri formu oluşturulamaz.");
+    throw badRequest("Makaleye yazar atanmadan Eser Onayı açılamaz.");
   }
 
-  const active = await findActiveGrant(article.id);
-  if (active) return active;
+  const live = await findLiveApproval(article.id);
+  if (live) return live;
 
-  const template = await getRightsTemplate();
-  const fields: GrantFields = { ...fieldsFromTemplate(template), ...options.overrides };
+  const agreement = await getCurrentAgreement();
+  if (!agreement) {
+    throw conflict("Yayınlanmış bir sözleşme sürümü yok; Eser Onayı açılamaz.");
+  }
 
   const writer = await findWriter(article.authorId);
-  const formText = renderGrantFormText({
-    fields,
-    articleTitle: article.title,
-    writerName: writer.penName ?? writer.displayName,
-  });
 
   const [grant] = await db
     .insert(rightsGrants)
     .values({
       articleId: article.id,
       grantorId: article.authorId,
-      ...fields,
-      formTextHash: sha256Hex(formText),
+      agreementVersionId: agreement.id,
+      grantType: LICENCE_TERMS.grantType,
+      rightAdaptation: LICENCE_TERMS.rightAdaptation,
+      rightReproduction: LICENCE_TERMS.rightReproduction,
+      rightDistribution: LICENCE_TERMS.rightDistribution,
+      rightCommunicationToPublic: LICENCE_TERMS.rightCommunicationToPublic,
+      channels: [...LICENCE_TERMS.channels],
+      territory: LICENCE_TERMS.territory,
+      exclusivityMonths: LICENCE_TERMS.exclusivityMonths,
+      consideration: LICENCE_TERMS.consideration,
+      commercialUseIncluded: LICENCE_TERMS.commercialUseIncluded,
+      // Filled in at approval time with the hash of the text actually approved
+      formTextHash: articleHash(article.bodyMarkdown),
       status: "pending",
     })
     .returning();
 
-  const url = `${env().APP_URL}/writer/rights/${grant!.id}`;
+  const url = `${env().APP_URL}/writer/approvals`;
   const message = templates.rightsGrantPending({
     displayName: writer.displayName,
     articleTitle: article.title,
@@ -194,64 +118,43 @@ export async function createGrantForArticle(
 
   await writeAudit({
     actorId: options.actorId,
-    action: "rights_grant.created",
+    action: "work_approval.opened",
     entityType: "rights_grants",
     entityId: grant!.id,
-    after: { articleId: article.id, grantorId: article.authorId, ...fields },
+    after: { articleId: article.id, grantorId: article.authorId, agreementVersionId: agreement.id },
     ip: options.ip ?? null,
   });
 
   return grant!;
 }
 
-/** An editor adjusting the defaults for one article before the writer signs. */
-export async function updateGrantFields(
-  actor: Actor,
-  grantId: string,
-  rawInput: unknown,
+/**
+ * Revokes the live approval, because the work it covered has changed (§7.5).
+ * The revoked row stays as history.
+ */
+export async function revokeApproval(
+  articleId: string,
+  actorId: string | null,
   meta: RequestMeta,
-): Promise<RightsGrant> {
-  if (!canAccessEditorPanel(actor)) throw forbidden();
+): Promise<void> {
+  const live = await findLiveApproval(articleId);
+  if (!live) return;
 
-  const parsed = grantFieldsSchema.safeParse(rawInput);
-  if (!parsed.success) {
-    throw badRequest("Form alanları geçersiz.", z.flattenError(parsed.error).fieldErrors);
-  }
-
-  const grant = await findGrant(grantId);
-  if (grant.status !== "pending") {
-    throw conflict("Yalnızca imza bekleyen form düzenlenebilir. Formu iptal edip yenisini açın.");
-  }
-
-  const article = await findArticle(grant.articleId);
-  const writer = await findWriter(grant.grantorId);
-  const formText = renderGrantFormText({
-    fields: parsed.data,
-    articleTitle: article.title,
-    writerName: writer.penName ?? writer.displayName,
-  });
-
-  const [updated] = await db
+  const now = new Date();
+  await db
     .update(rightsGrants)
-    .set({ ...parsed.data, formTextHash: sha256Hex(formText), updatedAt: new Date() })
-    .where(eq(rightsGrants.id, grantId))
-    .returning();
+    .set({ status: "revoked", revokedAt: now, revokedBy: actorId, updatedAt: now })
+    .where(eq(rightsGrants.id, live.id));
 
   await writeAudit({
-    actorId: actor.id,
-    action: "rights_grant.fields_updated",
+    actorId,
+    action: "work_approval.revoked",
     entityType: "rights_grants",
-    entityId: grantId,
-    before: {
-      grantType: grant.grantType,
-      channels: grant.channels,
-      exclusivityMonths: grant.exclusivityMonths,
-    },
-    after: parsed.data,
+    entityId: live.id,
+    before: { status: live.status },
+    after: { reason: "content_change" },
     ip: meta.ip,
   });
-
-  return updated!;
 }
 
 /* ------------------------------------------------------------------ */
@@ -261,16 +164,21 @@ export async function updateGrantFields(
 export async function findGrant(grantId: string): Promise<RightsGrant> {
   const rows = await db.select().from(rightsGrants).where(eq(rightsGrants.id, grantId)).limit(1);
   const row = rows[0];
-  if (!row) throw notFound("Devir formu bulunamadı.");
+  if (!row) throw notFound("Eser Onayı bulunamadı.");
   return row;
 }
 
-/** The one form that currently governs an article; revoked forms are history. */
-export async function findActiveGrant(articleId: string): Promise<RightsGrant | null> {
+/** The approval that currently governs an article: pending or signed (§7.5). */
+export async function findLiveApproval(articleId: string): Promise<RightsGrant | null> {
   const rows = await db
     .select()
     .from(rightsGrants)
-    .where(and(eq(rightsGrants.articleId, articleId), isNull(rightsGrants.revokedAt)))
+    .where(
+      and(
+        eq(rightsGrants.articleId, articleId),
+        inArray(rightsGrants.status, ["pending", "signed"]),
+      ),
+    )
     .limit(1);
   return rows[0] ?? null;
 }
@@ -289,28 +197,33 @@ async function findWriter(userId: string): Promise<User> {
   return row;
 }
 
-/** The writer's own forms, split into the three tabs of §9.1. */
-export async function listGrantsForWriter(actor: Actor) {
+/** Everything the approval screen needs for one writer (§7.2). */
+export async function listApprovalsForWriter(actor: Actor) {
   return db
     .select({
       id: rightsGrants.id,
       status: rightsGrants.status,
       articleId: rightsGrants.articleId,
       articleTitle: articles.title,
+      articleBody: articles.bodyMarkdown,
+      bylineChoice: rightsGrants.bylineChoice,
+      agreementVersion: agreementVersions.version,
       createdAt: rightsGrants.createdAt,
       signedAt: rightsGrants.signedAt,
       declinedAt: rightsGrants.declinedAt,
       declinedReason: rightsGrants.declinedReason,
+      formTextHash: rightsGrants.formTextHash,
       formPdfMediaId: rightsGrants.formPdfMediaId,
     })
     .from(rightsGrants)
     .innerJoin(articles, eq(rightsGrants.articleId, articles.id))
-    .where(and(eq(rightsGrants.grantorId, actor.id), isNull(rightsGrants.revokedAt)))
+    .leftJoin(agreementVersions, eq(rightsGrants.agreementVersionId, agreementVersions.id))
+    .where(eq(rightsGrants.grantorId, actor.id))
     .orderBy(desc(rightsGrants.createdAt));
 }
 
-/** Editor view: which forms are still waiting (§9.2). */
-export async function listPendingGrants(actor: Actor) {
+/** Editor view: which approvals are still waiting, and for how long (§9). */
+export async function listPendingApprovals(actor: Actor) {
   if (!canAccessEditorPanel(actor)) throw forbidden();
 
   return db
@@ -323,98 +236,108 @@ export async function listPendingGrants(actor: Actor) {
       writerEmail: users.email,
       createdAt: rightsGrants.createdAt,
       reminderSentAt: rightsGrants.reminderSentAt,
-      // Computed here so the page component stays free of Date.now()
       isOverdue: sql<boolean>`${rightsGrants.createdAt} < now() - interval '3 days'`,
     })
     .from(rightsGrants)
     .innerJoin(articles, eq(rightsGrants.articleId, articles.id))
     .innerJoin(users, eq(rightsGrants.grantorId, users.id))
-    .where(and(eq(rightsGrants.status, "pending"), isNull(rightsGrants.revokedAt)))
+    .where(eq(rightsGrants.status, "pending"))
     .orderBy(rightsGrants.createdAt);
 }
 
-/**
- * Reads the form as the writer must see it: the stored fields turned back into
- * the exact text whose hash was recorded.
- */
-export async function renderGrantForWriter(actor: Actor, grantId: string) {
-  const grant = await findGrant(grantId);
-  if (!canSignRightsGrant(actor, grant) && !canAccessEditorPanel(actor)) throw forbidden();
-
-  const article = await findArticle(grant.articleId);
-  const writer = await findWriter(grant.grantorId);
-
-  const formText = renderGrantFormText({
-    fields: grant,
-    articleTitle: article.title,
-    writerName: writer.penName ?? writer.displayName,
-  });
-
-  return { grant, article, writer, formText, formTextHash: sha256Hex(formText) };
-}
-
 /* ------------------------------------------------------------------ */
-/* Signing, declining, revoking                                        */
+/* Approving and declining                                             */
 /* ------------------------------------------------------------------ */
 
-export const signatureSchema = z.strictObject({
+export const approvalSchema = z.strictObject({
   grantId: z.uuid(),
-  /** Hash of the text the browser rendered, so the two are proven identical. */
-  formTextHash: z.string().length(64),
+  /** The hash of the text the screen showed, re-derived server side (§7.3.1). */
+  articleHash: z.string().length(64),
+  bylineChoice: z.enum(["real_name", "pen_name"]),
   acknowledged: z.literal(true, { message: "Onay kutusunu işaretlemeniz gerekiyor." }),
 });
 
-export async function signRightsGrant(
+export async function approveWork(
   actor: Actor,
   rawInput: unknown,
   meta: RequestMeta,
 ): Promise<RightsGrant> {
-  const parsed = signatureSchema.safeParse(rawInput);
+  const parsed = approvalSchema.safeParse(rawInput);
   if (!parsed.success) {
-    throw badRequest("İmza isteği geçersiz.", z.flattenError(parsed.error).fieldErrors);
+    throw badRequest("Onay isteği geçersiz.", z.flattenError(parsed.error).fieldErrors);
   }
 
   const grant = await findGrant(parsed.data.grantId);
-  if (!canSignRightsGrant(actor, grant)) throw forbidden("Bu formu yalnızca hak sahibi imzalayabilir.");
-  if (grant.status !== "pending") throw conflict("Bu form imza bekleyen durumda değil.");
-  if (grant.revokedAt) throw conflict("Bu form iptal edilmiş.");
+  if (!canSignRightsGrant(actor, grant)) {
+    throw forbidden("Bu eseri yalnızca hak sahibi onaylayabilir.");
+  }
+  if (grant.status !== "pending") throw conflict("Bu Eser Onayı beklemede değil.");
 
   const article = await findArticle(grant.articleId);
   const writer = await findWriter(grant.grantorId);
-  const formText = renderGrantFormText({
-    fields: grant,
-    articleTitle: article.title,
-    writerName: writer.penName ?? writer.displayName,
-  });
-  const formTextHash = sha256Hex(formText);
 
-  // The writer must be signing exactly the text that is on file
-  if (formTextHash !== parsed.data.formTextHash || formTextHash !== grant.formTextHash) {
-    throw conflict("Form içeriği değişmiş görünüyor. Sayfayı yenileyip tekrar deneyin.");
+  // §7.3.1: the text must not have moved under the writer's feet
+  const currentHash = articleHash(article.bodyMarkdown);
+  if (currentHash !== parsed.data.articleHash) {
+    throw conflict("Eser metni onay sırasında değişti. Sayfayı yenileyip tekrar bakın.");
+  }
+  if (parsed.data.bylineChoice === "pen_name" && !writer.penName) {
+    throw badRequest("Mahlasla yayın için önce profilinizde bir mahlas tanımlayın.");
   }
 
-  const signedAt = new Date();
+  const agreement = grant.agreementVersionId
+    ? (
+        await db
+          .select()
+          .from(agreementVersions)
+          .where(eq(agreementVersions.id, grant.agreementVersionId))
+          .limit(1)
+      )[0]
+    : null;
 
+  const signedAt = new Date();
+  const byline =
+    parsed.data.bylineChoice === "pen_name" ? (writer.penName ?? writer.displayName) : writer.displayName;
+
+  // §8: a one page record. The work's text is deliberately not in it.
   const pdf = await renderDocumentPdf({
-    title: "Eser Bazlı Mali Hak Devri Formu",
-    subtitle: `${article.title} · ${writer.penName ?? writer.displayName}`,
+    title: "postscript · Eser Onayı Kaydı",
+    subtitle: article.title,
     sections: [
-      { body: formText },
       {
-        heading: "İmza kaydı",
+        heading: "Onay",
         body: [
-          `İmza tarihi: ${signedAt.toISOString()}`,
-          `IP adresi: ${meta.ip ?? "-"}`,
-          `Tarayıcı: ${meta.userAgent ?? "-"}`,
+          `Dergi: postscript`,
+          `Yazar: ${writer.displayName}`,
+          `Yayın adı: ${byline} (${parsed.data.bylineChoice === "pen_name" ? "mahlas" : "gerçek ad"})`,
+          `Eser: ${article.title}`,
+          `Eser metni özeti (SHA-256): ${currentHash}`,
+        ].join("\n"),
+      },
+      {
+        heading: "Dayanak",
+        body: [
+          `Sözleşme sürümü: ${agreement?.version ?? "—"}`,
+          `Sözleşme metin özeti (SHA-256): ${agreement?.bodyHash ?? "—"}`,
+          "",
+          APPROVAL_STATEMENT,
+        ].join("\n"),
+      },
+      {
+        heading: "Kayıt",
+        body: [
+          `Onay tarihi: ${formatContractDateTime(signedAt)}`,
+          `IP adresi: ${meta.ip ?? "—"}`,
+          `Tarayıcı: ${meta.userAgent ?? "—"}`,
         ].join("\n"),
       },
     ],
-    footerNote: `postscript hak devri formu · sha256: ${formTextHash}`,
+    footerNote: `Eser Onayı · ${currentHash.slice(0, 16)} · ${signedAt.toISOString()}`,
   });
 
   const pdfMedia = await storeGeneratedPdf(pdf, {
-    prefix: "rights-grants",
-    fileName: `hak-devri-${article.slug}.pdf`,
+    prefix: "contracts",
+    fileName: `eser-onayi-${article.slug}.pdf`,
     uploadedBy: writer.id,
   });
 
@@ -425,6 +348,8 @@ export async function signRightsGrant(
       signedAt,
       signedIp: meta.ip,
       signedUserAgent: meta.userAgent,
+      formTextHash: currentHash,
+      bylineChoice: parsed.data.bylineChoice,
       formPdfMediaId: pdfMedia.id,
       updatedAt: signedAt,
     })
@@ -440,16 +365,20 @@ export async function signRightsGrant(
     subject: message.subject,
     text: message.text,
     attachments: [
-      { filename: `hak-devri-${article.slug}.pdf`, content: pdf, contentType: "application/pdf" },
+      { filename: `eser-onayi-${article.slug}.pdf`, content: pdf, contentType: "application/pdf" },
     ],
   });
 
   await writeAudit({
     actorId: actor.id,
-    action: "rights_grant.signed",
+    action: "work_approval.signed",
     entityType: "rights_grants",
     entityId: grant.id,
-    after: { formTextHash, signedAt: signedAt.toISOString() },
+    after: {
+      articleHash: currentHash,
+      bylineChoice: parsed.data.bylineChoice,
+      agreementVersionId: grant.agreementVersionId,
+    },
     ip: meta.ip,
   });
 
@@ -458,14 +387,14 @@ export async function signRightsGrant(
 
 export const declineSchema = z.strictObject({
   grantId: z.uuid(),
-  reason: z.string().trim().min(5, "Gerekçe en az 5 karakter olmalı.").max(1000),
+  reason: z.string().trim().min(10, "Gerekçe en az 10 karakter olmalı.").max(1000),
 });
 
 /**
  * Declining sends the article back for revision. The status change itself is
- * done by the article service so the state machine stays the only authority.
+ * the article service's job, so the state machine stays the only authority.
  */
-export async function declineRightsGrant(
+export async function declineWork(
   actor: Actor,
   rawInput: unknown,
   meta: RequestMeta,
@@ -477,23 +406,18 @@ export async function declineRightsGrant(
 
   const grant = await findGrant(parsed.data.grantId);
   if (!canSignRightsGrant(actor, grant)) throw forbidden();
-  if (grant.status !== "pending") throw conflict("Bu form imza bekleyen durumda değil.");
+  if (grant.status !== "pending") throw conflict("Bu Eser Onayı beklemede değil.");
 
   const now = new Date();
   const [declined] = await db
     .update(rightsGrants)
-    .set({
-      status: "declined",
-      declinedAt: now,
-      declinedReason: parsed.data.reason,
-      updatedAt: now,
-    })
+    .set({ status: "declined", declinedAt: now, declinedReason: parsed.data.reason, updatedAt: now })
     .where(eq(rightsGrants.id, grant.id))
     .returning();
 
   await writeAudit({
     actorId: actor.id,
-    action: "rights_grant.declined",
+    action: "work_approval.declined",
     entityType: "rights_grants",
     entityId: grant.id,
     after: { reason: parsed.data.reason },
@@ -503,49 +427,15 @@ export async function declineRightsGrant(
   return declined!;
 }
 
-/**
- * A signed form cannot be edited (§7.2). Changing the terms means revoking the
- * old form, which stays on file, and opening a new pending one.
- */
-export async function revokeAndReissue(
-  actor: Actor,
-  grantId: string,
-  overrides: Partial<GrantFields>,
-  meta: RequestMeta,
-): Promise<RightsGrant> {
-  if (!canAccessEditorPanel(actor)) throw forbidden();
-
-  const grant = await findGrant(grantId);
-  if (grant.revokedAt) throw conflict("Bu form zaten iptal edilmiş.");
-
-  const now = new Date();
-  await db
-    .update(rightsGrants)
-    .set({ status: "revoked", revokedAt: now, revokedBy: actor.id, updatedAt: now })
-    .where(eq(rightsGrants.id, grantId));
-
-  await writeAudit({
-    actorId: actor.id,
-    action: "rights_grant.revoked",
-    entityType: "rights_grants",
-    entityId: grantId,
-    before: { status: grant.status },
-    ip: meta.ip,
-  });
-
-  const article = await findArticle(grant.articleId);
-  return createGrantForArticle(article, { overrides, actorId: actor.id, ip: meta.ip });
-}
-
 /* ------------------------------------------------------------------ */
-/* Reminders (§12)                                                     */
+/* Reminders (§12 of the base specification)                           */
 /* ------------------------------------------------------------------ */
 
 /**
- * Nudges writers whose form has been waiting for three days. Idempotent: a
+ * Nudges writers whose approval has been waiting three days. Idempotent: a
  * reminder is not repeated within another three days.
  */
-export async function sendGrantReminders(now: Date = new Date()): Promise<number> {
+export async function sendApprovalReminders(now: Date = new Date()): Promise<number> {
   const threshold = new Date(now.getTime() - 3 * 86_400_000);
 
   const due = await db
@@ -561,9 +451,11 @@ export async function sendGrantReminders(now: Date = new Date()): Promise<number
     .where(
       and(
         eq(rightsGrants.status, "pending"),
-        isNull(rightsGrants.revokedAt),
         lt(rightsGrants.createdAt, threshold),
-        or(isNull(rightsGrants.reminderSentAt), lt(rightsGrants.reminderSentAt, threshold)),
+        or(
+          sql`${rightsGrants.reminderSentAt} is null`,
+          lt(rightsGrants.reminderSentAt, threshold),
+        ),
       ),
     );
 
@@ -571,7 +463,7 @@ export async function sendGrantReminders(now: Date = new Date()): Promise<number
     const message = templates.rightsGrantReminder({
       displayName: row.displayName,
       articleTitle: row.articleTitle,
-      url: `${env().APP_URL}/writer/rights/${row.grantId}`,
+      url: `${env().APP_URL}/writer/approvals`,
     });
     await sendMail({ to: row.email, subject: message.subject, text: message.text });
 
