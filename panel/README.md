@@ -314,7 +314,9 @@ sayfasıdır. Bu yüzden Vercel'de **panel kendi projesi olarak** kurulur.
    açın ve *pooled* bağlantı adresini alın: `postgres://…?sslmode=require`.
 
 2. **Vercel projesi.** New Project → depoyu seçin → **Root Directory: `panel`**.
-   Framework Next.js olarak tanınır; build komutu değiştirilmez.
+   **Framework Preset `Next.js` olmalı.** Var olan bir projeyi panele
+   çeviriyorsanız bu ayar `Other` kalır: Vercel derlemeyi hiç çalıştırmaz,
+   deploy "Ready" görünür ama her adres 404 verir.
 
 3. **Ortam değişkenleri.** İlk derlemeden **önce** girilmelidir; derleme
    sırasında da okunurlar.
