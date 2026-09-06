@@ -21,6 +21,7 @@ içinde kayıtlıdır.
 - [Mimari](#mimari)
 - [Zamanlanmış işler](#zamanlanmış-işler)
 - [Yedekleme ve geri yükleme](#yedekleme-ve-geri-yükleme)
+- [Yayına alma](#yayına-alma-vercel--neon)
 - [Test](#test)
 
 ---
@@ -301,6 +302,64 @@ Notlar:
   atlayın; `identity_verified_at` bilgisi veritabanında zaten durur.
 - Geri yükleme sonrası bir kez `pnpm purge-identity-documents` çalıştırın:
   saklama süresi dolmuş belgeler tekrar canlanmasın.
+
+---
+
+## Yayına alma (Vercel + Neon)
+
+Panel `panel/` alt dizinindedir; deponun kökü ayrı bir statik "çok yakında"
+sayfasıdır. Bu yüzden Vercel'de **panel kendi projesi olarak** kurulur.
+
+1. **Veritabanı.** Neon'da (veya başka bir yönetilen PostgreSQL'de) bir veritabanı
+   açın ve *pooled* bağlantı adresini alın: `postgres://…?sslmode=require`.
+
+2. **Vercel projesi.** New Project → depoyu seçin → **Root Directory: `panel`**.
+   Framework Next.js olarak tanınır; build komutu değiştirilmez.
+
+3. **Ortam değişkenleri.** İlk derlemeden **önce** girilmelidir; derleme
+   sırasında da okunurlar.
+
+   | Değişken | Değer |
+   |---|---|
+   | `APP_URL` | `https://<proje>.vercel.app` — yanlışsa bütün formlar 403 verir |
+   | `DATABASE_URL` | Neon bağlantı adresi |
+   | `SESSION_SECRET` | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+   | `SMTP_*`, `MAIL_FROM` | Gerçek bir SMTP sağlayıcısı |
+   | `S3_*` | Gerçek bir nesne deposu (S3, R2, MinIO) |
+
+4. **Migration** (bir kez, kendi makinenizden):
+
+   ```bash
+   DATABASE_URL="postgres://…" pnpm db:migrate
+   ```
+
+5. **İlk admin** (aynı şekilde, şifreyi siz seçersiniz):
+
+   ```bash
+   DATABASE_URL="postgres://…" pnpm create-admin -- --email … --password "…"
+   ```
+
+   `pnpm seed` **üretimde çalıştırılmaz**: oluşturduğu örnek hesapların şifreleri
+   depoda yazılıdır.
+
+Vercel'in dosya sistemi salt okunur ve geçicidir. Geliştirmedeki üç kısayol
+orada çalışmaz ve çalıştıkları sanılırsa veri sessizce kaybolur:
+
+- `DATABASE_URL=pglite://…` — veri sunucunun geçici diskinde kalır
+- `S3_ENDPOINT=file://…` — medya yükleme hata verir
+- `MAIL_TRANSPORT=file` — `.mail/` dizinine yazılamaz; e-posta gönderen her
+  işlem (kayıt, yazar terfisi, şifre sıfırlama) hata verir. Geçici çözüm
+  `MAIL_DIR=/tmp`'dir, ama postalar okunamaz; kalıcı çözüm gerçek SMTP'dir.
+  E-posta doğrulaması zorunlu olduğu için (D-034), SMTP kurulmadan **yeni
+  kullanıcı kaydı tamamlanamaz**; CLI ile oluşturulan admin doğrulanmış sayılır
+  ve girebilir.
+
+Zamanlanmış işler Vercel'de crontab ile çalışmaz; Vercel Cron veya dış bir
+tetikleyici gerekir (bkz. [Zamanlanmış işler](#zamanlanmış-işler)).
+
+Tek parça bir sunucu tercih edilirse depodaki `Dockerfile` üretim imajını üretir
+ve `docker compose --profile app up -d --build` aynı yığını (PostgreSQL, MinIO,
+panel) tek makinede ayağa kaldırır.
 
 ---
 
