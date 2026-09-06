@@ -17,6 +17,7 @@ import {
 import {
   createSession,
   destroyCurrentSession,
+  getAuthContext,
   requestMetadata,
   revokeAllSessions,
 } from "@/lib/auth/session";
@@ -29,7 +30,7 @@ function homeFor(role: Role): string {
   if (role === "admin") return "/admin";
   if (role === "editor") return "/editor";
   if (role === "writer") return "/writer";
-  return "/account";
+  return "/magazine";
 }
 
 export async function registerAction(
@@ -52,10 +53,10 @@ export async function registerAction(
       meta,
     );
 
-    // Signed in straight away, but nothing except the profile works until the
-    // address is verified (§5.1)
+    // A session is opened so the account can ask for another link, but that is
+    // all it can do until the address is verified (D-034)
     await createSession({ userId: user.id, ip: meta.ip, userAgent: meta.userAgent });
-    destination = "/account?registered=1";
+    destination = "/verify-email/pending";
   });
 
   if (destination) redirect(destination);
@@ -80,7 +81,10 @@ export async function loginAction(_state: ActionState, formData: FormData): Prom
       userAgent: meta.userAgent,
     });
 
-    destination = homeFor(outcome.user.role);
+    destination =
+      outcome.user.emailVerifiedAt === null
+        ? "/verify-email/pending"
+        : homeFor(outcome.user.role);
   });
 
   if (destination) redirect(destination);
@@ -96,12 +100,24 @@ export async function verifyEmailAction(
   _state: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  return runAction(async () => {
+  let destination: string | null = null;
+
+  const result = await runAction(async () => {
     await assertCsrfFromForm(formData);
     const meta = await requestMetadata();
-    await verifyEmail(text(formData, "token"), meta);
-    return { success: "E-posta adresiniz doğrulandı." };
+
+    const user = await verifyEmail(text(formData, "token"), meta);
+
+    // Someone who followed the link in the same browser goes straight in;
+    // anyone else is sent to sign in with a confirmed address
+    const context = await getAuthContext();
+    // ?verified=1 is what prints the welcome banner on the far side
+    destination =
+      context?.user.id === user.id ? `${homeFor(user.role)}?verified=1` : "/login?verified=1";
   });
+
+  if (destination) redirect(destination);
+  return result;
 }
 
 export async function requestPasswordResetAction(

@@ -5,15 +5,11 @@ import { requireSession } from "@/lib/auth/guard";
 import { listSessions } from "@/lib/auth/session";
 import { readCsrfToken } from "@/lib/csrf";
 import { PanelShell } from "@/components/shell";
-import { PanelForm, ActionButton } from "@/components/form";
+import { ActionButton } from "@/components/form";
 import { Alert, Card, PageHeader } from "@/components/ui";
 import { PasswordCard, ProfileCard, SessionsCard } from "@/components/account-forms";
 import { formatDate } from "@/lib/utils";
-import {
-  cancelDeletionAction,
-  requestDeletionAction,
-  resendVerificationAction,
-} from "./actions";
+import { cancelDeletionAction, requestDeletionAction } from "./actions";
 
 export const metadata = { title: "Hesabım" };
 
@@ -24,7 +20,7 @@ export const metadata = { title: "Hesabım" };
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ registered?: string }>;
+  searchParams: Promise<{ verified?: string }>;
 }) {
   const context = await requireSession();
   const csrfToken = (await readCsrfToken()) ?? "";
@@ -38,7 +34,10 @@ export default async function AccountPage({
     <PanelShell
       user={context.user}
       area="hesabım"
-      items={[{ href: "/account", label: "Hesabım" }]}
+      items={[
+        { href: "/magazine", label: "Dergi" },
+        { href: "/account", label: "Hesabım" },
+      ]}
     >
       <PageHeader
         title="Hesabım"
@@ -46,32 +45,13 @@ export default async function AccountPage({
       />
 
       <div className="space-y-6">
-        {params.registered && (
+        {params.verified && (
           <Alert tone="success" title="Hoş geldiniz">
-            Hesabınız oluşturuldu. E-posta adresinizi doğrulayana kadar yalnızca bu sayfayı
-            kullanabilirsiniz.
+            E-posta adresiniz doğrulandı, hesabınız kullanıma hazır.
           </Alert>
         )}
 
-        {!profile.emailVerifiedAt && (
-          <Card>
-            <Alert tone="warning" title="E-posta adresiniz doğrulanmadı">
-              Adresinize gönderilen bağlantıya tıklayana kadar profiliniz dışındaki hiçbir işlemi
-              yapamazsınız.
-            </Alert>
-            <div className="mt-4">
-              <PanelForm
-                action={resendVerificationAction}
-                csrfToken={csrfToken}
-                submitLabel="Bağlantıyı tekrar gönder"
-                submitVariant="secondary"
-              >
-              </PanelForm>
-            </div>
-          </Card>
-        )}
-
-        {profile.role === "user" && profile.emailVerifiedAt && (
+        {profile.role === "user" && (
           <Alert tone="info" title="Yazar olmak">
             Yazarlık yetkisini yalnızca yönetici verir; başvuru formu yoktur. Yetkilendirme için
             doğum tarihinizin girilmiş ve kimliğinizin doğrulanmış olması gerekir.

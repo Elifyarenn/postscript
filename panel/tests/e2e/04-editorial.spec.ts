@@ -117,6 +117,27 @@ test("takes an article from draft to published and then withdraws it", async ({ 
   // The author's private data must never appear in a public payload
   expect(JSON.stringify(body)).not.toContain(SEED.writer.email);
 
+  /* ---------- a reader reads it ---------- */
+
+  // SEED.reader is a writer by now (03 promoted it), so the plain reader here
+  // is the other ordinary account
+  await logout(page);
+  await submitLogin(page, SEED.minor);
+  await page.waitForURL("**/magazine**");
+
+  await page.getByRole("link", { name: ARTICLE_TITLE }).first().click();
+  await page.waitForURL(`**/magazine/articles/${slug}`);
+  await expect(page.getByRole("heading", { name: ARTICLE_TITLE })).toBeVisible();
+  await expect(page.getByText("Deneme gövdesi.")).toBeVisible();
+
+  // and the reader's sidebar offers nothing editorial
+  await expect(page.getByRole("link", { name: "Makaleler" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Genel bakış" })).toHaveCount(0);
+
+  await logout(page);
+  await loginElevated(page, "editor", SEED.editor);
+  await page.goto(articleUrl);
+
   /* ---------- withdrawal ---------- */
 
   await page.getByRole("button", { name: "Geri çekildi", exact: true }).click();

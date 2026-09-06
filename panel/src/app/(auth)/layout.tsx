@@ -9,7 +9,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         <Link href="/" className="mb-8 block text-center">
           <span className="font-serif text-3xl tracking-tight text-ink">postscript</span>
           <span className="mt-1 block text-xs tracking-[0.3em] text-muted uppercase">
-            yönetim paneli
+            e-dergi
           </span>
         </Link>
 

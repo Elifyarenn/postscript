@@ -461,3 +461,62 @@ Kaldırma tek bir migration'da (`0004`) toplandı, geri eklemek de öyle olacak.
 olmalı, oturum ikinci faktörü geçmeden panel dışında da (`/account` ve hesap
 eylemleri) iş göremez olmalı (D-023'ün kapattığı açık), ve kurulmuş bir faktörü
 sıfırlamak mevcut faktörü kanıtlamayı gerektirmeli (D-021'in kapattığı açık).
+
+---
+
+## D-034 — Doğrulanmamış e-posta sert bir kapıdır
+
+**Karar:** Kayıt olan hesap oturum açar ama e-posta adresini doğrulayana kadar
+`/verify-email/pending` dışında hiçbir sayfayı göremez, hiçbir mutasyonu
+çalıştıramaz. Kapı üç katmanda birden duruyor: `requireSession` doğrulanmamış
+oturumu bu sayfaya yönlendiriyor, `requireAuth`/`requireRole` 403 veriyor, ve
+`src/services/users.ts` içindeki `assertAccountUsable` profil güncelleme, hesap
+silme talebi ve talebin iptalinde aynı kontrolü servis katmanında tekrar
+yapıyor. Bekleme sayfasında yalnızca iki şey var: yeni bağlantı istemek
+(60 saniyede bir) ve çıkış yapmak. Bağlantı aynı tarayıcıda açılırsa kullanıcı
+doğrudan içeri alınır (`?verified=1`), başka bir tarayıcıda açılırsa
+`/login?verified=1`'e gider.
+
+**Gerekçe:** SPEC §5.1 kayıttan sonra oturumun açılmasını ve doğrulanmamış
+hesabın profilini kullanabilmesini öngörüyordu; ürün sahibi "kullanıcılar kayıt
+olurken mail doğrulaması olsun mutlaka" dedi, bu yüzden spesifikasyondan
+bilerek sapıldı. Yalnızca panelleri kapatmak yetmiyordu: doğrulanmamış bir
+hesap profil adını değiştirebiliyor, şifresini değiştirebiliyor, oturumlarını
+iptal edebiliyor ve hesap silme talebi açabiliyordu — yani adresi hiç kendisine
+ait olmayan biri hesabı kullanabiliyordu. Kontrolü servis katmanına da koymamın
+sebebi, entegrasyon testinin action katmanının etrafından dolaşıp `updateProfile`
+çağırabildiğini ve başarılı olduğunu göstermesiydi; iş kuralı tek yerde,
+servis katmanında durmalı.
+
+**Sınır:** Bekleme sayfası bilinçli olarak `requireSession` kullanmaz —
+kullansaydı kendi kendine yönlenirdi; `getAuthContext` ile çalışır ve oturum
+yoksa `/login`'e, adres doğrulanmışsa `/`'a gider.
+
+---
+
+## D-035 — Tek giriş kapısı ve okuyucunun okuma alanı
+
+**Karar:** Giriş ekranı artık kendini "yönetim paneli" diye tanıtmıyor;
+`postscript · e-dergi` yazıyor ve herkes aynı formdan giriyor. Kök adres
+girişten sonra rolüne göre yönlendiriyor: admin → `/admin`, editör →
+`/editor`, yazar → `/writer`, okuyucu → `/magazine`. Okuyucu için
+`/magazine` altında bir okuma alanı eklendi: son yazılar, sayılar, sayı
+içindekiler, yazı ve yazar sayfaları. Okuyucunun kenar çubuğunda yalnızca
+"Dergi", "Sayılar" ve "Hesabım" var.
+
+**Gerekçe:** Ürün sahibi giriş ekranının yönetim paneli gibi görünmesini
+istemedi; kayıtlı okuyucu için giriş yaptıktan sonra hesap ayarları sayfasına
+düşmek de anlamsızdı. Okuma alanı yeni bir veri yolu açmıyor:
+`src/services/public.ts` içindeki public read model'leri kullanıyor, bu yüzden
+okuyucu ekranı public API ile aynı alanları görüyor ve yazarın e-postası, gerçek
+adı, doğum tarihi hiçbir yerde geçmiyor. Tek eklenen read model
+`listRecentArticles`: bir yazı, sayısı yayınlanmadan da yayınlanabildiği için
+ana ekran sayı listesiyle değil son yazılarla açılıyor.
+
+**Sınırlar:** `/magazine` oturum ister (rol istemez), çünkü bu uygulama
+tümüyle `robots: noindex` ile çalışıyor ve halka açık site public API'yi
+tüketiyor. Sayı kapakları listede gösterilmiyor: `/api/media/:id` sıradan medya
+için editör yetkisi arıyor, okuyucuya kapak servis etmek o kuralı gevşetmek
+olurdu. Geri çekilmiş yazı okuyucuya 410 yerine "bu yazı geri çekildi" uyarısıyla
+gösteriliyor; 410 sözleşmesi public API'nin sözleşmesidir, ekranda insana
+söylenen cümle daha yararlı.

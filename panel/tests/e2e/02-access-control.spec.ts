@@ -12,7 +12,7 @@ test.describe.configure({ mode: "serial" });
 
 test.beforeEach(async ({ page }) => {
   await submitLogin(page, SEED.reader);
-  await page.waitForURL("**/account**");
+  await page.waitForURL("**/magazine**");
 });
 
 for (const area of ["/writer", "/editor", "/admin"]) {

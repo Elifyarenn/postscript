@@ -34,10 +34,17 @@ export async function guardWriterInnerPages(): Promise<AuthContext> {
   return context;
 }
 
-/** Any signed-in page outside the panels. */
+/**
+ * Any signed-in page outside the panels.
+ *
+ * An unverified address goes no further than the page that explains why: the
+ * account exists, but it cannot be used until the link in the e-mail is
+ * followed (D-034).
+ */
 export async function requireSession(): Promise<AuthContext> {
   const context = await getAuthContext();
   if (!context) redirect("/login");
+  if (context.user.emailVerifiedAt === null) redirect("/verify-email/pending");
   return context;
 }
 

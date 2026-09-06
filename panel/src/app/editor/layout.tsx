@@ -16,6 +16,7 @@ export default async function EditorLayout({ children }: { children: ReactNode }
         { href: "/editor/media", label: "Medya kütüphanesi" },
         { href: "/editor/announcements", label: "Duyurular" },
         { href: "/editor/approvals", label: "Eser Onayı takibi" },
+        { href: "/magazine", label: "Dergi" },
       ]}
     >
       {children}

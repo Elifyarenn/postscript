@@ -10,5 +10,5 @@ export default async function HomePage() {
   if (role === "admin") redirect("/admin");
   if (role === "editor") redirect("/editor");
   if (role === "writer") redirect("/writer");
-  redirect("/account");
+  redirect("/magazine");
 }

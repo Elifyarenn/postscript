@@ -12,14 +12,16 @@ import {
   changePassword,
   register,
   requestPasswordReset,
+  resendVerificationEmail,
   resetPassword,
   verifyCredentials,
   verifyEmail,
 } from "@/services/auth";
+import { updateProfile } from "@/services/users";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import { isAppError } from "@/lib/errors";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
-import { createUser, noMeta, TEST_PASSWORD } from "../helpers/factories";
+import { actorOf, createUser, noMeta, TEST_PASSWORD } from "../helpers/factories";
 
 let database: Database;
 const mailbox = new MemoryMailAdapter();
@@ -134,6 +136,40 @@ describe("e-mail verification", () => {
   it("refuses an unknown token", async () => {
     const error = await captureError(verifyEmail("made-up-token-value", noMeta));
     expect(error.status).toBe(404);
+  });
+
+  it("only lets a new link be asked for once a minute", async () => {
+    const { user } = await register(validRegistration, noMeta);
+
+    const tooSoon = await captureError(resendVerificationEmail(user.id));
+    expect(tooSoon.status).toBe(429);
+  });
+
+  it("refuses to resend once the address is verified", async () => {
+    const { user, verificationToken } = await register(validRegistration, noMeta);
+    await verifyEmail(verificationToken, noMeta);
+
+    const error = await captureError(resendVerificationEmail(user.id));
+    expect(error.status).toBe(400);
+  });
+});
+
+describe("an unverified address is a hard gate (D-034)", () => {
+  it("refuses every account action until the address is verified", async () => {
+    const unverified = await createUser({ email: "gate@example.com", emailVerified: false });
+    const actor = actorOf(unverified);
+
+    // The profile, the password and the sessions are all behind the gate
+    const profile = await captureError(
+      updateProfile(actor, { displayName: "Yeni Ad" }, noMeta),
+    );
+    expect(profile.status).toBe(403);
+  });
+
+  it("lets a verified account through the same call", async () => {
+    const verified = await createUser({ email: "open@example.com" });
+    const updated = await updateProfile(actorOf(verified), { displayName: "Yeni Ad" }, noMeta);
+    expect(updated.displayName).toBe("Yeni Ad");
   });
 });
 

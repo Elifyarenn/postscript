@@ -6,7 +6,7 @@
  * here directly testable.
  */
 import "server-only";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
 import { emailTokens, kvkkVersions, users, type User } from "@/db/schema";
@@ -202,12 +202,30 @@ export async function verifyEmail(token: string, meta: RequestMeta): Promise<Use
   return user!;
 }
 
+/** A new link can be asked for once a minute; the button is otherwise a mail cannon. */
+const RESEND_INTERVAL_MS = 60_000;
+
 /** Sends a new verification link. Used by the "resend" button. */
 export async function resendVerificationEmail(userId: string): Promise<void> {
   const rows = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   const user = rows[0];
   if (!user) throw notFound();
   if (user.emailVerifiedAt) throw badRequest("E-posta adresiniz zaten doğrulanmış.");
+
+  // Throttled against the last link issued rather than a counter table: the
+  // timestamp is already there and cannot drift out of step with reality
+  const recent = await db
+    .select({ createdAt: emailTokens.createdAt })
+    .from(emailTokens)
+    .where(and(eq(emailTokens.userId, user.id), eq(emailTokens.type, "verify_email")))
+    .orderBy(desc(emailTokens.createdAt))
+    .limit(1);
+
+  const last = recent[0]?.createdAt;
+  if (last && Date.now() - last.getTime() < RESEND_INTERVAL_MS) {
+    const wait = Math.ceil((RESEND_INTERVAL_MS - (Date.now() - last.getTime())) / 1000);
+    throw rateLimited(`Yeni bağlantı istemek için ${wait} saniye bekleyin.`);
+  }
 
   const token = await issueEmailToken(user.id, "verify_email", VERIFY_TOKEN_TTL_MS);
   const url = `${env().APP_URL}/verify-email?token=${encodeURIComponent(token)}`;

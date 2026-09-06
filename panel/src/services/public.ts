@@ -184,3 +184,30 @@ export async function getPublicAuthor(penNameSlug: string) {
 
   return { ...publicAuthor(row), articles: published };
 }
+
+/**
+ * The newest published articles, whatever issue they belong to.
+ *
+ * The reader's magazine screen leads with this rather than with the issue list,
+ * because an article can be published before its issue is.
+ */
+export async function listRecentArticles(limit = 20) {
+  return db
+    .select({
+      title: articles.title,
+      slug: articles.slug,
+      summary: articles.summary,
+      category: articles.category,
+      publishedAt: articles.publishedAt,
+      issueNumber: issues.number,
+      authorName: users.penName,
+      authorDisplayName: users.displayName,
+      authorSlug: users.penNameSlug,
+    })
+    .from(articles)
+    .leftJoin(users, eq(articles.authorId, users.id))
+    .leftJoin(issues, eq(articles.issueId, issues.id))
+    .where(and(eq(articles.status, "published"), isNull(articles.deletedAt)))
+    .orderBy(desc(articles.publishedAt))
+    .limit(limit);
+}

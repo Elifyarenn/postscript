@@ -21,19 +21,62 @@ test("registers, verifies the address, and logs in", async ({ page }) => {
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Kayıt ol" }).click();
 
-  // Registration signs the visitor in, but nothing beyond the profile works yet
-  await page.waitForURL("**/account**");
-  await expect(page.getByText("E-posta adresiniz doğrulanmadı")).toBeVisible();
+  // Registration opens a session, but it goes no further than the gate
+  await page.waitForURL("**/verify-email/pending");
+  await expect(page.getByRole("heading", { name: "E-posta adresinizi doğrulayın" })).toBeVisible();
+  await expect(page.getByText(NEW_USER.email)).toBeVisible();
+
+  // and every other page bounces back to it
+  await page.goto("/account");
+  await page.waitForURL("**/verify-email/pending");
 
   const message = await waitForMail(NEW_USER.email);
   expect(message.subject).toContain("doğrulayın");
 
   await page.goto(linkFrom(message.text));
   await page.getByRole("button", { name: "Doğrula" }).click();
-  await expect(page.getByText("E-posta adresiniz doğrulandı")).toBeVisible();
 
-  await page.goto("/account");
-  await expect(page.getByText("E-posta adresiniz doğrulanmadı")).toHaveCount(0);
+  // Following the link in the same browser goes straight in, and a reader's
+  // "in" is the magazine rather than a settings page
+  await page.waitForURL("**/magazine**");
+  await expect(page.getByText("E-posta adresiniz doğrulandı")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "postscript" })).toBeVisible();
+
+  // and the account is usable now
+  await page.getByRole("link", { name: "Hesabım" }).click();
+  await page.waitForURL("**/account");
+  await page.getByLabel("Ad Soyad").fill("Yeni Okur Düzeltildi");
+  await page.getByRole("button", { name: "Profili kaydet" }).click();
+  await expect(page.getByText("Profiliniz güncellendi")).toBeVisible();
+});
+
+test("sends an unverified account back to the gate when it signs in again", async ({
+  page,
+  context,
+}) => {
+  await context.clearCookies();
+
+  await page.goto("/register");
+  await page.getByLabel("Ad Soyad").fill("Doğrulanmamış Hesap");
+  await page.getByLabel("E-posta").fill("bekleyen@example.com");
+  await page.getByLabel("Şifre").fill("Bekleyen-Sifre-2026");
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Kayıt ol" }).click();
+  await page.waitForURL("**/verify-email/pending");
+
+  await page.getByRole("button", { name: "Başka bir hesapla giriş yap" }).click();
+  await page.waitForURL("**/login");
+
+  // Signing in again lands on the gate rather than the account
+  await submitLogin(page, {
+    email: "bekleyen@example.com",
+    password: "Bekleyen-Sifre-2026",
+  });
+  await page.waitForURL("**/verify-email/pending");
+
+  // A second link cannot be demanded straight away
+  await page.getByRole("button", { name: "Bağlantıyı tekrar gönder" }).click();
+  await expect(page.getByText(/saniye bekleyin/)).toBeVisible();
 });
 
 test("refuses a password that is too common", async ({ page }) => {
@@ -93,5 +136,5 @@ test("ticks the password rules off and keeps the button shut until all three are
   await expect(submit).toBeEnabled();
 
   await submit.click();
-  await page.waitForURL("**/account**");
+  await page.waitForURL("**/verify-email/pending");
 });

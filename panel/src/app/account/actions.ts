@@ -82,7 +82,7 @@ export async function resendVerificationAction(
 ): Promise<ActionState> {
   return runAction(async () => {
     await assertCsrfFromForm(formData);
-    const { user } = await requireAuth();
+    const { user } = await requireAuth({ allowUnverified: true });
     await resendVerificationEmail(user.id);
     return { success: "Doğrulama bağlantısı tekrar gönderildi." };
   });

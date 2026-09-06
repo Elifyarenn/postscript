@@ -142,10 +142,15 @@ Roller sıralıdır: her rol bir öncekinin yetkilerini kapsar.
 
 | Rol | Kapsam |
 |---|---|
-| `user` | Kayıtlı okuyucu. Panele erişemez; profilini ve oturumlarını yönetir. |
+| `user` | Kayıtlı okuyucu. Yönetim panellerine erişemez; dergiyi okur (`/magazine`), profilini ve oturumlarını yönetir. |
 | `writer` | Duyurular, sözleşme onayı, Eser Onayları, kendine atanan makaleler (salt okunur), teslim takvimi. |
 | `editor` | Tüm makaleler, sayı planlama, duyuru yayını, medya kütüphanesi, yazar atama. Sözleşme ve Eser Onayı PDF'lerini ve kullanıcı yönetimini **göremez**. |
 | `admin` | Her şey. Rol değişikliği yalnızca admin yapar. |
+
+Giriş tek kapıdır: herkes aynı formdan girer, panel yoktur diye ayrı bir adres
+yoktur. Girişten sonra kök adres (`/`) hesabın rolüne göre yönlendirir:
+admin → `/admin`, editör → `/editor`, yazar → `/writer`, okuyucu →
+`/magazine`. Okuyucunun gördüğü tek şey dergi ve hesap sayfasıdır (D-035).
 
 Değişmez kurallar:
 
@@ -160,11 +165,15 @@ Değişmez kurallar:
 6. İlk admin yalnızca seed veya CLI ile oluşturulur.
 7. İki adımlı doğrulama şu anda yok; §5.2'nin zorunlu kıldığı bu kontrol yayın
    öncesi geri eklenecek (D-033).
-8. `audit_log` ve `role_changes` yalnızca eklenir; hem uygulama katmanında hem de
+8. E-posta adresi doğrulanmamış hesap hiçbir sayfayı açamaz ve hiçbir mutasyonu
+   çalıştıramaz; yalnızca yeni bağlantı isteyebilir veya çıkış yapabilir. §5.1
+   doğrulanmamış hesabın profilini kullanabilmesini öngörüyordu, bilerek
+   sapıldı (D-034).
+9. `audit_log` ve `role_changes` yalnızca eklenir; hem uygulama katmanında hem de
    veritabanı trigger'ıyla korunur.
-9. Onaylanmış bir Eser Onayı olmadan hiçbir makale `scheduled` veya `published`
-   olamaz; lisans bilgisi eksik medya bağlıysa da olamaz. Kontrol durum geçiş
-   fonksiyonundadır.
+10. Onaylanmış bir Eser Onayı olmadan hiçbir makale `scheduled` veya `published`
+    olamaz; lisans bilgisi eksik medya bağlıysa da olamaz. Kontrol durum geçiş
+    fonksiyonundadır.
 
 ### Sözleşme ve Eser Onayı
 
@@ -229,6 +238,12 @@ Kimlik doğrulama veritabanı tabanlıdır (JWT yok): çerezde 256 bitlik rastge
 jeton taşınır, veritabanında yalnızca `sha256(jeton + SESSION_SECRET)` saklanır.
 Bu sayede oturumlar anında iptal edilebilir.
 
+Okuma alanı (`/magazine`) oturum ister ama rol istemez: yazar, editör ve admin
+de dergiyi okuyucuyla aynı ekrandan okur. Sayfalar public read model'leri
+(`src/services/public.ts`) kullanır, yani okuyucu ekranı ile public API aynı
+veriyi görür; ikisi de yazarın e-postasını, gerçek adını veya doğum tarihini
+göstermez.
+
 Public API (`/api/public/*`) oturum istemez, `Cache-Control` ve `ETag` döner ve
 yazarın e-postasını, gerçek adını veya doğum tarihini **hiçbir zaman** döndürmez.
 Geri çekilmiş yazı 410, yayında olmayan her şey 404 verir.
@@ -292,8 +307,8 @@ Notlar:
 ## Test
 
 ```bash
-pnpm test        # 153 birim + entegrasyon testi
-pnpm test:e2e    # 17 uçtan uca senaryo
+pnpm test        # 157 birim + entegrasyon testi
+pnpm test:e2e    # 18 uçtan uca senaryo
 ```
 
 Birim ve entegrasyon testleri süreç içi PostgreSQL (PGlite) üzerinde çalışır:
@@ -304,8 +319,9 @@ Uçtan uca testler kendi veri dizinini (`.e2e/`) her çalıştırmada siler, yen
 seed'ler, üretim derlemesi alır ve gerçek bir tarayıcıyla sürer. Kapsanan
 senaryolar §13.2'dekilerdir:
 
-- kayıt → e-posta doğrulama → giriş; yaygın şifre reddi; hatalı şifre ile
-  bilinmeyen hesabın aynı yanıtı vermesi
+- kayıt → doğrulama bekleme kapısı → e-posta doğrulama → giriş; doğrulanmamış
+  hesabın her sayfadan kapıya geri gönderilmesi; yaygın şifre reddi; hatalı
+  şifre ile bilinmeyen hesabın aynı yanıtı vermesi
 - `user` rolüyle `/writer`, `/editor`, `/admin` ve iç sayfalarına erişim → 403
 - 17 yaşındaki kullanıcıyı yazar yapma denemesi → reddedilir, gerekçe gösterilir
 - terfi → sözleşme onayı → `writer_status = active`
@@ -315,6 +331,8 @@ senaryolar §13.2'dekilerdir:
 - geri çekilen makale public API'de 410, hiç yayınlanmamış olan 404
 - yüklenen dosyanın türü içeriğinden doğrulanır; lisans bilgisi kaydedilir ve
   kullanıldığı makale sayısı raporlanır
+- yayınlanan yazıyı okuyucu `/magazine` üzerinden okur; okuyucunun menüsünde
+  editör bağlantısı yoktur
 - yeni sözleşme sürümü → aktif yazarlar `pending_agreement` durumuna düşer ve
   yeniden onaylayana kadar iç sayfalar kilitlenir
 

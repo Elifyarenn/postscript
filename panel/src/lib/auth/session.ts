@@ -209,11 +209,25 @@ export async function getAuthContext(): Promise<AuthContext | null> {
 /* Guards                                                              */
 /* ------------------------------------------------------------------ */
 
-/** Throws 401 when there is no session. Every mutation starts here. */
-export async function requireAuth(): Promise<AuthContext> {
+/**
+ * Throws 401 when there is no session. Every mutation starts here.
+ *
+ * An address that has not been verified gets nothing: not the profile, not a
+ * password change, not a session list. The single exception is asking for
+ * another verification link, which is the one thing such an account is
+ * supposed to be doing (D-034).
+ */
+export async function requireAuth(
+  options: { allowUnverified?: boolean } = {},
+): Promise<AuthContext> {
   const context = await getAuthContext();
   if (!context) throw unauthorized();
   if (context.user.isBanned) throw forbidden("Hesabınız askıya alınmış.");
+
+  if (!options.allowUnverified && context.user.emailVerifiedAt === null) {
+    throw forbidden("Önce e-posta adresinizi doğrulamanız gerekiyor.");
+  }
+
   return context;
 }
 
@@ -223,7 +237,7 @@ export async function requireRole(minimum: Role): Promise<AuthContext> {
   const { user } = context;
 
   if (!hasRole(user.role, minimum)) throw forbidden();
-  if (minimum !== "user" && user.emailVerifiedAt === null) {
+  if (user.emailVerifiedAt === null) {
     throw forbidden("Önce e-posta adresinizi doğrulamanız gerekiyor.");
   }
   const allowed =

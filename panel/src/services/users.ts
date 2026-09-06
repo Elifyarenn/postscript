@@ -355,11 +355,25 @@ export const profileSchema = z.strictObject({
     .optional(),
 });
 
+/**
+ * The gate an account has to be through before it can act on itself (D-034).
+ * Kept here rather than only in `requireAuth` so a script or a future caller
+ * cannot walk around it.
+ */
+function assertAccountUsable(actor: Actor): void {
+  if (actor.isBanned) throw forbidden("Hesabınız askıya alınmış.");
+  if (actor.emailVerifiedAt === null) {
+    throw forbidden("Önce e-posta adresinizi doğrulamanız gerekiyor.");
+  }
+}
+
 export async function updateProfile(
   actor: Actor,
   rawInput: unknown,
   meta: RequestMeta,
 ): Promise<User> {
+  assertAccountUsable(actor);
+
   const parsed = profileSchema.safeParse(rawInput);
   if (!parsed.success) {
     throw badRequest("Profil bilgileri geçersiz.", z.flattenError(parsed.error).fieldErrors);
@@ -441,6 +455,8 @@ export async function setBirthDateAsAdmin(
 /* ------------------------------------------------------------------ */
 
 export async function requestAccountDeletion(actor: Actor, meta: RequestMeta): Promise<void> {
+  assertAccountUsable(actor);
+
   await db
     .update(users)
     .set({ deletionRequestedAt: new Date(), updatedAt: new Date() })
@@ -456,6 +472,8 @@ export async function requestAccountDeletion(actor: Actor, meta: RequestMeta): P
 }
 
 export async function cancelAccountDeletion(actor: Actor): Promise<void> {
+  assertAccountUsable(actor);
+
   await db
     .update(users)
     .set({ deletionRequestedAt: null, updatedAt: new Date() })

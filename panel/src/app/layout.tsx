@@ -3,10 +3,10 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "postscript · Yönetim Paneli",
+    default: "postscript e-dergi",
     template: "%s · postscript",
   },
-  description: "postscript e-dergi yönetim paneli.",
+  description: "postscript e-dergi.",
   // The panel must never be indexed
   robots: { index: false, follow: false },
 };
