@@ -347,9 +347,8 @@ orada çalışmaz ve çalıştıkları sanılırsa veri sessizce kaybolur:
 
 - `DATABASE_URL=pglite://…` — veri sunucunun geçici diskinde kalır
 - `S3_ENDPOINT=file://…` — medya yükleme hata verir
-- `MAIL_TRANSPORT=file` — `.mail/` dizinine yazılamaz; e-posta gönderen her
-  işlem (kayıt, yazar terfisi, şifre sıfırlama) hata verir. Geçici çözüm
-  `MAIL_DIR=/tmp`'dir, ama postalar okunamaz; kalıcı çözüm gerçek SMTP'dir.
+- `MAIL_TRANSPORT=file` — `.mail/` dizinine yazılamaz. Teslim hatası işlemi geri
+  almaz (`sendMail` hatayı yutar ve loglar), ama posta hiçbir yere ulaşmaz.
   E-posta doğrulaması zorunlu olduğu için (D-034), SMTP kurulmadan **yeni
   kullanıcı kaydı tamamlanamaz**; CLI ile oluşturulan admin doğrulanmış sayılır
   ve girebilir.
