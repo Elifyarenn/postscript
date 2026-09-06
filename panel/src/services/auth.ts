@@ -16,6 +16,7 @@ import { badRequest, conflict, forbidden, notFound, rateLimited, unauthorized } 
 import { checkPasswordPolicy, hashPassword, isPwned, verifyPassword } from "@/lib/password";
 import { clearAttempts, consumeAttempt, currentAttemptCount, failureDelayMs } from "@/lib/rate-limit";
 import { writeAudit } from "@/lib/audit";
+import { requiresTwoFactor } from "@/lib/auth/rbac";
 import { sendMail } from "@/lib/mail/transport";
 import * as templates from "@emails/templates";
 
@@ -270,12 +271,12 @@ export async function verifyCredentials(
   await clearAttempts("login_account", email);
   await clearAttempts("login_ip", ipKey);
 
-  const elevated = user.role === "editor" || user.role === "admin";
+  const carriesFactor = requiresTwoFactor(user.role);
 
   return {
     user,
-    twoFactorRequired: user.totpConfirmedAt !== null,
-    twoFactorSetupRequired: elevated && user.totpConfirmedAt === null,
+    twoFactorRequired: carriesFactor && user.totpConfirmedAt !== null,
+    twoFactorSetupRequired: carriesFactor && user.totpConfirmedAt === null,
   };
 }
 

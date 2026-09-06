@@ -11,6 +11,7 @@ import {
   sha256Hex,
 } from "@/lib/crypto";
 import { checkPasswordPolicy, hashPassword, verifyPassword } from "@/lib/password";
+import { meetsPasswordRules, passwordRules } from "@/lib/password-rules";
 import { slugify, uniqueSlug } from "@/lib/slug";
 
 describe("sha256Hex", () => {
@@ -86,21 +87,64 @@ describe("secret encryption", () => {
   });
 });
 
+describe("password rules", () => {
+  it("accepts a password that satisfies all three rules", () => {
+    expect(meetsPasswordRules("Gecerli12")).toBe(true);
+    expect(checkPasswordPolicy("Gecerli12").ok).toBe(true);
+  });
+
+  it("names each rule and reports whether it is met", () => {
+    // Long enough and mixed case, but no digit: exactly one rule outstanding
+    const rules = passwordRules("KarisikHarf");
+    expect(rules.map((rule) => rule.id)).toEqual(["length", "letterCase", "digit"]);
+    expect(rules.find((rule) => rule.id === "length")?.met).toBe(true);
+    expect(rules.find((rule) => rule.id === "letterCase")?.met).toBe(true);
+    expect(rules.find((rule) => rule.id === "digit")?.met).toBe(false);
+  });
+
+  it("reports every rule as unmet for an empty password", () => {
+    expect(passwordRules("").every((rule) => rule.met)).toBe(false);
+    expect(passwordRules("").some((rule) => rule.met)).toBe(false);
+  });
+
+  it("requires eight characters", () => {
+    expect(meetsPasswordRules("Short1")).toBe(false);
+    expect(meetsPasswordRules("Sekizli1")).toBe(true);
+  });
+
+  it("requires both cases", () => {
+    expect(meetsPasswordRules("hepsikucuk1")).toBe(false);
+    expect(meetsPasswordRules("HEPSIBUYUK1")).toBe(false);
+    expect(meetsPasswordRules("KarisikHarf1")).toBe(true);
+  });
+
+  it("requires a digit", () => {
+    expect(meetsPasswordRules("HicRakamYok")).toBe(false);
+    expect(meetsPasswordRules("BirRakam1")).toBe(true);
+  });
+
+  it("counts Turkish letters as upper and lower case", () => {
+    expect(meetsPasswordRules("Şifreçğı1")).toBe(true);
+  });
+});
+
 describe("password policy", () => {
-  it("requires ten characters", () => {
-    expect(checkPasswordPolicy("Short1!").ok).toBe(false);
-    expect(checkPasswordPolicy("LongEnough2026!").ok).toBe(true);
+  it("rejects an entry from the common list even when it satisfies the rules", () => {
+    // "Password1" lowercases to an entry in the embedded 10.000 list
+    expect(meetsPasswordRules("Password1")).toBe(true);
+    const result = checkPasswordPolicy("Password1");
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.reason).toMatch(/yaygın/i);
   });
 
-  it("rejects entries from the common password list", () => {
-    // These are all in the embedded 10.000 entry list
-    expect(checkPasswordPolicy("1234567890").ok).toBe(false);
-    expect(checkPasswordPolicy("qwertyuiop").ok).toBe(false);
+  it("reports the first unmet rule", () => {
+    const result = checkPasswordPolicy("kisa");
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.reason).toMatch(/en az 8 karakter/i);
   });
 
-  it("ignores case when matching the common list", () => {
-    expect(checkPasswordPolicy("BASKETBALL").ok).toBe(false);
-    expect(checkPasswordPolicy("QwErTyUiOp").ok).toBe(false);
+  it("refuses an absurdly long password", () => {
+    expect(checkPasswordPolicy("Aa1" + "x".repeat(300)).ok).toBe(false);
   });
 });
 

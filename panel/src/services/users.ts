@@ -367,11 +367,10 @@ export const profileSchema = z.strictObject({
     .nullable(),
   socialLinks: z
     .strictObject({
-      website: z.url().optional(),
       x: z.url().optional(),
       instagram: z.url().optional(),
-      linkedin: z.url().optional(),
-      mastodon: z.url().optional(),
+      tiktok: z.url().optional(),
+      substack: z.url().optional(),
     })
     .optional(),
 });

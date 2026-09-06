@@ -52,7 +52,7 @@ Seed'in oluşturduğu hesaplar:
 | user | `okur@postscript.local` | `Okur!Parola2026` |
 | user (17 yaşında) | `genc@postscript.local` | `Genc!Parola2026` |
 
-> `editor` ve `admin` hesapları için iki adımlı doğrulama zorunludur. İlk girişte
+> `admin` hesapları için iki adımlı doğrulama zorunludur (D-025). İlk girişte
 > panel sizi kurulum ekranına alır; karekodu bir doğrulama uygulamasına okutup
 > kodu girin. Kurtarma kodları yalnızca o an bir kez gösterilir.
 
@@ -160,11 +160,21 @@ Değişmez kurallar:
 5. `writer_status = active` olmadan yazar panelinde yalnızca duyurular ve
    sözleşme sayfası açıktır.
 6. İlk admin yalnızca seed veya CLI ile oluşturulur.
-7. `audit_log` ve `role_changes` yalnızca eklenir; hem uygulama katmanında hem de
+7. İki adımlı doğrulama (TOTP) yalnızca `admin` rolündedir ve kapatılamaz; diğer
+   rollerde yoktur (D-025, §5.2'den sapma).
+8. `audit_log` ve `role_changes` yalnızca eklenir; hem uygulama katmanında hem de
    veritabanı trigger'ıyla korunur.
-8. İmzalı `rights_grants` olmadan hiçbir makale `scheduled` veya `published`
+9. İmzalı `rights_grants` olmadan hiçbir makale `scheduled` veya `published`
    olamaz; lisans bilgisi eksik medya bağlıysa da olamaz. Kontrol durum geçiş
    fonksiyonundadır.
+
+### Şifre kuralları
+
+En az 8 karakter, büyük ve küçük harf, en az bir rakam (D-026). Kayıt, şifre
+sıfırlama ve şifre değiştirme formlarında kurallar yazarken canlı olarak
+işaretlenir; üçü de sağlanmadan düğme açılmaz. Sunucu aynı fonksiyonları
+(`src/lib/password-rules.ts`) yeniden çalıştırır ve ayrıca gömülü 10.000 yaygın
+şifre listesine bakar.
 
 ---
 

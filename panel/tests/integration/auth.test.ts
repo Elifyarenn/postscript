@@ -40,7 +40,7 @@ beforeEach(async () => {
 
 const validRegistration = {
   email: "Yeni.Kullanici@Example.com",
-  password: "cok-guclu-bir-sifre-2026",
+  password: "Cok-Guclu-Sifre-2026",
   displayName: "Yeni Kullanıcı",
   kvkkConsent: true as const,
 };
@@ -82,10 +82,11 @@ describe("registration", () => {
     const short = await captureError(
       register({ ...validRegistration, password: "kisa123" }, noMeta),
     );
-    expect(short.details?.password?.[0]).toMatch(/en az 10/i);
+    expect(short.details?.password?.[0]).toMatch(/en az 8 karakter/i);
 
     const common = await captureError(
-      register({ ...validRegistration, email: "c@example.com", password: "qwertyuiop" }, noMeta),
+      // Satisfies all three rules but sits in the embedded common list
+      register({ ...validRegistration, email: "c@example.com", password: "Password1" }, noMeta),
     );
     expect(common.details?.password?.[0]).toMatch(/yaygın/i);
   });
@@ -187,13 +188,23 @@ describe("login", () => {
     expect(error.status).toBe(403);
   });
 
-  it("tells an editor without TOTP that setup is required", async () => {
+  it("tells an admin without TOTP that setup is required", async () => {
+    await createUser({ email: "admin@example.com", role: "admin" });
+    const outcome = await verifyCredentials(
+      { email: "admin@example.com", password: TEST_PASSWORD },
+      noMeta,
+    );
+    expect(outcome.twoFactorSetupRequired).toBe(true);
+  });
+
+  it("asks nothing extra of an editor: the factor is admin-only (D-025)", async () => {
     await createUser({ email: "editor@example.com", role: "editor" });
     const outcome = await verifyCredentials(
       { email: "editor@example.com", password: TEST_PASSWORD },
       noMeta,
     );
-    expect(outcome.twoFactorSetupRequired).toBe(true);
+    expect(outcome.twoFactorSetupRequired).toBe(false);
+    expect(outcome.twoFactorRequired).toBe(false);
   });
 });
 
@@ -213,16 +224,16 @@ describe("password reset", () => {
     const token = /token=([^\s]+)/.exec(message?.text ?? "")?.[1];
     expect(token).toBeDefined();
 
-    await resetPassword({ token: token!, password: "yepyeni-bir-sifre-2026" }, noMeta);
+    await resetPassword({ token: token!, password: "Yepyeni-Sifre-2026" }, noMeta);
 
     const outcome = await verifyCredentials(
-      { email: "reset@example.com", password: "yepyeni-bir-sifre-2026" },
+      { email: "reset@example.com", password: "Yepyeni-Sifre-2026" },
       noMeta,
     );
     expect(outcome.user.id).toBe(user.id);
 
     const reuse = await captureError(
-      resetPassword({ token: token!, password: "baska-bir-sifre-2026" }, noMeta),
+      resetPassword({ token: token!, password: "Baska-Sifre-2026" }, noMeta),
     );
     expect(reuse.status).toBe(400);
   });
@@ -242,11 +253,11 @@ describe("changing a password from the panel", () => {
     const user = await createUser({ email: "change@example.com" });
 
     const error = await captureError(
-      changePassword(user.id, "not-the-current-one", "yeni-guclu-sifre-2026", noMeta),
+      changePassword(user.id, "not-the-current-one", "Yeni-Guclu-Sifre-2026", noMeta),
     );
     expect(error.status).toBe(400);
 
-    await changePassword(user.id, TEST_PASSWORD, "yeni-guclu-sifre-2026", noMeta);
+    await changePassword(user.id, TEST_PASSWORD, "Yeni-Guclu-Sifre-2026", noMeta);
     const rows = await db.select().from(users).where(eq(users.id, user.id));
     expect(rows[0]!.passwordHash).not.toBe(user.passwordHash);
   });

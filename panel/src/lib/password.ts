@@ -1,8 +1,8 @@
 /**
  * Password hashing (argon2id) and the password policy.
  *
- * Policy, per specification §5.1:
- *  - at least 10 characters
+ * Policy (see D-026 for the departure from §5.1's ten character minimum):
+ *  - at least 8 characters, upper and lower case, and a digit
  *  - not in the embedded list of the 10.000 most common passwords
  *  - optional Have I Been Pwned k-anonymity check, off unless PASSWORD_HIBP_CHECK=true
  */
@@ -11,6 +11,9 @@ import { hash, verify } from "@node-rs/argon2";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { firstUnmetRule, MIN_PASSWORD_LENGTH } from "./password-rules";
+
+export { MIN_PASSWORD_LENGTH };
 
 /** OWASP recommended argon2id profile (DECISIONS.md D-004). */
 const ARGON2_OPTIONS = {
@@ -61,14 +64,14 @@ function loadCommonPasswords(): Set<string> {
   return commonPasswords;
 }
 
-export const MIN_PASSWORD_LENGTH = 10;
-
 export type PasswordCheck = { ok: true } | { ok: false; reason: string };
 
 /** Synchronous part of the policy. Callers may additionally run `isPwned`. */
 export function checkPasswordPolicy(plaintext: string): PasswordCheck {
-  if (plaintext.length < MIN_PASSWORD_LENGTH) {
-    return { ok: false, reason: `Şifre en az ${MIN_PASSWORD_LENGTH} karakter olmalı.` };
+  // The same rules the form ticks off while the visitor types
+  const unmet = firstUnmetRule(plaintext);
+  if (unmet) {
+    return { ok: false, reason: `Şifre kuralı sağlanmadı: ${unmet.label.toLocaleLowerCase("tr")}.` };
   }
   if (plaintext.length > 256) {
     return { ok: false, reason: "Şifre en fazla 256 karakter olabilir." };

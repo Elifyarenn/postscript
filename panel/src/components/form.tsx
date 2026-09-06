@@ -11,7 +11,7 @@
  * validation messages are collected at the top of the form rather than shown
  * beside each input: a server component cannot subscribe to client state.
  */
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Alert, Button } from "./ui";
 import type { ReactNode } from "react";
@@ -70,13 +70,15 @@ function FieldErrors({ fieldErrors }: { fieldErrors: Record<string, string[]> })
 function SubmitButton({
   children,
   variant = "primary",
+  disabled,
 }: {
   children: ReactNode;
   variant?: "primary" | "secondary" | "danger";
+  disabled?: boolean;
 }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" variant={variant} disabled={pending}>
+    <Button type="submit" variant={variant} disabled={pending || disabled}>
       {pending ? "Gönderiliyor…" : children}
     </Button>
   );
@@ -87,18 +89,35 @@ export function PanelForm({
   csrfToken,
   submitLabel,
   submitVariant = "primary",
+  requireValid = false,
   children,
 }: {
   action: ServerAction;
   csrfToken: string;
   submitLabel: string;
   submitVariant?: "primary" | "secondary" | "danger";
+  /**
+   * Keeps the submit button shut until every field satisfies its own
+   * constraints. Used where a rule is shown live, so the button matches what
+   * the checklist says rather than contradicting it.
+   */
+  requireValid?: boolean;
   children?: ReactNode;
 }) {
   const [state, formAction] = useActionState<ActionState, FormData>(action, null);
+  const [valid, setValid] = useState(!requireValid);
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form
+      action={formAction}
+      className="space-y-4"
+      noValidate={false}
+      onInput={
+        requireValid
+          ? (event) => setValid(event.currentTarget.checkValidity())
+          : undefined
+      }
+    >
       {/* Double submit token; the action compares it with the cookie */}
       <input type="hidden" name="csrfToken" value={csrfToken} />
 
@@ -121,7 +140,9 @@ export function PanelForm({
       {children}
 
       <div className="flex items-center gap-3 pt-1">
-        <SubmitButton variant={submitVariant}>{submitLabel}</SubmitButton>
+        <SubmitButton variant={submitVariant} disabled={requireValid && !valid}>
+          {submitLabel}
+        </SubmitButton>
       </div>
     </form>
   );

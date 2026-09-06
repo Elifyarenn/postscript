@@ -15,7 +15,7 @@ import {
   revokeSessionAction,
   updateProfileAction,
 } from "@/app/account/actions";
-import { MIN_PASSWORD_LENGTH } from "@/lib/password";
+import { PasswordField } from "./password-field";
 import type { SessionUser } from "@/lib/auth/session";
 import type { SocialLinks } from "@/db/schema";
 
@@ -89,11 +89,10 @@ export function ProfileCard({
               <legend className="mb-1.5 text-sm font-medium">Bağlantılar</legend>
               {(
                 [
-                  ["website", "İnternet sitesi"],
                   ["x", "X"],
                   ["instagram", "Instagram"],
-                  ["linkedin", "LinkedIn"],
-                  ["mastodon", "Mastodon"],
+                  ["tiktok", "TikTok"],
+                  ["substack", "Substack"],
                 ] as const
               ).map(([key, label]) => (
                 <Field key={key} label={label} htmlFor={`social_${key}`}>
@@ -178,6 +177,7 @@ export function PasswordCard({ csrfToken }: { csrfToken: string }) {
         action={changePasswordAction}
         csrfToken={csrfToken}
         submitLabel="Şifreyi güncelle"
+        requireValid
       >
           <>
             <Field
@@ -193,20 +193,7 @@ export function PasswordCard({ csrfToken }: { csrfToken: string }) {
               />
             </Field>
 
-            <Field
-              label="Yeni şifre"
-              htmlFor="password"
-              hint={`En az ${MIN_PASSWORD_LENGTH} karakter.`}
-            >
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                minLength={MIN_PASSWORD_LENGTH}
-              />
-            </Field>
+            <PasswordField label="Yeni şifre" />
 
             <Field
               label="Yeni şifre (tekrar)"

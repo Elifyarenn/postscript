@@ -107,11 +107,10 @@ const updatedAt = () => timestamp("updated_at", { withTimezone: true }).notNull(
 const deletedAt = () => timestamp("deleted_at", { withTimezone: true });
 
 export type SocialLinks = {
-  website?: string;
   x?: string;
   instagram?: string;
-  linkedin?: string;
-  mastodon?: string;
+  tiktok?: string;
+  substack?: string;
 };
 
 /* ------------------------------------------------------------------ */

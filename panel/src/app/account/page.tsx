@@ -90,11 +90,14 @@ export default async function AccountPage({
           socialLinks={profile.socialLinks ?? null}
         />
 
-        <TwoFactorCard
-          csrfToken={csrfToken}
-          confirmedAt={profile.totpConfirmedAt}
-          mandatory={false}
-        />
+        {/* Only the admin role carries a second factor (D-025) */}
+        {profile.role === "admin" && (
+          <TwoFactorCard
+            csrfToken={csrfToken}
+            confirmedAt={profile.totpConfirmedAt}
+            mandatory
+          />
+        )}
 
         <PasswordCard csrfToken={csrfToken} />
 

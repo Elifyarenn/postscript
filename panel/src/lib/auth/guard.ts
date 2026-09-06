@@ -61,12 +61,10 @@ export async function guardPanel(minimum: Role): Promise<AuthContext> {
 
   if (user.isBanned) forbidden();
 
-  // Elevated roles finish their second factor before anything else opens
+  // An admin finishes the second factor before anything else opens
   if (requiresTwoFactor(user.role) && !context.twoFactorSatisfied) {
     redirect(user.totpConfirmedAt ? "/two-factor" : "/two-factor/setup");
   }
-  // A writer who turned the factor on voluntarily is held to it as well
-  if (user.totpConfirmedAt && !context.twoFactorSatisfied) redirect("/two-factor");
 
   const allowed =
     minimum === "user" ||

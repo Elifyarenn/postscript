@@ -26,6 +26,10 @@ export default async function TotpSetupPage() {
   const context = await getAuthContext();
   if (!context) redirect("/login");
 
+  // Only the admin role carries a second factor (D-025); for anyone else there
+  // is nothing to set up and staging a secret would leave dead data behind
+  if (context.user.role !== "admin") redirect(homeFor(context.user.role));
+
   // Staging a secret clears the confirmation, so simply opening this page would
   // otherwise switch off a factor that is already in place. An account that has
   // one must prove it first; re-enrolment is then allowed, because the session
@@ -49,7 +53,7 @@ export default async function TotpSetupPage() {
     <Card>
       <h1 className="mb-1 font-serif text-xl">İki adımlı doğrulama kurulumu</h1>
       <p className="mb-5 text-sm text-muted">
-        Editör ve yönetici hesapları için zorunludur. Kurulum tamamlanmadan panele girilemez.
+        Yönetici hesapları için zorunludur. Kurulum tamamlanmadan panele girilemez.
       </p>
 
       <ol className="mb-5 space-y-3 text-sm">

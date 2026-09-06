@@ -1,7 +1,7 @@
 import { readCsrfToken } from "@/lib/csrf";
 import { Alert, Card, Field, Input } from "@/components/ui";
+import { PasswordField } from "@/components/password-field";
 import { PanelForm } from "@/components/form";
-import { MIN_PASSWORD_LENGTH } from "@/lib/password";
 import { resetPasswordAction } from "../actions";
 
 export const metadata = { title: "Şifre sıfırlama" };
@@ -31,24 +31,15 @@ export default async function ResetPasswordPage({
         Şifreniz değişince açık olan tüm oturumlarınız kapatılır.
       </p>
 
-      <PanelForm action={resetPasswordAction} csrfToken={csrfToken} submitLabel="Şifreyi güncelle">
+      <PanelForm
+        action={resetPasswordAction}
+        csrfToken={csrfToken}
+        submitLabel="Şifreyi güncelle"
+        requireValid
+      >
           <>
             <input type="hidden" name="token" value={token} />
-            <Field
-              label="Yeni şifre"
-              htmlFor="password"
-              hint={`En az ${MIN_PASSWORD_LENGTH} karakter.`}
-            >
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                autoFocus
-                minLength={MIN_PASSWORD_LENGTH}
-              />
-            </Field>
+            <PasswordField label="Yeni şifre" autoFocus />
           </>
       </PanelForm>
     </Card>

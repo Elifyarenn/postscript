@@ -165,16 +165,22 @@ export async function loadSecret(name: string): Promise<string | null> {
 }
 
 /**
- * Logs in as an account with mandatory two factor authentication, enrolling on
- * the first call and reusing the stored secret afterwards.
+ * Logs in to a panel account. Only the admin role carries a second factor
+ * (D-025): it enrols on the first call and reuses the stored secret afterwards.
+ * An editor signs in with nothing but a password.
  */
 export async function loginElevated(
   page: Page,
   name: "admin" | "editor",
   credentials: { email: string; password: string },
 ): Promise<void> {
-  const stored = await loadSecret(name);
+  if (name === "editor") {
+    await submitLogin(page, credentials);
+    await page.waitForURL("**/editor");
+    return;
+  }
 
+  const stored = await loadSecret(name);
   if (stored) {
     await loginWithTotp(page, credentials, stored);
     return;
@@ -183,5 +189,5 @@ export async function loginElevated(
   // Enrolment ends by following the "continue" button to the role's home
   const secret = await loginWithTotpSetup(page, credentials);
   await saveSecret(name, secret);
-  await page.waitForURL(name === "admin" ? "**/admin" : "**/editor");
+  await page.waitForURL("**/admin");
 }

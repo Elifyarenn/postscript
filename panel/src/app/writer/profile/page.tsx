@@ -4,12 +4,7 @@ import { users } from "@/db/schema";
 import { guardPanel } from "@/lib/auth/guard";
 import { listSessions } from "@/lib/auth/session";
 import { readCsrfToken } from "@/lib/csrf";
-import {
-  PasswordCard,
-  ProfileCard,
-  SessionsCard,
-  TwoFactorCard,
-} from "@/components/account-forms";
+import { PasswordCard, ProfileCard, SessionsCard } from "@/components/account-forms";
 import { PageHeader } from "@/components/ui";
 
 export const metadata = { title: "Profil ve güvenlik" };
@@ -26,7 +21,7 @@ export default async function WriterProfilePage() {
     <>
       <PageHeader
         title="Profil ve güvenlik"
-        description="Yayında görünen bilgileriniz, şifreniz, iki adımlı doğrulama ve oturumlarınız."
+        description="Yayında görünen bilgileriniz, şifreniz ve açık oturumlarınız."
       />
 
       <div className="space-y-6">
@@ -35,12 +30,6 @@ export default async function WriterProfilePage() {
           user={context.user}
           bio={profile.bio}
           socialLinks={profile.socialLinks ?? null}
-        />
-
-        <TwoFactorCard
-          csrfToken={csrfToken}
-          confirmedAt={profile.totpConfirmedAt}
-          mandatory={false}
         />
 
         <PasswordCard csrfToken={csrfToken} />

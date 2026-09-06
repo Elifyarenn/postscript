@@ -39,9 +39,9 @@ describe("role ordering", () => {
     expect(hasRole("user", "user")).toBe(true);
   });
 
-  it("demands two factor authentication from editors and admins only", () => {
+  it("demands two factor authentication from admins only (D-025)", () => {
     expect(requiresTwoFactor("admin")).toBe(true);
-    expect(requiresTwoFactor("editor")).toBe(true);
+    expect(requiresTwoFactor("editor")).toBe(false);
     expect(requiresTwoFactor("writer")).toBe(false);
     expect(requiresTwoFactor("user")).toBe(false);
   });

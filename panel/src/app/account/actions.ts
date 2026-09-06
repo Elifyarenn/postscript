@@ -20,6 +20,7 @@ import {
   revokeSession,
 } from "@/lib/auth/session";
 import { disableTotp } from "@/lib/auth/totp";
+import { requiresTwoFactor } from "@/lib/auth/rbac";
 import { assertCsrfFromForm } from "@/lib/csrf";
 import { listAnnouncementsFor } from "@/services/announcements";
 import { runAction, optionalText, text, type ActionState } from "@/lib/action";
@@ -35,7 +36,7 @@ export async function updateProfileAction(
     const meta = await requestMetadata();
 
     const socialLinks: Record<string, string> = {};
-    for (const key of ["website", "x", "instagram", "linkedin", "mastodon"]) {
+    for (const key of ["x", "instagram", "tiktok", "substack"]) {
       const value = optionalText(formData, `social_${key}`);
       if (value) socialLinks[key] = value;
     }
@@ -128,9 +129,10 @@ export async function disableTotpAction(
     await assertCsrfFromForm(formData);
     const { user } = await requireAuth();
 
-    // Editors and admins may not turn off a factor the specification requires
-    if (user.role === "editor" || user.role === "admin") {
-      throw badRequest("Editör ve yönetici hesaplarında iki adımlı doğrulama zorunludur.");
+    // The factor is mandatory for the only role that carries it, so this is
+    // reachable solely to clear a secret left behind by an earlier role (D-025)
+    if (requiresTwoFactor(user.role)) {
+      throw badRequest("Yönetici hesaplarında iki adımlı doğrulama zorunludur.");
     }
 
     await disableTotp(user.id);

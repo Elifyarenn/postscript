@@ -35,7 +35,7 @@ export type SessionUser = Actor & {
 export type AuthContext = {
   user: SessionUser;
   sessionId: string;
-  /** False while an editor or admin has not yet passed the TOTP step. */
+  /** False while an admin has not yet passed the TOTP step. */
   twoFactorSatisfied: boolean;
 };
 
@@ -219,9 +219,10 @@ export async function getAuthContext(): Promise<AuthContext | null> {
     birthDate: row.birthDate,
   };
 
-  // A second factor is expected when the role demands it, and also when the
-  // user opted in voluntarily — an enabled factor must never be skippable
-  const twoFactorExpected = requiresTwoFactor(user.role) || user.totpConfirmedAt !== null;
+  // The role alone decides. A secret left behind on a role that no longer
+  // carries the factor is inert: there is no screen to clear it, so honouring
+  // it would lock that account out of its own panel.
+  const twoFactorExpected = requiresTwoFactor(user.role);
 
   return {
     user,

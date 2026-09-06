@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { readCsrfToken } from "@/lib/csrf";
 import { Card, Field, Input } from "@/components/ui";
+import { PasswordField } from "@/components/password-field";
 import { PanelForm } from "@/components/form";
-import { MIN_PASSWORD_LENGTH } from "@/lib/password";
 import { registerAction } from "../actions";
 
 export const metadata = { title: "Kayıt" };
@@ -17,7 +17,12 @@ export default async function RegisterPage() {
         Herkes normal kullanıcı olarak kayıt olur. Yazar yetkisini yalnızca yönetici verir.
       </p>
 
-      <PanelForm action={registerAction} csrfToken={csrfToken} submitLabel="Kayıt ol">
+      <PanelForm
+        action={registerAction}
+        csrfToken={csrfToken}
+        submitLabel="Kayıt ol"
+        requireValid
+      >
           <>
             <Field
               label="Ad Soyad"
@@ -30,20 +35,7 @@ export default async function RegisterPage() {
               <Input id="email" name="email" type="email" autoComplete="email" required />
             </Field>
 
-            <Field
-              label="Şifre"
-              htmlFor="password"
-              hint={`En az ${MIN_PASSWORD_LENGTH} karakter. Yaygın kullanılan şifreler kabul edilmez.`}
-            >
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                minLength={MIN_PASSWORD_LENGTH}
-              />
-            </Field>
+            <PasswordField />
 
             <label className="flex items-start gap-2.5 text-sm">
               <input

@@ -28,9 +28,14 @@ export function hasRole(role: Role, minimum: Role): boolean {
   return RANK[role] >= RANK[minimum];
 }
 
-/** Roles for which TOTP two factor authentication is mandatory (§5.2). */
+/**
+ * Roles that carry TOTP two factor authentication.
+ *
+ * The specification (§5.2) makes it mandatory for editors as well and optional
+ * for writers. Narrowed to admins on the owner's instruction; see D-025.
+ */
 export function requiresTwoFactor(role: Role): boolean {
-  return role === "editor" || role === "admin";
+  return role === "admin";
 }
 
 /** A banned or unverified account can do nothing except manage its own profile. */

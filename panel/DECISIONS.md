@@ -317,3 +317,49 @@ faktörü her rolde zorluyordu — ama `/account` sayfasında hiçbir bağlantı
 özellik yalnızca adresi elle yazarak ulaşılabilir durumdaydı. Kararsız kalınan
 yerde muhafazakâr seçenek, okuyucuya da güvenliği sunmak ve yarım kalmış yolu
 görünür hâle getirmek.
+
+---
+
+## D-025 — İki adımlı doğrulama yalnızca admin rolünde
+
+**Karar:** TOTP yalnızca `admin` rolünde bulunur ve kapatılamaz. `editor`,
+`writer` ve `user` rollerinde ikinci faktör yoktur; kurulum sayfası bu rolleri
+kendi ana sayfalarına yönlendirir ve profil ekranlarında bir açma/kapama seçeneği
+sunulmaz. Faktörün beklenip beklenmediğine artık yalnızca rol karar verir, bu
+yüzden rolü değişmiş bir hesapta kalan gizli anahtar atıl hâle gelir ve o hesabı
+kilitlemez.
+
+**Gerekçe:** Spesifikasyon §5.2 editör için de zorunlu, yazar için isteğe bağlı
+diyor. Ürün sahibi bunu daraltmayı istedi. Bu bilinçli bir güvenlik gevşemesidir:
+editör makale yayınlayıp geri çekebilen, medya kütüphanesini ve duyuruları
+yöneten bir rol; artık o hesaplar yalnızca şifreyle korunuyor. Karşılığında
+günlük kullanım belirgin biçimde basitleşiyor. Karar kayda geçirildi ki ileride
+gözden geçirilebilsin.
+
+---
+
+## D-026 — Şifre kuralları ve canlı denetim listesi
+
+**Karar:** Şifre en az 8 karakter olmalı, hem büyük hem küçük harf ve en az bir
+rakam içermeli. Kurallar `src/lib/password-rules.ts` içinde tek bir yerde
+tanımlı; `server-only` içermez, çünkü aynı fonksiyonları hem tarayıcıdaki canlı
+denetim listesi hem de sunucudaki `checkPasswordPolicy` çalıştırır. Üç kural da
+sağlanmadan kayıt ve şifre yenileme düğmeleri açılmaz.
+
+**Gerekçe:** §5.1 asgari 10 karakter diyordu, karmaşıklık şartı yoktu. Ürün
+sahibi 8 karakter + büyük/küçük harf + rakam istedi. İki karakterlik kayıp,
+karakter kümesi genişlemesiyle fazlasıyla telafi ediliyor. Kuralların tek yerde
+durması şart: denetim listesi sunucunun reddedeceği bir şifreyi asla onaylı
+gösteremez. Yaygın şifre listesi kontrolü sunucuda kaldı — listeyi canlı olarak
+göstermek listeyi sızdırmak olurdu.
+
+---
+
+## D-027 — Yazar bağlantıları
+
+**Karar:** Profil bağlantıları X, Instagram, TikTok ve Substack. Önceki alanlar
+(`website`, `linkedin`, `mastodon`) kaldırıldı.
+
+**Gerekçe:** Ürün sahibinin derginin fiilen kullandığı mecralara göre isteği.
+Alan `jsonb` olduğu için migration gerekmedi; eski anahtarlar taşıyan kayıtlar
+varsa okunmaz hâle gelir, form kaydedildiğinde temizlenir.
