@@ -14,9 +14,13 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx src/db/migrate.ts",
-    "seed": "tsx src/db/seed.ts",
-    "create-admin": "tsx scripts/create-admin.ts"
+    "db:migrate": "tsx --tsconfig scripts/tsconfig.json src/db/migrate.ts",
+    "seed": "tsx --tsconfig scripts/tsconfig.json scripts/seed.ts",
+    "create-admin": "tsx --tsconfig scripts/tsconfig.json scripts/create-admin.ts",
+    "publish-scheduled": "tsx --tsconfig scripts/tsconfig.json scripts/publish-scheduled.ts",
+    "send-reminders": "tsx --tsconfig scripts/tsconfig.json scripts/send-reminders.ts",
+    "purge-identity-documents": "tsx --tsconfig scripts/tsconfig.json scripts/purge-identity-documents.ts",
+    "process-deletions": "tsx --tsconfig scripts/tsconfig.json scripts/process-deletions.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1127.0",

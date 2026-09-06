@@ -1,0 +1,104 @@
+# postscript panel — development stack (§2, §13.1)
+#
+#   docker compose up -d      brings up PostgreSQL, MinIO and Mailpit
+#   docker compose --profile app up -d --build   also builds and runs the panel
+#
+# The application service sits behind a profile so the usual workflow (run the
+# app with `pnpm dev`, everything else in containers) does not rebuild an image
+# on every change.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postscript
+      POSTGRES_PASSWORD: postscript
+      POSTGRES_DB: postscript
+      # Deterministic collation, so ordering does not depend on the host locale
+      POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postscript -d postscript"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: postscript
+      MINIO_ROOT_PASSWORD: postscript
+    ports:
+      - "9000:9000" # S3 API
+      - "9001:9001" # web console
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Creates the two buckets on first start, then exits. Identity documents live
+  # in their own bucket and are never public (DECISIONS.md D-009).
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 postscript postscript &&
+      mc mb --ignore-existing local/postscript &&
+      mc mb --ignore-existing local/postscript-identity &&
+      mc anonymous set none local/postscript-identity &&
+      echo 'buckets ready'
+      "
+
+  # A local SMTP sink with a web inbox at http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # web inbox
+    environment:
+      MP_MAX_MESSAGES: 500
+
+  app:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      APP_URL: http://localhost:3001
+      DATABASE_URL: postgres://postscript:postscript@postgres:5432/postscript
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in your .env}
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      MAIL_FROM: postscript <noreply@postscript.local>
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY_ID: postscript
+      S3_SECRET_ACCESS_KEY: postscript
+      S3_BUCKET: postscript
+      S3_IDENTITY_BUCKET: postscript-identity
+      S3_FORCE_PATH_STYLE: "true"
+
+volumes:
+  postgres-data:
+  minio-data:

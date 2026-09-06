@@ -9,7 +9,14 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
-import { articles, media, rightsGrants, users } from "@/db/schema";
+import {
+  agreementVersions,
+  articleMedia,
+  articles,
+  media,
+  rightsGrants,
+  users,
+} from "@/db/schema";
 import { acceptAgreement, createAgreementDraft, publishAgreementVersion } from "@/services/agreements";
 import {
   createArticle,
@@ -239,9 +246,7 @@ describe("media licensing guard", () => {
       .values({ storageKey: "media/x.png", mime: "image/png", size: 100, licenseType: null })
       .returning();
 
-    await db
-      .insert(await import("@/db/schema").then((m) => m.articleMedia))
-      .values({ articleId: article.id, mediaId: unlicensed!.id });
+    await db.insert(articleMedia).values({ articleId: article.id, mediaId: unlicensed!.id });
 
     await toAwaitingRights(editor, article.id);
     const grant = await findActiveGrant(article.id);
@@ -408,10 +413,7 @@ describe("a new agreement version", () => {
     let current = await db.select().from(users).where(eq(users.id, writerRow.id));
     expect(current[0]!.writerStatus).toBe("pending_agreement");
 
-    const published = await db
-      .select()
-      .from(await import("@/db/schema").then((m) => m.agreementVersions))
-      .limit(1);
+    const published = await db.select().from(agreementVersions).limit(1);
 
     await acceptAgreement(
       { ...writer, writerStatus: "pending_agreement" },

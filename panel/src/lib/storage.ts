@@ -91,6 +91,47 @@ function createS3Adapter(): StorageAdapter {
   };
 }
 
+/* ------------------------------------------------------------------ */
+/* Local disk adapter                                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Writes objects under a local directory. Selected by setting `S3_ENDPOINT` to
+ * `file://<dir>`, which is the Docker-free development path (DECISIONS.md
+ * D-003). Not for production: there is no redundancy and no access control
+ * beyond the file system.
+ */
+function createLocalDiskAdapter(root: string): StorageAdapter {
+  const resolve = (bucket: Bucket, key: string) => {
+    const full = path.resolve(root, bucket, key);
+    // A key must never escape its bucket directory
+    const base = path.resolve(root, bucket);
+    if (!full.startsWith(base + path.sep)) throw new Error("Invalid storage key");
+    return full;
+  };
+
+  return {
+    async put({ bucket, key, body }) {
+      const { mkdir, writeFile } = await import("node:fs/promises");
+      const target = resolve(bucket, key);
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, body);
+    },
+    async get({ bucket, key }) {
+      const { readFile } = await import("node:fs/promises");
+      return readFile(resolve(bucket, key));
+    },
+    async remove({ bucket, key }) {
+      const { rm } = await import("node:fs/promises");
+      await rm(resolve(bucket, key), { force: true });
+    },
+    async signedUrl({ bucket, key }) {
+      // Served through the authorised /api/media route rather than a real URL
+      return `/api/media/local?bucket=${bucket}&key=${encodeURIComponent(key)}`;
+    },
+  };
+}
+
 /** Keeps objects in a Map. Used by tests so they need no MinIO. */
 export class MemoryStorageAdapter implements StorageAdapter {
   readonly objects = new Map<string, { body: Buffer; mime: string }>();
@@ -134,7 +175,13 @@ export function setStorageAdapter(next: StorageAdapter): void {
 
 export function getStorage(): StorageAdapter {
   if (!adapter) {
-    adapter = process.env.NODE_ENV === "test" ? new MemoryStorageAdapter() : createS3Adapter();
+    if (process.env.NODE_ENV === "test") {
+      adapter = new MemoryStorageAdapter();
+    } else if (env().S3_ENDPOINT.startsWith("file://")) {
+      adapter = createLocalDiskAdapter(env().S3_ENDPOINT.replace(/^file:\/\//, "") || ".storage");
+    } else {
+      adapter = createS3Adapter();
+    }
   }
   return adapter;
 }

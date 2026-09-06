@@ -7,7 +7,7 @@
  * no other write path for `articles.status`.
  */
 import "server-only";
-import { and, asc, desc, eq, isNull, lte, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lte, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
 import {
@@ -496,7 +496,7 @@ async function notifyEditors(title: string, body: string, href: string): Promise
   const recipients = await db
     .select({ id: users.id })
     .from(users)
-    .where(and(sql`${users.role} in ('editor', 'admin')`, isNull(users.deletedAt)));
+    .where(and(inArray(users.role, ["editor", "admin"]), isNull(users.deletedAt)));
 
   if (recipients.length === 0) return;
 

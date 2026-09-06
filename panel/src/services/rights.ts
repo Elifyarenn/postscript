@@ -7,7 +7,7 @@
  * revoking it and issuing a new one.
  */
 import "server-only";
-import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
+import { and, desc, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
 import { articles, rightsGrants, users, type Article, type RightsGrant, type User } from "@/db/schema";
@@ -323,6 +323,8 @@ export async function listPendingGrants(actor: Actor) {
       writerEmail: users.email,
       createdAt: rightsGrants.createdAt,
       reminderSentAt: rightsGrants.reminderSentAt,
+      // Computed here so the page component stays free of Date.now()
+      isOverdue: sql<boolean>`${rightsGrants.createdAt} < now() - interval '3 days'`,
     })
     .from(rightsGrants)
     .innerJoin(articles, eq(rightsGrants.articleId, articles.id))

@@ -185,3 +185,74 @@ ederdi. Kısmi index, silinen kaydı saklarken adresin yeniden kullanılmasına 
 **Gerekçe:** Spesifikasyon "uygulama katmanında engelle" diyor; veritabanı triggerı
 bunu ücretsiz bir güvenlik ağı olarak ekler. Hatalı bir migration veya elle müdahale
 de böylece engellenir.
+
+---
+
+## D-016 — Docker'sız geliştirme yolu
+
+**Karar:** `DATABASE_URL=pglite://<dizin>`, `S3_ENDPOINT=file://<dizin>` ve
+`MAIL_TRANSPORT=file` verildiğinde uygulama sırasıyla süreç içi PostgreSQL,
+yerel diske yazan bir depolama ve dosyaya yazan bir e-posta adapteri kullanır.
+PGlite bağlantısı eşzamanlı açılamadığı için `src/instrumentation.ts` içinde
+sunucu açılışında kurulur; bağlantı `globalThis` üzerinde tutulur.
+
+**Gerekçe:** Docker bu makinede yok (D-003) ve uçtan uca testlerin gerçek bir
+sunucu sürmesi gerekiyordu. Üç adapteri de zaten arayüz arkasına aldığımız için
+maliyet küçük, kazanç büyük: kurulum gerektirmeyen bir geliştirme ve test yolu.
+`globalThis` kullanımı zorunlu; Next.js `instrumentation.ts`'i route handler'lardan
+ayrı bir modül grafiğinde yükler, modül düzeyi bir değişken paylaşılmaz.
+
+---
+
+## D-017 — Uçtan uca testler üretim derlemesine karşı çalışır
+
+**Karar:** `pnpm test:e2e` önce `.e2e/` veri dizinini siler, seed'ler, `next build`
+alır ve `next start` ile sunar.
+
+**Gerekçe:** `next dev`, `forbidden()` çağrıldığında kendi hata kabuğunu render
+ediyor; `app/forbidden.tsx` yalnızca üretim derlemesinde çıkıyor. §13.2 hem 403
+durum kodunu hem de kullanıcının gördüğü sayfayı istediği için testlerin üretim
+davranışını sürmesi gerekiyor. Yan fayda: testler gerçekten dağıtılacak kodu
+doğruluyor.
+
+---
+
+## D-018 — Alan bazlı hata mesajları formun başında toplanır
+
+**Karar:** `PanelForm` alanları sunucudan gelen sıradan `children` olarak alır;
+doğrulama mesajları her alanın yanında değil, formun başında alan adıyla
+listelenir.
+
+**Gerekçe:** Alanlar sunucu bileşeni içinde render ediliyor, form durumu ise
+istemci bileşeninde yaşıyor. Sunucu bileşeni istemci durumuna abone olamaz.
+Render-prop ile denendi ve React "Functions cannot be passed directly to Client
+Components" hatası verdi. Alternatif, her alanı istemci bileşenine çevirmekti;
+bu, tüm formu istemciye taşımak demekti. Mesajları tek yerde toplamak daha az
+kod ve daha az istemci JavaScript'i.
+
+---
+
+## D-019 — İç içe form kullanılmaz
+
+**Karar:** `PanelForm`'un `extraActions` özelliği kaldırıldı. Bir formun
+yanındaki ikincil eylem (örneğin sözleşme taslağının yayınlanması) kendi
+`<form>`'unda ve formun dışında durur.
+
+**Gerekçe:** `extraActions` içine konan `ActionButton` kendi `<form>`'unu
+render ediyordu; HTML iç içe form'a izin vermediği için tarayıcı iç formu
+sessizce düşürüyor, düğme dıştaki formu gönderiyordu. Sözleşme yayınlama
+düğmesi bu yüzden taslağı kaydediyordu. Özelliği kaldırmak, aynı hatanın
+tekrarlanmasını da engelliyor.
+
+---
+
+## D-020 — Kısa sözleşme metinlerinde kaydırma kilidi
+
+**Karar:** Onay kutusu, metin kutuya sığdığı için hiç kaydırma gerekmediğinde de
+açılır (`scrollHeight <= clientHeight` kontrolü ilk render'da yapılır).
+
+**Gerekçe:** §7.1 "en alta inmeden onay butonu aktif olmaz" diyor. Metin zaten
+tamamen görünüyorsa kullanıcı en alttadır; kaydırma olayı hiç tetiklenmeyeceği
+için kutu sonsuza dek kilitli kalıyordu. Sunucu tarafındaki asıl güvence
+değişmedi: onay, gösterilen metnin hash'i kayıtlı sürümün hash'iyle
+eşleşmediğinde reddedilir.

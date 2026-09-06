@@ -16,4 +16,4 @@ Open `index.html` in a browser, or serve the folder with any static server.
 
 ---
 
-Designed by [Elif Yaren Çekiç](https://www.elifyarencekic.com/)
+Designed by [Elif Yaren Çekiç](https://www.elifyarencekic.com/) & Tuanna Demir

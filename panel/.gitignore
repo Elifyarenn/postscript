@@ -10,3 +10,6 @@ playwright-report/
 test-results/
 .pglite/
 coverage/
+.storage/
+.e2e/
+.mail/

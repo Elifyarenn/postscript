@@ -52,6 +52,40 @@ function createSmtpAdapter(): MailAdapter {
   };
 }
 
+/**
+ * Writes each message as a JSON file instead of sending it. Selected with
+ * `MAIL_TRANSPORT=file`, which is the Docker-free development path: there is no
+ * SMTP server, but verification and reset links still have to be readable.
+ * The end to end tests read the same directory.
+ */
+function createFileAdapter(directory: string): MailAdapter {
+  return {
+    name: "file",
+    async send(message) {
+      const { mkdir, writeFile } = await import("node:fs/promises");
+      const path = await import("node:path");
+
+      await mkdir(directory, { recursive: true });
+      const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.json`;
+
+      await writeFile(
+        path.join(directory, name),
+        JSON.stringify(
+          {
+            to: message.to,
+            subject: message.subject,
+            text: message.text,
+            sentAt: new Date().toISOString(),
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+    },
+  };
+}
+
 /** Collects messages instead of sending them. Used by tests and by `NODE_ENV=test`. */
 export class MemoryMailAdapter implements MailAdapter {
   readonly name = "memory";
@@ -83,7 +117,13 @@ export function setMailAdapter(next: MailAdapter): void {
 
 export function getMailAdapter(): MailAdapter {
   if (!adapter) {
-    adapter = process.env.NODE_ENV === "test" ? new MemoryMailAdapter() : createSmtpAdapter();
+    if (process.env.NODE_ENV === "test") {
+      adapter = new MemoryMailAdapter();
+    } else if (process.env.MAIL_TRANSPORT === "file") {
+      adapter = createFileAdapter(process.env.MAIL_DIR ?? ".mail");
+    } else {
+      adapter = createSmtpAdapter();
+    }
   }
   return adapter;
 }
