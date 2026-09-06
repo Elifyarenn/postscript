@@ -16,3 +16,4 @@ coverage/
 .neon
 .admin-credentials.txt
 .vercel-env.txt
+.demo-users.txt
