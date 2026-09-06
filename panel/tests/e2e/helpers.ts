@@ -1,8 +1,7 @@
 /**
  * Shared steps for the end to end scenarios.
  */
-import { expect, type Page } from "@playwright/test";
-import * as OTPAuth from "otpauth";
+import type { Page } from "@playwright/test";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -77,117 +76,20 @@ export async function submitLogin(
   await page.getByRole("button", { name: "Giriş yap" }).click();
 }
 
-/**
- * Logs in an account that has no second factor yet and completes the mandatory
- * TOTP enrolment, reading the secret the setup page prints and generating a
- * real code from it.
- */
-export async function loginWithTotpSetup(
-  page: Page,
-  credentials: { email: string; password: string },
-): Promise<string> {
-  await submitLogin(page, credentials);
-  await page.waitForURL("**/two-factor/setup");
-
-  const secret = (await page.locator("code").first().innerText()).trim();
-  await enterTotpCode(page, secret, "Doğrula ve aç");
-
-  // The recovery codes are shown once, right after enrolment, and the way
-  // onwards only opens after confirming they were kept
-  await expect(page.getByText("Kurtarma kodları", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Panele devam et" })).toBeDisabled();
-
-  await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: "Panele devam et" }).click();
-
-  return secret;
-}
-
-/** Logs in an account that already has a confirmed second factor. */
-export async function loginWithTotp(
-  page: Page,
-  credentials: { email: string; password: string },
-  secret: string,
-): Promise<void> {
-  await submitLogin(page, credentials);
-  await page.waitForURL("**/two-factor");
-  await enterTotpCode(page, secret, "Doğrula");
-}
-
-async function enterTotpCode(page: Page, secret: string, buttonName: string): Promise<void> {
-  const totp = new OTPAuth.TOTP({
-    issuer: "postscript",
-    algorithm: "SHA1",
-    digits: 6,
-    period: 30,
-    secret: OTPAuth.Secret.fromBase32(secret),
-  });
-
-  await page.getByLabel(/kod/i).first().fill(totp.generate());
-  await page.getByRole("button", { name: buttonName }).click();
-}
-
 export async function logout(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Çıkış" }).click();
   await page.waitForURL("**/login");
 }
 
-/* ------------------------------------------------------------------ */
-/* Secrets shared between spec files                                   */
-/* ------------------------------------------------------------------ */
-
-const SECRETS_FILE = path.join(process.cwd(), ".e2e", "secrets.json");
-
 /**
- * TOTP enrolment happens once per account, but several spec files need to log
- * in as that account afterwards. The secret is kept in the run's data
- * directory, which is wiped before every run.
- */
-export async function saveSecret(name: string, secret: string): Promise<void> {
-  const { mkdir, writeFile } = await import("node:fs/promises");
-  await mkdir(path.dirname(SECRETS_FILE), { recursive: true });
-
-  const existing = await loadSecrets();
-  existing[name] = secret;
-  await writeFile(SECRETS_FILE, JSON.stringify(existing, null, 2), "utf8");
-}
-
-async function loadSecrets(): Promise<Record<string, string>> {
-  try {
-    return JSON.parse(await readFile(SECRETS_FILE, "utf8")) as Record<string, string>;
-  } catch {
-    return {};
-  }
-}
-
-export async function loadSecret(name: string): Promise<string | null> {
-  return (await loadSecrets())[name] ?? null;
-}
-
-/**
- * Logs in to a panel account. Only the admin role carries a second factor
- * (D-025): it enrols on the first call and reuses the stored secret afterwards.
- * An editor signs in with nothing but a password.
+ * Logs in to a panel account and waits for its home. Kept as its own helper so
+ * the specs read the same way they did when panel logins had a second step.
  */
 export async function loginElevated(
   page: Page,
   name: "admin" | "editor",
   credentials: { email: string; password: string },
 ): Promise<void> {
-  if (name === "editor") {
-    await submitLogin(page, credentials);
-    await page.waitForURL("**/editor");
-    return;
-  }
-
-  const stored = await loadSecret(name);
-  if (stored) {
-    await loginWithTotp(page, credentials, stored);
-    return;
-  }
-
-  // Enrolment ends by following the "continue" button to the role's home
-  const secret = await loginWithTotpSetup(page, credentials);
-  await saveSecret(name, secret);
-  await page.waitForURL("**/admin");
+  await submitLogin(page, credentials);
+  await page.waitForURL(name === "admin" ? "**/admin" : "**/editor");
 }

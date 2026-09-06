@@ -18,7 +18,6 @@ import {
   canAccessEditorPanel,
   canAccessWriterPanel,
   hasRole,
-  requiresTwoFactor,
   type Actor,
 } from "./rbac";
 
@@ -35,8 +34,6 @@ export type SessionUser = Actor & {
 export type AuthContext = {
   user: SessionUser;
   sessionId: string;
-  /** False while an admin has not yet passed the TOTP step. */
-  twoFactorSatisfied: boolean;
 };
 
 /* ------------------------------------------------------------------ */
@@ -59,8 +56,6 @@ export async function createSession(input: {
   userId: string;
   ip: string | null;
   userAgent: string | null;
-  /** Set immediately when the role does not need a second factor. */
-  totpVerified: boolean;
 }): Promise<string> {
   const config = env();
   const rawToken = randomToken(32);
@@ -72,7 +67,6 @@ export async function createSession(input: {
     tokenHash,
     ip: input.ip,
     userAgent: input.userAgent,
-    totpVerifiedAt: input.totpVerified ? new Date() : null,
     expiresAt,
   });
 
@@ -86,14 +80,6 @@ export async function createSession(input: {
   });
 
   return rawToken;
-}
-
-/** Marks the current session as having passed the TOTP challenge. */
-export async function markTwoFactorVerified(sessionId: string): Promise<void> {
-  await db
-    .update(sessions)
-    .set({ totpVerifiedAt: new Date(), updatedAt: new Date() })
-    .where(eq(sessions.id, sessionId));
 }
 
 export async function destroyCurrentSession(): Promise<void> {
@@ -164,7 +150,6 @@ export async function getAuthContext(): Promise<AuthContext | null> {
       expiresAt: sessions.expiresAt,
       lastSeenAt: sessions.lastSeenAt,
       revokedAt: sessions.revokedAt,
-      totpVerifiedAt: sessions.totpVerifiedAt,
       userId: users.id,
       email: users.email,
       displayName: users.displayName,
@@ -173,7 +158,6 @@ export async function getAuthContext(): Promise<AuthContext | null> {
       writerStatus: users.writerStatus,
       emailVerifiedAt: users.emailVerifiedAt,
       isBanned: users.isBanned,
-      totpConfirmedAt: users.totpConfirmedAt,
       kvkkConsentAt: users.kvkkConsentAt,
       birthDate: users.birthDate,
       deletedAt: users.deletedAt,
@@ -214,42 +198,22 @@ export async function getAuthContext(): Promise<AuthContext | null> {
     writerStatus: row.writerStatus as WriterStatus | null,
     emailVerifiedAt: row.emailVerifiedAt,
     isBanned: row.isBanned,
-    totpConfirmedAt: row.totpConfirmedAt,
     kvkkConsentAt: row.kvkkConsentAt,
     birthDate: row.birthDate,
   };
 
-  // The role alone decides. A secret left behind on a role that no longer
-  // carries the factor is inert: there is no screen to clear it, so honouring
-  // it would lock that account out of its own panel.
-  const twoFactorExpected = requiresTwoFactor(user.role);
-
-  return {
-    user,
-    sessionId: row.sessionId,
-    twoFactorSatisfied: twoFactorExpected ? row.totpVerifiedAt !== null : true,
-  };
+  return { user, sessionId: row.sessionId };
 }
 
 /* ------------------------------------------------------------------ */
 /* Guards                                                              */
 /* ------------------------------------------------------------------ */
 
-/**
- * Throws 401 when there is no session. Every mutation starts here.
- *
- * A session that owes a second factor is refused as well. Without that, an
- * account outside the panels — a reader, or a writer who turned the factor on
- * voluntarily — could change its profile, drop its other sessions or switch the
- * factor off again before ever presenting a code.
- */
+/** Throws 401 when there is no session. Every mutation starts here. */
 export async function requireAuth(): Promise<AuthContext> {
   const context = await getAuthContext();
   if (!context) throw unauthorized();
   if (context.user.isBanned) throw forbidden("Hesabınız askıya alınmış.");
-  if (!context.twoFactorSatisfied) {
-    throw forbidden("İki adımlı doğrulamayı tamamlamanız gerekiyor.");
-  }
   return context;
 }
 
@@ -262,10 +226,6 @@ export async function requireRole(minimum: Role): Promise<AuthContext> {
   if (minimum !== "user" && user.emailVerifiedAt === null) {
     throw forbidden("Önce e-posta adresinizi doğrulamanız gerekiyor.");
   }
-  if (requiresTwoFactor(user.role) && !context.twoFactorSatisfied) {
-    throw forbidden("İki adımlı doğrulamayı tamamlamanız gerekiyor.");
-  }
-
   const allowed =
     minimum === "user" ||
     (minimum === "writer" && canAccessWriterPanel(user)) ||

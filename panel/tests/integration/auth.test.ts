@@ -146,8 +146,6 @@ describe("login", () => {
     );
 
     expect(outcome.user.id).toBe(user.id);
-    expect(outcome.twoFactorRequired).toBe(false);
-    expect(outcome.twoFactorSetupRequired).toBe(false);
   });
 
   it("gives the same message for an unknown address and a wrong password", async () => {
@@ -188,24 +186,6 @@ describe("login", () => {
     expect(error.status).toBe(403);
   });
 
-  it("tells an admin without TOTP that setup is required", async () => {
-    await createUser({ email: "admin@example.com", role: "admin" });
-    const outcome = await verifyCredentials(
-      { email: "admin@example.com", password: TEST_PASSWORD },
-      noMeta,
-    );
-    expect(outcome.twoFactorSetupRequired).toBe(true);
-  });
-
-  it("asks nothing extra of an editor: the factor is admin-only (D-025)", async () => {
-    await createUser({ email: "editor@example.com", role: "editor" });
-    const outcome = await verifyCredentials(
-      { email: "editor@example.com", password: TEST_PASSWORD },
-      noMeta,
-    );
-    expect(outcome.twoFactorSetupRequired).toBe(false);
-    expect(outcome.twoFactorRequired).toBe(false);
-  });
 });
 
 describe("password reset", () => {

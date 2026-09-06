@@ -16,7 +16,6 @@ import { badRequest, conflict, forbidden, notFound, rateLimited, unauthorized } 
 import { checkPasswordPolicy, hashPassword, isPwned, verifyPassword } from "@/lib/password";
 import { clearAttempts, consumeAttempt, currentAttemptCount, failureDelayMs } from "@/lib/rate-limit";
 import { writeAudit } from "@/lib/audit";
-import { requiresTwoFactor } from "@/lib/auth/rbac";
 import { sendMail } from "@/lib/mail/transport";
 import * as templates from "@emails/templates";
 
@@ -220,13 +219,7 @@ export async function resendVerificationEmail(userId: string): Promise<void> {
 /* Login                                                               */
 /* ------------------------------------------------------------------ */
 
-export type LoginOutcome = {
-  user: User;
-  /** True when the account has a confirmed TOTP secret and must present a code. */
-  twoFactorRequired: boolean;
-  /** True for editors and admins who have not set up TOTP yet (§5.2). */
-  twoFactorSetupRequired: boolean;
-};
+export type LoginOutcome = { user: User };
 
 /**
  * Verifies credentials only. Creating the session cookie is the caller's job,
@@ -271,13 +264,7 @@ export async function verifyCredentials(
   await clearAttempts("login_account", email);
   await clearAttempts("login_ip", ipKey);
 
-  const carriesFactor = requiresTwoFactor(user.role);
-
-  return {
-    user,
-    twoFactorRequired: carriesFactor && user.totpConfirmedAt !== null,
-    twoFactorSetupRequired: carriesFactor && user.totpConfirmedAt === null,
-  };
+  return { user };
 }
 
 /* ------------------------------------------------------------------ */

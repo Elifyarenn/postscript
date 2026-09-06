@@ -53,9 +53,8 @@ Seed'in oluşturduğu hesaplar:
 | user | `okur@postscript.local` | `Okur!Parola2026` |
 | user (17 yaşında) | `genc@postscript.local` | `Genc!Parola2026` |
 
-> `admin` hesapları için iki adımlı doğrulama zorunludur (D-025). İlk girişte
-> panel sizi kurulum ekranına alır; karekodu bir doğrulama uygulamasına okutup
-> kodu girin. Kurtarma kodları yalnızca o an bir kez gösterilir.
+> İki adımlı doğrulama şu anda **kapalıdır** ve yayın öncesi yeniden
+> tasarlanacaktır (D-033). Tüm roller yalnızca e-posta ve şifreyle girer.
 
 Yardımcı adresler: Mailpit gelen kutusu `http://localhost:8025`, MinIO konsolu
 `http://localhost:9001`.
@@ -124,7 +123,7 @@ Tam liste `.env.example` içindedir. Kritik olanlar:
 |---|---|
 | `APP_URL` | Panelin dış adresi. CSRF origin kontrolü ve e-posta bağlantıları bunu kullanır. |
 | `DATABASE_URL` | `postgres://…` veya `pglite://<dizin>` |
-| `SESSION_SECRET` | Oturum jetonu özetine karışan gizli değer (pepper). En az 16 karakter; 32 baytlık rastgele hex önerilir. TOTP gizli anahtarının şifrelenmesinde de kullanılır. **Değiştirilirse tüm oturumlar düşer ve mevcut TOTP kayıtları okunamaz.** |
+| `SESSION_SECRET` | Oturum jetonu ve e-posta jetonu özetlerine karışan gizli değer (pepper). En az 16 karakter; 32 baytlık rastgele hex önerilir. **Değiştirilirse tüm oturumlar ve bekleyen doğrulama bağlantıları geçersiz olur.** |
 | `SESSION_MAX_AGE_DAYS` / `SESSION_IDLE_DAYS` | Oturum ömrü (30) ve hareketsizlik sınırı (7) |
 | `SMTP_*`, `MAIL_FROM` | E-posta gönderimi |
 | `MAIL_TRANSPORT=file`, `MAIL_DIR` | SMTP yerine dosyaya yazar (yalnızca geliştirme) |
@@ -159,8 +158,8 @@ Değişmez kurallar:
 5. `writer_status = active` olmadan yazar panelinde yalnızca duyurular ve
    sözleşme sayfası açıktır.
 6. İlk admin yalnızca seed veya CLI ile oluşturulur.
-7. İki adımlı doğrulama (TOTP) yalnızca `admin` rolündedir ve kapatılamaz; diğer
-   rollerde yoktur (D-025, §5.2'den sapma).
+7. İki adımlı doğrulama şu anda yok; §5.2'nin zorunlu kıldığı bu kontrol yayın
+   öncesi geri eklenecek (D-033).
 8. `audit_log` ve `role_changes` yalnızca eklenir; hem uygulama katmanında hem de
    veritabanı trigger'ıyla korunur.
 9. Onaylanmış bir Eser Onayı olmadan hiçbir makale `scheduled` veya `published`
@@ -281,8 +280,8 @@ DATABASE_URL=postgres://…/postscript_restore pnpm db:migrate
 Notlar:
 
 - `SESSION_SECRET` yedekte değildir ve olmamalıdır. Aynı değer kullanılmazsa
-  geri yüklenen sistemde oturumlar geçersizdir ve TOTP gizli anahtarları
-  çözülemez; bu durumda kullanıcıların 2FA kurulumunu yenilemesi gerekir.
+  geri yüklenen sistemde oturumlar ve bekleyen doğrulama bağlantıları geçersiz
+  olur; kullanıcılar yeniden giriş yapar.
 - `identity/` kişisel veridir. Geri yükleme gerçekten gerekmedikçe bu dizini
   atlayın; `identity_verified_at` bilgisi veritabanında zaten durur.
 - Geri yükleme sonrası bir kez `pnpm purge-identity-documents` çalıştırın:
@@ -293,8 +292,8 @@ Notlar:
 ## Test
 
 ```bash
-pnpm test        # 156 birim + entegrasyon testi
-pnpm test:e2e    # 21 uçtan uca senaryo
+pnpm test        # 153 birim + entegrasyon testi
+pnpm test:e2e    # 17 uçtan uca senaryo
 ```
 
 Birim ve entegrasyon testleri süreç içi PostgreSQL (PGlite) üzerinde çalışır:

@@ -146,10 +146,6 @@ export const users = pgTable(
     role: roleEnum("role").notNull().default("user"),
     writerStatus: writerStatusEnum("writer_status"),
 
-    /** TOTP secret, AES-256-GCM encrypted at rest (DECISIONS.md D-006). */
-    totpSecret: text("totp_secret"),
-    totpConfirmedAt: timestamp("totp_confirmed_at", { withTimezone: true }),
-
     kvkkConsentAt: timestamp("kvkk_consent_at", { withTimezone: true }),
     kvkkConsentVersion: integer("kvkk_consent_version"),
 
@@ -189,11 +185,6 @@ export const sessions = pgTable(
     tokenHash: text("token_hash").notNull(),
     ip: text("ip"),
     userAgent: text("user_agent"),
-    /**
-     * Elevated roles must finish TOTP verification before the session counts as
-     * fully authenticated (D-006).
-     */
-    totpVerifiedAt: timestamp("totp_verified_at", { withTimezone: true }),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
@@ -229,26 +220,6 @@ export const emailTokens = pgTable(
     uniqueIndex("email_tokens_token_hash_unique").on(t.tokenHash),
     index("email_tokens_user_type_idx").on(t.userId, t.type),
   ],
-);
-
-/* ------------------------------------------------------------------ */
-/* totp_recovery_codes                                                 */
-/* ------------------------------------------------------------------ */
-
-export const totpRecoveryCodes = pgTable(
-  "totp_recovery_codes",
-  {
-    id: id(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    /** argon2id hash of a single-use recovery code. */
-    codeHash: text("code_hash").notNull(),
-    usedAt: timestamp("used_at", { withTimezone: true }),
-    createdAt: createdAt(),
-    updatedAt: updatedAt(),
-  },
-  (t) => [index("totp_recovery_codes_user_idx").on(t.userId)],
 );
 
 /* ------------------------------------------------------------------ */

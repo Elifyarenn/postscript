@@ -14,7 +14,6 @@ import {
   canSignRightsGrant,
   canViewContractDocuments,
   hasRole,
-  requiresTwoFactor,
   type Actor,
 } from "@/lib/auth/rbac";
 
@@ -25,7 +24,6 @@ function actor(overrides: Partial<Actor> = {}): Actor {
     writerStatus: null,
     emailVerifiedAt: new Date("2026-01-01"),
     isBanned: false,
-    totpConfirmedAt: null,
     ...overrides,
   };
 }
@@ -37,13 +35,6 @@ describe("role ordering", () => {
     expect(hasRole("writer", "editor")).toBe(false);
     expect(hasRole("user", "writer")).toBe(false);
     expect(hasRole("user", "user")).toBe(true);
-  });
-
-  it("demands two factor authentication from admins only (D-025)", () => {
-    expect(requiresTwoFactor("admin")).toBe(true);
-    expect(requiresTwoFactor("editor")).toBe(false);
-    expect(requiresTwoFactor("writer")).toBe(false);
-    expect(requiresTwoFactor("user")).toBe(false);
   });
 });
 

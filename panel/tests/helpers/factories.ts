@@ -56,7 +56,6 @@ export function actorOf(user: User): Actor {
     writerStatus: user.writerStatus,
     emailVerifiedAt: user.emailVerifiedAt,
     isBanned: user.isBanned,
-    totpConfirmedAt: user.totpConfirmedAt,
   };
 }
 
@@ -79,7 +78,6 @@ export function adminActor(id = "00000000-0000-0000-0000-0000000000ad"): Actor {
     writerStatus: null,
     emailVerifiedAt: new Date(),
     isBanned: false,
-    totpConfirmedAt: new Date(),
   };
 }
 

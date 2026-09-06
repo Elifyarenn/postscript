@@ -19,8 +19,6 @@ import {
   revokeAllSessions,
   revokeSession,
 } from "@/lib/auth/session";
-import { disableTotp } from "@/lib/auth/totp";
-import { requiresTwoFactor } from "@/lib/auth/rbac";
 import { assertCsrfFromForm } from "@/lib/csrf";
 import { listAnnouncementsFor } from "@/services/announcements";
 import { runAction, optionalText, text, type ActionState } from "@/lib/action";
@@ -118,26 +116,6 @@ export async function revokeOtherSessionsAction(
     revalidatePath("/account");
     revalidatePath("/writer/profile");
     return { success: "Diğer tüm oturumlar kapatıldı." };
-  });
-}
-
-export async function disableTotpAction(
-  _state: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  return runAction(async () => {
-    await assertCsrfFromForm(formData);
-    const { user } = await requireAuth();
-
-    // The factor is mandatory for the only role that carries it, so this is
-    // reachable solely to clear a secret left behind by an earlier role (D-025)
-    if (requiresTwoFactor(user.role)) {
-      throw badRequest("Yönetici hesaplarında iki adımlı doğrulama zorunludur.");
-    }
-
-    await disableTotp(user.id);
-    revalidatePath("/writer/profile");
-    return { success: "İki adımlı doğrulama kapatıldı." };
   });
 }
 

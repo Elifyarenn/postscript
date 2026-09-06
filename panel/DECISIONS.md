@@ -437,3 +437,27 @@ tarafından kilitli olduğu için ikincisi mümkün değil, birincisi de test u�
 üretim davranışını gevşetmek olurdu. Aynı kural entegrasyon testinde tam olarak
 doğrulanıyor: eksik ayarla terfi reddediliyor ve gerekçe `dergi.ortak_2` yer
 tutucusunu adıyla söylüyor.
+
+---
+
+## D-033 — İki adımlı doğrulama geçici olarak kaldırıldı
+
+**Karar:** TOTP tamamen kaldırıldı: `users.totp_secret`,
+`users.totp_confirmed_at`, `sessions.totp_verified_at` sütunları ve
+`totp_recovery_codes` tablosu düşürüldü; kurulum ve doğrulama ekranları,
+`src/lib/auth/totp.ts`, `otpauth` ve `qrcode` bağımlılıkları silindi. Tüm
+roller yalnızca e-posta ve şifreyle giriyor. **Yayın öncesi baştan
+tasarlanacak.**
+
+**Gerekçe:** Ürün sahibi geliştirme sırasında sürekli engellendiğini bildirdi ve
+kaldırılmasını istedi. Bu, §5.2'nin editör ve yönetici için zorunlu tuttuğu bir
+kontrolü kaldırmak demektir; D-021, D-022, D-023, D-024 ve D-025 bu kararla
+birlikte geçersiz kalır. Yarım bırakıp bayrakla kapatmak yerine tamamen
+silmeyi seçtim: kullanılmayan bir kimlik doğrulama yolu, açık bırakılmış bir
+kapıdan farksızdır ve geri eklenirken yeniden gözden geçirilmesi gerekir.
+Kaldırma tek bir migration'da (`0004`) toplandı, geri eklemek de öyle olacak.
+
+**Yayın öncesi geri eklenirken:** en azından editör ve yönetici için zorunlu
+olmalı, oturum ikinci faktörü geçmeden panel dışında da (`/account` ve hesap
+eylemleri) iş göremez olmalı (D-023'ün kapattığı açık), ve kurulmuş bir faktörü
+sıfırlamak mevcut faktörü kanıtlamayı gerektirmeli (D-021'in kapattığı açık).

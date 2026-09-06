@@ -184,7 +184,6 @@ async function main(): Promise<void> {
     writerStatus: null,
     emailVerifiedAt: new Date(),
     isBanned: false,
-    totpConfirmedAt: new Date(),
   };
 
   console.log("Seeding publisher settings ...");
@@ -219,7 +218,6 @@ async function main(): Promise<void> {
       writerStatus: "pending_agreement",
       emailVerifiedAt: new Date(),
       isBanned: false,
-      totpConfirmedAt: null,
     };
     const writerRow = await db.select().from(users).where(eq(users.id, writerId)).limit(1);
     const preview = await renderAgreementForWriter(writerRow[0]!);
@@ -281,7 +279,7 @@ async function main(): Promise<void> {
   console.log("  editor : editor@postscript.local / Editor!Parola2026");
   console.log("  writer : yazar@postscript.local / Yazar!Parola2026");
   console.log("  reader : okur@postscript.local / Okur!Parola2026");
-  console.log(`\n  (editor id ${editorId} — two factor setup is required at first login)`);
+  console.log(`\n  (editor id ${editorId})`);
 
   await connection.close();
 }

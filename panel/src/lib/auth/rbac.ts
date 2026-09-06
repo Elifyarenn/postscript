@@ -16,7 +16,6 @@ export type Actor = {
   writerStatus: WriterStatus | null;
   emailVerifiedAt: Date | null;
   isBanned: boolean;
-  totpConfirmedAt: Date | null;
 };
 
 export function rankOf(role: Role): number {
@@ -26,16 +25,6 @@ export function rankOf(role: Role): number {
 /** True when `role` is at least `minimum` in the ordered role model. */
 export function hasRole(role: Role, minimum: Role): boolean {
   return RANK[role] >= RANK[minimum];
-}
-
-/**
- * Roles that carry TOTP two factor authentication.
- *
- * The specification (§5.2) makes it mandatory for editors as well and optional
- * for writers. Narrowed to admins on the owner's instruction; see D-025.
- */
-export function requiresTwoFactor(role: Role): boolean {
-  return role === "admin";
 }
 
 /** A banned or unverified account can do nothing except manage its own profile. */

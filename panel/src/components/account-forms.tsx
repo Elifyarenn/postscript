@@ -4,13 +4,11 @@
  * Both the plain user area and the writer panel show these, so they live in one
  * place and are handed the data they need.
  */
-import Link from "next/link";
 import { PanelForm, ActionButton } from "./form";
-import { Alert, Card, EmptyState, Field, Input, Table, Td, Textarea, Th } from "./ui";
+import { Card, EmptyState, Field, Input, Table, Td, Textarea, Th } from "./ui";
 import { formatDateTime } from "@/lib/utils";
 import {
   changePasswordAction,
-  disableTotpAction,
   revokeOtherSessionsAction,
   revokeSessionAction,
   updateProfileAction,
@@ -108,62 +106,6 @@ export function ProfileCard({
             </fieldset>
           </>
       </PanelForm>
-    </Card>
-  );
-}
-
-/**
- * The second factor, offered to every account that is not already forced to
- * have one. Editors and admins never see it: the specification makes the factor
- * mandatory for them, so there is nothing here for them to decide.
- */
-export function TwoFactorCard({
-  csrfToken,
-  confirmedAt,
-  mandatory,
-}: {
-  csrfToken: string;
-  confirmedAt: Date | null;
-  mandatory: boolean;
-}) {
-  return (
-    <Card>
-      <h2 className="mb-3 font-serif text-lg">İki adımlı doğrulama</h2>
-
-      {confirmedAt ? (
-        <>
-          <Alert tone="success">{formatDateTime(confirmedAt)} tarihinde açıldı.</Alert>
-
-          {mandatory ? (
-            <p className="mt-4 text-sm text-muted">
-              Rolünüz için zorunludur, kapatılamaz.
-            </p>
-          ) : (
-            <div className="mt-4">
-              <ActionButton
-                action={disableTotpAction}
-                csrfToken={csrfToken}
-                label="Kapat"
-                variant="danger"
-                confirmMessage="İki adımlı doğrulama kapatılacak. Devam edilsin mi?"
-              />
-            </div>
-          )}
-        </>
-      ) : (
-        <>
-          <p className="mb-4 text-sm text-muted">
-            İsteğe bağlıdır, ama hesabınızı belirgin biçimde güvenli hale getirir. Şifreniz başka
-            birinin eline geçse bile telefonunuzdaki kod olmadan giriş yapılamaz.
-          </p>
-          <Link
-            href="/two-factor/setup"
-            className="inline-block rounded-md border border-line bg-surface px-3.5 py-2 text-sm hover:bg-paper"
-          >
-            Kurulumu başlat
-          </Link>
-        </>
-      )}
     </Card>
   );
 }

@@ -7,12 +7,7 @@ import { readCsrfToken } from "@/lib/csrf";
 import { PanelShell } from "@/components/shell";
 import { PanelForm, ActionButton } from "@/components/form";
 import { Alert, Card, PageHeader } from "@/components/ui";
-import {
-  PasswordCard,
-  ProfileCard,
-  SessionsCard,
-  TwoFactorCard,
-} from "@/components/account-forms";
+import { PasswordCard, ProfileCard, SessionsCard } from "@/components/account-forms";
 import { formatDate } from "@/lib/utils";
 import {
   cancelDeletionAction,
@@ -89,15 +84,6 @@ export default async function AccountPage({
           bio={profile.bio}
           socialLinks={profile.socialLinks ?? null}
         />
-
-        {/* Only the admin role carries a second factor (D-025) */}
-        {profile.role === "admin" && (
-          <TwoFactorCard
-            csrfToken={csrfToken}
-            confirmedAt={profile.totpConfirmedAt}
-            mandatory
-          />
-        )}
 
         <PasswordCard csrfToken={csrfToken} />
 
