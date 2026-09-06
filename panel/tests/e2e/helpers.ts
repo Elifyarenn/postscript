@@ -9,7 +9,7 @@ import path from "node:path";
 export const MAIL_DIR = path.join(process.cwd(), ".e2e", "mail");
 
 export const SEED = {
-  admin: { email: "admin@postscript.local", password: "ChangeMe!Admin2026" },
+  admin: { email: "admin@postscriptmag.com", password: "ChangeMe!Admin2026" },
   editor: { email: "editor@postscript.local", password: "Editor!Parola2026" },
   writer: { email: "yazar@postscript.local", password: "Yazar!Parola2026" },
   reader: { email: "okur@postscript.local", password: "Okur!Parola2026" },

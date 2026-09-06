@@ -180,7 +180,7 @@ async function main(): Promise<void> {
 
   console.log("Seeding accounts ...");
   const adminId = await upsertUser({
-    email: process.env.SEED_ADMIN_EMAIL ?? "admin@postscript.local",
+    email: process.env.SEED_ADMIN_EMAIL ?? "admin@postscriptmag.com",
     displayName: process.env.SEED_ADMIN_NAME ?? "Site Admin",
     password: process.env.SEED_ADMIN_PASSWORD ?? "ChangeMe!Admin2026",
     role: "admin",
@@ -303,7 +303,7 @@ async function main(): Promise<void> {
   }
 
   console.log("\nSeed complete.");
-  console.log("  admin  :", process.env.SEED_ADMIN_EMAIL ?? "admin@postscript.local");
+  console.log("  admin  :", process.env.SEED_ADMIN_EMAIL ?? "admin@postscriptmag.com");
   console.log("  editor : editor@postscript.local / Editor!Parola2026");
   console.log("  writer : yazar@postscript.local / Yazar!Parola2026");
   console.log("  reader : okur@postscript.local / Okur!Parola2026");
