@@ -256,3 +256,33 @@ tamamen görünüyorsa kullanıcı en alttadır; kaydırma olayı hiç tetiklenm
 için kutu sonsuza dek kilitli kalıyordu. Sunucu tarafındaki asıl güvence
 değişmedi: onay, gösterilen metnin hash'i kayıtlı sürümün hash'iyle
 eşleşmediğinde reddedilir.
+
+---
+
+## D-021 — Kurulmuş bir 2FA'yı sıfırlamak doğrulama ister
+
+**Karar:** `/two-factor/setup` sayfası, hesapta onaylanmış bir TOTP varsa ve
+oturum ikinci faktörü henüz geçmemişse `/two-factor` sayfasına yönlendirir.
+Yeniden kurulum yalnızca oturum mevcut faktörü kanıtladıktan sonra mümkündür.
+Cihazını kaybeden kullanıcı `/two-factor` ekranında kurtarma kodlarından birini
+kullanır.
+
+**Gerekçe:** Kurulum sayfası açıldığında yeni bir gizli anahtar üretip
+`totp_confirmed_at` alanını temizliyordu. Bu, ikinci faktörü henüz geçmemiş bir
+oturumun yalnızca adrese giderek 2FA'yı devre dışı bırakabilmesi demekti; çalınan
+bir oturum çerezi için doğrudan bir kaçış yolu. Yönlendirme bu yolu kapatırken
+meşru yeniden kurulumu engellemiyor.
+
+---
+
+## D-022 — Kurtarma kodlarından sonraki adım
+
+**Karar:** Kurtarma kodları gösterildikten sonra ekranda "kaydettim" onay kutusu
+ve rolün ana sayfasına giden bir "Panele devam et" düğmesi bulunur; kutu
+işaretlenmeden düğme açılmaz.
+
+**Gerekçe:** Kodlar bir kez gösteriliyor ve yalnızca özetleri saklanıyor. Önceki
+hâlde ekran kodlarda bitiyordu: kullanıcı için görünür bir sonraki adım yoktu ve
+sayfadan ayrılmak kodları geri getirilemez biçimde kaybetmek anlamına geliyordu.
+Onay kutusu, kullanıcıyı kodları kaydetmeden ilerlemekten alıkoyan tek ucuz
+engel.

@@ -92,8 +92,14 @@ export async function loginWithTotpSetup(
   const secret = (await page.locator("code").first().innerText()).trim();
   await enterTotpCode(page, secret, "Doğrula ve aç");
 
-  // The recovery codes are shown once, right after enrolment
+  // The recovery codes are shown once, right after enrolment, and the way
+  // onwards only opens after confirming they were kept
   await expect(page.getByText("Kurtarma kodları", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Panele devam et" })).toBeDisabled();
+
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Panele devam et" }).click();
+
   return secret;
 }
 
@@ -174,9 +180,8 @@ export async function loginElevated(
     return;
   }
 
+  // Enrolment ends by following the "continue" button to the role's home
   const secret = await loginWithTotpSetup(page, credentials);
   await saveSecret(name, secret);
-
-  // Enrolment leaves the browser on the setup page; go where the role belongs
-  await page.goto(name === "admin" ? "/admin" : "/editor");
+  await page.waitForURL(name === "admin" ? "**/admin" : "**/editor");
 }

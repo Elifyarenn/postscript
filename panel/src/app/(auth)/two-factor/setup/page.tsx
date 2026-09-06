@@ -14,9 +14,23 @@ import { confirmTotpAction } from "./actions";
 
 export const metadata = { title: "İki adımlı doğrulama kurulumu" };
 
+/** Where an account belongs once its second factor is in place. */
+function homeFor(role: string): string {
+  if (role === "admin") return "/admin";
+  if (role === "editor") return "/editor";
+  if (role === "writer") return "/writer";
+  return "/account";
+}
+
 export default async function TotpSetupPage() {
   const context = await getAuthContext();
   if (!context) redirect("/login");
+
+  // Staging a secret clears the confirmation, so simply opening this page would
+  // otherwise switch off a factor that is already in place. An account that has
+  // one must prove it first; re-enrolment is then allowed, because the session
+  // has already shown possession of the current device.
+  if (context.user.totpConfirmedAt && !context.twoFactorSatisfied) redirect("/two-factor");
 
   const csrfToken = (await readCsrfToken()) ?? "";
 
@@ -58,7 +72,11 @@ export default async function TotpSetupPage() {
         <code className="text-xs tracking-widest break-all text-muted">{secret}</code>
       </div>
 
-      <TotpSetupForm action={confirmTotpAction} csrfToken={csrfToken} />
+      <TotpSetupForm
+        action={confirmTotpAction}
+        csrfToken={csrfToken}
+        continueHref={homeFor(context.user.role)}
+      />
 
       <div className="mt-5">
         <Alert tone="warning">
