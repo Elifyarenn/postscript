@@ -219,11 +219,14 @@ export async function getAuthContext(): Promise<AuthContext | null> {
     birthDate: row.birthDate,
   };
 
+  // A second factor is expected when the role demands it, and also when the
+  // user opted in voluntarily — an enabled factor must never be skippable
+  const twoFactorExpected = requiresTwoFactor(user.role) || user.totpConfirmedAt !== null;
+
   return {
     user,
     sessionId: row.sessionId,
-    // Roles without mandatory 2FA are satisfied by definition
-    twoFactorSatisfied: requiresTwoFactor(user.role) ? row.totpVerifiedAt !== null : true,
+    twoFactorSatisfied: twoFactorExpected ? row.totpVerifiedAt !== null : true,
   };
 }
 

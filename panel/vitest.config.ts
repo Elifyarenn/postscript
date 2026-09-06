@@ -15,6 +15,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
+      "@emails": path.resolve(import.meta.dirname, "emails"),
       // The real package throws when imported outside a React Server Component graph
       "server-only": path.resolve(import.meta.dirname, "tests/stubs/server-only.ts"),
     },

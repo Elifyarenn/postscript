@@ -7,14 +7,16 @@
  *  - optional Have I Been Pwned k-anonymity check, off unless PASSWORD_HIBP_CHECK=true
  */
 import "server-only";
-import { hash, verify, Algorithm } from "@node-rs/argon2";
+import { hash, verify } from "@node-rs/argon2";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
 /** OWASP recommended argon2id profile (DECISIONS.md D-004). */
 const ARGON2_OPTIONS = {
-  algorithm: Algorithm.Argon2id,
+  // 2 is Argon2id. The library exports it as an ambient const enum, which
+  // cannot be read under isolatedModules, so the value is written out.
+  algorithm: 2,
   memoryCost: 19456, // 19 MiB
   timeCost: 2,
   parallelism: 1,
