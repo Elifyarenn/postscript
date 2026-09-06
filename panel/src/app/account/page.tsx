@@ -7,7 +7,12 @@ import { readCsrfToken } from "@/lib/csrf";
 import { PanelShell } from "@/components/shell";
 import { PanelForm, ActionButton } from "@/components/form";
 import { Alert, Card, PageHeader } from "@/components/ui";
-import { PasswordCard, ProfileCard, SessionsCard } from "@/components/account-forms";
+import {
+  PasswordCard,
+  ProfileCard,
+  SessionsCard,
+  TwoFactorCard,
+} from "@/components/account-forms";
 import { formatDate } from "@/lib/utils";
 import {
   cancelDeletionAction,
@@ -83,6 +88,12 @@ export default async function AccountPage({
           user={context.user}
           bio={profile.bio}
           socialLinks={profile.socialLinks ?? null}
+        />
+
+        <TwoFactorCard
+          csrfToken={csrfToken}
+          confirmedAt={profile.totpConfirmedAt}
+          mandatory={false}
         />
 
         <PasswordCard csrfToken={csrfToken} />

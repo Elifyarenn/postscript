@@ -66,3 +66,42 @@ test("an unverified session cannot reset a factor that is already in place", asy
   await page.waitForURL("**/two-factor");
   await expect(page.getByText("Doğrulama uygulamanızdaki altı haneli kodu girin.")).toBeVisible();
 });
+
+test("a reader can turn the factor on from the account page", async ({ page, context }) => {
+  await context.clearCookies();
+
+  await submitLogin(page, SEED.reader);
+  // The reader was promoted to writer in scenario 03, so this lands on /writer
+  await page.waitForURL(/\/(writer|account)/);
+
+  await page.goto("/account");
+  await expect(page.getByRole("heading", { name: "İki adımlı doğrulama" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Kurulumu başlat" }).click();
+  await page.waitForURL("**/two-factor/setup");
+  await expect(page.locator("code").first()).toBeVisible();
+});
+
+test("an unverified session cannot reach the account page or its actions", async ({
+  page,
+  context,
+}) => {
+  await context.clearCookies();
+
+  // The writer enrolled in the first scenario, so this login owes a factor
+  await submitLogin(page, SEED.writer);
+  await page.waitForURL("**/two-factor");
+
+  // The page redirects rather than rendering with an unverified session
+  await page.goto("/account");
+  await page.waitForURL("**/two-factor");
+
+  // Requested directly, it redirects rather than serving the page: the second
+  // factor is owed before anything behind it opens
+  const landing = await page.evaluate(async () => {
+    const response = await fetch("/account");
+    return { url: response.url, redirected: response.redirected };
+  });
+  expect(landing.redirected).toBe(true);
+  expect(landing.url).toContain("/two-factor");
+});

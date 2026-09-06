@@ -234,11 +234,21 @@ export async function getAuthContext(): Promise<AuthContext | null> {
 /* Guards                                                              */
 /* ------------------------------------------------------------------ */
 
-/** Throws 401 when there is no session. Every mutation starts here. */
+/**
+ * Throws 401 when there is no session. Every mutation starts here.
+ *
+ * A session that owes a second factor is refused as well. Without that, an
+ * account outside the panels — a reader, or a writer who turned the factor on
+ * voluntarily — could change its profile, drop its other sessions or switch the
+ * factor off again before ever presenting a code.
+ */
 export async function requireAuth(): Promise<AuthContext> {
   const context = await getAuthContext();
   if (!context) throw unauthorized();
   if (context.user.isBanned) throw forbidden("Hesabınız askıya alınmış.");
+  if (!context.twoFactorSatisfied) {
+    throw forbidden("İki adımlı doğrulamayı tamamlamanız gerekiyor.");
+  }
   return context;
 }
 

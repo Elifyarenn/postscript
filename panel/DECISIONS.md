@@ -286,3 +286,34 @@ hâlde ekran kodlarda bitiyordu: kullanıcı için görünür bir sonraki adım 
 sayfadan ayrılmak kodları geri getirilemez biçimde kaybetmek anlamına geliyordu.
 Onay kutusu, kullanıcıyı kodları kaydetmeden ilerlemekten alıkoyan tek ucuz
 engel.
+
+---
+
+## D-023 — İkinci faktör paneller dışında da zorunlu
+
+**Karar:** `requireAuth()` ve `requireSession()`, oturum ikinci faktörü borçluysa
+(rol gereği zorunlu ya da kullanıcı isteğe bağlı olarak açmış) isteği reddeder;
+sayfa `/two-factor` adresine yönlendirir, server action 403 döner.
+
+**Gerekçe:** Faktör yalnızca panel katmanlarında (`guardPanel`, `requireRole`)
+kontrol ediliyordu. `/account` sayfası ve tüm hesap eylemleri `requireAuth()`
+kullandığı için, doğrulamayı geçmemiş bir oturum profili değiştirebiliyor,
+diğer oturumları düşürebiliyor ve `disableTotpAction` ile faktörü tamamen
+kapatabiliyordu. Bu, D-021'de kurulum sayfasında kapatılan deliğin ikinci
+kapısıydı. Kontrol artık oturumun kendisinde, tek yerde.
+
+---
+
+## D-024 — Normal kullanıcıya da isteğe bağlı 2FA
+
+**Karar:** İki adımlı doğrulama kartı `/account` sayfasına da eklendi; `user` ve
+`writer` rolleri faktörü açıp kapatabilir, `editor` ve `admin` için zorunludur ve
+kapatılamaz. Kart tek bir bileşende (`TwoFactorCard`) toplandı.
+
+**Gerekçe:** Spesifikasyon §5.2 yalnızca editör/yönetici (zorunlu) ve yazar
+(isteğe bağlı) diyor; normal kullanıcı için sessiz. Altyapı zaten her rol için
+çalışıyordu — kurulum sayfasında rol kontrolü yok ve giriş akışı açılmış bir
+faktörü her rolde zorluyordu — ama `/account` sayfasında hiçbir bağlantı yoktu:
+özellik yalnızca adresi elle yazarak ulaşılabilir durumdaydı. Kararsız kalınan
+yerde muhafazakâr seçenek, okuyucuya da güvenliği sunmak ve yarım kalmış yolu
+görünür hâle getirmek.

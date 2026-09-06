@@ -39,9 +39,15 @@ export async function guardWriterInnerPages(): Promise<AuthContext> {
   return context;
 }
 
+/**
+ * Any signed-in page outside the panels. A session that still owes a second
+ * factor is sent to present it first, whatever the role: an opted-in writer or
+ * reader is held to the factor exactly like an editor.
+ */
 export async function requireSession(): Promise<AuthContext> {
   const context = await getAuthContext();
   if (!context) redirect("/login");
+  if (!context.twoFactorSatisfied) redirect("/two-factor");
   return context;
 }
 
