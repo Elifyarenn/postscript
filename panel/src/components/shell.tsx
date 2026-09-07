@@ -17,6 +17,8 @@ export const ADMIN_NAV: NavItem[] = [
   { href: "/admin", label: "Genel bakış" },
   { href: "/admin/users", label: "Kullanıcılar" },
   { href: "/admin/applications", label: "Yazar başvuruları" },
+  { href: "/admin/writer-leads", label: "Yazar adayları" },
+  { href: "/admin/categories", label: "Kategoriler" },
   { href: "/admin/agreements", label: "Sözleşme sürümleri" },
   { href: "/admin/settings", label: "Sistem" },
   { href: "/admin/community", label: "Topluluk yönetimi" },

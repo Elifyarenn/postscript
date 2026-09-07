@@ -104,6 +104,9 @@ export const grantTypeEnum = pgEnum("grant_type", [
 
 export const grantStatusEnum = pgEnum("grant_status", ["pending", "signed", "declined", "revoked"]);
 
+/** The state of a writer-lead collected through the public interest form. */
+export const leadStatusEnum = pgEnum("lead_status", ["pending", "approved", "rejected"]);
+
 /** How the author is credited on a given work (§7, contract art. 7). */
 export const bylineChoiceEnum = pgEnum("byline_choice", ["real_name", "pen_name"]);
 
@@ -795,6 +798,72 @@ export const communityMessages = pgTable(
 );
 
 /* ------------------------------------------------------------------ */
+/* Writer leads and category quotas (module 5)                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Writing categories with a per-category writer quota. The quota counts
+ * approved leads: a category is "full" when `max_quota` approved leads are
+ * linked to it, and the public form then blocks further selections.
+ */
+export const categories = pgTable(
+  "categories",
+  {
+    id: id(),
+    name: text("name").notNull(),
+    maxQuota: integer("max_quota").notNull().default(3),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    deletedAt: deletedAt(),
+  },
+  (t) => [uniqueIndex("categories_name_unique").on(t.name).where(sql`${t.deletedAt} is null`)],
+);
+
+/**
+ * A writer-lead: someone who filled the public interest form. This is not the
+ * contract pipeline (that lives in `writer_applications`); it is a contact
+ * pool with a pending → approved/rejected status that feeds the category
+ * quotas.
+ */
+export const writerLeads = pgTable(
+  "writer_leads",
+  {
+    id: id(),
+    fullName: text("full_name").notNull(),
+    birthDate: date("birth_date").notNull(),
+    phone: text("phone").notNull(),
+    email: text("email").notNull(),
+    status: leadStatusEnum("status").notNull().default("pending"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    deletedAt: deletedAt(),
+  },
+  (t) => [
+    uniqueIndex("writer_leads_email_unique").on(t.email).where(sql`${t.deletedAt} is null`),
+  ],
+);
+
+/** A lead's chosen categories; at most three (enforced in the service). */
+export const writerLeadCategories = pgTable(
+  "writer_lead_categories",
+  {
+    id: id(),
+    leadId: uuid("lead_id")
+      .notNull()
+      .references(() => writerLeads.id, { onDelete: "cascade" }),
+    categoryId: uuid("category_id")
+      .notNull()
+      .references(() => categories.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("writer_lead_categories_unique").on(t.leadId, t.categoryId),
+    index("writer_lead_categories_category_idx").on(t.categoryId),
+  ],
+);
+
+/* ------------------------------------------------------------------ */
 /* audit_log (append only, D-015)                                      */
 /* ------------------------------------------------------------------ */
 
@@ -831,6 +900,8 @@ export type Issue = typeof issues.$inferSelect;
 export type RightsGrant = typeof rightsGrants.$inferSelect;
 export type WriterApplication = typeof writerApplications.$inferSelect;
 export type MediaRow = typeof media.$inferSelect;
+export type WriterLead = typeof writerLeads.$inferSelect;
+export type Category = typeof categories.$inferSelect;
 export type CommunityComment = typeof communityComments.$inferSelect;
 export type CommunityMessage = typeof communityMessages.$inferSelect;
 export type BannedWord = typeof bannedWords.$inferSelect;
@@ -841,5 +912,6 @@ export type ArticleStatus = (typeof articleStatusEnum.enumValues)[number];
 export type WriterStatus = (typeof writerStatusEnum.enumValues)[number];
 export type EditorStatus = (typeof editorStatusEnum.enumValues)[number];
 export type GrantStatus = (typeof grantStatusEnum.enumValues)[number];
+export type LeadStatus = (typeof leadStatusEnum.enumValues)[number];
 export type WriterApplicationStatus = (typeof writerApplicationStatusEnum.enumValues)[number];
 export type LicenseType = (typeof licenseTypeEnum.enumValues)[number];

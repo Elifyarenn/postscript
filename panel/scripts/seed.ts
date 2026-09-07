@@ -21,6 +21,7 @@ import {
   agreementVersions,
   articles,
   bannedWords,
+  categories,
   issues,
   kvkkVersions,
   users,
@@ -206,6 +207,32 @@ async function main(): Promise<void> {
     { ip: null, userAgent: "seed" },
   );
   console.log("  · saved");
+
+  console.log("Seeding writing categories ...");
+  const BASE_CATEGORIES = [
+    "1. BİLİM & TEKNOLOJİ",
+    "2. PSİKOLOJİ & İLİŞKİLER",
+    "3. KÜLTÜR & SANAT",
+    "4. EDEBİYAT",
+    "5. SEYAHAT & GEZİ",
+    "6. YEMEK & GASTRONOMİ",
+    "7. TARİH & TOPLUM",
+    "8. FELSEFE & DÜŞÜNCE",
+    "9. MÜZİK",
+    "10. SİNEMA & DİZİ",
+    "11. SPOR & SAĞLIK",
+  ];
+  for (const name of BASE_CATEGORIES) {
+    const existing = await db
+      .select({ id: categories.id })
+      .from(categories)
+      .where(and(eq(categories.name, name), isNull(categories.deletedAt)))
+      .limit(1);
+    if (existing.length === 0) {
+      await db.insert(categories).values({ name, maxQuota: 3, isActive: true });
+    }
+  }
+  console.log(`  · ${BASE_CATEGORIES.length} categories ensured`);
 
   console.log("Seeding the community blacklist ...");
   const bannedSource = readFileSync(

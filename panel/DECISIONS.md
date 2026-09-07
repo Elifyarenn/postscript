@@ -626,3 +626,28 @@ listedeki kelime her durumda görünmez olur. Alt dize eşleşmesi zararsız
 kelimeleri de yakalayabileceği için liste yönetici denetimindedir ve seed
 yalnızca küçük bir başlangıç seti koyar. Yumuşak silme, D-015'teki
 eklenmek-bir-türde-eklenen kayıt ilkesine uygundur: denetim geçmişi korunur.
+
+---
+
+## D-041 — Yazar bilgi formu ve kategori kontenjanları
+
+**Karar:** Herkese açık `/yazar-basvuru` formu eklendi; adaylar
+(`writer_leads` tablosu: ad, doğum, telefon, e-posta, durum) en fazla 3
+kategoriden seçer (`writer_lead_categories`; `categories` tablosu: ad,
+`max_quota` varsayılan 3, `is_active`). Kontenjan "onaylanmış aday sayısı"dır:
+dolu kategori hem formda pasiftir hem de sunucuda başvuruyu reddeder; onay da
+kontenjanı aşamaz. Spesifikasyondaki REST uçları birebir uygulandı
+(`/api/categories`, `/api/writers/apply`, `/api/admin/writers(/:id)`,
+`/api/admin/categories(/:id)`); admin arayüzü aynı servisleri server action'la
+çağırır. Kategori silme yumuşaktır. Seed 11 temel kategoriyi kurar.
+
+**Gerekçe:** Bu modül, kayıtlı kullanıcı + sözleşme odaklı
+`writer_applications` pipeline'ından farklıdır — dışarıdan ilgi toplamak için
+ayrı bir havuzdur ve bu yüzden ayrı tablolar kullandı (isim çakışmasını önlemek
+için `writer_leads`). REST uçları ürün sahibinin açık teknik isteği olduğundan
+"mutasyonlar server action'dır" kuralı bu modülde bilinçli olarak esnetildi
+(route handler → servis → yanıt katman düzeni korundu). Kontenjanın "onaylı
+aday" sayması, başvurunun kendisi kotayı doldurmaz — ancak onay doldurur — bu
+yüzden hem form hem onay kontrolü aynı fonksiyonu (`leadSelectionIssues`)
+kullanır. Doğum tarihi yaş kuralı uygulanmaz: form yalnızca ilgi toplar, asıl
+pipeline 18+ şartını zaten denetler.

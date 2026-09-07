@@ -278,6 +278,21 @@ Yönetici panelindeki **"Topluluk yönetimi"** sekmesinde tüm yorumlar, sohbet
 mesajları ve yasaklı kelimeler yönetilir; kaldırma yumuşak silmedir
 (kayıt geçmişte kalır).
 
+### Yazar bilgi formu ve kategori kontenjanları
+
+`/yazar-basvuru` adresindeki herkese açık form, adayların ilgi alanlarını
+toplar: ad soyad, doğum tarihi, telefon, e-posta ve **en fazla 3 kategori**.
+Kontenjanı dolan (3 onaylı aday) kategoriler formda pasif görünür ve "Kontenjan
+Dolu" etiketi taşır; sunucu aynı kuralları yeniden çalıştırır. Başvurular
+`pending` olarak `writer_leads` tablosuna düşer — bu, sözleşme odaklı
+`writer_applications` pipeline'ından ayrı bir ilgi havuzudur.
+
+API: `GET /api/categories`, `POST /api/writers/apply`,
+`GET /api/admin/writers`, `PUT /api/admin/writers/:id`,
+`POST/PUT/DELETE /api/admin/categories(/:id)`. Admin panelinde **"Yazar
+adayları"** ve **"Kategoriler"** ekranları başvuruları ve kontenjanları yönetir
+(2/3 göstergesi, aktif/pasif, yumuşak silme) (D-041).
+
 ### Güvenlik başlıkları
 
 `next.config.ts` her yanıta `X-Content-Type-Options`, `X-Frame-Options`,
@@ -440,7 +455,7 @@ panel) tek makinede ayağa kaldırır.
 ## Test
 
 ```bash
-pnpm test        # 218 birim + entegrasyon testi
+pnpm test        # 234 birim + entegrasyon testi
 pnpm test:e2e    # 19 uçtan uca senaryo
 ```
 
