@@ -9,7 +9,7 @@ import "server-only";
 import { cookies, headers } from "next/headers";
 import { and, eq, isNull, ne, desc } from "drizzle-orm";
 import { db } from "@/db/client";
-import { sessions, users, type Role, type WriterStatus } from "@/db/schema";
+import { sessions, users, type EditorStatus, type Role, type WriterStatus } from "@/db/schema";
 import { hashToken, randomToken } from "@/lib/crypto";
 import { env, isProduction } from "@/lib/env";
 import { forbidden, unauthorized } from "@/lib/errors";
@@ -156,6 +156,7 @@ export async function getAuthContext(): Promise<AuthContext | null> {
       penName: users.penName,
       role: users.role,
       writerStatus: users.writerStatus,
+      editorStatus: users.editorStatus,
       emailVerifiedAt: users.emailVerifiedAt,
       isBanned: users.isBanned,
       kvkkConsentAt: users.kvkkConsentAt,
@@ -196,6 +197,7 @@ export async function getAuthContext(): Promise<AuthContext | null> {
     penName: row.penName,
     role: row.role as Role,
     writerStatus: row.writerStatus as WriterStatus | null,
+    editorStatus: row.editorStatus as EditorStatus | null,
     emailVerifiedAt: row.emailVerifiedAt,
     isBanned: row.isBanned,
     kvkkConsentAt: row.kvkkConsentAt,

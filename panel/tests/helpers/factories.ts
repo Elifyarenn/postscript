@@ -4,7 +4,7 @@
  */
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { users, type Role, type User, type WriterStatus } from "@/db/schema";
+import { users, type EditorStatus, type Role, type User, type WriterStatus } from "@/db/schema";
 import { hashPassword } from "@/lib/password";
 import type { Actor } from "@/lib/auth/rbac";
 
@@ -16,6 +16,7 @@ export type UserOverrides = {
   email?: string;
   role?: Role;
   writerStatus?: WriterStatus | null;
+  editorStatus?: EditorStatus | null;
   emailVerified?: boolean;
   kvkkConsent?: boolean;
   birthDate?: string | null;
@@ -37,6 +38,7 @@ export async function createUser(overrides: UserOverrides = {}): Promise<User> {
       displayName: overrides.displayName ?? `Test User ${counter}`,
       role: overrides.role ?? "user",
       writerStatus: overrides.writerStatus ?? null,
+      editorStatus: overrides.editorStatus ?? null,
       emailVerifiedAt: overrides.emailVerified === false ? null : now,
       kvkkConsentAt: overrides.kvkkConsent === false ? null : now,
       kvkkConsentVersion: overrides.kvkkConsent === false ? null : 1,
@@ -54,6 +56,7 @@ export function actorOf(user: User): Actor {
     id: user.id,
     role: user.role,
     writerStatus: user.writerStatus,
+    editorStatus: user.editorStatus,
     emailVerifiedAt: user.emailVerifiedAt,
     isBanned: user.isBanned,
   };
@@ -76,6 +79,7 @@ export function adminActor(id = "00000000-0000-0000-0000-0000000000ad"): Actor {
     id,
     role: "admin",
     writerStatus: null,
+    editorStatus: null,
     emailVerifiedAt: new Date(),
     isBanned: false,
   };

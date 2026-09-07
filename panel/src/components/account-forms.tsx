@@ -24,6 +24,7 @@ import {
   requestEmailChangeAction,
   revokeOtherSessionsAction,
   revokeSessionAction,
+  selfFreezeDutyAction,
   submitWriterApplicationAction,
   updateProfileAction,
 } from "@/app/account/actions";
@@ -357,6 +358,51 @@ export function EmailCard({
           <Input id="newEmail" name="newEmail" type="email" autoComplete="email" required maxLength={254} />
         </Field>
       </PanelForm>
+    </Card>
+  );
+}
+
+/**
+ * The duty card on the account page. A writer or editor can freeze their own
+ * duty: the panel closes, every record (signed rights grants, acceptances)
+ * stays, and an admin reactivates the duty. A frozen user only sees the state;
+ * there is no self-unfreeze, so the freeze is a real commitment (D-039).
+ */
+export function DutyCard({
+  csrfToken,
+  role,
+  frozen,
+}: {
+  csrfToken: string;
+  role: SessionUser["role"];
+  frozen: boolean;
+}) {
+  if (role !== "writer" && role !== "editor") return null;
+
+  return (
+    <Card>
+      <h2 className="mb-4 font-serif text-lg">Görev durumu</h2>
+
+      {frozen ? (
+        <Alert tone="warning" title="Göreviniz donduruldu">
+          Paneliniz kapatıldı; görev kayıtlarınız korunuyor. Görevinizi yeniden
+          aktifleştirmek için bir yöneticiye başvurun.
+        </Alert>
+      ) : (
+        <>
+          <p className="mb-4 text-sm text-muted">
+            Görevinizi dondurursanız paneliniz kapanır; imzaladığınız sözleşme ve hak devri
+            kayıtları korunur. Yeniden aktifleştirme bir yönetici gerektirir.
+          </p>
+          <ActionButton
+            action={selfFreezeDutyAction}
+            csrfToken={csrfToken}
+            label="Görevimi dondur"
+            variant="danger"
+            confirmMessage="Görevinizi dondurmak istiyor musunuz? Paneliniz kapanacak ve yeniden açılması için yönetici onayı gerekecek."
+          />
+        </>
+      )}
     </Card>
   );
 }

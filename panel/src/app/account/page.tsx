@@ -13,6 +13,7 @@ import {
   SessionsCard,
   EmailCard,
   WriterApplicationCard,
+  DutyCard,
 } from "@/components/account-forms";
 import { formatDate } from "@/lib/utils";
 import { checkWriterEligibility } from "@/services/users";
@@ -97,6 +98,12 @@ export default async function AccountPage({
           csrfToken={csrfToken}
           email={profile.email}
           pendingEmail={profile.pendingEmail}
+        />
+
+        <DutyCard
+          csrfToken={csrfToken}
+          role={profile.role}
+          frozen={profile.writerStatus === "suspended" || profile.editorStatus === "suspended"}
         />
 
         <PasswordCard csrfToken={csrfToken} />

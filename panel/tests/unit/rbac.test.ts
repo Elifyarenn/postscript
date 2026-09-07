@@ -22,6 +22,7 @@ function actor(overrides: Partial<Actor> = {}): Actor {
     id: "user-1",
     role: "user",
     writerStatus: null,
+    editorStatus: null,
     emailVerifiedAt: new Date("2026-01-01"),
     isBanned: false,
     ...overrides,
@@ -88,6 +89,26 @@ describe("writer_status gate", () => {
   it("does not gate editors on writer_status", () => {
     const editor = actor({ role: "editor", writerStatus: null });
     expect(canAccessRestrictedWriterPages(editor)).toBe(true);
+  });
+});
+
+describe("editor_status gate", () => {
+  it("locks the editor panel while the duty is frozen", () => {
+    const frozen = actor({ role: "editor", editorStatus: "suspended" });
+    expect(canAccessEditorPanel(frozen)).toBe(false);
+    // The role itself is intact: the writer panel of a frozen editor still works
+    expect(canAccessWriterPanel(frozen)).toBe(true);
+  });
+
+  it("reopens the panel once the duty is active", () => {
+    const active = actor({ role: "editor", editorStatus: "active" });
+    expect(canAccessEditorPanel(active)).toBe(true);
+  });
+
+  it("never freezes an admin through editor_status", () => {
+    const admin = actor({ role: "admin", editorStatus: null });
+    expect(canAccessEditorPanel(admin)).toBe(true);
+    expect(canAccessAdminPanel(admin)).toBe(true);
   });
 });
 

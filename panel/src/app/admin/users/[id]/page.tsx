@@ -29,6 +29,7 @@ import {
   revokeUserSessionsAction,
   setBannedAction,
   setBirthDateAction,
+  setEditorStatusAction,
   setWriterStatusAction,
 } from "../../actions";
 
@@ -208,7 +209,7 @@ export default async function AdminUserDetailPage({
               </Field>
             </PanelForm>
 
-            {target.role !== "user" && (
+            {target.role === "writer" && (
               <PanelForm
                 action={setWriterStatusAction}
                 csrfToken={csrfToken}
@@ -224,7 +225,32 @@ export default async function AdminUserDetailPage({
                   >
                     <option value="pending_agreement">Sözleşme bekliyor</option>
                     <option value="active">Aktif</option>
-                    <option value="suspended">Askıda</option>
+                    <option value="suspended">Donduruldu</option>
+                  </Select>
+                </Field>
+              </PanelForm>
+            )}
+
+            {target.role === "editor" && (
+              <PanelForm
+                action={setEditorStatusAction}
+                csrfToken={csrfToken}
+                submitLabel="Editör durumunu değiştir"
+                submitVariant="secondary"
+              >
+                <input type="hidden" name="userId" value={target.id} />
+                <Field
+                  label="Editör durumu"
+                  htmlFor="editorStatus"
+                  hint="Dondurulan editör rolünü ve kayıtlarını korur; yalnızca paneli kapanır."
+                >
+                  <Select
+                    id="editorStatus"
+                    name="editorStatus"
+                    defaultValue={target.editorStatus ?? "active"}
+                  >
+                    <option value="active">Aktif</option>
+                    <option value="suspended">Donduruldu</option>
                   </Select>
                 </Field>
               </PanelForm>

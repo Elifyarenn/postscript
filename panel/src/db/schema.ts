@@ -35,6 +35,13 @@ export const writerStatusEnum = pgEnum("writer_status", [
   "suspended",
 ]);
 
+/**
+ * The editor's duty state. Editors have no `writer_status`; suspension (a
+ * freeze, by an admin or by the editor themself) is tracked separately so the
+ * editor panel can be locked without touching their role.
+ */
+export const editorStatusEnum = pgEnum("editor_status", ["active", "suspended"]);
+
 export const emailTokenTypeEnum = pgEnum("email_token_type", [
   "verify_email",
   "reset_password",
@@ -170,6 +177,8 @@ export const users = pgTable(
 
     role: roleEnum("role").notNull().default("user"),
     writerStatus: writerStatusEnum("writer_status"),
+    /** Belongs to editors only; admins and writers leave it null (D-039). */
+    editorStatus: editorStatusEnum("editor_status"),
 
     kvkkConsentAt: timestamp("kvkk_consent_at", { withTimezone: true }),
     kvkkConsentVersion: integer("kvkk_consent_version"),
@@ -762,6 +771,7 @@ export type Announcement = typeof announcements.$inferSelect;
 export type Role = (typeof roleEnum.enumValues)[number];
 export type ArticleStatus = (typeof articleStatusEnum.enumValues)[number];
 export type WriterStatus = (typeof writerStatusEnum.enumValues)[number];
+export type EditorStatus = (typeof editorStatusEnum.enumValues)[number];
 export type GrantStatus = (typeof grantStatusEnum.enumValues)[number];
 export type WriterApplicationStatus = (typeof writerApplicationStatusEnum.enumValues)[number];
 export type LicenseType = (typeof licenseTypeEnum.enumValues)[number];

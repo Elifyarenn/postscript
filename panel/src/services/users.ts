@@ -124,6 +124,7 @@ export async function listUsers(actor: Actor, filters: UserListFilters = {}) {
       penName: users.penName,
       role: users.role,
       writerStatus: users.writerStatus,
+      editorStatus: users.editorStatus,
       emailVerifiedAt: users.emailVerifiedAt,
       birthDate: users.birthDate,
       isBanned: users.isBanned,
@@ -288,6 +289,83 @@ export async function setWriterStatus(
     entityId: target.id,
     before: { writerStatus: target.writerStatus },
     after: { writerStatus: status },
+    ip: meta.ip,
+  });
+
+  return updated!;
+}
+
+/**
+ * Freezes or reactivates an editor's duty. The editor keeps the role and all
+ * records; only the panel closes (and opens again). Editors have no
+ * `writer_status`, so their duty state lives in `editor_status` (D-039).
+ */
+export async function setEditorStatus(
+  actor: Actor,
+  targetUserId: string,
+  status: "active" | "suspended",
+  meta: RequestMeta,
+): Promise<User> {
+  if (!canManageUsers(actor)) throw forbidden();
+
+  const target = await findUserById(targetUserId);
+  if (target.role !== "editor") throw conflict("Bu kullanıcı editör değil.");
+
+  const [updated] = await db
+    .update(users)
+    .set({ editorStatus: status, updatedAt: new Date() })
+    .where(eq(users.id, target.id))
+    .returning();
+
+  await writeAudit({
+    actorId: actor.id,
+    action: "user.editor_status_changed",
+    entityType: "users",
+    entityId: target.id,
+    before: { editorStatus: target.editorStatus },
+    after: { editorStatus: status },
+    ip: meta.ip,
+  });
+
+  return updated!;
+}
+
+/**
+ * A writer or editor freezes their own duty from the account page. The legal
+ * records (signed rights grants, acceptances) stay untouched; the panel locks
+ * until an admin reactivates the duty. A plain reader has no duty to freeze.
+ */
+export async function selfFreezeDuty(actor: Actor, meta: RequestMeta): Promise<User> {
+  const user = await findUserById(actor.id);
+
+  if (user.role === "user") {
+    throw conflict("Dondurulacak bir göreviniz yok.");
+  }
+  if (user.role === "admin") {
+    throw conflict("Yönetici görevi bu yolla dondurulamaz; başka bir yöneticiye başvurun.");
+  }
+
+  const before = user.role === "writer" ? user.writerStatus : user.editorStatus;
+  const [updated] = await db
+    .update(users)
+    .set(
+      user.role === "writer"
+        ? { writerStatus: "suspended", updatedAt: new Date() }
+        : { editorStatus: "suspended", updatedAt: new Date() },
+    )
+    .where(eq(users.id, user.id))
+    .returning();
+
+  await writeAudit({
+    actorId: user.id,
+    action: "user.duty_frozen",
+    entityType: "users",
+    entityId: user.id,
+    before: user.role === "writer" ? { writerStatus: before } : { editorStatus: before },
+    after:
+      user.role === "writer"
+        ? { writerStatus: "suspended" }
+        : { editorStatus: "suspended" },
     ip: meta.ip,
   });
 

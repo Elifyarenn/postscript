@@ -185,6 +185,7 @@ async function main(): Promise<void> {
     id: adminId,
     role: "admin",
     writerStatus: null,
+    editorStatus: null,
     emailVerifiedAt: new Date(),
     isBanned: false,
   };
@@ -221,6 +222,7 @@ async function main(): Promise<void> {
         id: writerId,
         role: "writer",
         writerStatus: "pending_agreement",
+        editorStatus: null,
         emailVerifiedAt: new Date(),
         isBanned: false,
       };

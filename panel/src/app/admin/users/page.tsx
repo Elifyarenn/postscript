@@ -103,6 +103,7 @@ export default async function AdminUsersPage({
                     <Td className="space-x-1 whitespace-nowrap">
                       {row.isBanned && <StatusBadge status="suspended" />}
                       {row.writerStatus && <StatusBadge status={row.writerStatus} />}
+                      {row.editorStatus === "suspended" && <StatusBadge status="suspended" />}
                       {!row.emailVerifiedAt && (
                         <span className="text-xs text-warning">e-posta ✗</span>
                       )}

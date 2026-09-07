@@ -581,3 +581,24 @@ değiştirebilmek için sahibin onu kontrol ettiğini göstermesi gerekir. Mevcu
 değişim onaylanana dek canlı kaldığı için, istek yanlış bir adrese giderse bile
 hesap kaybolmaz. Oturumların kapatılması şifre sıfırlamayla aynı ilkedir: kimlik
 değiştiğinde eski kanıtlanmış oturumların geçerliliğini yitirmesi gerekir.
+
+---
+
+## D-039 — Görev dondurma: editör durumu ayrı, kendi kendine dondurma tek yönlü
+
+**Karar:** `users.editor_status` ('active' | 'suspended') sütunu eklendi; yalnızca
+`editor` rolü için anlamlıdır. `canAccessEditorPanel` dondurulmuş editörü 403'le
+dışarıda bırakır; rol, kayıtlar ve sözleşmeler korunur. Yazar dondurması mevcut
+`writer_status = suspended` ile aynıdır. Hesabım sayfasında yazar/editör
+"Görevimi dondur" diyebilir; dondurmayı geri almak yalnızca yöneticinin
+yetkisidir (kullanıcı için self-unfreeze yok). Hesap silme talebi ve 30 gün
+sonraki anonimleştirme mevcut akışta zaten tüm roller için geçerliydi; imzalı
+hak devri kayıtları anonimleştirmede korunur.
+
+**Gerekçe:** Spesifikasyonda editörün askıya alınması için bir alan yoktu; yazar
+alanını editörde kullanmak anlamsızdı (editörün `writer_status`'u yok).
+Dondurmanın tek yönlü olması bilinçlidir: kullanıcı başlattığı dondurmayı
+kendisi açabilseydi, yöneticinin koyduğu dondurma da kullanıcı tarafından
+sessizce açılabilirdi. Yönetici kararı hızlı ve kayıt altındadır (audit_log),
+böylece maliyet küçük, anlam korunur. Admin `editor_status`'tan hiç etkilenmez
+(admin, editör görevinden üstündür ve dondurulamaz).

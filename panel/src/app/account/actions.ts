@@ -12,6 +12,7 @@ import { submitWriterApplication } from "@/services/writer-applications";
 import {
   cancelAccountDeletion,
   requestAccountDeletion,
+  selfFreezeDuty,
   updateProfile,
 } from "@/services/users";
 import {
@@ -205,6 +206,26 @@ export async function cancelDeletionAction(
     await cancelAccountDeletion({ ...user });
     revalidatePath("/account");
     return { success: "Silme talebiniz iptal edildi." };
+  });
+}
+
+export async function selfFreezeDutyAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireAuth();
+    const meta = await requestMetadata();
+
+    await selfFreezeDuty({ ...user }, meta);
+    revalidatePath("/account");
+    revalidatePath("/writer/profile");
+    return {
+      success:
+        "Göreviniz donduruldu. Paneliniz kapatıldı; kayıtlarınız korunur. " +
+        "Görevinizi yeniden aktifleştirmek için bir yöneticiye başvurun.",
+    };
   });
 }
 

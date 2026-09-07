@@ -6,7 +6,7 @@
  * tested without a request, and they are used on the server only. Hiding a menu
  * item in the browser is never a substitute for calling one of these.
  */
-import type { Role, WriterStatus } from "@/db/schema";
+import type { EditorStatus, Role, WriterStatus } from "@/db/schema";
 
 const RANK: Record<Role, number> = { user: 0, writer: 1, editor: 2, admin: 3 };
 
@@ -14,6 +14,8 @@ export type Actor = {
   id: string;
   role: Role;
   writerStatus: WriterStatus | null;
+  /** Null for anyone who is not an editor; `suspended` locks the editor panel. */
+  editorStatus: EditorStatus | null;
   emailVerifiedAt: Date | null;
   isBanned: boolean;
 };
@@ -48,7 +50,13 @@ export function canAccessRestrictedWriterPages(actor: Actor): boolean {
 }
 
 export function canAccessEditorPanel(actor: Actor): boolean {
-  return isOperational(actor) && hasRole(actor.role, "editor");
+  // A frozen editor keeps the role but loses the panel; admin is above the
+  // editor duty and is never frozen through `editor_status` (D-039).
+  return (
+    isOperational(actor) &&
+    hasRole(actor.role, "editor") &&
+    actor.editorStatus !== "suspended"
+  );
 }
 
 export function canAccessAdminPanel(actor: Actor): boolean {

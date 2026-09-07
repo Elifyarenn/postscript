@@ -14,6 +14,7 @@ import {
   promoteToWriter,
   setBanned,
   setBirthDateAsAdmin,
+  setEditorStatus,
   setWriterStatus,
 } from "@/services/users";
 import { createVersionFromTemplate, publishAgreementVersion } from "@/services/agreements";
@@ -100,6 +101,29 @@ export async function setWriterStatusAction(
 
     revalidatePath(`/admin/users/${targetId}`);
     return { success: "Yazar durumu güncellendi." };
+  });
+}
+
+export async function setEditorStatusAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
+
+    const targetId = text(formData, "userId");
+    await setEditorStatus(
+      { ...user },
+      targetId,
+      text(formData, "editorStatus") as "active" | "suspended",
+      meta,
+    );
+
+    revalidatePath(`/admin/users/${targetId}`);
+    revalidatePath("/admin/users");
+    return { success: "Editör durumu güncellendi." };
   });
 }
 

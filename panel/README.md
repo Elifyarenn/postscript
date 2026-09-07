@@ -250,6 +250,19 @@ Süreç sırayla ilerler ve durum makinesi dışı geçiş 409 verir:
 Örnek eser dosyası medya bucket'ında saklanır, hiçbir zaman genel erişime
 açılmaz; yalnızca başvuru sahibi, editör ve yönetici okuyabilir (D-037).
 
+### Görev dondurma ve hesap silme
+
+Yazar ve editörler Hesabım sayfasından **görevlerini dondurur**: panel kapanır,
+rol ve tüm kayıtlar (imzalı sözleşmeler, hak devirleri) korunur; yeniden
+aktifleştirme yönetici gerektirir. Yönetici, kullanıcı sayfasından yazarı
+(`writer_status = suspended`) veya editörü (`editor_status = suspended`)
+dondurabilir/açabilir; görevden çıkarma ise rol değişimiyle yapılır ve her rol
+değişimi `role_changes` kaydıyla güvenceye alınır.
+
+Hesap silme talebi tüm roller için Hesabım sayfasındadır: 30 gün bekleme sonrası
+kişisel veriler anonimleştirilir, imzalı hak devri kayıtları ve imza kanıtları
+hukuki dayanak gereği saklanır (D-039).
+
 ### Güvenlik başlıkları
 
 `next.config.ts` her yanıta `X-Content-Type-Options`, `X-Frame-Options`,
@@ -412,7 +425,7 @@ panel) tek makinede ayağa kaldırır.
 ## Test
 
 ```bash
-pnpm test        # 189 birim + entegrasyon testi
+pnpm test        # 201 birim + entegrasyon testi
 pnpm test:e2e    # 19 uçtan uca senaryo
 ```
 
