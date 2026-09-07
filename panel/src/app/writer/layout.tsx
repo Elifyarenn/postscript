@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+﻿import type { ReactNode } from "react";
 import { guardPanel } from "@/lib/auth/guard";
 import { pendingAcknowledgements } from "@/services/announcements";
 import { hasRole } from "@/lib/auth/rbac";
@@ -23,7 +23,7 @@ export default async function WriterLayout({ children }: { children: ReactNode }
   const locked = lockedByStatus || pending.length > 0;
 
   return (
-    <PanelShell user={user} area="yazar paneli" items={writerNav(locked)}>
+    <PanelShell user={user} area="yazar paneli" groups={writerNav(locked)}>
       {children}
     </PanelShell>
   );

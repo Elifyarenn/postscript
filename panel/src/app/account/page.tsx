@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+﻿import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import { requireSession } from "@/lib/auth/guard";
@@ -20,11 +20,11 @@ import { checkWriterEligibility } from "@/services/users";
 import { cooldownInfo, latestApplication } from "@/services/writer-applications";
 import { cancelDeletionAction, requestDeletionAction } from "./actions";
 
-export const metadata = { title: "Hesabım" };
+export const metadata = { title: "HesabÄ±m" };
 
 /**
  * The home of a plain registered reader: profile, password, sessions.
- * There is no self-service route from here to the writer role by design (§3).
+ * There is no self-service route from here to the writer role by design (Â§3).
  */
 export default async function AccountPage({
   searchParams,
@@ -51,30 +51,30 @@ export default async function AccountPage({
   const nav = navForRole(context.user.role);
 
   return (
-    <PanelShell user={context.user} area={nav.area} items={nav.items}>
+    <PanelShell user={context.user} area={nav.area} groups={nav.groups}>
       <PageHeader
-        title="Hesabım"
-        description="Profil bilgileriniz, şifreniz ve açık oturumlarınız."
+        title="HesabÄ±m"
+        description="Profil bilgileriniz, ÅŸifreniz ve aÃ§Ä±k oturumlarÄ±nÄ±z."
       />
 
       <div className="space-y-6">
         {params.verified && (
-          <Alert tone="success" title="Hoş geldiniz">
-            E-posta adresiniz doğrulandı, hesabınız kullanıma hazır.
+          <Alert tone="success" title="HoÅŸ geldiniz">
+            E-posta adresiniz doÄŸrulandÄ±, hesabÄ±nÄ±z kullanÄ±ma hazÄ±r.
           </Alert>
         )}
 
         {params.emailChanged && (
-          <Alert tone="success" title="E-posta adresi güncellendi">
-            E-posta adresiniz değiştirildi ve doğrulandı.
+          <Alert tone="success" title="E-posta adresi gÃ¼ncellendi">
+            E-posta adresiniz deÄŸiÅŸtirildi ve doÄŸrulandÄ±.
           </Alert>
         )}
 
         {profile.role === "user" && (
           <Alert tone="info" title="Yazar olmak">
-            Yazarlık yetkisi başvuruyla ve iki aşamalı onaydan (editör → yönetim) sonra
-            sözleşmenin imzalanmasıyla kazanılır. Başvurmadan önce doğum tarihinizin girilmiş
-            olması gerekir.
+            YazarlÄ±k yetkisi baÅŸvuruyla ve iki aÅŸamalÄ± onaydan (editÃ¶r â†’ yÃ¶netim) sonra
+            sÃ¶zleÅŸmenin imzalanmasÄ±yla kazanÄ±lÄ±r. BaÅŸvurmadan Ã¶nce doÄŸum tarihinizin girilmiÅŸ
+            olmasÄ± gerekir.
           </Alert>
         )}
 
@@ -115,13 +115,13 @@ export default async function AccountPage({
         />
 
         <Card>
-          <h2 className="mb-3 font-serif text-lg">Hesabı sil</h2>
+          <h2 className="mb-3 font-serif text-lg">HesabÄ± sil</h2>
 
           {profile.deletionRequestedAt ? (
             <>
               <Alert tone="warning">
-                Silme talebiniz {formatDate(profile.deletionRequestedAt)} tarihinde alındı. Hesabınız
-                talepten 30 gün sonra silinecek.
+                Silme talebiniz {formatDate(profile.deletionRequestedAt)} tarihinde alÄ±ndÄ±. HesabÄ±nÄ±z
+                talepten 30 gÃ¼n sonra silinecek.
               </Alert>
               <div className="mt-4">
                 <ActionButton
@@ -134,15 +134,15 @@ export default async function AccountPage({
           ) : (
             <>
               <p className="mb-4 text-sm text-muted">
-                Talebinizden 30 gün sonra hesabınız silinir. İmzalanmış hak devri kayıtları ve imza
-                kanıtları hukuki dayanak gereği saklanır; kişisel verileriniz anonimleştirilir.
+                Talebinizden 30 gÃ¼n sonra hesabÄ±nÄ±z silinir. Ä°mzalanmÄ±ÅŸ hak devri kayÄ±tlarÄ± ve imza
+                kanÄ±tlarÄ± hukuki dayanak gereÄŸi saklanÄ±r; kiÅŸisel verileriniz anonimleÅŸtirilir.
               </p>
               <ActionButton
                 action={requestDeletionAction}
                 csrfToken={csrfToken}
-                label="Silme talebi oluştur"
+                label="Silme talebi oluÅŸtur"
                 variant="danger"
-                confirmMessage="Hesabınızın silinmesini talep ediyorsunuz. Devam edilsin mi?"
+                confirmMessage="HesabÄ±nÄ±zÄ±n silinmesini talep ediyorsunuz. Devam edilsin mi?"
               />
             </>
           )}

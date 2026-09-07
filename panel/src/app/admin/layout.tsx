@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+﻿import type { ReactNode } from "react";
 import { guardPanel } from "@/lib/auth/guard";
 import { ADMIN_NAV, PanelShell } from "@/components/shell";
 
@@ -10,7 +10,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const { user } = await guardPanel("admin");
 
   return (
-    <PanelShell user={user} area="yönetim" items={ADMIN_NAV}>
+    <PanelShell user={user} area="yönetim" groups={ADMIN_NAV}>
       {children}
     </PanelShell>
   );

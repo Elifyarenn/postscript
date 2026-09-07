@@ -1,4 +1,4 @@
-import { requireSession } from "@/lib/auth/guard";
+﻿import { requireSession } from "@/lib/auth/guard";
 import { readCsrfToken } from "@/lib/csrf";
 import { navForRole, PanelShell } from "@/components/shell";
 import { PageHeader } from "@/components/ui";
@@ -24,10 +24,10 @@ export default async function CommunityPage() {
   }));
 
   return (
-    <PanelShell user={context.user} area={nav.area} items={nav.items}>
+    <PanelShell user={context.user} area={nav.area} groups={nav.groups}>
       <PageHeader
         title="Topluluk sohbeti"
-        description="Herkese açık canlı sohbet. Küfür ve hakaret içeren mesajlar otomatik yıldızlanır; yönetim kaldırabilir."
+        description="Herkese aÃ§Ä±k canlÄ± sohbet. KÃ¼fÃ¼r ve hakaret iÃ§eren mesajlar otomatik yÄ±ldÄ±zlanÄ±r; yÃ¶netim kaldÄ±rabilir."
       />
 
       <ChatRoom

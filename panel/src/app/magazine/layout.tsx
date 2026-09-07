@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+﻿import type { ReactNode } from "react";
 import { requireSession } from "@/lib/auth/guard";
 import { PanelShell, READER_NAV } from "@/components/shell";
 
@@ -13,7 +13,7 @@ export default async function MagazineLayout({ children }: { children: ReactNode
   const { user } = await requireSession();
 
   return (
-    <PanelShell user={user} area="dergi" items={READER_NAV}>
+    <PanelShell user={user} area="dergi" groups={READER_NAV}>
       {children}
     </PanelShell>
   );
