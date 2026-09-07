@@ -211,16 +211,25 @@ export function ChatRoom({
                       {own ? "Sen" : (message.authorName ?? "Silinmiş kullanıcı")}
                     </span>
                     {message.authorRole && <StatusBadge status={message.authorRole} />}
-                    {isAdmin && (
+                    <span className="ml-auto flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={() => removeMessage(message)}
-                        title="Mesajı kaldır"
-                        className="ml-auto rounded px-1 text-[10px] text-danger underline opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                        onClick={() => setQuote(message)}
+                        className="rounded px-1 text-[10px] text-muted underline opacity-100 hover:text-ink md:opacity-0 md:group-hover:opacity-100"
                       >
-                        Sil
+                        Alıntıla
                       </button>
-                    )}
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => removeMessage(message)}
+                          title="Mesajı kaldır"
+                          className="rounded px-1 text-[10px] text-danger underline opacity-100 hover:text-danger/80 md:opacity-0 md:group-hover:opacity-100"
+                        >
+                          Sil
+                        </button>
+                      )}
+                    </span>
                   </div>
 
                   {/* Quoted block inside the bubble */}
