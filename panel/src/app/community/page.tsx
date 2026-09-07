@@ -30,7 +30,12 @@ export default async function CommunityPage() {
         description="Herkese açık canlı sohbet. Küfür ve hakaret içeren mesajlar otomatik yıldızlanır; yönetim kaldırabilir."
       />
 
-      <ChatRoom csrfToken={csrfToken} initialMessages={initial} />
+      <ChatRoom
+        csrfToken={csrfToken}
+        currentUserId={context.user.id}
+        isAdmin={context.user.role === "admin"}
+        initialMessages={initial}
+      />
     </PanelShell>
   );
 }

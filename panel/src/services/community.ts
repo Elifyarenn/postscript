@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Community module (module 4): comments on published articles, the community
  * chat, and the banned word blacklist that masks both.
  *
@@ -45,7 +45,7 @@ export async function activeBannedWords(): Promise<string[]> {
 }
 
 export const bannedWordSchema = z.strictObject({
-  word: z.string().trim().min(2, "Kelime en az 2 karakter olmalı.").max(100),
+  word: z.string().trim().min(2, "Kelime en az 2 karakter olmalÄ±.").max(100),
 });
 
 /** Adds a word to the blacklist; duplicates (even soft-deleted) are refused. */
@@ -57,11 +57,11 @@ export async function addBannedWord(
   if (!canModerateCommunity(actor)) throw forbidden();
   const parsed = bannedWordSchema.safeParse(rawInput);
   if (!parsed.success) {
-    throw badRequest("Kelime geçersiz.", z.flattenError(parsed.error).fieldErrors);
+    throw badRequest("Kelime geÃ§ersiz.", z.flattenError(parsed.error).fieldErrors);
   }
 
   const word = normalizeBannedWord(parsed.data.word);
-  if (word === "") throw badRequest("Kelime boş olamaz.");
+  if (word === "") throw badRequest("Kelime boÅŸ olamaz.");
 
   const existing = await db
     .select({ id: bannedWords.id })
@@ -101,7 +101,7 @@ export async function removeBannedWord(
     .where(and(eq(bannedWords.id, wordId), isNull(bannedWords.deletedAt)))
     .returning();
 
-  if (!row) throw notFound("Kelime bulunamadı.");
+  if (!row) throw notFound("Kelime bulunamadÄ±.");
 
   await writeAudit({
     actorId: actor.id,
@@ -125,7 +125,7 @@ async function mask(text: string): Promise<string> {
 
 export const communityCommentSchema = z.strictObject({
   articleId: z.uuid(),
-  body: z.string().trim().min(1, "Yorum boş olamaz.").max(MAX_COMMENT_LENGTH),
+  body: z.string().trim().min(1, "Yorum boÅŸ olamaz.").max(MAX_COMMENT_LENGTH),
 });
 
 export async function addCommunityComment(
@@ -135,7 +135,7 @@ export async function addCommunityComment(
 ): Promise<CommunityComment> {
   const parsed = communityCommentSchema.safeParse(rawInput);
   if (!parsed.success) {
-    throw badRequest("Yorum geçersiz.", z.flattenError(parsed.error).fieldErrors);
+    throw badRequest("Yorum geÃ§ersiz.", z.flattenError(parsed.error).fieldErrors);
   }
 
   // The article must exist and be live; only published work is commentable
@@ -144,9 +144,9 @@ export async function addCommunityComment(
     .from(articles)
     .where(and(eq(articles.id, parsed.data.articleId), isNull(articles.deletedAt)))
     .limit(1);
-  if (!article[0]) throw notFound("Yazı bulunamadı.");
+  if (!article[0]) throw notFound("YazÄ± bulunamadÄ±.");
   if (article[0].status !== "published") {
-    throw conflict("Yalnızca yayınlanmış yazılar yorumlanabilir.");
+    throw conflict("YalnÄ±zca yayÄ±nlanmÄ±ÅŸ yazÄ±lar yorumlanabilir.");
   }
 
   const body = await mask(parsed.data.body);
@@ -217,7 +217,7 @@ export async function removeCommunityComment(
     .where(and(eq(communityComments.id, commentId), isNull(communityComments.deletedAt)))
     .returning();
 
-  if (!row) throw notFound("Yorum bulunamadı.");
+  if (!row) throw notFound("Yorum bulunamadÄ±.");
 
   await writeAudit({
     actorId: actor.id,
@@ -233,7 +233,7 @@ export async function removeCommunityComment(
 /* ------------------------------------------------------------------ */
 
 export const chatMessageSchema = z.strictObject({
-  body: z.string().trim().min(1, "Mesaj boş olamaz.").max(MAX_MESSAGE_LENGTH),
+  body: z.string().trim().min(1, "Mesaj boÅŸ olamaz.").max(MAX_MESSAGE_LENGTH),
   quotedMessageId: z.uuid().optional().nullable(),
 });
 
@@ -244,7 +244,7 @@ export async function addChatMessage(
 ): Promise<CommunityMessage> {
   const parsed = chatMessageSchema.safeParse(rawInput);
   if (!parsed.success) {
-    throw badRequest("Mesaj geçersiz.", z.flattenError(parsed.error).fieldErrors);
+    throw badRequest("Mesaj geÃ§ersiz.", z.flattenError(parsed.error).fieldErrors);
   }
 
   if (parsed.data.quotedMessageId) {
@@ -253,7 +253,7 @@ export async function addChatMessage(
       .from(communityMessages)
       .where(eq(communityMessages.id, parsed.data.quotedMessageId))
       .limit(1);
-    if (!quoted[0]) throw notFound("Alıntılanan mesaj bulunamadı.");
+    if (!quoted[0]) throw notFound("AlÄ±ntÄ±lanan mesaj bulunamadÄ±.");
   }
 
   const body = await mask(parsed.data.body);
@@ -281,6 +281,7 @@ export async function addChatMessage(
 
 export type MessageListItem = {
   id: string;
+  authorId: string | null;
   body: string;
   createdAt: Date;
   authorName: string | null;
@@ -298,6 +299,7 @@ export async function listChatMessages(limit = CHAT_LIMIT): Promise<MessageListI
   const rows = await db
     .select({
       id: communityMessages.id,
+      authorId: communityMessages.authorId,
       body: communityMessages.body,
       createdAt: communityMessages.createdAt,
       authorName: users.displayName,
@@ -317,7 +319,7 @@ export async function listChatMessages(limit = CHAT_LIMIT): Promise<MessageListI
   return [...rows].reverse();
 }
 
-/** The messages created after a timestamp, oldest first — the chat poll feed. */
+/** The messages created after a timestamp, oldest first â€” the chat poll feed. */
 export async function listChatMessagesAfter(after: Date, limit = CHAT_LIMIT): Promise<MessageListItem[]> {
   const quoted = alias(communityMessages, "quoted");
   const quotedAuthor = alias(users, "quoted_author");
@@ -325,6 +327,7 @@ export async function listChatMessagesAfter(after: Date, limit = CHAT_LIMIT): Pr
   return db
     .select({
       id: communityMessages.id,
+      authorId: communityMessages.authorId,
       body: communityMessages.body,
       createdAt: communityMessages.createdAt,
       authorName: users.displayName,
@@ -353,6 +356,7 @@ export async function getChatMessage(messageId: string): Promise<MessageListItem
   const rows = await db
     .select({
       id: communityMessages.id,
+      authorId: communityMessages.authorId,
       body: communityMessages.body,
       createdAt: communityMessages.createdAt,
       authorName: users.displayName,
@@ -385,7 +389,7 @@ export async function removeChatMessage(
     .where(and(eq(communityMessages.id, messageId), isNull(communityMessages.deletedAt)))
     .returning();
 
-  if (!row) throw notFound("Mesaj bulunamadı.");
+  if (!row) throw notFound("Mesaj bulunamadÄ±.");
 
   await writeAudit({
     actorId: actor.id,
@@ -429,6 +433,7 @@ export async function listAllMessagesForAdmin(actor: Actor, limit = 200) {
   return db
     .select({
       id: communityMessages.id,
+      authorId: communityMessages.authorId,
       body: communityMessages.body,
       createdAt: communityMessages.createdAt,
       deletedAt: communityMessages.deletedAt,
