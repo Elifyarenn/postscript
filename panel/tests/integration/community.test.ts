@@ -10,6 +10,7 @@ import {
   addBannedWord,
   addChatMessage,
   addCommunityComment,
+  getChatMessage,
   listChatMessages,
   listChatMessagesAfter,
   listCommentsForArticle,
@@ -213,6 +214,16 @@ describe("community chat", () => {
 
     const everything = await listChatMessagesAfter(new Date(0));
     expect(everything.map((m) => m.id)).toContain(first.id);
+  });
+
+  it("returns an enriched message so the room shows the author at once", async () => {
+    const editor = await createUser({ role: "editor" });
+    const msg = await addChatMessage(actorOf(editor), { body: "merhaba" }, noMeta);
+
+    const enriched = await getChatMessage(msg.id);
+    expect(enriched).not.toBeNull();
+    expect(enriched!.authorName).toBe(editor.displayName);
+    expect(enriched!.authorRole).toBe("editor");
   });
 });
 

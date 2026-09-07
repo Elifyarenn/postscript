@@ -5,7 +5,7 @@
  *      room can append it without a page reload. Session + CSRF required.
  */
 import { NextResponse } from "next/server";
-import { addChatMessage, listChatMessagesAfter } from "@/services/community";
+import { addChatMessage, getChatMessage, listChatMessagesAfter } from "@/services/community";
 import { errorJson } from "@/lib/api";
 import { getAuthContext, requestMetadata } from "@/lib/auth/session";
 import { assertCsrf } from "@/lib/csrf";
@@ -48,9 +48,11 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => null);
     const message = await addChatMessage({ ...context.user }, body ?? {}, meta);
+    // Return the enriched row (author name and role), not the raw insert
+    const enriched = await getChatMessage(message.id);
 
     return NextResponse.json(
-      { message },
+      { message: enriched },
       { status: 201, headers: { "cache-control": "no-store" } },
     );
   } catch (error) {

@@ -342,6 +342,35 @@ export async function listChatMessagesAfter(after: Date, limit = CHAT_LIMIT): Pr
     .limit(limit);
 }
 
+/**
+ * One enriched message (author name and role included), for the POST response
+ * so the room can append what it displays, not a raw row.
+ */
+export async function getChatMessage(messageId: string): Promise<MessageListItem | null> {
+  const quoted = alias(communityMessages, "quoted");
+  const quotedAuthor = alias(users, "quoted_author");
+
+  const rows = await db
+    .select({
+      id: communityMessages.id,
+      body: communityMessages.body,
+      createdAt: communityMessages.createdAt,
+      authorName: users.displayName,
+      authorRole: users.role,
+      quotedMessageId: communityMessages.quotedMessageId,
+      quotedBody: quoted.body,
+      quotedAuthorName: quotedAuthor.displayName,
+    })
+    .from(communityMessages)
+    .leftJoin(users, eq(communityMessages.authorId, users.id))
+    .leftJoin(quoted, and(eq(communityMessages.quotedMessageId, quoted.id), isNull(quoted.deletedAt)))
+    .leftJoin(quotedAuthor, eq(quoted.authorId, quotedAuthor.id))
+    .where(eq(communityMessages.id, messageId))
+    .limit(1);
+
+  return rows[0] ?? null;
+}
+
 /** Admin moderation: removes a message (soft delete, stays as history). */
 export async function removeChatMessage(
   actor: Actor,
