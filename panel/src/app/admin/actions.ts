@@ -322,6 +322,7 @@ export async function createCategoryAction(
       { ...user },
       {
         name: text(formData, "name"),
+        description: optionalText(formData, "description"),
         maxQuota: numberField(formData, "maxQuota") ?? 3,
         isActive: checkbox(formData, "isActive"),
       },
@@ -348,6 +349,7 @@ export async function updateCategoryAction(
       categoryId,
       {
         name: optionalText(formData, "name") ?? undefined,
+        description: optionalText(formData, "description"),
         maxQuota: numberField(formData, "maxQuota") ?? 3,
         isActive: checkbox(formData, "isActive"),
       },

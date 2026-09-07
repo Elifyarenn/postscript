@@ -71,6 +71,13 @@
       "when": 1788787006340,
       "tag": "0009_new_power_pack",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1788789120509,
+      "tag": "0010_swift_starjammers",
+      "breakpoints": true
     }
   ]
 }

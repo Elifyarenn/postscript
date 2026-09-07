@@ -12,6 +12,7 @@ import { Alert, Button, Field, Input } from "@/components/ui";
 type CategoryOption = {
   id: string;
   name: string;
+  description: string | null;
   maxQuota: number;
   currentCount: number;
   isActive: boolean;
@@ -23,6 +24,7 @@ const MAX_SELECTIONS = 3;
 export function LeadForm({ csrfToken }: { csrfToken: string }) {
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
+  const [openId, setOpenId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -121,38 +123,59 @@ export function LeadForm({ csrfToken }: { csrfToken: string }) {
           {categories.map((category) => {
             const isSelected = selected.includes(category.id);
             const locked = category.full || (!isSelected && selected.length >= MAX_SELECTIONS);
+            const isOpen = openId === category.id;
             return (
-              <label
+              <div
                 key={category.id}
                 className={
-                  "flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm " +
+                  "rounded-md border " +
                   (category.full
-                    ? "cursor-not-allowed border-line bg-paper text-muted/50"
+                    ? "border-line bg-paper"
                     : isSelected
-                      ? "border-accent bg-accent-soft text-ink"
-                      : "border-line bg-surface hover:bg-paper")
+                      ? "border-accent bg-accent-soft"
+                      : "border-line bg-surface")
                 }
               >
-                <span className="flex items-center gap-2.5">
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    disabled={category.full || locked}
-                    onChange={() => toggle(category.id)}
-                    className="size-4 rounded border-line disabled:opacity-40"
-                  />
-                  {category.name}
-                </span>
-                <span className="text-xs">
-                  {category.full ? (
-                    <span className="font-medium text-danger">Kontenjan Dolu</span>
-                  ) : (
-                    <span className="text-muted">
-                      {category.currentCount}/{category.maxQuota}
-                    </span>
-                  )}
-                </span>
-              </label>
+                <button
+                  type="button"
+                  onClick={() => setOpenId(isOpen ? null : category.id)}
+                  className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-paper"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      disabled={category.full || locked}
+                      onChange={() => toggle(category.id)}
+                      onClick={(event) => event.stopPropagation()}
+                      className="size-4 rounded border-line disabled:opacity-40"
+                    />
+                    {category.name}
+                  </span>
+                  <span className="flex items-center gap-2 text-xs">
+                    {category.full ? (
+                      <span className="font-medium text-danger">Kontenjan Dolu</span>
+                    ) : (
+                      <span className="text-muted">
+                        {category.currentCount}/{category.maxQuota}
+                      </span>
+                    )}
+                    {category.description && (
+                      <span aria-hidden className={isOpen ? "rotate-180" : ""}>
+                        ▾
+                      </span>
+                    )}
+                  </span>
+                </button>
+
+                {isOpen && category.description && (
+                  <div className="border-t border-line px-4 py-3">
+                    <p className="whitespace-pre-wrap text-xs text-muted">
+                      {category.description}
+                    </p>
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>

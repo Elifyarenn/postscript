@@ -10,6 +10,7 @@ import {
   PageHeader,
   Table,
   Td,
+  Textarea,
   Th,
 } from "@/components/ui";
 import { listCategoriesWithQuota } from "@/services/leads";
@@ -44,10 +45,17 @@ export default async function AdminCategoriesPage() {
           <h2 className="mb-4 font-serif text-lg">Yeni kategori</h2>
 
           <PanelForm action={createCategoryAction} csrfToken={csrfToken} submitLabel="Ekle">
+            <Field label="Kategori adı" htmlFor="name">
+              <Input id="name" name="name" required minLength={2} maxLength={120} />
+            </Field>
+            <Field
+              label="Alt başlıklar"
+              htmlFor="description"
+              hint="Formda kart açılınca aynen gösterilir; satır satır yazın."
+            >
+              <Textarea id="description" name="description" rows={4} maxLength={2000} />
+            </Field>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Kategori adı" htmlFor="name">
-                <Input id="name" name="name" required minLength={2} maxLength={120} />
-              </Field>
               <Field label="Kontenjan" htmlFor="maxQuota">
                 <Input
                   id="maxQuota"
@@ -59,11 +67,13 @@ export default async function AdminCategoriesPage() {
                   required
                 />
               </Field>
+              <div className="flex items-end">
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" name="isActive" defaultChecked className="size-4" />
+                  Başvuru formunda görünür
+                </label>
+              </div>
             </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="isActive" defaultChecked className="size-4" />
-              Başvuru formunda görünür
-            </label>
           </PanelForm>
         </Card>
 
@@ -117,6 +127,19 @@ export default async function AdminCategoriesPage() {
                         submitVariant="secondary"
                       >
                         <input type="hidden" name="categoryId" value={category.id} />
+                        <Field
+                          label="Alt başlıklar"
+                          htmlFor={`description-${category.id}`}
+                          hint="Formda kart açılınca aynen gösterilir."
+                        >
+                          <Textarea
+                            id={`description-${category.id}`}
+                            name="description"
+                            rows={4}
+                            maxLength={2000}
+                            defaultValue={category.description ?? ""}
+                          />
+                        </Field>
                         <div className="grid gap-3 sm:grid-cols-2">
                           <Field label="Kontenjan" htmlFor={`quota-${category.id}`}>
                             <Input

@@ -811,6 +811,11 @@ export const categories = pgTable(
   {
     id: id(),
     name: text("name").notNull(),
+    /**
+     * The subheadings under this category, kept as the editor wrote them. The
+     * public form shows them when the category card is opened.
+     */
+    description: text("description"),
     maxQuota: integer("max_quota").notNull().default(3),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: createdAt(),

@@ -36,6 +36,8 @@ export const DEFAULT_QUOTA = 3;
 export type CategoryWithQuota = {
   id: string;
   name: string;
+  /** The subheadings as the editor wrote them; shown when the card opens. */
+  description: string | null;
   maxQuota: number;
   isActive: boolean;
   /** Number of approved leads linked to this category. */
@@ -80,6 +82,7 @@ export async function listCategoriesWithQuota(
     return {
       id: category.id,
       name: category.name,
+      description: category.description,
       maxQuota: category.maxQuota,
       isActive: category.isActive,
       currentCount,
@@ -216,6 +219,7 @@ export async function applyAsWriterLead(
 
 export const categorySchema = z.strictObject({
   name: z.string().trim().min(2, "Kategori adı en az 2 karakter olmalı.").max(120),
+  description: z.string().trim().max(2000).optional().nullable(),
   maxQuota: z.coerce.number().int().min(1, "Kontenjan en az 1 olmalı.").max(100).default(DEFAULT_QUOTA),
   isActive: z.boolean().default(true),
 });
@@ -241,7 +245,12 @@ export async function createCategory(
 
   const [row] = await db
     .insert(categories)
-    .values({ name: input.name, maxQuota: input.maxQuota, isActive: input.isActive })
+    .values({
+      name: input.name,
+      description: input.description ?? null,
+      maxQuota: input.maxQuota,
+      isActive: input.isActive,
+    })
     .returning();
 
   await writeAudit({
@@ -273,6 +282,7 @@ export async function updateCategory(
     .update(categories)
     .set({
       ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
+      ...(parsed.data.description !== undefined ? { description: parsed.data.description } : {}),
       ...(parsed.data.maxQuota !== undefined ? { maxQuota: parsed.data.maxQuota } : {}),
       ...(parsed.data.isActive !== undefined ? { isActive: parsed.data.isActive } : {}),
       updatedAt: new Date(),
