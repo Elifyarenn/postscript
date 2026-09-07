@@ -174,7 +174,17 @@ export async function submitWriterApplication(
 
   const mime = assertApplicationFileAcceptable(input.buffer);
   const storageKey = buildStorageKey("writer-applications", input.fileName);
-  await getStorage().put({ bucket: "media", key: storageKey, body: input.buffer, mime });
+  try {
+    await getStorage().put({ bucket: "media", key: storageKey, body: input.buffer, mime });
+  } catch (error) {
+    // The sample must exist before the application row does; a storage outage
+    // is exactly where a silent failure would lose the file. Log the real
+    // cause and tell the applicant plainly what happened.
+    console.error("Sample work upload failed", error);
+    throw badRequest(
+      "Örnek eser dosyası depolamaya yüklenemedi. Lütfen sayfayı yenileyip tekrar deneyin.",
+    );
+  }
 
   const [sample] = await db
     .insert(media)
