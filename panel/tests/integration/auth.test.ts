@@ -20,6 +20,7 @@ import {
   verifyEmail,
 } from "@/services/auth";
 import { updateProfile } from "@/services/users";
+import { setAccessMode } from "@/services/access-mode";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import { isAppError } from "@/lib/errors";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
@@ -332,6 +333,41 @@ describe("e-mail change", () => {
       requestEmailChange(unverified.id, { newEmail: "new@example.com" }, noMeta),
     );
     expect(error.status).toBe(403);
+  });
+});
+
+describe("closed entry mode", () => {
+  it("refuses registration and non-admin logins while closed", async () => {
+    const admin = await createUser({ role: "admin" });
+    await createUser({ email: "okur@example.com" });
+    await setAccessMode(actorOf(admin), { mode: "closed" }, noMeta);
+
+    const registerError = await captureError(register(validRegistration, noMeta));
+    expect(registerError.status).toBe(409);
+
+    const loginError = await captureError(
+      verifyCredentials({ email: "okur@example.com", password: TEST_PASSWORD }, noMeta),
+    );
+    expect(loginError.status).toBe(403);
+
+    const adminLogin = await verifyCredentials(
+      { email: admin.email, password: TEST_PASSWORD },
+      noMeta,
+    );
+    expect(adminLogin.user.id).toBe(admin.id);
+  });
+
+  it("opens again when an admin switches the mode back", async () => {
+    const admin = await createUser({ role: "admin" });
+    await setAccessMode(actorOf(admin), { mode: "closed" }, noMeta);
+    await setAccessMode(actorOf(admin), { mode: "open" }, noMeta);
+
+    await register(validRegistration, noMeta);
+    const login = await verifyCredentials(
+      { email: "yeni.kullanici@example.com", password: validRegistration.password },
+      noMeta,
+    );
+    expect(login.user.email).toBe("yeni.kullanici@example.com");
   });
 });
 

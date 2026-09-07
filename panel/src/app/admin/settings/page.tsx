@@ -8,6 +8,7 @@ import {
   SETTING_LABELS,
   SITE_SETTING_KEYS,
 } from "@/services/site-settings";
+import { getAccessMode } from "@/services/access-mode";
 import { renderAgreementForWriter } from "@/services/agreements";
 import { AgreementRenderError } from "@/lib/agreement/render";
 import { readCsrfToken } from "@/lib/csrf";
@@ -19,6 +20,7 @@ import {
   Field,
   Input,
   PageHeader,
+  Select,
   Table,
   Td,
   Textarea,
@@ -26,7 +28,7 @@ import {
 } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
 import * as templates from "@emails/templates";
-import { publishKvkkVersionAction, saveSiteSettingsAction } from "../actions";
+import { publishKvkkVersionAction, saveSiteSettingsAction, setAccessModeAction } from "../actions";
 
 export const metadata = { title: "Sistem" };
 
@@ -35,6 +37,7 @@ export default async function AdminSettingsPage() {
   const csrfToken = (await readCsrfToken()) ?? "";
 
   const settings = await getSiteSettings();
+  const accessMode = await getAccessMode();
   const kvkk = await db.select().from(kvkkVersions).orderBy(desc(kvkkVersions.version)).limit(20);
 
   // §9: prove the current values actually render a contract before trusting them
@@ -76,6 +79,27 @@ export default async function AdminSettingsPage() {
       />
 
       <div className="space-y-6">
+        <Card>
+          <h2 className="mb-2 font-serif text-lg">Erişim modu</h2>
+          <p className="mb-4 text-sm text-muted">
+            Kapalıyken kayıt alınmaz, yalnızca yöneticiler girebilir ve mevcut yönetici dışı
+            oturumlar geçersiz sayılır.
+          </p>
+
+          <PanelForm
+            action={setAccessModeAction}
+            csrfToken={csrfToken}
+            submitLabel="Uygula"
+          >
+            <Field label="Durum" htmlFor="accessMode">
+              <Select id="accessMode" name="mode" defaultValue={accessMode}>
+                <option value="open">Açık (herkes kayıt olup girebilir)</option>
+                <option value="closed">Kapalı (yalnızca yöneticiler)</option>
+              </Select>
+            </Field>
+          </PanelForm>
+        </Card>
+
         <Card>
           <h2 className="mb-2 font-serif text-lg">Yayıncı bilgileri</h2>
           <p className="mb-4 text-sm text-muted">

@@ -672,3 +672,23 @@ filtrelenmesi düzeltmesi gereken bir tutarsızlıktı: yazarlara özel bir duyu
 için editörlerin "okumadı" görünmesi yanlış izlenim veriyordu. Admin ve editör
 aynı arayüzü paylaşır; admin action'ları `requireRole("admin")` ile kendi
 yetkisini korur.
+
+---
+
+## D-043 — Kapalı erişim modu
+
+**Karar:** `site_settings.access_mode` ('open' | 'closed', varsayılan open)
+eklendi. Kapalıyken: kayıt servisi reddeder (409), giriş yalnızca `admin`
+rolüne izin verir (diğerleri 403) ve `getAuthContext` admin dışı oturumları
+null döndürür — yani kapama öncesi açılmış okuyucu/yazar/editor oturumları da
+anında ölür. Kapalıyken `/register` form yerine uyarı gösterir, `/login` not
+gösterir. Modu yönetici Sistem sayfasındaki "Erişim modu" kartından değiştirir;
+değişiklik audit_log'a yazılır.
+
+**Gerekçe:** Ürün sahibi yayın öncesi siteyi kilitlemek istedi: yeni kayıt
+alınmayacak ve yalnızca adminler girecek. "Herhangi bir girişi önleyelim"
+ifadesi, giriş formunu kapatmanın ötesinde mevcut oturumları da kapsıyor —
+oturum çözümünde kapı kurmak (login kapısı + session kapısı) tek taraflı kalan
+bir açık bırakmaz. `isEntryAllowed` saf fonksiyon olduğundan kural tek yerde ve
+birim test edilebilir. Varsayılan 'open' davranışı değiştirmez; kapanma yalnızca
+yönetici kararıyla ve bilinçli olarak yapılır.

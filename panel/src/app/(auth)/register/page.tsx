@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { readCsrfToken } from "@/lib/csrf";
-import { Card, Field, Input } from "@/components/ui";
+import { Alert, Card, Field, Input } from "@/components/ui";
+import { getAccessMode } from "@/services/access-mode";
 import { PasswordField } from "@/components/password-field";
 import { PanelForm } from "@/components/form";
 import { registerAction } from "../actions";
@@ -9,6 +10,23 @@ export const metadata = { title: "Kayıt" };
 
 export default async function RegisterPage() {
   const csrfToken = (await readCsrfToken()) ?? "";
+  const closed = (await getAccessMode()) === "closed";
+
+  if (closed) {
+    return (
+      <Card>
+        <h1 className="mb-1 font-serif text-xl">Hesap oluştur</h1>
+        <Alert tone="warning" title="Kayıtlar şu anda kapalı">
+          Yeni hesap alınmıyor. Site açıldığında tekrar kayıt olabilirsiniz.
+        </Alert>
+        <p className="mt-5 text-sm">
+          <Link href="/login" className="text-accent hover:underline">
+            Girişe dön
+          </Link>
+        </p>
+      </Card>
+    );
+  }
 
   return (
     <Card>

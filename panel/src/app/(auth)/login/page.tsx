@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { readCsrfToken } from "@/lib/csrf";
+import { getAccessMode } from "@/services/access-mode";
 import { Alert, Card, Field, Input } from "@/components/ui";
 import { PanelForm } from "@/components/form";
 import { loginAction } from "../actions";
@@ -13,11 +14,20 @@ export default async function LoginPage({
 }) {
   const csrfToken = (await readCsrfToken()) ?? "";
   const params = await searchParams;
+  const closed = (await getAccessMode()) === "closed";
 
   return (
     <Card>
       <h1 className="mb-1 font-serif text-xl">Giriş</h1>
       <p className="mb-5 text-sm text-muted">Panel hesabınızla giriş yapın.</p>
+
+      {closed && (
+        <div className="mb-4">
+          <Alert tone="warning">
+            Kayıtlar kapalı; şu anda yalnızca yöneticiler giriş yapabilir.
+          </Alert>
+        </div>
+      )}
 
       {params.reset && (
         <div className="mb-4">

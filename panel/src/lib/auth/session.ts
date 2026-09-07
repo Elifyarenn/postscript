@@ -13,6 +13,8 @@ import { sessions, users, type EditorStatus, type Role, type WriterStatus } from
 import { hashToken, randomToken } from "@/lib/crypto";
 import { env, isProduction } from "@/lib/env";
 import { forbidden, unauthorized } from "@/lib/errors";
+import { isEntryAllowed } from "@/lib/access-mode";
+import { getAccessMode } from "@/services/access-mode";
 import {
   canAccessAdminPanel,
   canAccessEditorPanel,
@@ -181,6 +183,10 @@ export async function getAuthContext(): Promise<AuthContext | null> {
     now - row.lastSeenAt.getTime() > idleLimitMs;
 
   if (invalid) return null;
+
+  // Closed entry: sessions of non-admins stop resolving, so an existing
+  // reader or writer session cannot outlive the closure
+  if (!isEntryAllowed(await getAccessMode(), row.role as Role)) return null;
 
   // Touch the session, but not on every single request: once a minute is plenty
   if (now - row.lastSeenAt.getTime() > 60_000) {

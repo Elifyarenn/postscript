@@ -17,6 +17,8 @@ import { checkPasswordPolicy, hashPassword, isPwned, verifyPassword } from "@/li
 import { clearAttempts, consumeAttempt, currentAttemptCount, failureDelayMs } from "@/lib/rate-limit";
 import { writeAudit } from "@/lib/audit";
 import { sendMail } from "@/lib/mail/transport";
+import { getAccessMode } from "./access-mode";
+import { isEntryAllowed } from "@/lib/access-mode";
 import * as templates from "@emails/templates";
 
 export type RequestMeta = { ip: string | null; userAgent: string | null };
@@ -84,6 +86,12 @@ export async function register(
     throw badRequest("Kayıt bilgileri geçersiz.", z.flattenError(parsed.error).fieldErrors);
   }
   const input = parsed.data;
+
+  // Closed entry: nobody new registers until an admin reopens the site
+  const mode = await getAccessMode();
+  if (!isEntryAllowed(mode, "user")) {
+    throw conflict("Kayıtlar şu anda kapalı. Yeni hesaplar açılmıyor.");
+  }
 
   // Rate limit before hashing: argon2 is deliberately expensive (§5.1)
   const limit = await consumeAttempt("register_ip", meta.ip ?? "unknown");
@@ -393,6 +401,12 @@ export async function verifyCredentials(
     throw unauthorized("E-posta veya şifre hatalı.");
   }
   if (user.isBanned) throw forbidden("Hesabınız askıya alınmış.");
+
+  // Closed entry: only admins sign in until an admin reopens the site
+  const mode = await getAccessMode();
+  if (!isEntryAllowed(mode, user.role)) {
+    throw forbidden("Şu anda yalnızca yöneticiler giriş yapabilir.");
+  }
 
   await clearAttempts("login_account", email);
   await clearAttempts("login_ip", ipKey);
