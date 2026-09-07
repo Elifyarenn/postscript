@@ -651,3 +651,24 @@ aday" sayması, başvurunun kendisi kotayı doldurmaz — ancak onay doldurur �
 yüzden hem form hem onay kontrolü aynı fonksiyonu (`leadSelectionIssues`)
 kullanır. Doğum tarihi yaş kuralı uygulanmaz: form yalnızca ilgi toplar, asıl
 pipeline 18+ şartını zaten denetler.
+
+---
+
+## D-042 — İç duyurular: önem seviyesi ve kitleye göre okundu raporu
+
+**Karar:** Duyuru tablosuna `severity` ('info' | 'important' | 'critical')
+eklendi. **Kritik** duyurular, yazar kutu işaretlemese bile `requires_ack`
+olarak kaydedilir ve onaylanmadan yazar paneli kilitlenir (mevcut kilit
+mekanizması). Yayınlanmış her duyurunun okunma raporu (`readReport`) artık
+yalnızca duyurunun gerçek hedef kitlesini listeler (writers → yazar,
+editors → editör+admin, all_staff → tüm ekip) — rapor başka rollerden
+beklenti doğurmaz. Yönetici panelinde "Duyurular" sekmesi oluşturma/yayınlama
+ve raporu içerir; editör paneli aynı ortak bileşeni kullanır.
+
+**Gerekçe:** Severity, duyurunun aciliyetini hem yazar/editor sekmesinde rozetle
+gösterir hem de kritik duyuruları otomatik olarak "onay zorunlu" yapar — kritik
+bir duyuruyu bilgilendirme gibi geçiştirmek mümkün olmaz. Raporun kitleye göre
+filtrelenmesi düzeltmesi gereken bir tutarsızlıktı: yazarlara özel bir duyuru
+için editörlerin "okumadı" görünmesi yanlış izlenim veriyordu. Admin ve editör
+aynı arayüzü paylaşır; admin action'ları `requireRole("admin")` ile kendi
+yetkisini korur.

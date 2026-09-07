@@ -293,6 +293,17 @@ API: `GET /api/categories`, `POST /api/writers/apply`,
 adayları"** ve **"Kategoriler"** ekranları başvuruları ve kontenjanları yönetir
 (2/3 göstergesi, aktif/pasif, yumuşak silme) (D-041).
 
+### İç duyurular ve okundu onayı
+
+Yönetici panelindeki **Duyurular** sekmesi, yazarlara / editörlere / tüm ekibe
+hedefli duyuru yayınlar. Her duyurunun **önem seviyesi** vardır
+(Bilgilendirme / Önemli / Kritik); **kritik** duyurular her zaman onay
+gerektirir — onaylanmadan yazar paneli kilitlenir. Yazar ve editör panellerinde
+"Duyurular" sekmesi duyuruları seviye rozetiyle gösterir; okuma sayfayı açmakla,
+onay düğmeyle kaydedilir. Yayınlanmış her duyurunun "Okunma raporu" yönetici ve
+editör panelinden açılır: hedef kitlenin kimin okuduğunu, kimin onayladığını,
+kimin beklemede olduğunu listeler (D-042).
+
 ### Güvenlik başlıkları
 
 `next.config.ts` her yanıta `X-Content-Type-Options`, `X-Frame-Options`,
@@ -455,7 +466,7 @@ panel) tek makinede ayağa kaldırır.
 ## Test
 
 ```bash
-pnpm test        # 234 birim + entegrasyon testi
+pnpm test        # 241 birim + entegrasyon testi
 pnpm test:e2e    # 19 uçtan uca senaryo
 ```
 

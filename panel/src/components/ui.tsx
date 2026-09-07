@@ -196,6 +196,9 @@ export const STATUS_LABELS: Record<string, string> = {
   admin_approved: "Sözleşme hazır",
   editor_rejected: "Editör reddetti",
   admin_rejected: "Yönetim reddetti",
+  info: "Bilgilendirme",
+  important: "Önemli",
+  critical: "Kritik",
 };
 
 const BADGE_TONES: Record<string, string> = {
@@ -217,6 +220,8 @@ const BADGE_TONES: Record<string, string> = {
   submitted: "bg-warning-soft text-warning border-warning/30",
   editor_rejected: "bg-danger-soft text-danger border-danger/30",
   admin_rejected: "bg-danger-soft text-danger border-danger/30",
+  important: "bg-warning-soft text-warning border-warning/30",
+  critical: "bg-danger-soft text-danger border-danger/30",
 };
 
 export function StatusBadge({ status }: { status: string }) {

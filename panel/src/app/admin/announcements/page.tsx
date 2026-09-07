@@ -7,12 +7,17 @@ import { createAnnouncementAction, publishAnnouncementAction } from "../actions"
 
 export const metadata = { title: "Duyurular" };
 
-export default async function EditorAnnouncementsPage({
+/**
+ * The admin's announcement module: targeted announcements (writers, editors,
+ * the whole team) with a severity, and the read/acknowledgement report of
+ * every published one — critical announcements require an acknowledgement.
+ */
+export default async function AdminAnnouncementsPage({
   searchParams,
 }: {
   searchParams: Promise<{ report?: string }>;
 }) {
-  const { user } = await guardPanel("editor");
+  const { user } = await guardPanel("admin");
   const csrfToken = (await readCsrfToken()) ?? "";
   const { report } = await searchParams;
 
@@ -21,7 +26,10 @@ export default async function EditorAnnouncementsPage({
 
   return (
     <>
-      <PageHeader title="Duyurular" description="Yazarlara ve ekibe duyuru yayınlayın." />
+      <PageHeader
+        title="Duyurular"
+        description="Ekibe hedefli duyuru yayınlayın ve okundu onaylarını denetleyin."
+      />
 
       <AnnouncementsAdminPanel
         csrfToken={csrfToken}
@@ -29,7 +37,7 @@ export default async function EditorAnnouncementsPage({
           create: createAnnouncementAction,
           publish: publishAnnouncementAction,
         }}
-        reportBasePath="/editor/announcements"
+        reportBasePath="/admin/announcements"
         announcements={announcements}
         reportRows={reportRows}
       />

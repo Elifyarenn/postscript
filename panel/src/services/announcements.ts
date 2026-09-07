@@ -6,10 +6,16 @@
  * exempt, otherwise a writer could be locked out of both at once.
  */
 import "server-only";
-import { and, desc, eq, inArray, isNotNull, isNull, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { announcementReads, announcements, users, type Announcement } from "@/db/schema";
+import {
+  announcementReads,
+  announcements,
+  users,
+  type Announcement,
+  type Role,
+} from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import { canAccessEditorPanel, hasRole, type Actor } from "@/lib/auth/rbac";
 import { env } from "@/lib/env";
@@ -22,6 +28,7 @@ export const announcementSchema = z.strictObject({
   title: z.string().trim().min(3).max(200),
   bodyMarkdown: z.string().trim().min(3).max(20_000),
   audience: z.enum(["writers", "editors", "all_staff"]),
+  severity: z.enum(["info", "important", "critical"]).default("info"),
   requiresAcknowledgement: z.boolean(),
   pinned: z.boolean(),
 });
@@ -43,6 +50,7 @@ export async function listAnnouncementsFor(actor: Actor) {
       title: announcements.title,
       bodyMarkdown: announcements.bodyMarkdown,
       audience: announcements.audience,
+      severity: announcements.severity,
       requiresAcknowledgement: announcements.requiresAcknowledgement,
       pinned: announcements.pinned,
       publishedAt: announcements.publishedAt,
@@ -129,14 +137,22 @@ export async function createAnnouncement(
     throw badRequest("Duyuru geçersiz.", z.flattenError(parsed.error).fieldErrors);
   }
 
-  const [row] = await db.insert(announcements).values(parsed.data).returning();
+  // A critical announcement always requires an acknowledgement: the audience
+  // cannot dismiss it as a mere notice (module 5).
+  const requiresAcknowledgement =
+    parsed.data.severity === "critical" || parsed.data.requiresAcknowledgement;
+
+  const [row] = await db
+    .insert(announcements)
+    .values({ ...parsed.data, requiresAcknowledgement })
+    .returning();
 
   await writeAudit({
     actorId: actor.id,
     action: "announcement.created",
     entityType: "announcements",
     entityId: row!.id,
-    after: { title: row!.title, audience: row!.audience },
+    after: { title: row!.title, audience: row!.audience, severity: row!.severity },
     ip: meta.ip,
   });
 
@@ -204,9 +220,25 @@ export async function publishAnnouncement(
   return published!;
 }
 
-/** Read report for the editor panel: who has seen and who has acknowledged. */
+/** Read report for the panels: who has seen and who has acknowledged. */
 export async function readReport(actor: Actor, announcementId: string) {
   if (!canAccessEditorPanel(actor)) throw forbidden();
+
+  const rows = await db
+    .select({ audience: announcements.audience })
+    .from(announcements)
+    .where(eq(announcements.id, announcementId))
+    .limit(1);
+  const announcement = rows[0];
+  if (!announcement) throw notFound("Duyuru bulunamadı.");
+
+  // Only the announcement's real audience is expected to read or acknowledge it
+  const audienceRoles: Role[] =
+    announcement.audience === "editors"
+      ? ["editor", "admin"]
+      : announcement.audience === "writers"
+        ? ["writer"]
+        : ["writer", "editor", "admin"];
 
   return db
     .select({
@@ -225,7 +257,7 @@ export async function readReport(actor: Actor, announcementId: string) {
         eq(announcementReads.announcementId, announcementId),
       ),
     )
-    .where(and(isNull(users.deletedAt), ne(users.role, "user")))
+    .where(and(isNull(users.deletedAt), inArray(users.role, audienceRoles)))
     .orderBy(users.displayName);
 }
 

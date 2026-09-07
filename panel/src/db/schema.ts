@@ -71,6 +71,13 @@ export const announcementAudienceEnum = pgEnum("announcement_audience", [
   "all_staff",
 ]);
 
+/** How urgent an internal announcement is; critical ones force an acknowledgement. */
+export const announcementSeverityEnum = pgEnum("announcement_severity", [
+  "info",
+  "important",
+  "critical",
+]);
+
 export const issueStatusEnum = pgEnum("issue_status", [
   "planning",
   "in_production",
@@ -445,6 +452,7 @@ export const announcements = pgTable(
     title: text("title").notNull(),
     bodyMarkdown: text("body_markdown").notNull(),
     audience: announcementAudienceEnum("audience").notNull(),
+    severity: announcementSeverityEnum("severity").notNull().default("info"),
     requiresAcknowledgement: boolean("requires_acknowledgement").notNull().default(false),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     publishedBy: uuid("published_by").references(() => users.id, { onDelete: "set null" }),
@@ -912,6 +920,7 @@ export type CommunityMessage = typeof communityMessages.$inferSelect;
 export type BannedWord = typeof bannedWords.$inferSelect;
 export type AgreementVersion = typeof agreementVersions.$inferSelect;
 export type Announcement = typeof announcements.$inferSelect;
+export type AnnouncementSeverity = (typeof announcementSeverityEnum.enumValues)[number];
 export type Role = (typeof roleEnum.enumValues)[number];
 export type ArticleStatus = (typeof articleStatusEnum.enumValues)[number];
 export type WriterStatus = (typeof writerStatusEnum.enumValues)[number];

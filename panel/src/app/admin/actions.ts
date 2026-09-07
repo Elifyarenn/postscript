@@ -19,6 +19,8 @@ import {
 } from "@/services/users";
 import { createVersionFromTemplate, publishAgreementVersion } from "@/services/agreements";
 import { adminDecideApplication } from "@/services/writer-applications";
+import { createAnnouncement, publishAnnouncement } from "@/services/announcements";
+import type { AnnouncementSeverity } from "@/db/schema";
 import {
   addBannedWord,
   removeBannedWord,
@@ -406,6 +408,52 @@ export async function updateLeadAction(
 
     revalidatePath("/admin/writer-leads");
     return { success: "Başvuru güncellendi." };
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Announcements (module 5)                                            */
+/* ------------------------------------------------------------------ */
+
+export async function createAnnouncementAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
+
+    await createAnnouncement(
+      { ...user },
+      {
+        title: text(formData, "title"),
+        bodyMarkdown: text(formData, "bodyMarkdown"),
+        audience: text(formData, "audience") as "writers" | "editors" | "all_staff",
+        severity: text(formData, "severity") as AnnouncementSeverity,
+        requiresAcknowledgement: checkbox(formData, "requiresAcknowledgement"),
+        pinned: checkbox(formData, "pinned"),
+      },
+      meta,
+    );
+
+    revalidatePath("/admin/announcements");
+    return { success: "Duyuru taslağı oluşturuldu." };
+  });
+}
+
+export async function publishAnnouncementAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
+
+    await publishAnnouncement({ ...user }, text(formData, "announcementId"), meta);
+    revalidatePath("/admin/announcements");
+    return { success: "Duyuru yayınlandı." };
   });
 }
 

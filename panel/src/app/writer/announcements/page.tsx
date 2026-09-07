@@ -2,7 +2,7 @@ import { guardPanel } from "@/lib/auth/guard";
 import { listAnnouncementsFor, markRead } from "@/services/announcements";
 import { readCsrfToken } from "@/lib/csrf";
 import { renderMarkdown } from "@/lib/markdown";
-import { Alert, Card, EmptyState, PageHeader } from "@/components/ui";
+import { Alert, Card, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
 import { PanelForm } from "@/components/form";
 import { formatDate } from "@/lib/utils";
 import { acknowledgeAnnouncementAction } from "../actions";
@@ -45,6 +45,7 @@ export default async function WriterAnnouncementsPage() {
                       Sabitlenmiş
                     </span>
                   )}
+                  <StatusBadge status={row.severity} />
                   <h2 className="font-serif text-lg">{row.title}</h2>
                 </div>
                 <p className="mb-3 text-xs text-muted">{formatDate(row.publishedAt)}</p>
