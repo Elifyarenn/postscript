@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "./ui";
 import { PanelSidebar } from "./sidebar";
+import { BackButton } from "./back-button";
 import type { SessionUser } from "@/lib/auth/session";
 
 export type NavItem = { href: string; label: string; disabled?: boolean };
@@ -159,6 +160,8 @@ export function PanelShell({
             <StatusBadge status={user.role} />
             {user.writerStatus && <StatusBadge status={user.writerStatus} />}
           </div>
+
+          <BackButton />
         </header>
 
         <main className="flex-1 px-6 py-8">
