@@ -15,7 +15,8 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { env } from "@/lib/env";
+import { env, isProduction } from "@/lib/env";
+import { badRequest } from "@/lib/errors";
 
 export type Bucket = "media" | "identity";
 
@@ -48,6 +49,16 @@ export function buildStorageKey(prefix: string, originalName: string): string {
 
 function createS3Adapter(): StorageAdapter {
   const config = env();
+
+  // The env default is the local MinIO address. In production that endpoint
+  // cannot exist, so the adapter would hang and time out on every upload;
+  // refusing fast with a clear message beats a function that dies silently.
+  if (isProduction() && config.S3_ENDPOINT.includes("localhost")) {
+    throw badRequest(
+      "Nesne depolama ayarları eksik: S3_ENDPOINT üretimde yerel bir adrese işaret ediyor.",
+    );
+  }
+
   const client = new S3Client({
     endpoint: config.S3_ENDPOINT,
     region: config.S3_REGION,

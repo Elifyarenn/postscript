@@ -36,7 +36,7 @@ import {
   type Actor,
 } from "@/lib/auth/rbac";
 import { env } from "@/lib/env";
-import { badRequest, conflict, forbidden, notFound, rateLimited } from "@/lib/errors";
+import { badRequest, conflict, forbidden, isAppError, notFound, rateLimited } from "@/lib/errors";
 import { sendMail } from "@/lib/mail/transport";
 import { buildStorageKey, getStorage } from "@/lib/storage";
 import { renderDocumentPdf } from "@/lib/pdf";
@@ -180,6 +180,7 @@ export async function submitWriterApplication(
     // The sample must exist before the application row does; a storage outage
     // is exactly where a silent failure would lose the file. Log the real
     // cause and tell the applicant plainly what happened.
+    if (isAppError(error)) throw error;
     console.error("Sample work upload failed", error);
     throw badRequest(
       "Örnek eser dosyası depolamaya yüklenemedi. Lütfen sayfayı yenileyip tekrar deneyin.",
