@@ -428,7 +428,7 @@ export async function acceptAgreement(
  * Markdown to plain text for the PDF. The evidence is `rendered_markdown`; the
  * PDF only has to be readable, so tables become simple lines.
  */
-function stripMarkdown(markdown: string): string {
+export function stripMarkdown(markdown: string): string {
   return markdown
     .replace(/^\s*\|\s*-+[-\s|:]*\|\s*$/gm, "")
     .replace(/^\s*\|/gm, "")

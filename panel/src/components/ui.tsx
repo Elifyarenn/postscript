@@ -191,6 +191,11 @@ export const STATUS_LABELS: Record<string, string> = {
   not_run: "Kontrol edilmedi",
   clean: "Temiz",
   flagged: "İşaretlendi",
+  submitted: "Başvuru alındı",
+  editor_approved: "Editör onayı geçti",
+  admin_approved: "Sözleşme hazır",
+  editor_rejected: "Editör reddetti",
+  admin_rejected: "Yönetim reddetti",
 };
 
 const BADGE_TONES: Record<string, string> = {
@@ -207,6 +212,11 @@ const BADGE_TONES: Record<string, string> = {
   awaiting_rights: "bg-warning-soft text-warning border-warning/30",
   pending: "bg-warning-soft text-warning border-warning/30",
   pending_agreement: "bg-warning-soft text-warning border-warning/30",
+  editor_approved: "bg-warning-soft text-warning border-warning/30",
+  admin_approved: "bg-warning-soft text-warning border-warning/30",
+  submitted: "bg-warning-soft text-warning border-warning/30",
+  editor_rejected: "bg-danger-soft text-danger border-danger/30",
+  admin_rejected: "bg-danger-soft text-danger border-danger/30",
 };
 
 export function StatusBadge({ status }: { status: string }) {

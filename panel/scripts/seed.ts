@@ -149,6 +149,15 @@ async function main(): Promise<void> {
     role: "user",
   });
 
+  // The reader the writer-application pipeline scenario submits as; no other
+  // scenario touches this account, so the two never race
+  await upsertUser({
+    email: "aday@postscript.local",
+    displayName: "Aylin Aday",
+    password: "Aday!Parola2026",
+    role: "user",
+  });
+
   // Deliberately under 18: the promotion screen must refuse this account
   await upsertUser({
     email: "genc@postscript.local",
@@ -261,6 +270,7 @@ async function main(): Promise<void> {
   console.log("  editor : editor@postscript.local / Editor!Parola2026");
   console.log("  writer : yazar@postscript.local / Yazar!Parola2026");
   console.log("  reader : okur@postscript.local / Okur!Parola2026");
+  console.log("  applicant : aday@postscript.local / Aday!Parola2026");
   console.log(`\n  (editor id ${editorId})`);
 
   await connection.close();

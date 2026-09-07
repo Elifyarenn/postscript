@@ -43,6 +43,13 @@
       "when": 1788769837595,
       "tag": "0005_eager_captain_universe",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788772068870,
+      "tag": "0006_rich_gunslinger",
+      "breakpoints": true
     }
   ]
 }

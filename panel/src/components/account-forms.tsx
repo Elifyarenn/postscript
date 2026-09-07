@@ -4,14 +4,27 @@
  * Both the plain user area and the writer panel show these, so they live in one
  * place and are handed the data they need.
  */
+import Link from "next/link";
 import { PanelForm, ActionButton } from "./form";
-import { Card, EmptyState, Field, Input, Table, Td, Textarea, Th, Alert } from "./ui";
-import { formatDateTime } from "@/lib/utils";
+import {
+  Card,
+  EmptyState,
+  Field,
+  Input,
+  Table,
+  Td,
+  Textarea,
+  Th,
+  Alert,
+  StatusBadge,
+} from "./ui";
+import { formatDate, formatDateTime } from "@/lib/utils";
 import {
   changePasswordAction,
   requestEmailChangeAction,
   revokeOtherSessionsAction,
   revokeSessionAction,
+  submitWriterApplicationAction,
   updateProfileAction,
 } from "@/app/account/actions";
 import { PasswordField } from "./password-field";
@@ -107,6 +120,201 @@ export function ProfileCard({
             </fieldset>
           </>
       </PanelForm>
+    </Card>
+  );
+}
+
+export type ApplicationCardData = {
+  id: string;
+  status: string;
+  note: string | null;
+  reviewNote: string | null;
+  submittedAt: Date;
+  sampleMediaId: string | null;
+};
+
+/**
+ * The writer application block on the account page.
+ *
+ * The submit button only appears when every prerequisite holds; otherwise the
+ * missing ones are listed next to the disabled button, so the user sees the
+ * reason without having to click anything. The server re-checks all of it in
+ * the action — this card is a courtesy, not the gate.
+ */
+export function WriterApplicationCard({
+  csrfToken,
+  role,
+  problems,
+  messages,
+  latest,
+  cooldown,
+}: {
+  csrfToken: string;
+  role: SessionUser["role"];
+  /** Machine ids of the unmet prerequisites, if any (see `checkWriterEligibility`). */
+  problems: string[];
+  /** Human readable versions of the same list, for the warning box. */
+  messages: string[];
+  latest: ApplicationCardData | null;
+  cooldown: { withinCooldown: boolean; retryAt: Date | null };
+}) {
+  if (role !== "user" && !latest) return null;
+
+  const open = latest && !["signed", "editor_rejected", "admin_rejected"].includes(latest.status);
+  const ready = problems.length === 0;
+
+  const RULES: [string, string][] = [
+    ["email_not_verified", "E-posta adresi doğrulanmış"],
+    ["birth_date_missing", "Doğum tarihi girilmiş"],
+    ["under_age", "18 yaşını doldurmuş"],
+    ["kvkk_consent_missing", "Güncel KVKK onayı verilmiş"],
+    ["banned", "Yasaklı değil"],
+  ];
+
+  return (
+    <Card>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h2 className="font-serif text-lg">Yazar olma başvurusu</h2>
+        {latest && <StatusBadge status={latest.status} />}
+      </div>
+
+      {latest?.status === "signed" && (
+        <Alert tone="success" title="Yazar oldunuz">
+          Başvurunuz tamamlandı ve sözleşmeniz imzalandı. Yazar paneline geçebilirsiniz.
+        </Alert>
+      )}
+
+      {open && (
+        <Alert tone="info">
+          <p>
+            Başvurunuz {formatDate(latest!.submittedAt)} tarihinde alındı ve değerlendirmede.
+            Süreç: editör onayı → yönetim onayı → sözleşme imzası.
+          </p>
+          {latest!.sampleMediaId && (
+            <p className="mt-2">
+              <a
+                href={`/api/media/${latest!.sampleMediaId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent underline"
+              >
+                Örnek eser dosyanız
+              </a>
+            </p>
+          )}
+        </Alert>
+      )}
+
+      {latest?.status === "admin_approved" && (
+        <Alert tone="success" title="Sözleşmeniz hazır">
+          <p>
+            Başvurunuz yönetim tarafından onaylandı. Son adım, çerçeve sözleşmeyi okuyup
+            imzalamak; imzaladığınızda hesabınız yazar rolüne geçer.
+          </p>
+          <p className="mt-3">
+            <Link
+              href={`/writer-application/contract?application=${latest!.id}`}
+              className="text-accent underline"
+            >
+              Sözleşmeyi oku ve imzala
+            </Link>
+          </p>
+        </Alert>
+      )}
+
+      {(latest?.status === "editor_rejected" || latest?.status === "admin_rejected") && (
+        <Alert tone="warning" title="Başvurunuz bu kez kabul edilmedi">
+          <p>{latest!.reviewNote ?? "Değerlendirme notu belirtilmedi."}</p>
+          {cooldown.retryAt && (
+            <p className="mt-2">
+              Yeniden başvurabileceğiniz tarih: {formatDate(cooldown.retryAt)}.
+            </p>
+          )}
+        </Alert>
+      )}
+
+      {!latest && cooldown.withinCooldown && (
+        <Alert tone="warning">
+          Son 30 günde bir başvuru yaptınız. Yeniden başvurabileceğiniz tarih:{" "}
+          {formatDate(cooldown.retryAt)}.
+        </Alert>
+      )}
+
+      {!latest && !cooldown.withinCooldown && !ready && (
+        <>
+          <p className="mb-4 text-sm text-muted">
+            Başvuru butonu şu durumlarda etkinleşir:
+          </p>
+          <ul className="mb-5 space-y-2 text-sm">
+            {RULES.map(([id, label]) => {
+              const failed = problems.includes(id);
+              return (
+                <li key={id} className="flex items-start gap-2.5">
+                  <span
+                    aria-hidden
+                    className={
+                      failed
+                        ? "inline-flex size-4 shrink-0 items-center justify-center rounded-full border border-danger bg-danger-soft text-[10px] leading-none text-danger"
+                        : "inline-flex size-4 shrink-0 items-center justify-center rounded-full border border-accent bg-accent text-[10px] leading-none text-white"
+                    }
+                  >
+                    {failed ? "✗" : "✓"}
+                  </span>
+                  <span className={failed ? "text-danger" : "text-ink"}>{label}</span>
+                </li>
+              );
+            })}
+          </ul>
+          <Alert tone="warning" title="Eksik koşullar var">
+            <ul className="mt-1 list-disc pl-5">
+              {messages.map((message) => (
+                <li key={message}>{message}</li>
+              ))}
+            </ul>
+          </Alert>
+          <button
+            type="button"
+            disabled
+            className="mt-4 cursor-not-allowed rounded-md border border-line bg-surface px-4 py-2 text-sm text-muted/50"
+          >
+            Yazar Olma İsteği Gönder
+          </button>
+        </>
+      )}
+
+      {!latest && !cooldown.withinCooldown && ready && (
+        <>
+          <p className="mb-4 text-sm text-muted">
+            Örnek bir yazınızı (PDF veya DOCX, en fazla 20 MB) yükleyin. Başvuru önce
+            editörlerimize, ardından yönetime gider; onaylanırsa sözleşme imzasına davet
+            edilirsiniz.
+          </p>
+
+          <PanelForm
+            action={submitWriterApplicationAction}
+            csrfToken={csrfToken}
+            submitLabel="Yazar Olma İsteği Gönder"
+          >
+            <Field label="Örnek eser dosyası" htmlFor="sampleFile">
+              <Input
+                id="sampleFile"
+                name="sampleFile"
+                type="file"
+                required
+                accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              />
+            </Field>
+            <Field label="Not (isteğe bağlı)" htmlFor="note">
+              <Textarea
+                id="note"
+                name="note"
+                maxLength={2000}
+                placeholder="Örnek eseriniz hakkında birkaç cümle…"
+              />
+            </Field>
+          </PanelForm>
+        </>
+      )}
     </Card>
   );
 }

@@ -218,6 +218,26 @@ bağlantısı gider ve adres yalnızca bağlantı tıklanınca değişir; o ana 
 doğrulanmış adres canlı kalır, böylece istek asla sahibini hesaptan kilitleyemez.
 Onayda eski oturumların tümü kapatılır (D-036).
 
+### Yazar başvuru süreci
+
+Kayıtlı okuyucu, hesap sayfasındaki "Yazar Olma İsteği Gönder" butonuyla
+başvurur; örnek bir eser dosyası (PDF/DOCX, en fazla 20 MB) yükler. Butonun
+etkin olması için e-posta doğrulanmış, doğum tarihi girilmiş ve ≥ 18 yaş, KVKK
+onayı verilmiş olmalıdır; eksikler butonun yanında listelenir. Başvuru sayısı
+son 30 günde birdir (her sonuca karşı bekleme süresi aynıdır).
+
+Süreç sırayla ilerler ve durum makinesi dışı geçiş 409 verir:
+
+1. **Editör onayı** (`/editor/applications`) — onaylanan başvuru yönetime gider.
+2. **Yönetim onayı** (`/admin/applications`) — onayda o anki güncel sözleşme
+   sürümü başvuruya tanımlanır.
+3. **Sözleşme imzası** — başvuru sahibine giden bağlantı, çerçeve sözleşmeyi
+   gösterir; imzalandığında onay kaydı tutulur, başvuru kapanır ve hesap
+   **otomatik olarak aktif yazar** rolüne geçer (`role_changes` kaydıyla).
+
+Örnek eser dosyası medya bucket'ında saklanır, hiçbir zaman genel erişime
+açılmaz; yalnızca başvuru sahibi, editör ve yönetici okuyabilir (D-037).
+
 ### Güvenlik başlıkları
 
 `next.config.ts` her yanıta `X-Content-Type-Options`, `X-Frame-Options`,
@@ -380,8 +400,8 @@ panel) tek makinede ayağa kaldırır.
 ## Test
 
 ```bash
-pnpm test        # 163 birim + entegrasyon testi
-pnpm test:e2e    # 18 uçtan uca senaryo
+pnpm test        # 189 birim + entegrasyon testi
+pnpm test:e2e    # 19 uçtan uca senaryo
 ```
 
 Birim ve entegrasyon testleri süreç içi PostgreSQL (PGlite) üzerinde çalışır:

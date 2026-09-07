@@ -494,6 +494,33 @@ yoksa `/login`'e, adres doğrulanmışsa `/`'a gider.
 
 ---
 
+## D-037 — Yazar başvuru ve onay pipeline'ı
+
+**Karar:** "Yazar başvuru formu yok" kararı kaldırıldı; yerine dört aşamalı bir
+pipeline geldi. `writer_applications` tablosu eklenir; durumlar veri olarak
+tanımlı bir geçiş tablosuyla `submitted → editor_approved → admin_approved →
+signed` sırasında ilerler (red: `editor_rejected` / `admin_rejected`), dışı 409.
+Örnek eser dosyası medya bucket'ında `writer-applications/` ön ekiyle saklanır,
+`license_type` null kalır; yalnızca başvuru sahibi, editör ve yönetici okur.
+Admin onayında o anki güncel sözleşme sürümü başvuruya tanımlanır; imzada
+kullanıcı güncel sürümü imzalar (arada yeni sürüm yayınlanmışsa yenisi). İmza,
+`agreement_acceptances` kaydı + `role_changes` kaydı + `role=writer,
+writer_status=active` geçişini tek işlemde yapar.
+
+**Gerekçe:** Ürün sahibi, yazar kazanımını başvuru ve iki aşamalı onayla
+başlatmayı istedi. Aylık sınır (son 30 günde 1 başvuru) sonucu ne olursa olsun
+aynıdır: kabul edilmeyen başvuru sahibi de 30 gün bekler, böylece pipeline
+yeniden denemeyle spam'lenemez. Dosya doğrulaması yalnızca sihirli baytlaradır
+(PDF `%PDF-`, DOCX ZIP imzası); dosya özel bir bucket'ta durduğu ve hiçbir zaman
+HTML olarak render edilmediği için bildirilen MIME ile karşılaştırma gereksizdir.
+`canSubmitApplication` yalnızca rolü denetler: doğrulanmamış veya yasaklı
+okuyucunun, eksikleri isimleriyle söyleyen ön koşul hatasına (409 + requirements)
+ulaşması gerekir; çıplak 403 daha az bilgilendiricidir. Hesap sayfasındaki başvuru
+kartı, imzalanmış başvurusu olan yazarlar için de render edilir — aksi hâlde
+"yazar oldunuz" durumu hiç görünmezdi.
+
+---
+
 ## D-035 — Tek giriş kapısı ve okuyucunun okuma alanı
 
 **Karar:** Giriş ekranı artık kendini "yönetim paneli" diye tanıtmıyor;

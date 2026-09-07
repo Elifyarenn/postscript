@@ -13,6 +13,7 @@ export const SEED = {
   writer: { email: "yazar@postscript.local", password: "Yazar!Parola2026" },
   reader: { email: "okur@postscript.local", password: "Okur!Parola2026" },
   minor: { email: "genc@postscript.local", password: "Genc!Parola2026" },
+  applicant: { email: "aday@postscript.local", password: "Aday!Parola2026" },
 };
 
 /* ------------------------------------------------------------------ */

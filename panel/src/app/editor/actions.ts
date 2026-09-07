@@ -23,6 +23,7 @@ import {
   publishAnnouncement,
 } from "@/services/announcements";
 import { sendApprovalReminders } from "@/services/rights";
+import { editorDecideApplication } from "@/services/writer-applications";
 import { requestMetadata, requireRole } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
 import {
@@ -440,5 +441,53 @@ export async function sendRemindersAction(
     const count = await sendApprovalReminders();
     revalidatePath("/editor/approvals");
     return { success: `${count} yazara hatırlatma gönderildi.` };
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Writer applications (stage one)                                     */
+/* ------------------------------------------------------------------ */
+
+export async function editorApproveApplicationAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("editor");
+    const meta = await requestMetadata();
+
+    await editorDecideApplication(
+      { ...user },
+      text(formData, "applicationId"),
+      "approve",
+      optionalText(formData, "note"),
+      meta,
+    );
+
+    revalidatePath("/editor/applications");
+    return { success: "Başvuru onaylandı; yönetim onayına gönderildi." };
+  });
+}
+
+export async function editorRejectApplicationAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("editor");
+    const meta = await requestMetadata();
+
+    await editorDecideApplication(
+      { ...user },
+      text(formData, "applicationId"),
+      "reject",
+      text(formData, "note"),
+      meta,
+    );
+
+    revalidatePath("/editor/applications");
+    return { success: "Başvuru reddedildi." };
   });
 }

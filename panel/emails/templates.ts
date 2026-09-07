@@ -65,6 +65,58 @@ export function promotedToWriter(input: { displayName: string; url: string }): T
   };
 }
 
+export function applicationSubmitted(input: { displayName: string }): Template {
+  return {
+    subject: "postscript · Yazar başvurunuz alındı",
+    text:
+      `Merhaba ${input.displayName},\n\n` +
+      "Yazar başvurunuz alındı. Önce editörlerimiz, ardından yönetim başvurunuzu " +
+      "değerlendirecek. Durum, Hesabım sayfasından takip edilebilir.\n\n" +
+      "Değerlendirme sürerken yeni başvuru gönderilemez." +
+      signature,
+  };
+}
+
+export function applicationEditorApproved(input: { displayName: string }): Template {
+  return {
+    subject: "postscript · Yazar başvurunuz editör onayından geçti",
+    text:
+      `Merhaba ${input.displayName},\n\n` +
+      "Örnek eseriniz editörlerimiz tarafından onaylandı. Başvurunuz artık yönetim " +
+      "onayına gönderildi.\n\n" +
+      "Sonuç, Hesabım sayfasından takip edilebilir." +
+      signature,
+  };
+}
+
+export function applicationRejected(input: { displayName: string; reason: string }): Template {
+  return {
+    subject: "postscript · Yazar başvurunuzla ilgili karar",
+    text:
+      `Merhaba ${input.displayName},\n\n` +
+      "Yazar başvurunuz şu anda kabul edilmedi.\n\n" +
+      `Değerlendirme notu: ${input.reason}\n\n` +
+      "Gerekli koşulları sağladıktan sonra 30 günün ardından yeniden başvurabilirsiniz." +
+      signature,
+  };
+}
+
+export function applicationContractReady(input: {
+  displayName: string;
+  url: string;
+}): Template {
+  return {
+    subject: "postscript · Yazar sözleşmeniz hazır",
+    text:
+      `Merhaba ${input.displayName},\n\n` +
+      "Başvurunuz yönetim tarafından onaylandı. Yazar olmanın son adımı, çerçeve " +
+      "sözleşmeyi okuyup imzalamak:\n" +
+      `${input.url}\n\n` +
+      "Sözleşmeyi imzaladığınızda hesabınız otomatik olarak yazar rolüne geçer." +
+      signature,
+  };
+}
+
 export function newAgreementVersion(input: {
   displayName: string;
   version: number;

@@ -17,6 +17,7 @@ import {
   setWriterStatus,
 } from "@/services/users";
 import { createVersionFromTemplate, publishAgreementVersion } from "@/services/agreements";
+import { adminDecideApplication } from "@/services/writer-applications";
 import { saveSiteSettings, SITE_SETTING_KEYS } from "@/services/site-settings";
 import { requestMetadata, requireRole, revokeAllSessions } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
@@ -153,6 +154,57 @@ export async function revokeUserSessionsAction(
 
     await revokeAllSessions(text(formData, "userId"));
     return { success: "Kullanıcının tüm oturumları kapatıldı." };
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Writer applications (stage two)                                     */
+/* ------------------------------------------------------------------ */
+
+export async function adminApproveApplicationAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
+
+    await adminDecideApplication(
+      { ...user },
+      text(formData, "applicationId"),
+      "approve",
+      optionalText(formData, "note"),
+      meta,
+    );
+
+    revalidatePath("/admin/applications");
+    return {
+      success:
+        "Başvuru onaylandı. Yazar sözleşmesi tanımlandı; başvuru sahibi imzaya davet edildi.",
+    };
+  });
+}
+
+export async function adminRejectApplicationAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
+
+    await adminDecideApplication(
+      { ...user },
+      text(formData, "applicationId"),
+      "reject",
+      text(formData, "note"),
+      meta,
+    );
+
+    revalidatePath("/admin/applications");
+    return { success: "Başvuru reddedildi." };
   });
 }
 

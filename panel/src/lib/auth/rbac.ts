@@ -86,3 +86,29 @@ export function canReadArticle(actor: Actor, article: { authorId: string | null 
 export function canSignRightsGrant(actor: Actor, grant: { grantorId: string }): boolean {
   return canAccessRestrictedWriterPages(actor) && grant.grantorId === actor.id;
 }
+
+/* ------------------------------------------------------------------ */
+/* Writer applications                                                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Only a plain reader applies. Anyone who already holds a staff role has no
+ * reason to; their promotion is the admin's job.
+ *
+ * Deliberately not gated on `isOperational`: an unverified or banned reader
+ * must reach the eligibility check, which names the missing prerequisites
+ * instead of giving a bare 403.
+ */
+export function canSubmitApplication(actor: Actor): boolean {
+  return actor.role === "user";
+}
+
+/** An editor (or above) runs the first review stage of the pipeline. */
+export function canReviewApplications(actor: Actor): boolean {
+  return canAccessEditorPanel(actor);
+}
+
+/** The admin (and only the admin) decides the second stage of the pipeline. */
+export function canFinalizeApplications(actor: Actor): boolean {
+  return canAccessAdminPanel(actor);
+}

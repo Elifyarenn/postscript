@@ -8,6 +8,7 @@
  */
 import { revalidatePath } from "next/cache";
 import { changePassword, requestEmailChange, resendVerificationEmail } from "@/services/auth";
+import { submitWriterApplication } from "@/services/writer-applications";
 import {
   cancelAccountDeletion,
   requestAccountDeletion,
@@ -107,6 +108,39 @@ export async function requestEmailChangeAction(
       success:
         "Yeni adresinize bir doğrulama bağlantısı gönderildi. Bağlantıyı açana kadar " +
         "adresiniz değişmez.",
+    };
+  });
+}
+
+export async function submitWriterApplicationAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireAuth();
+    const meta = await requestMetadata();
+
+    const file = formData.get("sampleFile");
+    if (!(file instanceof File) || file.size === 0) {
+      throw badRequest("Örnek eser dosyası seçilmedi.");
+    }
+
+    await submitWriterApplication(
+      { ...user },
+      {
+        buffer: Buffer.from(await file.arrayBuffer()),
+        fileName: file.name,
+        note: optionalText(formData, "note"),
+      },
+      meta,
+    );
+
+    revalidatePath("/account");
+    return {
+      success:
+        "Başvurunuz alındı. Önce editörlerimiz, ardından yönetim değerlendirecek; " +
+        "durumu buradan takip edebilirsiniz.",
     };
   });
 }

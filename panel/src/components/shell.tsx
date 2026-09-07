@@ -16,6 +16,7 @@ export type NavItem = { href: string; label: string; disabled?: boolean };
 export const ADMIN_NAV: NavItem[] = [
   { href: "/admin", label: "Genel bakış" },
   { href: "/admin/users", label: "Kullanıcılar" },
+  { href: "/admin/applications", label: "Yazar başvuruları" },
   { href: "/admin/agreements", label: "Sözleşme sürümleri" },
   { href: "/admin/settings", label: "Sistem" },
   { href: "/admin/audit", label: "Denetim kaydı" },
@@ -31,6 +32,7 @@ export const EDITOR_NAV: NavItem[] = [
   { href: "/editor/media", label: "Medya kütüphanesi" },
   { href: "/editor/announcements", label: "Duyurular" },
   { href: "/editor/approvals", label: "Eser Onayı takibi" },
+  { href: "/editor/applications", label: "Yazar başvuruları" },
   { href: "/magazine", label: "Dergi" },
   { href: "/account", label: "Hesabım" },
 ];

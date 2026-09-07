@@ -41,6 +41,22 @@ export const emailTokenTypeEnum = pgEnum("email_token_type", [
   "change_email",
 ]);
 
+/**
+ * Writer application pipeline (§6 of the writer-application module).
+ *
+ * The flow is strictly staged: the applicant does nothing after submitting, an
+ * editor decides first, an admin decides second, and only the applicant's own
+ * contract signature turns them into a writer.
+ */
+export const writerApplicationStatusEnum = pgEnum("writer_application_status", [
+  "submitted", // waiting for the editor
+  "editor_approved", // editor passed it on; waiting for the admin
+  "admin_approved", // contract defined; waiting for the applicant to sign
+  "signed", // applicant signed; the role change happened
+  "editor_rejected",
+  "admin_rejected",
+]);
+
 export const announcementAudienceEnum = pgEnum("announcement_audience", [
   "writers",
   "editors",
@@ -176,6 +192,52 @@ export const users = pgTable(
       .on(t.penNameSlug)
       .where(sql`${t.deletedAt} is null and ${t.penNameSlug} is not null`),
     index("users_role_idx").on(t.role),
+  ],
+);
+
+/* ------------------------------------------------------------------ */
+/* writer_applications                                                 */
+/* ------------------------------------------------------------------ */
+
+export const writerApplications = pgTable(
+  "writer_applications",
+  {
+    id: id(),
+    /** Who applied. Null once the account is anonymised. */
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "set null" }),
+    status: writerApplicationStatusEnum("status").notNull().default("submitted"),
+    /** The uploaded sample work. Stored in the media bucket, never public. */
+    sampleMediaId: uuid("sample_media_id").references(() => media.id, { onDelete: "set null" }),
+    /** The applicant's own words about their sample work. */
+    note: text("note"),
+    /** The latest reviewer's note; set by whichever reviewer decided last. */
+    reviewNote: text("review_note"),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
+    editorBy: uuid("editor_by").references(() => users.id, { onDelete: "set null" }),
+    editorReviewedAt: timestamp("editor_reviewed_at", { withTimezone: true }),
+    adminBy: uuid("admin_by").references(() => users.id, { onDelete: "set null" }),
+    adminReviewedAt: timestamp("admin_reviewed_at", { withTimezone: true }),
+    /** The contract assigned at admin approval; the applicant signs it last. */
+    contractVersionId: uuid("contract_version_id").references(() => agreementVersions.id, {
+      onDelete: "set null",
+    }),
+    signedAt: timestamp("signed_at", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    // Cooldown and "my applications" lookups: one row per user, newest first
+    index("writer_applications_user_idx").on(t.userId, t.submittedAt),
+    index("writer_applications_status_idx").on(t.status),
+    // At most one application may be mid-flight per user; finished ones stay
+    // as history and the service enforces the 30 day cooldown on top of this
+    uniqueIndex("writer_applications_one_open")
+      .on(t.userId)
+      .where(
+        sql`${t.status} in ('submitted', 'editor_approved', 'admin_approved')`,
+      ),
   ],
 );
 
@@ -693,6 +755,7 @@ export type Session = typeof sessions.$inferSelect;
 export type Article = typeof articles.$inferSelect;
 export type Issue = typeof issues.$inferSelect;
 export type RightsGrant = typeof rightsGrants.$inferSelect;
+export type WriterApplication = typeof writerApplications.$inferSelect;
 export type MediaRow = typeof media.$inferSelect;
 export type AgreementVersion = typeof agreementVersions.$inferSelect;
 export type Announcement = typeof announcements.$inferSelect;
@@ -700,4 +763,5 @@ export type Role = (typeof roleEnum.enumValues)[number];
 export type ArticleStatus = (typeof articleStatusEnum.enumValues)[number];
 export type WriterStatus = (typeof writerStatusEnum.enumValues)[number];
 export type GrantStatus = (typeof grantStatusEnum.enumValues)[number];
+export type WriterApplicationStatus = (typeof writerApplicationStatusEnum.enumValues)[number];
 export type LicenseType = (typeof licenseTypeEnum.enumValues)[number];

@@ -32,12 +32,15 @@ export function AgreementAcceptForm({
   agreementVersionId,
   renderedHash,
   html,
+  extraHidden,
 }: {
   action: ServerAction;
   csrfToken: string;
   agreementVersionId: string;
   renderedHash: string;
   html: string;
+  /** Extra hidden fields the action needs, such as the application id. */
+  extraHidden?: Record<string, string>;
 }) {
   const [state, formAction] = useActionState<ActionState, FormData>(action, null);
   const [reachedEnd, setReachedEnd] = useState(false);
@@ -91,6 +94,9 @@ export function AgreementAcceptForm({
         <input type="hidden" name="agreementVersionId" value={agreementVersionId} />
         {/* Echoed back; the server re-renders and compares before accepting */}
         <input type="hidden" name="renderedHash" value={renderedHash} />
+        {Object.entries(extraHidden ?? {}).map(([name, value]) => (
+          <input key={name} type="hidden" name={name} value={value} />
+        ))}
 
         {state?.error && <Alert tone="danger">{state.error}</Alert>}
         {state?.success && <Alert tone="success">{state.success}</Alert>}

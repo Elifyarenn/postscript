@@ -16,7 +16,7 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db/client";
-import { agreementAcceptances, media, rightsGrants } from "@/db/schema";
+import { agreementAcceptances, media, rightsGrants, writerApplications } from "@/db/schema";
 import { getAuthContext } from "@/lib/auth/session";
 import { canAccessEditorPanel, canViewContractDocuments } from "@/lib/auth/rbac";
 import { getStorage } from "@/lib/storage";
@@ -54,7 +54,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
           headers: { "cache-control": "no-store" },
         });
       }
-    } else if (!canAccessEditorPanel(context.user)) {
+    } else if (
+      !canAccessEditorPanel(context.user) &&
+      !(await ownsApplicationSample(context.user.id, row.id))
+    ) {
       throw forbidden();
     }
 
@@ -93,4 +96,22 @@ async function ownsContract(userId: string, mediaId: string): Promise<boolean> {
     .limit(1);
 
   return approval.length > 0;
+}
+
+/**
+ * True when this file is the applicant's own sample work. The applicant may
+ * read their own file back; the file itself is never public.
+ */
+async function ownsApplicationSample(userId: string, mediaId: string): Promise<boolean> {
+  const rows = await db
+    .select({ id: writerApplications.id })
+    .from(writerApplications)
+    .where(
+      and(
+        eq(writerApplications.sampleMediaId, mediaId),
+        eq(writerApplications.userId, userId),
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
 }

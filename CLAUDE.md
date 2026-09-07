@@ -56,7 +56,6 @@ docker compose up -d  # postgres + minio
 - Sosyal giriş
 - Okuyucu yorum sistemi
 - Abonelik / ödeme duvarı
-- Yazar başvuru formu
 - X API entegrasyonu (OG görseli + elle paylaşım yeter)
 - PDF sayı üretimi
 - ML tabanlı öneri (kural tabanlı sıralama: aynı yazar → aynı kategori → son 30 gün popüler)

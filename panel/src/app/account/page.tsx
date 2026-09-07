@@ -7,8 +7,16 @@ import { readCsrfToken } from "@/lib/csrf";
 import { navForRole, PanelShell } from "@/components/shell";
 import { ActionButton } from "@/components/form";
 import { Alert, Card, PageHeader } from "@/components/ui";
-import { PasswordCard, ProfileCard, SessionsCard, EmailCard } from "@/components/account-forms";
+import {
+  PasswordCard,
+  ProfileCard,
+  SessionsCard,
+  EmailCard,
+  WriterApplicationCard,
+} from "@/components/account-forms";
 import { formatDate } from "@/lib/utils";
+import { checkWriterEligibility } from "@/services/users";
+import { cooldownInfo, latestApplication } from "@/services/writer-applications";
 import { cancelDeletionAction, requestDeletionAction } from "./actions";
 
 export const metadata = { title: "Hesabım" };
@@ -29,6 +37,13 @@ export default async function AccountPage({
   const rows = await db.select().from(users).where(eq(users.id, context.user.id)).limit(1);
   const profile = rows[0]!;
   const sessions = await listSessions(context.user.id);
+
+  // The writer application block: prerequisites, cooldown and current status
+  const eligibility = checkWriterEligibility(profile);
+  const [cooldown, latest] = await Promise.all([
+    cooldownInfo(profile.id),
+    latestApplication(profile.id),
+  ]);
 
   // Every role can open this page, so the sidebar has to be the one that role
   // came from; otherwise an admin loses the panel navigation on the way here.
@@ -56,10 +71,20 @@ export default async function AccountPage({
 
         {profile.role === "user" && (
           <Alert tone="info" title="Yazar olmak">
-            Yazarlık yetkisini yalnızca yönetici verir; başvuru formu yoktur. Yetkilendirme için
-            doğum tarihinizin girilmiş ve kimliğinizin doğrulanmış olması gerekir.
+            Yazarlık yetkisi başvuruyla ve iki aşamalı onaydan (editör → yönetim) sonra
+            sözleşmenin imzalanmasıyla kazanılır. Başvurmadan önce doğum tarihinizin girilmiş
+            olması gerekir.
           </Alert>
         )}
+
+        <WriterApplicationCard
+          csrfToken={csrfToken}
+          role={profile.role}
+          problems={eligibility.problems}
+          messages={eligibility.messages}
+          latest={latest}
+          cooldown={cooldown}
+        />
 
         <ProfileCard
           csrfToken={csrfToken}
