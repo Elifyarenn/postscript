@@ -1,7 +1,11 @@
 /**
- * Seeds a usable system: the first admin, an editor, an active writer, a couple
- * of ordinary accounts, the KVKK notice, a published framework agreement, one
- * issue and articles at several points in the lifecycle.
+ * Seeds a usable system: the first admin, the KVKK notice, a published framework
+ * agreement and the publisher details.
+ *
+ * The demo accounts (editor, writer, readers) and the sample content are only
+ * created when `SEED_DEMO_USERS=1`. They exist so the development environment
+ * and the end to end suite have someone to log in as; a production seed must
+ * not ship accounts with known, committed passwords (D-038).
  *
  * Run with: pnpm seed
  *
@@ -94,6 +98,9 @@ async function main(): Promise<void> {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set.");
 
+  // The old placeholder users are off by default; dev and e2e opt back in
+  const demoEnabled = process.env.SEED_DEMO_USERS === "1";
+
   const connection = await createConnection(url);
   setDatabase(connection.db, connection.close);
 
@@ -127,47 +134,52 @@ async function main(): Promise<void> {
     role: "admin",
   });
 
-  const editorId = await upsertUser({
-    email: "editor@postscript.local",
-    displayName: "Deniz Editör",
-    password: "Editor!Parola2026",
-    role: "editor",
-  });
+  let writerId: string | null = null;
 
-  const writerId = await upsertUser({
-    email: "yazar@postscript.local",
-    displayName: "Ada Yazar",
-    penName: "Ada Y.",
-    password: "Yazar!Parola2026",
-    role: "writer",
-  });
+  if (demoEnabled) {
+    await upsertUser({
+      email: "editor@postscript.local",
+      displayName: "Deniz Editör",
+      password: "Editor!Parola2026",
+      role: "editor",
+    });
 
-  await upsertUser({
-    email: "okur@postscript.local",
-    displayName: "Kerem Okur",
-    password: "Okur!Parola2026",
-    role: "user",
-  });
+    const writer = await upsertUser({
+      email: "yazar@postscript.local",
+      displayName: "Ada Yazar",
+      penName: "Ada Y.",
+      password: "Yazar!Parola2026",
+      role: "writer",
+    });
+    writerId = writer;
 
-  // The reader the writer-application pipeline scenario submits as; no other
-  // scenario touches this account, so the two never race
-  await upsertUser({
-    email: "aday@postscript.local",
-    displayName: "Aylin Aday",
-    password: "Aday!Parola2026",
-    role: "user",
-  });
+    await upsertUser({
+      email: "okur@postscript.local",
+      displayName: "Kerem Okur",
+      password: "Okur!Parola2026",
+      role: "user",
+    });
 
-  // Deliberately under 18: the promotion screen must refuse this account
-  await upsertUser({
-    email: "genc@postscript.local",
-    displayName: "Genç Aday",
-    password: "Genc!Parola2026",
-    role: "user",
-    birthDate: new Date(new Date().setUTCFullYear(new Date().getUTCFullYear() - 17))
-      .toISOString()
-      .slice(0, 10),
-  });
+    // The reader the writer-application pipeline scenario submits as; no other
+    // scenario touches this account, so the two never race
+    await upsertUser({
+      email: "aday@postscript.local",
+      displayName: "Aylin Aday",
+      password: "Aday!Parola2026",
+      role: "user",
+    });
+
+    // Deliberately under 18: the promotion screen must refuse this account
+    await upsertUser({
+      email: "genc@postscript.local",
+      displayName: "Genç Aday",
+      password: "Genc!Parola2026",
+      role: "user",
+      birthDate: new Date(new Date().setUTCFullYear(new Date().getUTCFullYear() - 17))
+        .toISOString()
+        .slice(0, 10),
+    });
+  }
 
   const adminActor: Actor = {
     id: adminId,
@@ -202,33 +214,37 @@ async function main(): Promise<void> {
     });
     console.log(`  · published version ${published.version} from the template file`);
 
-    // The seeded writer starts out active, so the panel is immediately usable
-    const writerActor: Actor = {
-      id: writerId,
-      role: "writer",
-      writerStatus: "pending_agreement",
-      emailVerifiedAt: new Date(),
-      isBanned: false,
-    };
-    const writerRow = await db.select().from(users).where(eq(users.id, writerId)).limit(1);
-    const preview = await renderAgreementForWriter(writerRow[0]!);
+    // The seeded writer starts out active, so the panel is immediately usable.
+    // Demo users only: a production seed has no placeholder writer to accept.
+    if (demoEnabled && writerId) {
+      const writerActor: Actor = {
+        id: writerId,
+        role: "writer",
+        writerStatus: "pending_agreement",
+        emailVerifiedAt: new Date(),
+        isBanned: false,
+      };
+      const writerRow = await db.select().from(users).where(eq(users.id, writerId)).limit(1);
+      const preview = await renderAgreementForWriter(writerRow[0]!);
 
-    await acceptAgreement(
-      writerActor,
-      {
-        agreementVersionId: published.id,
-        renderedHash: preview.hash,
-        acknowledged: true,
-      },
-      { ip: "127.0.0.1", userAgent: "seed" },
-    );
-    console.log("  · seeded writer accepted it");
+      await acceptAgreement(
+        writerActor,
+        {
+          agreementVersionId: published.id,
+          renderedHash: preview.hash,
+          acknowledged: true,
+        },
+        { ip: "127.0.0.1", userAgent: "seed" },
+      );
+      console.log("  · seeded writer accepted it");
+    }
   } else {
     console.log("  · already present");
   }
 
   console.log("Seeding issue and articles ...");
-  const existingIssue = await db.select({ id: issues.id }).from(issues).limit(1);
+  if (demoEnabled && writerId) {
+    const existingIssue = await db.select({ id: issues.id }).from(issues).limit(1);
   if (existingIssue.length === 0) {
     const [issue] = await db
       .insert(issues)
@@ -264,14 +280,18 @@ async function main(): Promise<void> {
   } else {
     console.log("  · already present");
   }
+  } else {
+    console.log("  · demo content skipped (SEED_DEMO_USERS is not set)");
+  }
 
   console.log("\nSeed complete.");
   console.log("  admin  :", process.env.SEED_ADMIN_EMAIL ?? "admin@postscriptmag.com");
-  console.log("  editor : editor@postscript.local / Editor!Parola2026");
-  console.log("  writer : yazar@postscript.local / Yazar!Parola2026");
-  console.log("  reader : okur@postscript.local / Okur!Parola2026");
-  console.log("  applicant : aday@postscript.local / Aday!Parola2026");
-  console.log(`\n  (editor id ${editorId})`);
+  if (demoEnabled) {
+    console.log("  editor : editor@postscript.local / Editor!Parola2026");
+    console.log("  writer : yazar@postscript.local / Yazar!Parola2026");
+    console.log("  reader : okur@postscript.local / Okur!Parola2026");
+    console.log("  applicant : aday@postscript.local / Aday!Parola2026");
+  }
 
   await connection.close();
 }

@@ -521,6 +521,23 @@ kartı, imzalanmış başvurusu olan yazarlar için de render edilir — aksi h�
 
 ---
 
+## D-038 — Demo kullanıcıları seed'de varsayılan olarak kapalı
+
+**Karar:** `scripts/seed.ts` varsayılan olarak yalnızca ilk admini, KVKK metnini,
+yayınlanmış çerçeve sözleşmeyi ve yayıncı bilgilerini oluşturur. Eski placeholder
+hesaplar (editor, yazar, okur, aday, genç) ve örnek içerik yalnızca
+`SEED_DEMO_USERS=1` ile açılır. E2E paketi bu bayrağı kendi ortamında açar.
+
+**Gerekçe:** Demo hesapları bilinen, depoda yazılı şifrelerle çalışıyordu; üretim
+seed'i bu yüzden "çalıştırma" diye uyarıyordu ama hesaplar yine de oluşuyordu.
+Ürün sahibi placeholder kullanıcıların eski olduğunu ve kaldırılmasını istedi.
+Bayrakla kapatmak, e2e testlerinin ihtiyaç duyduğu hesapları korurken üretim
+seed'ini güvenli hâle getirir; geliştirmede isteyen `SEED_DEMO_USERS=1` ile
+hesapları geri alabilir. Bayrak kapalıyken yazar-onayı ve örnek içerik adımları
+da atlanır (bunlar demo yazar hesabına bağlıydı).
+
+---
+
 ## D-035 — Tek giriş kapısı ve okuyucunun okuma alanı
 
 **Karar:** Giriş ekranı artık kendini "yönetim paneli" diye tanıtmıyor;

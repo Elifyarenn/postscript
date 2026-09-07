@@ -40,11 +40,19 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 pnpm install
 docker compose up -d          # PostgreSQL + MinIO + Mailpit
 pnpm db:migrate
-pnpm seed                     # ilk admin, örnek kullanıcılar ve içerik
+pnpm seed                     # ilk admin (varsayılan: demo kullanıcı yok)
 pnpm dev                      # http://localhost:3001
 ```
 
-Seed'in oluşturduğu hesaplar:
+`pnpm seed` varsayılan olarak yalnızca ilk admini, KVKK metnini, yayınlanmış
+çerçeve sözleşmeyi ve yayıncı bilgilerini oluşturur. Geliştirme/e2e için demo
+hesapları isterseniz `SEED_DEMO_USERS=1` ile çalıştırın:
+
+```bash
+SEED_DEMO_USERS=1 pnpm seed
+```
+
+`SEED_DEMO_USERS=1` ile oluşan hesaplar:
 
 | Rol | E-posta | Şifre |
 |---|---|---|
@@ -52,7 +60,11 @@ Seed'in oluşturduğu hesaplar:
 | editor | `editor@postscript.local` | `Editor!Parola2026` |
 | writer | `yazar@postscript.local` | `Yazar!Parola2026` |
 | user | `okur@postscript.local` | `Okur!Parola2026` |
+| user (başvuru) | `aday@postscript.local` | `Aday!Parola2026` |
 | user (17 yaşında) | `genc@postscript.local` | `Genc!Parola2026` |
+
+> Demo hesapları bilinen, depoda yazılı şifrelerle çalışır — üretimde yalnızca
+> admin CLI ile oluşturulur (D-038).
 
 > İki adımlı doğrulama şu anda **kapalıdır** ve yayın öncesi yeniden
 > tasarlanacaktır (D-033). Tüm roller yalnızca e-posta ve şifreyle girer.

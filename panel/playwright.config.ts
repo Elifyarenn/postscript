@@ -46,6 +46,8 @@ export default defineConfig({
       MAIL_TRANSPORT: "file",
       MAIL_DIR: ".e2e/mail",
       SESSION_SECRET: "e2e-session-secret-0123456789abcdef",
+      // The specs log in as the demo accounts, so the seed must create them
+      SEED_DEMO_USERS: "1",
     },
   },
 });
