@@ -84,6 +84,16 @@ describe("categories", () => {
     );
     expect(refused.status).toBe(403);
   });
+
+  it("orders categories numerically by their leading number", async () => {
+    await createCategory(admin!, { name: "1. İLK" }, noMeta);
+    await createCategory(admin!, { name: "10. ON" }, noMeta);
+    await createCategory(admin!, { name: "2. İKİ" }, noMeta);
+
+    const names = (await listCategoriesWithQuota(false)).map((c) => c.name);
+    expect(names.indexOf("1. İLK")).toBeLessThan(names.indexOf("2. İKİ"));
+    expect(names.indexOf("2. İKİ")).toBeLessThan(names.indexOf("10. ON"));
+  });
 });
 
 describe("the public interest form", () => {

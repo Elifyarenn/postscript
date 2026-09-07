@@ -9,7 +9,7 @@
  *    a full category rejects both new applications and further approvals
  */
 import "server-only";
-import { and, count, desc, eq, ilike, inArray, isNull, ne } from "drizzle-orm";
+import { and, count, desc, eq, ilike, inArray, isNull, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
 import {
@@ -63,7 +63,11 @@ export async function listCategoriesWithQuota(
         includeInactive ? undefined : eq(categories.isActive, true),
       ),
     )
-    .orderBy(categories.name);
+    // Category names carry a leading number ("1. …", "10. …"); sort numerically
+    // so 10 and 11 come after 9, not after 1. Numberless names go last.
+    .orderBy(
+      sql`(regexp_match(${categories.name}::text, '^\\d+'))[1]::int nulls last, ${categories.name}`,
+    );
 
   const counts = await db
     .select({
