@@ -54,7 +54,6 @@ docker compose up -d  # postgres + minio
 - Ödeme, IBAN, fatura, vergi
 - Yazar tarafından makale gönderimi
 - Sosyal giriş
-- Okuyucu yorum sistemi
 - Abonelik / ödeme duvarı
 - X API entegrasyonu (OG görseli + elle paylaşım yeter)
 - PDF sayı üretimi

@@ -120,3 +120,8 @@ export function canReviewApplications(actor: Actor): boolean {
 export function canFinalizeApplications(actor: Actor): boolean {
   return canAccessAdminPanel(actor);
 }
+
+/** Comment and chat moderation is an admin-only duty (module 4). */
+export function canModerateCommunity(actor: Actor): boolean {
+  return canAccessAdminPanel(actor);
+}

@@ -1,11 +1,26 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { and, eq, isNull } from "drizzle-orm";
+import { db } from "@/db/client";
+import { articles } from "@/db/schema";
 import { requireSession } from "@/lib/auth/guard";
 import { getPublicArticle } from "@/services/public";
+import { listCommentsForArticle } from "@/services/community";
 import { AuthorLinks } from "@/components/magazine";
-import { Alert, Card, PageHeader } from "@/components/ui";
+import { PanelForm } from "@/components/form";
+import {
+  Alert,
+  Card,
+  EmptyState,
+  Field,
+  PageHeader,
+  StatusBadge,
+  Textarea,
+} from "@/components/ui";
+import { readCsrfToken } from "@/lib/csrf";
 import { isAppError } from "@/lib/errors";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatDateTime } from "@/lib/utils";
+import { addCommentAction } from "@/app/community/actions";
 
 export const metadata = { title: "Yazı" };
 
@@ -18,6 +33,7 @@ export const metadata = { title: "Yazı" };
  */
 export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   await requireSession();
+  const csrfToken = (await readCsrfToken()) ?? "";
   const { slug } = await params;
 
   let article: Awaited<ReturnType<typeof getPublicArticle>>;
@@ -36,6 +52,15 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   }
 
   const tags = Array.isArray(article.tags) ? (article.tags as string[]) : [];
+
+  // The public read model deliberately has no id; the comments anchor needs one
+  const idRows = await db
+    .select({ id: articles.id })
+    .from(articles)
+    .where(and(eq(articles.slug, slug), isNull(articles.deletedAt)))
+    .limit(1);
+  const articleId = idRows[0]?.id ?? "";
+  const comments = articleId ? await listCommentsForArticle(articleId) : [];
 
   return (
     <>
@@ -101,6 +126,36 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           )}
         </Card>
       )}
+
+      <Card className="mt-6">
+        <h2 className="mb-4 font-serif text-lg">Yorumlar ({comments.length})</h2>
+
+        {comments.length === 0 ? (
+          <EmptyState>Henüz yorum yok. İlk yorumu siz yazın!</EmptyState>
+        ) : (
+          <ul className="mb-6 space-y-4">
+            {comments.map((comment) => (
+              <li key={comment.id} className="rounded-md border border-line bg-paper p-4">
+                <div className="mb-1 flex flex-wrap items-center gap-2 text-xs">
+                  <span className="font-medium">
+                    {comment.authorName ?? "Silinmiş kullanıcı"}
+                  </span>
+                  {comment.authorRole && <StatusBadge status={comment.authorRole} />}
+                  <span className="text-muted">{formatDateTime(comment.createdAt)}</span>
+                </div>
+                <p className="whitespace-pre-wrap text-sm">{comment.body}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <PanelForm action={addCommentAction} csrfToken={csrfToken} submitLabel="Yorum yap">
+          <input type="hidden" name="articleId" value={articleId} />
+          <Field label="Yorumunuz" htmlFor="commentBody">
+            <Textarea id="commentBody" name="body" required maxLength={2000} rows={3} />
+          </Field>
+        </PanelForm>
+      </Card>
     </>
   );
 }

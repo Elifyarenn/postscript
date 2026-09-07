@@ -19,6 +19,12 @@ import {
 } from "@/services/users";
 import { createVersionFromTemplate, publishAgreementVersion } from "@/services/agreements";
 import { adminDecideApplication } from "@/services/writer-applications";
+import {
+  addBannedWord,
+  removeBannedWord,
+  removeChatMessage,
+  removeCommunityComment,
+} from "@/services/community";
 import { saveSiteSettings, SITE_SETTING_KEYS } from "@/services/site-settings";
 import { requestMetadata, requireRole, revokeAllSessions } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
@@ -229,6 +235,70 @@ export async function adminRejectApplicationAction(
 
     revalidatePath("/admin/applications");
     return { success: "Başvuru reddedildi." };
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Community moderation                                                */
+/* ------------------------------------------------------------------ */
+
+export async function removeCommentAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
+
+    await removeCommunityComment({ ...user }, text(formData, "commentId"), meta);
+    revalidatePath("/admin/community");
+    return { success: "Yorum kaldırıldı." };
+  });
+}
+
+export async function removeChatMessageAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
+
+    await removeChatMessage({ ...user }, text(formData, "messageId"), meta);
+    revalidatePath("/admin/community");
+    return { success: "Mesaj kaldırıldı." };
+  });
+}
+
+export async function addBannedWordAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
+
+    await addBannedWord({ ...user }, { word: text(formData, "word") }, meta);
+    revalidatePath("/admin/community");
+    return { success: "Kelime yasaklı listesine eklendi." };
+  });
+}
+
+export async function removeBannedWordAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
+
+    await removeBannedWord({ ...user }, text(formData, "wordId"), meta);
+    revalidatePath("/admin/community");
+    return { success: "Kelime listeden çıkarıldı." };
   });
 }
 

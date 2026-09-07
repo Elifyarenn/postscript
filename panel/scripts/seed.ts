@@ -20,6 +20,7 @@ import { setDatabase, db } from "@/db/client";
 import {
   agreementVersions,
   articles,
+  bannedWords,
   issues,
   kvkkVersions,
   users,
@@ -28,6 +29,7 @@ import {
 import { hashPassword } from "@/lib/password";
 import { sha256Hex } from "@/lib/crypto";
 import { slugify } from "@/lib/slug";
+import { normalizeBannedWord } from "@/lib/moderation";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import {
   acceptAgreement,
@@ -205,9 +207,29 @@ async function main(): Promise<void> {
   );
   console.log("  · saved");
 
+  console.log("Seeding the community blacklist ...");
+  const bannedSource = readFileSync(
+    path.join(process.cwd(), "data", "banned-words.txt"),
+    "utf8",
+  )
+    .split(/\r?\n/)
+    .map(normalizeBannedWord)
+    .filter((word) => word.length > 0);
+
+  for (const word of bannedSource) {
+    const live = await db
+      .select({ id: bannedWords.id })
+      .from(bannedWords)
+      .where(and(eq(bannedWords.word, word), isNull(bannedWords.deletedAt)))
+      .limit(1);
+    if (live.length === 0) {
+      await db.insert(bannedWords).values({ word, createdBy: adminId });
+    }
+  }
+  console.log(`  · ${bannedSource.length} banned words ensured`);
+
   console.log("Seeding the writer contract ...");
-  const agreements = await db.select({ id: agreementVersions.id }).from(agreementVersions).limit(1);
-  if (agreements.length === 0) {
+  const agreements = await db.select({ id: agreementVersions.id }).from(agreementVersions).limit(1);  if (agreements.length === 0) {
     const draft = await createVersionFromTemplate(adminActor, { ip: null, userAgent: "seed" });
     const published = await publishAgreementVersion(adminActor, draft.id, {
       ip: null,

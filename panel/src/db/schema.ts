@@ -19,6 +19,7 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -730,6 +731,70 @@ export const notifications = pgTable(
 );
 
 /* ------------------------------------------------------------------ */
+/* community (blog comments, chat, banned words)                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The moderation blacklist (module 4). Words are stored normalized (lowercase,
+ * Turkish locale) and matched case-insensitively as substrings, so suffixed
+ * forms are covered too. Removal is a soft delete so an admin can restore.
+ */
+export const bannedWords = pgTable(
+  "banned_words",
+  {
+    id: id(),
+    word: text("word").notNull(),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    deletedAt: deletedAt(),
+  },
+  (t) => [
+    // A live word is unique; soft-deleted ones stay as history
+    uniqueIndex("banned_words_word_unique").on(t.word).where(sql`${t.deletedAt} is null`),
+  ],
+);
+
+/** A reader's comment on a published magazine article. */
+export const communityComments = pgTable(
+  "community_comments",
+  {
+    id: id(),
+    articleId: uuid("article_id")
+      .notNull()
+      .references(() => articles.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id").references(() => users.id, { onDelete: "set null" }),
+    /** The comment with banned words already masked (module 4). */
+    body: text("body").notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    deletedAt: deletedAt(),
+  },
+  (t) => [
+    index("community_comments_article_idx").on(t.articleId, t.createdAt),
+  ],
+);
+
+/** A message in the community chat; an optional quote references another one. */
+export const communityMessages = pgTable(
+  "community_messages",
+  {
+    id: id(),
+    authorId: uuid("author_id").references(() => users.id, { onDelete: "set null" }),
+    body: text("body").notNull(),
+    // Self reference: the explicit return type breaks the circular inference
+    quotedMessageId: uuid("quoted_message_id").references(
+      (): AnyPgColumn => communityMessages.id,
+      { onDelete: "set null" },
+    ),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    deletedAt: deletedAt(),
+  },
+  (t) => [index("community_messages_created_idx").on(t.createdAt)],
+);
+
+/* ------------------------------------------------------------------ */
 /* audit_log (append only, D-015)                                      */
 /* ------------------------------------------------------------------ */
 
@@ -766,6 +831,9 @@ export type Issue = typeof issues.$inferSelect;
 export type RightsGrant = typeof rightsGrants.$inferSelect;
 export type WriterApplication = typeof writerApplications.$inferSelect;
 export type MediaRow = typeof media.$inferSelect;
+export type CommunityComment = typeof communityComments.$inferSelect;
+export type CommunityMessage = typeof communityMessages.$inferSelect;
+export type BannedWord = typeof bannedWords.$inferSelect;
 export type AgreementVersion = typeof agreementVersions.$inferSelect;
 export type Announcement = typeof announcements.$inferSelect;
 export type Role = (typeof roleEnum.enumValues)[number];

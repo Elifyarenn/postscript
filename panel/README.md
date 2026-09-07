@@ -263,6 +263,21 @@ Hesap silme talebi tüm roller için Hesabım sayfasındadır: 30 gün bekleme s
 kişisel veriler anonimleştirilir, imzalı hak devri kayıtları ve imza kanıtları
 hukuki dayanak gereği saklanır (D-039).
 
+### Topluluk (yorumlar, sohbet, moderasyon)
+
+Kayıtlı okuyucular yayınlanmış yazılara **yorum** yapabilir ve **Topluluk
+sohbetinde** mesaj atabilir (alıntılı mesajlar dahil). Mesajlarda yazar adının
+yanında rol rozeti görünür (Kullanıcı / Yazar / Editör / Yönetici).
+
+Her mesaj yazılırken **yasaklı kelime listesinden** geçer: listedeki kelimeler
+otomatik yıldızlanır (ilk harf kalır), böylece kayıtlarda temiz hâli durur.
+Liste admin tarafından yönetilir; eşleştirme büyük/küçük harfe duyarsız ve ek
+almış biçimleri yakalar (D-040).
+
+Yönetici panelindeki **"Topluluk yönetimi"** sekmesinde tüm yorumlar, sohbet
+mesajları ve yasaklı kelimeler yönetilir; kaldırma yumuşak silmedir
+(kayıt geçmişte kalır).
+
 ### Güvenlik başlıkları
 
 `next.config.ts` her yanıta `X-Content-Type-Options`, `X-Frame-Options`,
@@ -425,7 +440,7 @@ panel) tek makinede ayağa kaldırır.
 ## Test
 
 ```bash
-pnpm test        # 201 birim + entegrasyon testi
+pnpm test        # 218 birim + entegrasyon testi
 pnpm test:e2e    # 19 uçtan uca senaryo
 ```
 

@@ -57,6 +57,13 @@
       "when": 1788782325492,
       "tag": "0007_parched_rattler",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788785372477,
+      "tag": "0008_vengeful_jetstream",
+      "breakpoints": true
     }
   ]
 }

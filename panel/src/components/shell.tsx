@@ -19,9 +19,11 @@ export const ADMIN_NAV: NavItem[] = [
   { href: "/admin/applications", label: "Yazar başvuruları" },
   { href: "/admin/agreements", label: "Sözleşme sürümleri" },
   { href: "/admin/settings", label: "Sistem" },
+  { href: "/admin/community", label: "Topluluk yönetimi" },
   { href: "/admin/audit", label: "Denetim kaydı" },
   { href: "/editor", label: "Editör paneli" },
   { href: "/magazine", label: "Dergi" },
+  { href: "/community", label: "Topluluk" },
   { href: "/account", label: "Hesabım" },
 ];
 
@@ -34,12 +36,14 @@ export const EDITOR_NAV: NavItem[] = [
   { href: "/editor/approvals", label: "Eser Onayı takibi" },
   { href: "/editor/applications", label: "Yazar başvuruları" },
   { href: "/magazine", label: "Dergi" },
+  { href: "/community", label: "Topluluk" },
   { href: "/account", label: "Hesabım" },
 ];
 
 export const READER_NAV: NavItem[] = [
   { href: "/magazine", label: "Dergi" },
   { href: "/magazine/issues", label: "Sayılar" },
+  { href: "/community", label: "Topluluk" },
   { href: "/account", label: "Hesabım" },
 ];
 
@@ -53,6 +57,7 @@ export function writerNav(locked: boolean): NavItem[] {
     { href: "/writer/articles", label: "Makalelerim", disabled: locked },
     { href: "/writer/profile", label: "Profil ve güvenlik" },
     { href: "/magazine", label: "Dergi" },
+    { href: "/community", label: "Topluluk" },
   ];
 }
 

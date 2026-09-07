@@ -602,3 +602,27 @@ kendisi açabilseydi, yöneticinin koyduğu dondurma da kullanıcı tarafından
 sessizce açılabilirdi. Yönetici kararı hızlı ve kayıt altındadır (audit_log),
 böylece maliyet küçük, anlam korunur. Admin `editor_status`'tan hiç etkilenmez
 (admin, editör görevinden üstündür ve dondurulamaz).
+
+---
+
+## D-040 — Topluluk modülü: "okuyucu yorum sistemi yok" kararı kaldırıldı
+
+**Karar:** "Okuyucu yorum sistemi" yapılmayacaklar listesinden çıkarıldı; yerine
+topluluk modülü geldi. Üç yeni tablo: `banned_words` (yasaklı kelime listesi,
+yumuşak silme, canlı kelimede unique), `community_comments` (yayınlanmış
+yazılara yorumlar) ve `community_messages` (sohbet, kendine `quoted_message_id`
+ile alıntı). Her metin yazılırken yasaklı kelimeler `k****` biçiminde
+yıldızlanır (ilk harf kalır) ve temiz hâli saklanır; maskeleme
+`src/lib/moderation.ts`'te saf bir fonksiyondur. Eşleştirme Türkçe küçük harfe
+duyarsız alt dize aramasıdır (ek almış biçimler yakalanır). Roller
+(Admin/Editör/Yazar/Kullanıcı) yorum ve sohbet mesajlarında adın yanında rozet
+olarak gösterilir. Moderasyon yalnızca yöneticinindir; kaldırma yumuşak silme
+ile yapılır ve geçmişte kalır.
+
+**Gerekçe:** Ürün sahibi topluluk blogu/sohbet ve moderasyon modülünü istedi;
+bu, eski "okuyucu yorum sistemi yok" kararını bilinçli olarak kaldırır.
+Maskeleme (yıldızlama) engellemeye tercih edildi: kullanıcı yazısını kaybetmez,
+listedeki kelime her durumda görünmez olur. Alt dize eşleşmesi zararsız
+kelimeleri de yakalayabileceği için liste yönetici denetimindedir ve seed
+yalnızca küçük bir başlangıç seti koyar. Yumuşak silme, D-015'teki
+eklenmek-bir-türde-eklenen kayıt ilkesine uygundur: denetim geçmişi korunur.
