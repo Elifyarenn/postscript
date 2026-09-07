@@ -11,6 +11,7 @@ import {
   addChatMessage,
   addCommunityComment,
   listChatMessages,
+  listChatMessagesAfter,
   listCommentsForArticle,
   removeBannedWord,
   removeChatMessage,
@@ -198,6 +199,20 @@ describe("community chat", () => {
     const admin = await createUser({ role: "admin" });
     await removeChatMessage(actorOf(admin), msg.id, noMeta);
     expect(await listChatMessages()).toHaveLength(0);
+  });
+
+  it("feeds the live room: only messages after a timestamp come back", async () => {
+    const reader = await createUser();
+    const first = await addChatMessage(actorOf(reader), { body: "eski mesaj" }, noMeta);
+    const marker = first.createdAt;
+    const second = await addChatMessage(actorOf(reader), { body: "yeni mesaj" }, noMeta);
+
+    const fresh = await listChatMessagesAfter(marker);
+    expect(fresh).toHaveLength(1);
+    expect(fresh[0]!.id).toBe(second.id);
+
+    const everything = await listChatMessagesAfter(new Date(0));
+    expect(everything.map((m) => m.id)).toContain(first.id);
   });
 });
 

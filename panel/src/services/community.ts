@@ -7,7 +7,7 @@
  * clean. The blacklist itself is admin-curated; removal is a soft delete.
  */
 import "server-only";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, gt, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { db } from "@/db/client";
@@ -315,6 +315,31 @@ export async function listChatMessages(limit = CHAT_LIMIT): Promise<MessageListI
     .limit(limit);
 
   return [...rows].reverse();
+}
+
+/** The messages created after a timestamp, oldest first — the chat poll feed. */
+export async function listChatMessagesAfter(after: Date, limit = CHAT_LIMIT): Promise<MessageListItem[]> {
+  const quoted = alias(communityMessages, "quoted");
+  const quotedAuthor = alias(users, "quoted_author");
+
+  return db
+    .select({
+      id: communityMessages.id,
+      body: communityMessages.body,
+      createdAt: communityMessages.createdAt,
+      authorName: users.displayName,
+      authorRole: users.role,
+      quotedMessageId: communityMessages.quotedMessageId,
+      quotedBody: quoted.body,
+      quotedAuthorName: quotedAuthor.displayName,
+    })
+    .from(communityMessages)
+    .leftJoin(users, eq(communityMessages.authorId, users.id))
+    .leftJoin(quoted, and(eq(communityMessages.quotedMessageId, quoted.id), isNull(quoted.deletedAt)))
+    .leftJoin(quotedAuthor, eq(quoted.authorId, quotedAuthor.id))
+    .where(and(isNull(communityMessages.deletedAt), gt(communityMessages.createdAt, after)))
+    .orderBy(asc(communityMessages.createdAt))
+    .limit(limit);
 }
 
 /** Admin moderation: removes a message (soft delete, stays as history). */
