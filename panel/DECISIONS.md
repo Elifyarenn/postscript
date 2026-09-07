@@ -692,3 +692,20 @@ oturum çözümünde kapı kurmak (login kapısı + session kapısı) tek tarafl
 bir açık bırakmaz. `isEntryAllowed` saf fonksiyon olduğundan kural tek yerde ve
 birim test edilebilir. Varsayılan 'open' davranışı değiştirmez; kapanma yalnızca
 yönetici kararıyla ve bilinçli olarak yapılır.
+
+---
+
+## D-044 — Başvuru formunda tekli kategori seçimi
+
+**Karar:** Modül 5'teki "en fazla 3 kategori" kuralı kaldırıldı; aday **tek bir
+kategori** seçer. `leadApplySchema`'da `categoryIds` dizisi yerine tek
+`categoryId` geldi; `leadSelectionIssues` tek kategoriye göre çalışır; admin
+başvuru düzenleme formu da radio (tek seçim) oldu. Dolu kategori hem formda
+pasif + "Kontenjan Dolu" etiketi taşır hem de `POST /api/writers/apply`'te
+sunucuda 400 ile reddedilir. `MAX_LEAD_CATEGORIES` 1'e indi.
+
+**Gerekçe:** Ürün sahibi formu sadeleştirdi: her aday tek bir alanda yoğunlaşsın.
+Tekli seçim radyo kartlarıyla kullanıcıya net; arka plan (kota = onaylı aday
+sayısı, onay kontrolü, kitle raporu) aynı kaldığı için değişiklik yalnızca seçim
+modelindedir. Bu karar D-041'deki "en fazla 3 kategori" kuralını bilinçli olarak
+günceller.

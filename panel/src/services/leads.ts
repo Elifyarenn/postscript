@@ -26,7 +26,7 @@ import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { parseIsoDate } from "@/lib/age";
 import type { RequestMeta } from "./auth";
 
-export const MAX_LEAD_CATEGORIES = 3;
+export const MAX_LEAD_CATEGORIES = 1;
 export const DEFAULT_QUOTA = 3;
 
 /* ------------------------------------------------------------------ */
@@ -100,35 +100,25 @@ export async function listCategoriesWithQuota(
 /* ------------------------------------------------------------------ */
 
 /**
- * The selection rules, pure so they can be unit tested. `categories` is the
- * resolved list (id, maxQuota, currentCount, isActive) for the chosen ids.
+ * The selection rules, pure so they can be unit tested. A lead picks exactly
+ * one category; the resolved category must exist, be active and have room.
  * Returns Turkish messages; an empty array means the selection is fine.
  */
 export function leadSelectionIssues(
-  selectedIds: string[],
+  categoryId: string | null,
   categories: { id: string; name: string; maxQuota: number; currentCount: number; isActive: boolean }[],
 ): string[] {
+  if (!categoryId) return ["Bir kategori seçmelisiniz."];
+
+  const category = categories.find((c) => c.id === categoryId);
+  if (!category) return ["Seçilen kategori artık mevcut değil."];
+
   const issues: string[] = [];
-
-  if (selectedIds.length === 0) issues.push("En az bir kategori seçmelisiniz.");
-  if (selectedIds.length > MAX_LEAD_CATEGORIES) {
-    issues.push(`En fazla ${MAX_LEAD_CATEGORIES} kategori seçebilirsiniz.`);
+  if (!category.isActive) issues.push(`"${category.name}" kategorisi şu anda kapalı.`);
+  if (category.currentCount >= category.maxQuota) {
+    issues.push(`"${category.name}" kategorisinin kontenjanı dolu.`);
   }
-
-  const byId = new Map(categories.map((c) => [c.id, c]));
-  for (const id of selectedIds) {
-    const category = byId.get(id);
-    if (!category) {
-      issues.push("Seçilen kategorilerden biri artık mevcut değil.");
-      continue;
-    }
-    if (!category.isActive) issues.push(`"${category.name}" kategorisi şu anda kapalı.`);
-    if (category.currentCount >= category.maxQuota) {
-      issues.push(`"${category.name}" kategorisinin kontenjanı dolu.`);
-    }
-  }
-
-  return [...new Set(issues)];
+  return issues;
 }
 
 /* ------------------------------------------------------------------ */
@@ -145,10 +135,7 @@ export const leadApplySchema = z.strictObject({
     .max(20, "Telefon numarası geçersiz.")
     .regex(/^\+?[0-9\s()-]+$/, "Telefon numarası yalnızca rakam içerebilir."),
   email: z.email("Geçerli bir e-posta adresi girin.").max(254),
-  categoryIds: z
-    .array(z.uuid())
-    .min(1, "En az bir kategori seçmelisiniz.")
-    .max(MAX_LEAD_CATEGORIES, `En fazla ${MAX_LEAD_CATEGORIES} kategori seçebilirsiniz.`),
+  categoryId: z.uuid("Geçerli bir kategori seçin."),
 });
 
 /** Normalises a phone number to a compact, comparable form. */
@@ -171,9 +158,9 @@ export async function applyAsWriterLead(
     throw badRequest("Doğum tarihi gelecekte olamaz.");
   }
 
-  // The chosen categories must exist, be active and have room right now
+  // The chosen category must exist, be active and have room right now
   const quota = await listCategoriesWithQuota(false);
-  const issues = leadSelectionIssues(input.categoryIds, quota);
+  const issues = leadSelectionIssues(input.categoryId, quota);
   if (issues.length > 0) {
     throw badRequest("Seçim geçersiz.", { categories: issues });
   }
@@ -199,18 +186,14 @@ export async function applyAsWriterLead(
     })
     .returning();
 
-  await db
-    .insert(writerLeadCategories)
-    .values(
-      input.categoryIds.map((categoryId) => ({ leadId: lead!.id, categoryId })),
-    );
+  await db.insert(writerLeadCategories).values({ leadId: lead!.id, categoryId: input.categoryId });
 
   await writeAudit({
     actorId: null,
     action: "lead.applied",
     entityType: "writer_leads",
     entityId: lead!.id,
-    after: { fullName: input.fullName, categoryCount: input.categoryIds.length },
+    after: { fullName: input.fullName, categoryId: input.categoryId },
     ip: meta.ip,
   });
 
@@ -388,7 +371,7 @@ export const leadUpdateSchema = z.strictObject({
   phone: z.string().trim().min(7).max(20).regex(/^\+?[0-9\s()-]+$/).optional(),
   email: z.email().max(254).optional(),
   status: z.enum(["pending", "approved", "rejected"]).optional(),
-  categoryIds: z.array(z.uuid()).min(1).max(MAX_LEAD_CATEGORIES).optional(),
+  categoryId: z.uuid().optional(),
 });
 
 /**
@@ -417,42 +400,40 @@ export async function updateLead(
   const lead = current[0];
   if (!lead) throw notFound("Başvuru bulunamadı.");
 
-  const categoryIds = input.categoryIds ?? (await leadCategoryIds(leadId));
+  const categoryId = input.categoryId ?? ((await leadCategoryIds(leadId))[0] ?? null);
   const nextStatus = input.status ?? lead.status;
 
-  // The selection rules matter when the categories change or when the lead is
-  // approved into them. A pure status change away from approval (rejecting or
-  // holding) must never be blocked by a category that the lead already holds.
-  if (input.categoryIds !== undefined || nextStatus === "approved") {
+  // The selection rules matter when the category changes or when the lead is
+  // approved into it. A pure status change away from approval (rejecting or
+  // holding) must never be blocked by a category the lead already holds.
+  if (input.categoryId !== undefined || nextStatus === "approved") {
     const quota = await listCategoriesWithQuota(false);
-    const issues = leadSelectionIssues(categoryIds, quota);
+    const issues = leadSelectionIssues(categoryId, quota);
     if (issues.length > 0) {
       throw badRequest("Seçim geçersiz.", { categories: issues });
     }
   }
 
-  // Approving fills quota: every chosen category must still have room once
-  // this lead is counted in, ignoring the lead's own current approval state
-  if (nextStatus === "approved") {
+  // Approving fills quota: the chosen category must still have room once this
+  // lead is counted in, ignoring the lead's own current approval state
+  if (nextStatus === "approved" && categoryId) {
     const quota = await listCategoriesWithQuota(false);
-    for (const categoryId of categoryIds) {
-      const approved = await db
-        .select({ n: count(writerLeadCategories.leadId) })
-        .from(writerLeadCategories)
-        .innerJoin(writerLeads, eq(writerLeadCategories.leadId, writerLeads.id))
-        .where(
-          and(
-            eq(writerLeadCategories.categoryId, categoryId),
-            eq(writerLeads.status, "approved"),
-            isNull(writerLeads.deletedAt),
-            ne(writerLeadCategories.leadId, leadId),
-          ),
-        );
-      const taken = Number(approved[0]?.n ?? 0);
-      const target = quota.find((c) => c.id === categoryId);
-      if (target && taken >= target.maxQuota) {
-        throw conflict(`"${target.name}" kategorisinin kontenjanı doldu.`);
-      }
+    const approved = await db
+      .select({ n: count(writerLeadCategories.leadId) })
+      .from(writerLeadCategories)
+      .innerJoin(writerLeads, eq(writerLeadCategories.leadId, writerLeads.id))
+      .where(
+        and(
+          eq(writerLeadCategories.categoryId, categoryId),
+          eq(writerLeads.status, "approved"),
+          isNull(writerLeads.deletedAt),
+          ne(writerLeadCategories.leadId, leadId),
+        ),
+      );
+    const taken = Number(approved[0]?.n ?? 0);
+    const target = quota.find((c) => c.id === categoryId);
+    if (target && taken >= target.maxQuota) {
+      throw conflict(`"${target.name}" kategorisinin kontenjanı doldu.`);
     }
   }
 
@@ -469,11 +450,9 @@ export async function updateLead(
     .where(eq(writerLeads.id, leadId))
     .returning();
 
-  if (input.categoryIds) {
+  if (input.categoryId) {
     await db.delete(writerLeadCategories).where(eq(writerLeadCategories.leadId, leadId));
-    await db
-      .insert(writerLeadCategories)
-      .values(input.categoryIds.map((categoryId) => ({ leadId, categoryId })));
+    await db.insert(writerLeadCategories).values({ leadId, categoryId: input.categoryId });
   }
 
   await writeAudit({
@@ -481,8 +460,8 @@ export async function updateLead(
     action: "lead.updated",
     entityType: "writer_leads",
     entityId: leadId,
-    before: { status: lead.status, categoryCount: (await leadCategoryIds(leadId)).length },
-    after: { status: updated!.status, ...(input.categoryIds ? { categoryCount: input.categoryIds.length } : {}) },
+    before: { status: lead.status, categoryId: (await leadCategoryIds(leadId))[0] ?? null },
+    after: { status: updated!.status, ...(input.categoryId ? { categoryId: input.categoryId } : {}) },
     ip: meta.ip,
   });
 

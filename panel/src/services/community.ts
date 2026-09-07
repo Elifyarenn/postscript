@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Community module (module 4): comments on published articles, the community
  * chat, and the banned word blacklist that masks both.
  *

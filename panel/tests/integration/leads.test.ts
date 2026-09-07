@@ -1,4 +1,4 @@
-/**
+﻿/**
  * The writer lead and category quota module (module 5): the public interest
  * form's rules, the category CRUD, and the admin's lead inbox.
  */
@@ -60,7 +60,7 @@ const APPLICANT = {
 
 describe("categories", () => {
   it("creates, updates and soft deletes a category", async () => {
-    const created = await createCategory(admin!, { name: "Fotoğrafçılık", maxQuota: 2 }, noMeta);
+    const created = await createCategory(admin!, { name: "FotoÄŸrafÃ§Ä±lÄ±k", maxQuota: 2 }, noMeta);
     expect(created.maxQuota).toBe(2);
 
     const updated = await updateCategory(admin!, created.id, { isActive: false }, noMeta);
@@ -86,13 +86,13 @@ describe("categories", () => {
   });
 
   it("orders categories numerically by their leading number", async () => {
-    await createCategory(admin!, { name: "1. İLK" }, noMeta);
+    await createCategory(admin!, { name: "1. Ä°LK" }, noMeta);
     await createCategory(admin!, { name: "10. ON" }, noMeta);
-    await createCategory(admin!, { name: "2. İKİ" }, noMeta);
+    await createCategory(admin!, { name: "2. Ä°KÄ°" }, noMeta);
 
     const names = (await listCategoriesWithQuota(false)).map((c) => c.name);
-    expect(names.indexOf("1. İLK")).toBeLessThan(names.indexOf("2. İKİ"));
-    expect(names.indexOf("2. İKİ")).toBeLessThan(names.indexOf("10. ON"));
+    expect(names.indexOf("1. Ä°LK")).toBeLessThan(names.indexOf("2. Ä°KÄ°"));
+    expect(names.indexOf("2. Ä°KÄ°")).toBeLessThan(names.indexOf("10. ON"));
   });
 });
 
@@ -106,7 +106,7 @@ describe("the public interest form", () => {
   it("stores a lead as pending with its chosen categories", async () => {
     const { a, b } = await withCategories();
     const result = await applyAsWriterLead(
-      { ...APPLICANT, categoryIds: [a.id, b.id] },
+      { ...APPLICANT, categoryId: a.id },
       noMeta,
     );
     expect(result.status).toBe("pending");
@@ -115,26 +115,21 @@ describe("the public interest form", () => {
     expect(rows[0]!.phone).toBe("05321112233"); // normalised
   });
 
-  it("rejects more than three categories with 400", async () => {
-    const { a, b } = await withCategories();
-    const c = await createCategory(admin!, { name: "C Kategorisi" }, noMeta);
-    const d = await createCategory(admin!, { name: "D Kategorisi" }, noMeta);
+  it("refuses an application without a category (single selection)", async () => {
+    const { a } = await withCategories();
 
     const error = await captureError(
-      applyAsWriterLead(
-        { ...APPLICANT, categoryIds: [a.id, b.id, c.id, d.id] },
-        noMeta,
-      ),
+      applyAsWriterLead({ ...APPLICANT, categoryId: undefined }, noMeta),
     );
     expect(error.status).toBe(400);
-    expect(JSON.stringify(error.details?.categoryIds ?? [])).toMatch(/En fazla 3/);
+    expect(JSON.stringify(error.details?.categoryId ?? [])).toMatch(/kategori/i);
   });
 
   it("rejects a full category with 400", async () => {
     const { a, b } = await withCategories();
-    // Two other leads approved in category b fill it (quota 3 → 2/3 now)
+    // Two other leads approved in category b fill it (quota 3 â†’ 2/3 now)
     for (const email of ["x@example.com", "y@example.com"]) {
-      const lead = await applyAsWriterLead({ ...APPLICANT, email, categoryIds: [b.id] }, noMeta);
+      const lead = await applyAsWriterLead({ ...APPLICANT, email, categoryId: b.id }, noMeta);
       await updateLead(admin!, lead.id, { status: "approved" }, noMeta);
     }
     const list = await listCategoriesWithQuota(false);
@@ -144,14 +139,14 @@ describe("the public interest form", () => {
     // refuse a third approval attempt's application only when truly full:
     // approve one more, then the category is full and new applications fail
     const last = await applyAsWriterLead(
-      { ...APPLICANT, email: "z@example.com", categoryIds: [b.id] },
+      { ...APPLICANT, email: "z@example.com", categoryId: b.id },
       noMeta,
     );
     await updateLead(admin!, last.id, { status: "approved" }, noMeta);
 
     const error = await captureError(
       applyAsWriterLead(
-        { ...APPLICANT, email: "dolu@example.com", categoryIds: [b.id] },
+        { ...APPLICANT, email: "dolu@example.com", categoryId: b.id },
         noMeta,
       ),
     );
@@ -161,10 +156,10 @@ describe("the public interest form", () => {
 
   it("rejects a duplicate e-mail", async () => {
     const { a } = await withCategories();
-    await applyAsWriterLead({ ...APPLICANT, categoryIds: [a.id] }, noMeta);
+    await applyAsWriterLead({ ...APPLICANT, categoryId: a.id }, noMeta);
 
     const error = await captureError(
-      applyAsWriterLead({ ...APPLICANT, categoryIds: [a.id] }, noMeta),
+      applyAsWriterLead({ ...APPLICANT, categoryId: a.id }, noMeta),
     );
     expect(error.status).toBe(409);
   });
@@ -176,7 +171,7 @@ describe("admin lead management", () => {
     const b = await createCategory(admin!, { name: "Sanat", maxQuota: 1 }, noMeta);
 
     const lead = await applyAsWriterLead(
-      { ...APPLICANT, categoryIds: [a.id, b.id] },
+      { ...APPLICANT, categoryId: a.id },
       noMeta,
     );
 
@@ -185,7 +180,7 @@ describe("admin lead management", () => {
 
     const list = await listLeads(admin!);
     expect(list).toHaveLength(1);
-    expect(list[0]!.categories).toHaveLength(2);
+    expect(list[0]!.categories).toHaveLength(1);
 
     const quota = await listCategoriesWithQuota(false);
     expect(quota.find((c) => c.id === a.id)!.currentCount).toBe(1);
@@ -197,11 +192,11 @@ describe("admin lead management", () => {
 
     // Both leads apply while the category is still open (0/1)
     const first = await applyAsWriterLead(
-      { ...APPLICANT, categoryIds: [a.id] },
+      { ...APPLICANT, categoryId: a.id },
       noMeta,
     );
     const second = await applyAsWriterLead(
-      { ...APPLICANT, email: "ikinci@example.com", categoryIds: [a.id] },
+      { ...APPLICANT, email: "ikinci@example.com", categoryId: a.id },
       noMeta,
     );
 
@@ -216,9 +211,9 @@ describe("admin lead management", () => {
 
   it("frees the quota when an approval is moved back to rejected", async () => {
     const a = await createCategory(admin!, { name: "Teknoloji", maxQuota: 1 }, noMeta);
-    const first = await applyAsWriterLead({ ...APPLICANT, categoryIds: [a.id] }, noMeta);
+    const first = await applyAsWriterLead({ ...APPLICANT, categoryId: a.id }, noMeta);
     const second = await applyAsWriterLead(
-      { ...APPLICANT, email: "ikinci@example.com", categoryIds: [a.id] },
+      { ...APPLICANT, email: "ikinci@example.com", categoryId: a.id },
       noMeta,
     );
 

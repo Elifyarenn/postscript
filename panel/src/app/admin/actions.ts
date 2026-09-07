@@ -389,9 +389,6 @@ export async function updateLeadAction(
     const meta = await requestMetadata();
 
     const leadId = text(formData, "leadId");
-    const categoryIds = formData
-      .getAll("categoryIds")
-      .filter((value): value is string => typeof value === "string" && value !== "");
 
     await updateLead(
       { ...user },
@@ -402,7 +399,7 @@ export async function updateLeadAction(
         phone: text(formData, "phone"),
         email: text(formData, "email"),
         status: text(formData, "status") as LeadStatus,
-        categoryIds,
+        categoryId: optionalText(formData, "categoryId") ?? undefined,
       },
       meta,
     );

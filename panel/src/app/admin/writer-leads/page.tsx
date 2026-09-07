@@ -93,7 +93,7 @@ export default async function AdminWriterLeadsPage() {
 
                     <fieldset>
                       <legend className="mb-1.5 text-sm font-medium">
-                        Kategoriler <span className="text-muted">(en fazla 3)</span>
+                        Kategori <span className="text-muted">(tek seçim)</span>
                       </legend>
                       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                         {categories.map((category) => {
@@ -110,8 +110,8 @@ export default async function AdminWriterLeadsPage() {
                               }
                             >
                               <input
-                                type="checkbox"
-                                name="categoryIds"
+                                type="radio"
+                                name="categoryId"
                                 value={category.id}
                                 defaultChecked={checked}
                                 disabled={full}

@@ -3,8 +3,9 @@
 /**
  * The public writer interest form. Categories load from GET /api/categories,
  * so a category that just filled up is already disabled when the page opens.
- * At most three selections are kept; the form posts to POST /api/writers/apply
- * with the double submit token, and the server re-runs every rule.
+ * Exactly one category can be chosen (radio cards); the form posts to
+ * POST /api/writers/apply with the double submit token, and the server
+ * re-runs every rule — a full category is refused with 400.
  */
 import { useEffect, useState } from "react";
 import { Alert, Button, Field, Input } from "@/components/ui";
@@ -19,11 +20,9 @@ type CategoryOption = {
   full: boolean;
 };
 
-const MAX_SELECTIONS = 3;
-
 export function LeadForm({ csrfToken }: { csrfToken: string }) {
   const [categories, setCategories] = useState<CategoryOption[]>([]);
-  const [selected, setSelected] = useState<string[]>([]);
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
@@ -38,18 +37,11 @@ export function LeadForm({ csrfToken }: { csrfToken: string }) {
       .catch(() => setError("Kategoriler yüklenemedi, sayfayı yenileyin."));
   }, []);
 
-  function toggle(categoryId: string) {
-    if (selected.includes(categoryId)) {
-      setSelected(selected.filter((id) => id !== categoryId));
-    } else if (selected.length < MAX_SELECTIONS) {
-      setSelected([...selected, categoryId]);
-    }
-  }
-
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setSuccess(null);
+    if (!categoryId) return;
 
     const form = event.currentTarget;
     const payload = {
@@ -57,7 +49,7 @@ export function LeadForm({ csrfToken }: { csrfToken: string }) {
       birthDate: (form.elements.namedItem("birthDate") as HTMLInputElement).value,
       phone: (form.elements.namedItem("phone") as HTMLInputElement).value,
       email: (form.elements.namedItem("email") as HTMLInputElement).value,
-      categoryIds: selected,
+      categoryId,
     };
 
     setSubmitting(true);
@@ -78,7 +70,7 @@ export function LeadForm({ csrfToken }: { csrfToken: string }) {
         return;
       }
       setSuccess("Başvurunuz alındı. Değerlendirme sonrası sizinle iletişime geçeceğiz.");
-      setSelected([]);
+      setCategoryId(null);
       form.reset();
     } catch {
       setError("Bağlantı hatası, tekrar deneyin.");
@@ -110,19 +102,12 @@ export function LeadForm({ csrfToken }: { csrfToken: string }) {
 
       <fieldset>
         <legend className="mb-1.5 text-sm font-medium">
-          İlgi alanlarınız <span className="text-muted">(en fazla {MAX_SELECTIONS})</span>
+          İlgi alanınız <span className="text-muted">(yalnızca bir kategori)</span>
         </legend>
-
-        {selected.length === MAX_SELECTIONS && (
-          <p className="mb-2 text-xs text-muted">
-            En fazla {MAX_SELECTIONS} kategori seçebilirsiniz; yeni seçim için birini bırakın.
-          </p>
-        )}
 
         <div className="grid gap-2">
           {categories.map((category) => {
-            const isSelected = selected.includes(category.id);
-            const locked = category.full || (!isSelected && selected.length >= MAX_SELECTIONS);
+            const isSelected = categoryId === category.id;
             const isOpen = openId === category.id;
             return (
               <div
@@ -143,12 +128,14 @@ export function LeadForm({ csrfToken }: { csrfToken: string }) {
                 >
                   <span className="flex items-center gap-2.5">
                     <input
-                      type="checkbox"
+                      type="radio"
+                      name="categoryId"
+                      value={category.id}
                       checked={isSelected}
-                      disabled={category.full || locked}
-                      onChange={() => toggle(category.id)}
+                      disabled={category.full}
+                      onChange={() => setCategoryId(category.id)}
                       onClick={(event) => event.stopPropagation()}
-                      className="size-4 rounded border-line disabled:opacity-40"
+                      className="size-4 rounded-full border-line disabled:opacity-40"
                     />
                     {category.name}
                   </span>
@@ -181,7 +168,7 @@ export function LeadForm({ csrfToken }: { csrfToken: string }) {
         </div>
       </fieldset>
 
-      <Button type="submit" disabled={submitting || selected.length === 0}>
+      <Button type="submit" disabled={submitting || !categoryId}>
         {submitting ? "Gönderiliyor…" : "Başvuruyu gönder"}
       </Button>
     </form>

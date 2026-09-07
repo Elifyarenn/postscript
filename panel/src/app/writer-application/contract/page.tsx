@@ -1,4 +1,4 @@
-﻿import { and, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users, writerApplications } from "@/db/schema";
 import { requireSession } from "@/lib/auth/guard";
@@ -11,7 +11,7 @@ import { Alert, Card, PageHeader } from "@/components/ui";
 import { AgreementAcceptForm } from "@/app/writer/agreement/accept-form";
 import { signApplicationContractAction } from "../actions";
 
-export const metadata = { title: "Yazar sÃ¶zleÅŸmesi" };
+export const metadata = { title: "Yazar sözleşmesi" };
 
 /**
  * The contract an approved applicant signs. Only the owner of an application
@@ -43,20 +43,20 @@ export default async function WriterApplicationContractPage({
 
   let error: string | null = null;
   if (!application) {
-    error = "BaÅŸvuru bulunamadÄ±.";
+    error = "Başvuru bulunamadı.";
   } else if (application.userId !== context.user.id) {
-    error = "Bu baÅŸvuru size ait deÄŸil.";
+    error = "Bu başvuru size ait değil.";
   } else if (application.status !== "admin_approved") {
-    error = "Bu baÅŸvurunun sÃ¶zleÅŸmesi henÃ¼z imzalanmaya hazÄ±r deÄŸil.";
+    error = "Bu başvurunun sözleşmesi henüz imzalanmaya hazır değil.";
   } else if (profile.role !== "user") {
-    error = "Zaten yazar veya Ã¼zeri bir role sahipsiniz.";
+    error = "Zaten yazar veya üzeri bir role sahipsiniz.";
   }
 
   let rendered: { html: string; hash: string; version: number; versionId: string } | null = null;
   if (!error) {
     const current = await getCurrentAgreement();
     if (!current) {
-      error = "YayÄ±nlanmÄ±ÅŸ bir Ã§erÃ§eve sÃ¶zleÅŸme yok. YÃ¶neticiye bildirin.";
+      error = "Yayınlanmış bir çerçeve sözleşme yok. Yöneticiye bildirin.";
     } else {
       try {
         const preview = await renderAgreementForWriter(profile);
@@ -70,7 +70,7 @@ export default async function WriterApplicationContractPage({
         error =
           caught instanceof AgreementRenderError
             ? caught.message
-            : "SÃ¶zleÅŸme ÅŸu anda gÃ¶sterilemiyor.";
+            : "Sözleşme şu anda gösterilemiyor.";
       }
     }
   }
@@ -78,20 +78,20 @@ export default async function WriterApplicationContractPage({
   return (
     <PanelShell user={context.user} area={nav.area} groups={nav.groups}>
       <PageHeader
-        title="Yazar sÃ¶zleÅŸmesi"
-        description="BaÅŸvurunuz onaylandÄ±; yazar olmanÄ±n son adÄ±mÄ± bu sÃ¶zleÅŸmeyi imzalamak."
+        title="Yazar sözleşmesi"
+        description="Başvurunuz onaylandı; yazar olmanın son adımı bu sözleşmeyi imzalamak."
       />
 
       <div className="space-y-6">
         {error ? (
-          <Alert tone="danger" title="SÃ¶zleÅŸme imzalanamÄ±yor">
+          <Alert tone="danger" title="Sözleşme imzalanamıyor">
             {error}
           </Alert>
         ) : rendered ? (
           <Card>
-            <h2 className="mb-1 font-serif text-lg">SÃ¼rÃ¼m {rendered.version}</h2>
+            <h2 className="mb-1 font-serif text-lg">Sürüm {rendered.version}</h2>
             <p className="mb-4 text-xs text-muted">
-              Size gÃ¶sterilen metnin Ã¶zeti (sha256):{" "}
+              Size gösterilen metnin özeti (sha256):{" "}
               <code className="break-all">{rendered.hash}</code>
             </p>
 
