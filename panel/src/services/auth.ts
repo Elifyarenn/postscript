@@ -53,6 +53,10 @@ export const passwordResetSchema = z.strictObject({
   password: z.string().min(1),
 });
 
+export const changeEmailSchema = z.strictObject({
+  newEmail: z.email("Geçerli bir e-posta adresi girin.").max(254),
+});
+
 export function normaliseEmail(email: string): string {
   return email.trim().toLowerCase();
 }
@@ -139,7 +143,7 @@ export async function register(
 
 async function issueEmailToken(
   userId: string,
-  type: "verify_email" | "reset_password",
+  type: "verify_email" | "reset_password" | "change_email",
   ttlMs: number,
 ): Promise<string> {
   // Any earlier token of the same kind is spent, so only the newest link works
@@ -160,7 +164,7 @@ async function issueEmailToken(
 
 async function consumeEmailToken(
   token: string,
-  type: "verify_email" | "reset_password",
+  type: "verify_email" | "reset_password" | "change_email",
 ): Promise<string> {
   const tokenHash = hashToken(token, env().SESSION_SECRET);
   const rows = await db
@@ -231,6 +235,117 @@ export async function resendVerificationEmail(userId: string): Promise<void> {
   const url = `${env().APP_URL}/verify-email?token=${encodeURIComponent(token)}`;
   const message = templates.verifyEmail({ displayName: user.displayName, url });
   await sendMail({ to: user.email, subject: message.subject, text: message.text });
+}
+
+/* ------------------------------------------------------------------ */
+/* E-mail change                                                       */
+/* ------------------------------------------------------------------ */
+
+const CHANGE_EMAIL_TTL_MS = 24 * 60 * 60_000;
+
+/**
+ * Asks to switch the account to a new address. The address is only stored as
+ * pending until the owner proves they control it by following the link that is
+ * sent to it. The existing, already-verified address stays live until then, so
+ * a change request can never lock the owner out of the account.
+ */
+export async function requestEmailChange(
+  userId: string,
+  rawInput: unknown,
+  meta: RequestMeta,
+): Promise<void> {
+  const parsed = changeEmailSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    throw badRequest("E-posta adresi geçersiz.", z.flattenError(parsed.error).fieldErrors);
+  }
+
+  const newEmail = normaliseEmail(parsed.data.newEmail);
+  const rows = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  const user = rows[0];
+  if (!user) throw notFound();
+  if (user.emailVerifiedAt === null) {
+    throw forbidden("Önce mevcut e-posta adresinizi doğrulamanız gerekiyor.");
+  }
+  if (newEmail === user.email) throw conflict("Bu adres zaten kullanıcı adresiniz.");
+
+  // The new address must not belong to any other live account
+  const taken = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(eq(users.email, newEmail), isNull(users.deletedAt)))
+    .limit(1);
+  if (taken.length > 0) throw conflict("Bu e-posta adresi zaten kayıtlı.");
+
+  // Throttled against the last change link, like the verification resend
+  const recent = await db
+    .select({ createdAt: emailTokens.createdAt })
+    .from(emailTokens)
+    .where(and(eq(emailTokens.userId, user.id), eq(emailTokens.type, "change_email")))
+    .orderBy(desc(emailTokens.createdAt))
+    .limit(1);
+
+  const last = recent[0]?.createdAt;
+  if (last && Date.now() - last.getTime() < RESEND_INTERVAL_MS) {
+    const wait = Math.ceil((RESEND_INTERVAL_MS - (Date.now() - last.getTime())) / 1000);
+    throw rateLimited(`Yeni bağlantı istemek için ${wait} saniye bekleyin.`);
+  }
+
+  await db
+    .update(users)
+    .set({ pendingEmail: newEmail, updatedAt: new Date() })
+    .where(eq(users.id, user.id));
+
+  const token = await issueEmailToken(user.id, "change_email", CHANGE_EMAIL_TTL_MS);
+  const url = `${env().APP_URL}/verify-email/change?token=${encodeURIComponent(token)}`;
+  const message = templates.changeEmail({ displayName: user.displayName, newEmail, url });
+  await sendMail({ to: newEmail, subject: message.subject, text: message.text });
+
+  await writeAudit({
+    actorId: userId,
+    action: "user.email_change_requested",
+    entityType: "users",
+    entityId: userId,
+    before: { email: user.email },
+    after: { pendingEmail: newEmail },
+    ip: meta.ip,
+  });
+}
+
+/**
+ * Completes the swap after the owner follows the link sent to the new address.
+ * The pending address becomes the live one, is marked verified, and every other
+ * session is dropped so the change is felt everywhere at once.
+ */
+export async function confirmEmailChange(token: string, meta: RequestMeta): Promise<User> {
+  const userId = await consumeEmailToken(token, "change_email");
+
+  const rows = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  const user = rows[0];
+  if (!user) throw notFound();
+  if (!user.pendingEmail) throw badRequest("Bu bağlantı için bekleyen bir adres yok.");
+
+  const [updated] = await db
+    .update(users)
+    .set({
+      email: user.pendingEmail,
+      pendingEmail: null,
+      emailVerifiedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId))
+    .returning();
+
+  await writeAudit({
+    actorId: userId,
+    action: "user.email_changed",
+    entityType: "users",
+    entityId: userId,
+    before: { email: user.email },
+    after: { email: updated!.email },
+    ip: meta.ip,
+  });
+
+  return updated!;
 }
 
 /* ------------------------------------------------------------------ */

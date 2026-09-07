@@ -6,11 +6,13 @@
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { emailTokens, users } from "@/db/schema";
+import { emailTokens, users, type User } from "@/db/schema";
 import { db, type Database } from "@/db/client";
 import {
   changePassword,
   register,
+  requestEmailChange,
+  confirmEmailChange,
   requestPasswordReset,
   resendVerificationEmail,
   resetPassword,
@@ -21,7 +23,7 @@ import { updateProfile } from "@/services/users";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import { isAppError } from "@/lib/errors";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
-import { actorOf, createUser, noMeta, TEST_PASSWORD } from "../helpers/factories";
+import { actorOf, createUser, noMeta, reloadUser, TEST_PASSWORD } from "../helpers/factories";
 
 let database: Database;
 const mailbox = new MemoryMailAdapter();
@@ -261,6 +263,75 @@ describe("password reset", () => {
 
     const error = await captureError(resetPassword({ token: token!, password: "kisa" }, noMeta));
     expect(error.status).toBe(400);
+  });
+});
+
+describe("e-mail change", () => {
+  /** Requests a change and returns the link's token for a fresh verified user. */
+  async function requestChangeFor(
+    email: string,
+    newEmail: string,
+  ): Promise<{ user: User; token: string }> {
+    const user = await createUser({ email });
+    await requestEmailChange(user.id, { newEmail }, noMeta);
+    const token = /token=([^\s]+)/.exec(mailbox.lastTo(newEmail)?.text ?? "")?.[1];
+    expect(token).toBeDefined();
+    return { user, token: token! };
+  }
+
+  it("keeps the live address until the new one is confirmed", async () => {
+    const { user } = await requestChangeFor("before@example.com", "after@example.com");
+
+    // The link went to the new address, but the live address has not changed
+    expect(mailbox.lastTo("after@example.com")?.subject).toContain("doğrulayın");
+    const pending = await reloadUser(user.id);
+    expect(pending.email).toBe("before@example.com");
+    expect(pending.pendingEmail).toBe("after@example.com");
+  });
+
+  it("swaps the address and clears the pending one once the link is used", async () => {
+    const { user, token } = await requestChangeFor("swap@example.com", "swapped@example.com");
+
+    const updated = await confirmEmailChange(token, noMeta);
+    expect(updated.email).toBe("swapped@example.com");
+    expect(updated.pendingEmail).toBeNull();
+    expect(updated.emailVerifiedAt).not.toBeNull();
+  });
+
+  it("burns the token so the link is single use", async () => {
+    const { token } = await requestChangeFor("single@example.com", "once@example.com");
+    await confirmEmailChange(token, noMeta);
+
+    const reuse = await captureError(confirmEmailChange(token, noMeta));
+    expect(reuse.status).toBe(400);
+  });
+
+  it("refuses a change to an address already in use", async () => {
+    const user = await createUser({ email: "owner@example.com" });
+    await createUser({ email: "taken@example.com" });
+
+    const error = await captureError(
+      requestEmailChange(user.id, { newEmail: "taken@example.com" }, noMeta),
+    );
+    expect(error.status).toBe(409);
+  });
+
+  it("refuses a change to the current address", async () => {
+    const user = await createUser({ email: "same@example.com" });
+
+    const error = await captureError(
+      requestEmailChange(user.id, { newEmail: "same@example.com" }, noMeta),
+    );
+    expect(error.status).toBe(409);
+  });
+
+  it("refuses a change from an account whose address is not verified", async () => {
+    const unverified = await createUser({ email: "unverified-change@example.com", emailVerified: false });
+
+    const error = await captureError(
+      requestEmailChange(unverified.id, { newEmail: "new@example.com" }, noMeta),
+    );
+    expect(error.status).toBe(403);
   });
 });
 

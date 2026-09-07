@@ -35,6 +35,24 @@ export function resetPassword(input: { displayName: string; url: string }): Temp
   };
 }
 
+export function changeEmail(input: {
+  displayName: string;
+  newEmail: string;
+  url: string;
+}): Template {
+  return {
+    subject: "postscript · E-posta adresinizi doğrulayın",
+    text:
+      `Merhaba ${input.displayName},\n\n` +
+      `Hesabınızın e-posta adresini ${input.newEmail} adresine değiştirmek istediniz. ` +
+      "Bu adresi doğrulamak için aşağıdaki bağlantıyı kullanın:\n" +
+      `${input.url}\n\n` +
+      "Bağlantı 24 saat geçerlidir. Bu isteği siz yapmadıysanız bu iletiyi yok sayabilirsiniz; " +
+      "adresiniz değişmez." +
+      signature,
+  };
+}
+
 export function promotedToWriter(input: { displayName: string; url: string }): Template {
   return {
     subject: "postscript · Yazar olarak yetkilendirildiniz",

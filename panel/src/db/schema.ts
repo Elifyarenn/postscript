@@ -35,7 +35,11 @@ export const writerStatusEnum = pgEnum("writer_status", [
   "suspended",
 ]);
 
-export const emailTokenTypeEnum = pgEnum("email_token_type", ["verify_email", "reset_password"]);
+export const emailTokenTypeEnum = pgEnum("email_token_type", [
+  "verify_email",
+  "reset_password",
+  "change_email",
+]);
 
 export const announcementAudienceEnum = pgEnum("announcement_audience", [
   "writers",
@@ -130,6 +134,11 @@ export const users = pgTable(
     /** Always stored lowercase and trimmed; normalisation happens in the service layer. */
     email: text("email").notNull(),
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+    /**
+     * The address a user is switching to, held here until the change link
+     * sent to it is followed. Cleared once the swap happens.
+     */
+    pendingEmail: text("pending_email"),
     passwordHash: text("password_hash").notNull(),
 
     displayName: text("display_name").notNull(),

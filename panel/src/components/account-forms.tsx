@@ -5,10 +5,11 @@
  * place and are handed the data they need.
  */
 import { PanelForm, ActionButton } from "./form";
-import { Card, EmptyState, Field, Input, Table, Td, Textarea, Th } from "./ui";
+import { Card, EmptyState, Field, Input, Table, Td, Textarea, Th, Alert } from "./ui";
 import { formatDateTime } from "@/lib/utils";
 import {
   changePasswordAction,
+  requestEmailChangeAction,
   revokeOtherSessionsAction,
   revokeSessionAction,
   updateProfileAction,
@@ -105,6 +106,48 @@ export function ProfileCard({
               ))}
             </fieldset>
           </>
+      </PanelForm>
+    </Card>
+  );
+}
+
+export function EmailCard({
+  csrfToken,
+  email,
+  pendingEmail,
+}: {
+  csrfToken: string;
+  email: string;
+  pendingEmail: string | null;
+}) {
+  return (
+    <Card>
+      <h2 className="mb-4 font-serif text-lg">E-posta adresi</h2>
+
+      {pendingEmail && (
+        <div className="mb-4">
+          <Alert tone="info">
+            <p>
+              Yeni adresinize (<strong>{pendingEmail}</strong>) bir doğrulama bağlantısı gönderildi.
+              Bağlantıyı açana kadar adresiniz değişmez.
+            </p>
+          </Alert>
+        </div>
+      )}
+
+      <p className="mb-4 text-sm text-muted">
+        Giriş adresiniz: <strong>{email}</strong>. Değiştirmek için yeni adresinizi yazın;
+        doğrulama bağlantısı o adrese gönderilir.
+      </p>
+
+      <PanelForm
+        action={requestEmailChangeAction}
+        csrfToken={csrfToken}
+        submitLabel="Değişiklik bağlantısı gönder"
+      >
+        <Field label="Yeni e-posta adresi" htmlFor="newEmail">
+          <Input id="newEmail" name="newEmail" type="email" autoComplete="email" required maxLength={254} />
+        </Field>
       </PanelForm>
     </Card>
   );

@@ -211,6 +211,19 @@ işaretlenir; üçü de sağlanmadan düğme açılmaz. Sunucu aynı fonksiyonla
 (`src/lib/password-rules.ts`) yeniden çalıştırır ve ayrıca gömülü 10.000 yaygın
 şifre listesine bakar.
 
+### E-posta değiştirme
+
+Kullanıcı hesap sayfasından yeni bir adres isteyebilir. Yeni adrese bir doğrulama
+bağlantısı gider ve adres yalnızca bağlantı tıklanınca değişir; o ana kadar mevcut
+doğrulanmış adres canlı kalır, böylece istek asla sahibini hesaptan kilitleyemez.
+Onayda eski oturumların tümü kapatılır (D-036).
+
+### Güvenlik başlıkları
+
+`next.config.ts` her yanıta `X-Content-Type-Options`, `X-Frame-Options`,
+`Referrer-Policy`, `Content-Security-Policy` ve `X-Permitted-Cross-Domain-Policies`
+ekler ve `X-Powered-By` üstbilgisini kapatır (`poweredByHeader: false`).
+
 ---
 
 ## Mimari
@@ -367,7 +380,7 @@ panel) tek makinede ayağa kaldırır.
 ## Test
 
 ```bash
-pnpm test        # 157 birim + entegrasyon testi
+pnpm test        # 163 birim + entegrasyon testi
 pnpm test:e2e    # 18 uçtan uca senaryo
 ```
 

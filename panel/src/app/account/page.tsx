@@ -7,7 +7,7 @@ import { readCsrfToken } from "@/lib/csrf";
 import { navForRole, PanelShell } from "@/components/shell";
 import { ActionButton } from "@/components/form";
 import { Alert, Card, PageHeader } from "@/components/ui";
-import { PasswordCard, ProfileCard, SessionsCard } from "@/components/account-forms";
+import { PasswordCard, ProfileCard, SessionsCard, EmailCard } from "@/components/account-forms";
 import { formatDate } from "@/lib/utils";
 import { cancelDeletionAction, requestDeletionAction } from "./actions";
 
@@ -20,7 +20,7 @@ export const metadata = { title: "Hesabım" };
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ verified?: string }>;
+  searchParams: Promise<{ verified?: string; emailChanged?: string }>;
 }) {
   const context = await requireSession();
   const csrfToken = (await readCsrfToken()) ?? "";
@@ -48,6 +48,12 @@ export default async function AccountPage({
           </Alert>
         )}
 
+        {params.emailChanged && (
+          <Alert tone="success" title="E-posta adresi güncellendi">
+            E-posta adresiniz değiştirildi ve doğrulandı.
+          </Alert>
+        )}
+
         {profile.role === "user" && (
           <Alert tone="info" title="Yazar olmak">
             Yazarlık yetkisini yalnızca yönetici verir; başvuru formu yoktur. Yetkilendirme için
@@ -60,6 +66,12 @@ export default async function AccountPage({
           user={context.user}
           bio={profile.bio}
           socialLinks={profile.socialLinks ?? null}
+        />
+
+        <EmailCard
+          csrfToken={csrfToken}
+          email={profile.email}
+          pendingEmail={profile.pendingEmail}
         />
 
         <PasswordCard csrfToken={csrfToken} />

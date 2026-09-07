@@ -13,6 +13,7 @@ import {
   resetPassword,
   verifyCredentials,
   verifyEmail,
+  confirmEmailChange,
 } from "@/services/auth";
 import {
   createSession,
@@ -114,6 +115,29 @@ export async function verifyEmailAction(
     // ?verified=1 is what prints the welcome banner on the far side
     destination =
       context?.user.id === user.id ? `${homeFor(user.role)}?verified=1` : "/login?verified=1";
+  });
+
+  if (destination) redirect(destination);
+  return result;
+}
+
+export async function confirmEmailChangeAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  let destination: string | null = null;
+
+  const result = await runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const meta = await requestMetadata();
+
+    const user = await confirmEmailChange(text(formData, "token"), meta);
+    // The address changed, so every other session must go (a reset does the same)
+    await revokeAllSessions(user.id);
+
+    // Whoever is still signed in on this browser goes straight home
+    const context = await getAuthContext();
+    destination = context?.user.id === user.id ? `${homeFor(user.role)}?emailChanged=1` : "/login";
   });
 
   if (destination) redirect(destination);

@@ -520,3 +520,20 @@ için editör yetkisi arıyor, okuyucuya kapak servis etmek o kuralı gevşetmek
 olurdu. Geri çekilmiş yazı okuyucuya 410 yerine "bu yazı geri çekildi" uyarısıyla
 gösteriliyor; 410 sözleşmesi public API'nin sözleşmesidir, ekranda insana
 söylenen cümle daha yararlı.
+
+---
+
+## D-036 — E-posta değiştirme: bekleyen adres, değişim bağlantısıyla onaylanır
+
+**Karar:** Kullanıcı yeni bir adres ister; `users.pending_email` alanına yazılır ve
+yeni adrese bir `change_email` türünde doğrulama bağlantısı gönderilir. Bağlantı
+tıklanınca adres takas edilir, `pending_email` temizlenir, adres doğrulanmış
+sayılır ve tüm oturumlar kapatılır. O ana kadar mevcut doğrulanmış adres canlı
+kalır; `email_tokens` tablosuna yeni adres yazılmaz, çünkü tablo yalnızca
+`tokenHash` taşır — adres `users.pending_email`'de durur.
+
+**Gerekçe:** Yeni adrese kanıt yalnızca o adrese giden bağlantıyla yapılır; adresi
+değiştirebilmek için sahibin onu kontrol ettiğini göstermesi gerekir. Mevcut adres
+değişim onaylanana dek canlı kaldığı için, istek yanlış bir adrese giderse bile
+hesap kaybolmaz. Oturumların kapatılması şifre sıfırlamayla aynı ilkedir: kimlik
+değiştiğinde eski kanıtlanmış oturumların geçerliliğini yitirmesi gerekir.
