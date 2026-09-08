@@ -9,7 +9,7 @@ import { env } from "@/lib/env";
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = env().APP_URL.replace(/\/+$/, "");
+  const baseUrl = env().SITE_URL.replace(/\/+$/, "");
   const now = new Date();
 
   const [articleRows, issueRows] = await Promise.all([

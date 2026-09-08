@@ -784,6 +784,54 @@ marka bütünlüğünü arama sonucunda kurmazdı.
 
 ---
 
+## D-047 — Panel robots.txt halka açıldı
+
+**Karar:** D-045'in "panelin kendi `public/robots.txt` (`Disallow: /`) uygulamayı
+kapalı tutar" kararı güncellendi. `public/robots.txt` silindi; yerine Next.js
+standardı `src/app/robots.ts` eklendi ve `/robots.txt` artık `User-Agent: *`
++ `Allow: /` üretiyor, `Sitemap: https://www.postscriptmag.com/sitemap.xml`
+satırını taşıyor. Çakışmayı önlemek için App Router'ın metadata route'u tercih
+edildi (statik `public/robots.txt` ile aynı adres için çakışır).
+
+**Gerekçe:** Ürün sahibi Googlebot dahil tüm tarayıcıların siteyi tamamen
+taramasına ve sitemap adresinin (ürün sahibinin belirttiği `www`'lu adres)
+robots dosyasında geçmesine karar verdi. Kapsam dışı bırakılan iki nokta:
+(1) kök layout hâlâ `robots: noindex, nofollow` meta'sı yayıyor (D-035) —
+robots.txt yalnızca taramaya izin verir, sayfaların dizine girmesini engelleyen
+`noindex` meta'sı kaldırılmadı; (2) sitemap adresi `www.postscriptmag.com`
+olarak yazıldı, landing canonical'ı `postscriptmag.com` (www'suz) — `www`/www'suz
+kanonikleştirme dağıtımda netleştirilecek.
+
+---
+
+## D-048 — Sayfalar dizine açıldı; canonical host `www` olarak sabitlendi
+
+**Karar:** D-047'nin iki açık noktası kapandı.
+
+1. **`noindex` meta'sı.** Kök layout (`src/app/layout.tsx`) artık üretimde
+   `noindex, nofollow` yaymıyor; yalnızca dev/test derlemelerinde yayıyor
+   (`process.env.NODE_ENV !== "production"`). NODE_ENV derleme başına sabit
+   olduğu için çalışma zamanında değişmez. Sayfalar üretimde dizine girebilir.
+   Aynı düzenlemede title şablonu marka standardına bağlandı (D-046 kural 1):
+   varsayılan `PostScript Dergi`, kalıp `PostScript Dergi - %s`; varsayılan
+   description markayı içeriyor.
+
+2. **`www` kanonikleştirme.** Kanonik host `https://www.postscriptmag.com`
+   olarak sabitlendi ve her yerde birebir kullanılıyor: landing `canonical`,
+   `og:url`, JSON-LD `@id`/`url` ve CTA bağlantıları; kök `robots.txt` ve
+   `sitemap.xml`; panelin `app/robots.ts` ve `app/sitemap.ts`. Panelin sitemap
+   ve robots'u panel origin'ini (APP_URL) sızdırmamak için yeni `SITE_URL`
+   ortam değişkenini kullanır (varsayılan `https://www.postscriptmag.com`);
+   e-posta ve CSRF bağlantıları `APP_URL`'den okumaya devam eder.
+
+**Gerekçe:** Sayfaların dizine girmesi için D-035'in paneli "noindex + oturum
+kapılı" tutan kararı bu ölçüde güncellendi; oturum kapısı duruyor (otorite dışı
+sayfalar hâlâ girişe yönlenir). Ürün sahibi sitemap ve canonical'ların `www`
+adresinde birebir örtüşmesini istedi — farklı host'larda hem canonical hem
+sitemap tutarsızlığı sıralama sinyallerini böler.
+
+---
+
 ## D-047 — Kimlik belgesi adımı iptal edildi
 
 **Karar:** Kimlik belgesi toplama adımı (D-009) ürün kapsamından çıkarıldı.

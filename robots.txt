@@ -1,4 +1,4 @@
-User-agent: *
+﻿User-agent: *
 Allow: /
 
-Sitemap: https://postscriptmag.com/sitemap.xml
+Sitemap: https://www.postscriptmag.com/sitemap.xml

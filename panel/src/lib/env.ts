@@ -15,6 +15,9 @@ const booleanish = z
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   APP_URL: z.string().url().default("http://localhost:3001"),
+  // Canonical host of the public site; sitemap and robots reference it, so the
+  // panel's own origin (APP_URL) never leaks into crawler-facing URLs.
+  SITE_URL: z.string().url().default("https://www.postscriptmag.com"),
 
   DATABASE_URL: z.string().min(1),
 
