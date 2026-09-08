@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { readCsrfToken } from "@/lib/csrf";
+import { WRITER_AREAS } from "@/lib/writer-areas";
 import { Alert, Card, Field, Input } from "@/components/ui";
 import { PasswordField } from "@/components/password-field";
 import { PanelForm } from "@/components/form";
@@ -43,29 +44,36 @@ export default async function WriterRegisterPage() {
             <Input id="email" name="email" type="email" autoComplete="email" required />
           </Field>
 
-          <PasswordField />
+          <fieldset>
+            <legend className="mb-1.5 text-sm font-medium">
+              Alanınız <span className="text-muted">(yalnızca bir alan)</span>
+            </legend>
+            <div className="grid gap-2">
+              {WRITER_AREAS.map((area) => (
+                <label
+                  key={area}
+                  className="flex cursor-pointer items-center gap-2.5 rounded-md border border-line bg-surface px-3 py-2 text-sm hover:bg-paper"
+                >
+                  <input
+                    type="radio"
+                    name="area"
+                    value={area}
+                    required
+                    className="size-4 rounded-full border-line"
+                  />
+                  {area}
+                </label>
+              ))}
+            </div>
+          </fieldset>
 
-          <label className="flex items-start gap-2.5 text-sm">
-            <input
-              type="checkbox"
-              name="kvkkConsent"
-              required
-              className="mt-0.5 size-4 rounded border-line"
-            />
-            <span>
-              <Link href="/kvkk" className="text-accent hover:underline">
-                KVKK aydınlatma metnini
-              </Link>{" "}
-              okudum ve kişisel verilerimin işlenmesini kabul ediyorum.
-            </span>
-          </label>
+          <PasswordField />
         </>
       </PanelForm>
 
       <div className="mt-5">
         <Alert tone="info">
-          Yazar hesabınız onaylandıktan sonra çerçeve sözleşmeyi onaylayarak tüm yazar
-          sayfalarınızı açarsınız.
+          Yazar hesabınız onaylandıktan sonra yazar sayfalarınız doğrudan açılır.
         </Alert>
       </div>
 

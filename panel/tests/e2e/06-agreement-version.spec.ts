@@ -1,9 +1,7 @@
 /**
- * §13.2 — publishing a new agreement version drops every active writer back to
- * `pending_agreement` until they accept it.
- *
- * This one runs last, because it deliberately locks the writer accounts the
- * earlier scenarios rely on.
+ * §13.2 — publishing a new agreement version makes it the current one. It no
+ * longer locks writers: the contract is handled outside the panel for now, so
+ * writers keep working (D-050).
  */
 import { expect, test } from "@playwright/test";
 import { readFile, writeFile } from "node:fs/promises";
@@ -18,7 +16,7 @@ const TEMPLATE = path.join(
 
 test.describe.configure({ mode: "serial" });
 
-test("a new version locks active writers until they accept it again", async ({ page }) => {
+test("a new version becomes current without locking writers", async ({ page }) => {
   await loginElevated(page, "admin", SEED.admin);
 
   await page.goto("/admin/agreements");
@@ -52,34 +50,13 @@ test("a new version locks active writers until they accept it again", async ({ p
   await expect(page.getByRole("cell", { name: "v2" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "güncel" })).toBeVisible();
 
-  // The report shows the writers waiting again
-  await expect(page.getByText(/Bekleyenler \([1-9]/)).toBeVisible();
-
   await logout(page);
 
-  /* ---------- the writer is locked out until they accept ---------- */
+  /* ---------- the writer is NOT locked by the new version ---------- */
 
   await submitLogin(page, SEED.writer);
   await page.waitForURL("**/writer**");
-  await expect(page.getByText("Yazar sayfalarınız kilitli")).toBeVisible();
-
-  await page.goto("/writer/articles");
-  await page.waitForURL("**/writer/agreement");
-
-  await page.locator("div.overflow-y-auto").first().evaluate((element) => {
-    element.scrollTop = element.scrollHeight;
-  });
-  await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: /kabul ediyorum/i }).click();
-  // The acceptance form is replaced by the accepted view; that swap is the
-  // outcome, and the record it leaves behind is what matters
-  await expect(page.getByText("Bu sürümü onayladınız")).toBeVisible();
-  await expect(page.getByRole("link", { name: "İndir" }).first()).toBeVisible();
-
-  // The acceptance history keeps the earlier version, marked as superseded
-  await page.goto("/writer/agreement");
-  await expect(page.getByText("Yeni sürümle değiştirildi")).toBeVisible();
-
+  await expect(page.getByText("Yazar sayfalarınız kilitli")).toHaveCount(0);
   await page.goto("/writer/articles");
   await expect(page).toHaveURL(/\/writer\/articles$/);
 });

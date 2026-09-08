@@ -17,6 +17,7 @@ import { checkPasswordPolicy, hashPassword, isPwned, verifyPassword } from "@/li
 import { clearAttempts, consumeAttempt, currentAttemptCount, failureDelayMs } from "@/lib/rate-limit";
 import { writeAudit } from "@/lib/audit";
 import { isAdult, parseIsoDate } from "@/lib/age";
+import { isWriterArea } from "@/lib/writer-areas";
 import { sendMail } from "@/lib/mail/transport";
 import { getAccessMode } from "./access-mode";
 import { isEntryAllowed } from "@/lib/access-mode";
@@ -48,14 +49,15 @@ export const registerSchema = z.strictObject({
  * has no closed-entry gate: pre-launch the magazine only onboards writers this
  * way (D-049). The account is created with `writer_intent_at` set, then the
  * address is verified by e-mail — and verification auto-approves the account
- * to writer, without an editor/admin review step.
+ * to an active writer, without an editor/admin review step. Neither KVKK
+ * consent nor a contract is collected for now (D-050).
  */
 export const writerRegisterSchema = z.strictObject({
   email: z.email("Geçerli bir e-posta adresi girin.").max(254),
   password: z.string().min(1, "Şifre gerekli."),
   displayName: z.string().trim().min(2, "Ad en az 2 karakter olmalı.").max(80),
   birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Tarih YYYY-AA-GG biçiminde olmalı."),
-  kvkkConsent: z.literal(true, { message: "KVKK aydınlatma metnini onaylamanız gerekiyor." }),
+  area: z.string().trim().min(1, "Bir alan seçmelisiniz.").max(120),
 });
 
 export const loginSchema = z.strictObject({
@@ -199,6 +201,10 @@ export async function registerWriterCandidate(
     throw badRequest(message, { birthDate: [message] });
   }
 
+  if (!isWriterArea(input.area)) {
+    throw badRequest("Seçilen alan geçersiz.", { area: ["Seçilen alan geçersiz."] });
+  }
+
   const email = normaliseEmail(input.email);
   const existing = await db
     .select({ id: users.id })
@@ -216,10 +222,9 @@ export async function registerWriterCandidate(
       passwordHash,
       displayName: input.displayName,
       birthDate: input.birthDate,
+      writerArea: input.area,
       // The server decides the role. It is never read from the request.
       role: "user",
-      kvkkConsentAt: new Date(),
-      kvkkConsentVersion: await currentKvkkVersion(),
       writerIntentAt: new Date(),
     })
     .returning();
@@ -235,7 +240,7 @@ export async function registerWriterCandidate(
     action: "user.writer_registered",
     entityType: "users",
     entityId: user!.id,
-    after: { email, displayName: user!.displayName, birthDate: input.birthDate },
+    after: { email, displayName: user!.displayName, birthDate: input.birthDate, area: input.area },
     ip: meta.ip,
   });
 

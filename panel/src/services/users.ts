@@ -18,8 +18,6 @@ import { env } from "@/lib/env";
 import { sendMail } from "@/lib/mail/transport";
 import { slugify } from "@/lib/slug";
 import * as templates from "@emails/templates";
-import { AgreementRenderError } from "@/lib/agreement/render";
-import { renderAgreementForWriter } from "./agreements";
 import type { RequestMeta } from "./auth";
 
 /* ------------------------------------------------------------------ */
@@ -30,19 +28,13 @@ export type EligibilityProblem =
   | "email_not_verified"
   | "birth_date_missing"
   | "under_age"
-  | "kvkk_consent_missing"
-  | "banned"
-  | "no_agreement_version"
-  | "agreement_not_renderable";
+  | "banned";
 
 const PROBLEM_LABELS: Record<EligibilityProblem, string> = {
   email_not_verified: "E-posta adresi doğrulanmamış.",
   birth_date_missing: "Doğum tarihi girilmemiş.",
   under_age: `Kullanıcı ${MINIMUM_WRITER_AGE} yaşından küçük.`,
-  kvkk_consent_missing: "KVKK onayı alınmamış.",
   banned: "Kullanıcı yasaklı.",
-  no_agreement_version: "Yayınlanmış bir sözleşme sürümü yok.",
-  agreement_not_renderable: "Sözleşme bu kullanıcı için render edilemiyor.",
 };
 
 export type Eligibility = {
@@ -55,8 +47,8 @@ export type Eligibility = {
 /**
  * The preconditions that can be judged from the user row alone, in one place so
  * the screen and the mutation cannot drift apart. `at` is injectable so the age
- * rule is testable. The contract render check is asynchronous and lives in
- * `checkPromotionReadiness`.
+ * rule is testable. KVKK consent and a published contract are not required for
+ * now: they will be handled outside the panel later (D-050).
  */
 export function checkWriterEligibility(user: User, at: Date = new Date()): Eligibility {
   const problems: EligibilityProblem[] = [];
@@ -69,7 +61,6 @@ export function checkWriterEligibility(user: User, at: Date = new Date()): Eligi
     problems.push("under_age");
   }
 
-  if (!user.kvkkConsentAt) problems.push("kvkk_consent_missing");
   if (user.isBanned) problems.push("banned");
 
   return {
@@ -142,33 +133,15 @@ export async function listUsers(actor: Actor, filters: UserListFilters = {}) {
 /* ------------------------------------------------------------------ */
 
 /**
- * The full precondition check, including the one that needs the database and
- * the contract template: can this user's contract actually be rendered?
- *
- * Returning the reason matters — "sözleşme ayarları eksik: dergi.ortak_2" tells
- * an admin exactly what to go and fill in (§6.1).
+ * The full precondition check for a promotion. The contract is not part of it
+ * for now (D-050): a published contract is no longer a prerequisite, so a fresh
+ * system with no contract can still promote writers.
  */
 export async function checkPromotionReadiness(
   user: User,
   at: Date = new Date(),
 ): Promise<Eligibility> {
-  const base = checkWriterEligibility(user, at);
-  const problems = [...base.problems];
-  const messages = [...base.messages];
-
-  try {
-    await renderAgreementForWriter(user);
-  } catch (error) {
-    if (error instanceof AgreementRenderError) {
-      const missingVersion = error.placeholders.includes("agreement.version");
-      problems.push(missingVersion ? "no_agreement_version" : "agreement_not_renderable");
-      messages.push(missingVersion ? PROBLEM_LABELS.no_agreement_version : error.message);
-    } else {
-      throw error;
-    }
-  }
-
-  return { eligible: problems.length === 0, problems, messages };
+  return checkWriterEligibility(user, at);
 }
 
 export async function promoteToWriter(
@@ -192,7 +165,7 @@ export async function promoteToWriter(
 
   const [updated] = await db
     .update(users)
-    .set({ role: "writer", writerStatus: "pending_agreement", updatedAt: new Date() })
+    .set({ role: "writer", writerStatus: "active", updatedAt: new Date() })
     .where(eq(users.id, target.id))
     .returning();
 
@@ -205,7 +178,7 @@ export async function promoteToWriter(
     ip: meta.ip,
   });
 
-  const url = `${env().APP_URL}/writer/agreement`;
+  const url = `${env().APP_URL}/writer`;
   const message = templates.promotedToWriter({ displayName: target.displayName, url });
   await sendMail({ to: target.email, subject: message.subject, text: message.text });
 
@@ -215,10 +188,11 @@ export async function promoteToWriter(
 /**
  * The auto-approval of a writer-registration candidate (D-049). Runs once the
  * candidate's e-mail address is verified: the address proof stands in for the
- * editorial review the old application pipeline needed. The exact same
- * eligibility an admin promotion checks is enforced here — a candidate that
- * cannot be promoted (for example when no contract version is published yet)
- * stays a reader, and the audit trail records why.
+ * editorial review the old application pipeline needed. The same eligibility
+ * an admin promotion checks is enforced here — an underage or unverified
+ * candidate stays a reader, and the audit trail records why. The account
+ * becomes an active writer right away; the contract is handled outside the
+ * panel for now (D-050).
  */
 export async function autoApproveWriterCandidate(
   userId: string,
@@ -243,7 +217,7 @@ export async function autoApproveWriterCandidate(
   const now = new Date();
   const [updated] = await db
     .update(users)
-    .set({ role: "writer", writerStatus: "pending_agreement", updatedAt: now })
+    .set({ role: "writer", writerStatus: "active", updatedAt: now })
     .where(eq(users.id, user.id))
     .returning();
 
@@ -262,11 +236,11 @@ export async function autoApproveWriterCandidate(
     action: "writer_auto_approved",
     entityType: "users",
     entityId: user.id,
-    after: { role: "writer", writerStatus: "pending_agreement" },
+    after: { role: "writer", writerStatus: "active" },
     ip: meta.ip,
   });
 
-  const url = `${env().APP_URL}/writer/agreement`;
+  const url = `${env().APP_URL}/writer`;
   const message = templates.promotedToWriter({ displayName: user.displayName, url });
   await sendMail({ to: user.email, subject: message.subject, text: message.text });
 
@@ -301,7 +275,7 @@ export async function changeRole(
     newRole === "user"
       ? null
       : newRole === "writer"
-        ? (target.writerStatus ?? "pending_agreement")
+        ? (target.writerStatus ?? "active")
         : target.writerStatus;
 
   const [updated] = await db

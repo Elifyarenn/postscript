@@ -63,8 +63,8 @@ export default async function AdminAgreementsPage() {
       <div className="space-y-6">
         <Alert tone="warning" title="Yayınlamanın sonuçları">
           Yeni bir sürüm yayınlandığında önceki onaylar &ldquo;değiştirildi&rdquo; olarak
-          işaretlenir, tüm aktif yazarlar sözleşme bekliyor durumuna düşer, bekleyen Eser
-          Onayları yeni sürüm onaylanana kadar verilemez ve yazarlara e-posta gönderilir.
+          işaretlenir ve bu sürüm güncel sözleşme olur. Yazarlar şu anda sözleşmeyle
+          kilitlenmez; sözleşme ayrıca iletilecek (D-050).
         </Alert>
 
         <Card>
@@ -143,7 +143,7 @@ export default async function AdminAgreementsPage() {
               label="Bu sürümü yayınla"
               variant="primary"
               fields={{ versionId: draft.id }}
-              confirmMessage="Bu sürüm yayınlanacak ve tüm aktif yazarlar yeniden onay verene kadar kilitlenecek. Devam edilsin mi?"
+              confirmMessage="Bu sürüm yayınlanacak ve güncel sözleşme olacak. Devam edilsin mi?"
             />
           </Card>
         ))}

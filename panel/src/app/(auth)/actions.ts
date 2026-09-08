@@ -66,7 +66,7 @@ export async function registerWriterAction(
         password: text(formData, "password"),
         displayName: text(formData, "displayName"),
         birthDate: text(formData, "birthDate"),
-        kvkkConsent: checkbox(formData, "kvkkConsent") as true,
+        area: text(formData, "area"),
       },
       meta,
     );

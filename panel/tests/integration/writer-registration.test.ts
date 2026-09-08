@@ -23,7 +23,7 @@ const validWriter = {
   password: "Cok-Guclu-Sifre-2026",
   displayName: "Yeni Yazar",
   birthDate: "1994-04-12",
-  kvkkConsent: true as const,
+  area: "Sanat & Edebiyat",
 };
 
 /** The reader registration has no birth-date field, so it is a different shape. */
@@ -67,6 +67,9 @@ describe("writer registration (/yazar-basvuru)", () => {
     expect(user.writerIntentAt).not.toBeNull();
     expect(user.birthDate).toBe("1994-04-12");
     expect(user.emailVerifiedAt).toBeNull();
+    // No KVKK consent is collected at registration for now (D-050)
+    expect(user.kvkkConsentAt).toBeNull();
+    expect(user.writerArea).toBe("Sanat & Edebiyat");
     expect(mailbox.lastTo("yeni.yazar@example.com")?.subject).toContain("doğrulayın");
   });
 
@@ -86,6 +89,13 @@ describe("writer registration (/yazar-basvuru)", () => {
     await registerWriterCandidate(validWriter, noMeta);
     const error = await captureError(registerWriterCandidate(validWriter, noMeta));
     expect(error.status).toBe(409);
+  });
+
+  it("refuses an area outside the fixed list", async () => {
+    const error = await captureError(
+      registerWriterCandidate({ ...validWriter, area: "Boyle bir alan yok" }, noMeta),
+    );
+    expect(error.status).toBe(400);
   });
 
   it("is open even while the site is closed, unlike the reader registration", async () => {
@@ -114,7 +124,7 @@ describe("writer auto-approval on e-mail verification", () => {
     const verified = await verifyEmail(verificationToken, noMeta);
     expect(verified.emailVerifiedAt).not.toBeNull();
     expect(verified.role).toBe("writer");
-    expect(verified.writerStatus).toBe("pending_agreement");
+    expect(verified.writerStatus).toBe("active");
 
     const changes = await db
       .select()
@@ -132,14 +142,15 @@ describe("writer auto-approval on e-mail verification", () => {
     expect(verified.writerIntentAt).toBeNull();
   });
 
-  it("does not promote a candidate while no contract is published", async () => {
+  it("promotes even before a contract is published", async () => {
     const { verificationToken } = await registerWriterCandidate(validWriter, noMeta);
-    // No contract setup on purpose: the readiness check fails, so the account
-    // stays a reader instead of being promoted into an unsignable state
+    // No contract setup on purpose: a contract is no longer a prerequisite
+    // (D-050), so the verified candidate still becomes an active writer
     const verified = await verifyEmail(verificationToken, noMeta);
-    expect(verified.role).toBe("user");
+    expect(verified.role).toBe("writer");
+    expect(verified.writerStatus).toBe("active");
 
     const changes = await db.select().from(roleChanges);
-    expect(changes).toHaveLength(0);
+    expect(changes).toHaveLength(1);
   });
 });

@@ -2,8 +2,8 @@
  * §13.2 — the writer promotion rules.
  *
  *  - an account under 18 is refused, and the reason is shown
- *  - an eligible account is promoted, then becomes active by accepting the
- *    framework agreement
+ *  - an eligible account is promoted to an active writer, and can use the
+ *    writer panel right away (no agreement lock, D-050)
  */
 import { expect, test } from "@playwright/test";
 import { loginElevated, logout, SEED, submitLogin } from "./helpers";
@@ -33,15 +33,12 @@ test("refuses to promote someone under eighteen, and says why", async ({ page })
   await expect(page.getByRole("button", { name: "Yazar yap" })).toHaveCount(0);
 });
 
-test("promotes an eligible reader, who then activates by accepting the agreement", async ({
-  page,
-}) => {
+test("promotes an eligible reader, who can use the panel right away", async ({ page }) => {
   await loginElevated(page, "admin", SEED.admin);
 
   await openUser(page, SEED.reader.email);
 
   // §9: every precondition is listed with a tick or a cross
-  await expect(page.getByText("Sözleşme bu kullanıcı için render ediliyor")).toBeVisible();
   await expect(page.getByText("sağlanmadı")).toHaveCount(0);
 
   // and the admin can read the filled contract before promoting
@@ -57,39 +54,14 @@ test("promotes an eligible reader, who then activates by accepting the agreement
 
   await logout(page);
 
-  // The promoted account can reach the writer panel, but it is still locked
+  // The promoted account reaches the writer panel, already active — there is
+  // no contract lock to clear (D-050)
   await submitLogin(page, SEED.reader);
   await page.waitForURL("**/writer**");
-  await expect(page.getByText("Yazar sayfalarınız kilitli")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Merhaba, Kerem Okur" })).toBeVisible();
+  await expect(page.getByText("Yazar sayfalarınız kilitli")).toHaveCount(0);
 
-  // §7.2: the approvals screen is reachable but locked, with the reason shown
-  await page.goto("/writer/approvals");
-  await expect(page.getByText("Onay veremezsiniz")).toBeVisible();
-
-  await page.getByRole("link", { name: "Sözleşmeye git" }).click();
-  await page.waitForURL("**/writer/agreement");
-
-  // The confirm control only wakes up once the text has been read to the end
-  const checkbox = page.getByRole("checkbox");
-  await expect(checkbox).toBeDisabled();
-
-  // The gate watches the last paragraph with an IntersectionObserver, so the
-  // scroll container is the outer box rather than the prose itself
-  await page.locator("div.overflow-y-auto").first().evaluate((element) => {
-    element.scrollTop = element.scrollHeight;
-  });
-  await expect(checkbox).toBeEnabled();
-
-  await checkbox.check();
-  await page.getByRole("button", { name: /kabul ediyorum/i }).click();
-
-  // The acceptance form is replaced by the accepted view; that swap is the
-  // outcome, and the record it leaves behind is what matters
-  await expect(page.getByText("Bu sürümü onayladınız")).toBeVisible();
-  await expect(page.getByRole("link", { name: "İndir" }).first()).toBeVisible();
-
-  // Now the previously locked screen opens, with no reason banner on it
+  // §7.2: the approvals screen is reachable and unlocked
   await page.goto("/writer/approvals");
   await expect(page).toHaveURL(/\/writer\/approvals$/);
-  await expect(page.getByText("Onay veremezsiniz")).toHaveCount(0);
 });

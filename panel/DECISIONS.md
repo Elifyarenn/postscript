@@ -918,3 +918,53 @@ gereken tüm ön koşullar (doğrulanmış adres, 18+, KVKK, yasaklı değil) ko
 Okuyucu kaydının kaldırılması ve yazar kanalının kapalıyken açık kalması,
 yayın öncesi tek amaçlı (yazar + yönetici) giriş ekranı isteğinin sonucudur.
 
+---
+
+## D-050 — Sözleşme ve KVKK şimdilik panel dışında
+
+**Karar:** Yazar kaydı ve yazar aktivasyonu artık sözleşme ya da KVKK onayına
+bağlı değil; sözleşme ürün sahibi tarafından sonradan (panel dışından) iletilecek.
+
+- **Kayıt:** `/yazar-basvuru` formunda KVKK onay kutusu yok; kayıt
+  `kvkk_consent_at` yazmaz.
+- **Aktivasyon:** E-posta doğrulamasındaki otomatik onay doğrudan
+  `writerStatus = active` verir (`pending_agreement` adımı atlanır). Admin
+  terfisi (`promoteToWriter`) ve rol değişimi de `active` verir.
+- **Panel kilidi:** Yazar paneli sözleşmeyle kilitlenmez; yalnızca `suspended`
+  dondurur. `guardWriterInnerPages` sözleşme yönlendirmesi yapmaz.
+- **Sözleşme sayfası:** `/writer/agreement` boş durur ("metin henüz hazır
+  değil; ayrıca iletilecek").
+- **Ön koşullar:** `checkWriterEligibility` KVKK'yı istemez;
+  `checkPromotionReadiness` yayınlanmış sözleşme sürümü şartını aramaz
+  (sözleşme olmayan taze bir sistemde bile terfi/otomatik onay çalışır).
+- **Sürüm yayını:** `publishAgreementVersion` aktif yazarları artık
+  `pending_agreement`'a düşürmez ve kilit e-postası göndermez.
+- **Korunanlar:** Yönetici sözleşme sürümleri ekranı, `writer_applications`
+  imza akışı, Eser Onayı (`rights_grants`) ve seed'deki yayınlanmış sözleşme
+  yerinde durur; sözleşmeler geri gelince yeniden devreye alınır.
+
+**Gerekçe:** Ürün sahibi "sözleşmeleri şuanlık kaldır, sonradan göndereceğiz;
+kayıt sırasında ne KVKK ne yazar sözleşmesi olacak, sözleşme sayfası boş
+kalacak" dedi. Yayın öncesi amaç, yazarı hiçbir hukuki adıma takılmadan panele
+almak; sözleşme ve KVKK süreci dışarıda yürütülecek. Güvenlik çekirdeği
+korunur: rol değişikliği `role_changes` kaydı olmadan gerçekleşmez, 18+ ve
+doğrulanmış adres zorunluluğu sürer, `suspended` yazarlar kilitli kalır.
+
+---
+
+## D-051 — Sabit yazar alan listesi
+
+**Karar:** Yazar kaydında "alan seçme" bölümü, lead modülü kaldırılınca giden
+kategori listesinin yerine **sabit, kodda tanımlı bir liste** olarak geri
+geldi. `users.writer_area` kolonu eklendi; kayıt formunda tek alan seçilir
+(radyo), sunucuda `WRITER_AREAS` listesine karşı doğrulanır ve hesapta
+saklanır. Hesabım ve yönetici kullanıcı ekranı seçilen alanı salt okunur
+gösterir.
+
+**Gerekçe:** Ürün sahibi alan seçiminin kayıtta kalmasını istedi ama kategori
+tablosu/kontenjan sistemini geri getirmek istemedi ("sabit alan listesi, tek
+seçim"). Liste kodda olduğu için migration gerektirmeden düzenlenebilir;
+ileride yönetilebilir bir tabloya taşınmak istenirse formun sözleşmesi
+değişmez.
+
+

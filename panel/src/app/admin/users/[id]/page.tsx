@@ -40,10 +40,7 @@ const RULES = [
   { id: "email_not_verified", label: "E-posta adresi doğrulanmış" },
   { id: "birth_date_missing", label: "Doğum tarihi girilmiş" },
   { id: "under_age", label: "18 yaşını doldurmuş" },
-  { id: "kvkk_consent_missing", label: "KVKK onayı alınmış" },
   { id: "banned", label: "Yasaklı değil" },
-  { id: "no_agreement_version", label: "Yayınlanmış bir sözleşme sürümü var" },
-  { id: "agreement_not_renderable", label: "Sözleşme bu kullanıcı için render ediliyor" },
 ] as const;
 
 export default async function AdminUserDetailPage({
@@ -187,6 +184,12 @@ export default async function AdminUserDetailPage({
 
         <Card>
           <h2 className="mb-4 font-serif text-lg">Rol ve durum</h2>
+
+          {target.writerArea && (
+            <p className="mb-4 text-sm text-muted">
+              Alan: <span className="text-ink">{target.writerArea}</span>
+            </p>
+          )}
 
           <div className="grid gap-6 lg:grid-cols-2">
             <PanelForm

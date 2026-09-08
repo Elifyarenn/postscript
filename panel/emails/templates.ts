@@ -58,8 +58,8 @@ export function promotedToWriter(input: { displayName: string; url: string }): T
     subject: "postscript · Yazar olarak yetkilendirildiniz",
     text:
       `Merhaba ${input.displayName},\n\n` +
-      "Hesabınız yazar rolüne yükseltildi. Yazar paneline girip çerçeve sözleşmeyi " +
-      "onayladıktan sonra tüm yazar sayfaları açılacak:\n" +
+      "Hesabınız yazar olarak onaylandı; yazar sayfalarınız açık. Çerçeve sözleşme " +
+      "size ayrıca iletilecek.\n\n" +
       `${input.url}` +
       signature,
   };

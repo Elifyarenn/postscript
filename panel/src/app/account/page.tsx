@@ -114,6 +114,7 @@ export default async function AccountPage({
           user={context.user}
           bio={profile.bio}
           socialLinks={profile.socialLinks ?? null}
+          writerArea={profile.writerArea}
         />
 
         <EmailCard

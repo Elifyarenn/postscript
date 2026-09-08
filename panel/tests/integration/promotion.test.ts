@@ -62,17 +62,12 @@ describe("eligibility", () => {
   it("lists every missing prerequisite at once", async () => {
     const candidate = await createUser({
       emailVerified: false,
-      kvkkConsent: false,
       birthDate: null,
     });
 
     const result = checkWriterEligibility(candidate);
     expect(result.eligible).toBe(false);
-    expect(result.problems).toEqual([
-      "email_not_verified",
-      "birth_date_missing",
-      "kvkk_consent_missing",
-    ]);
+    expect(result.problems).toEqual(["email_not_verified", "birth_date_missing"]);
   });
 });
 
@@ -91,7 +86,7 @@ describe("promoteToWriter", () => {
     const promoted = await promoteToWriter(actorOf(admin), candidate.id, noMeta);
 
     expect(promoted.role).toBe("writer");
-    expect(promoted.writerStatus).toBe("pending_agreement");
+    expect(promoted.writerStatus).toBe("active");
 
     const changes = await db.select().from(roleChanges).where(eq(roleChanges.userId, candidate.id));
     expect(changes).toHaveLength(1);
@@ -130,25 +125,13 @@ describe("promoteToWriter", () => {
     expect(promoted.role).toBe("writer");
   });
 
-  it("refuses when no contract version has been published (§6.1 rule 5)", async () => {
+  it("promotes without a published contract (D-050)", async () => {
     const admin = await createUser({ role: "admin" });
     const candidate = await createUser();
 
-    const error = await captureError(promoteToWriter(actorOf(admin), candidate.id, noMeta));
-    expect(error.details?.requirements).toContain("Yayınlanmış bir sözleşme sürümü yok.");
-  });
-
-  it("refuses when a publisher setting is missing, and names the placeholder", async () => {
-    const admin = await adminWithContract();
-
-    const { clearSiteSetting } = await import("@/services/site-settings");
-    await clearSiteSetting("publisher_partner_2");
-
-    const candidate = await createUser();
-    const error = await captureError(promoteToWriter(actorOf(admin), candidate.id, noMeta));
-
-    // §10: the refusal names the placeholder the admin has to go and fill in
-    expect(error.details?.requirements?.join(" ")).toContain("dergi.ortak_2");
+    const promoted = await promoteToWriter(actorOf(admin), candidate.id, noMeta);
+    expect(promoted.role).toBe("writer");
+    expect(promoted.writerStatus).toBe("active");
   });
 
   it("refuses when the writer has no birth date, and names that placeholder", async () => {

@@ -81,14 +81,14 @@ export function linkFrom(text: string): string {
  */
 export async function registerWriter(
   page: Page,
-  input: { displayName: string; email: string; password: string; birthDate?: string },
+  input: { displayName: string; email: string; password: string; birthDate?: string; area?: string },
 ): Promise<void> {
   await page.goto("/yazar-basvuru");
   await page.getByLabel("Ad Soyad").fill(input.displayName);
   await page.getByLabel("Doğum Tarihi").fill(input.birthDate ?? "1994-04-12");
   await page.getByLabel("E-posta").fill(input.email);
+  await page.getByLabel(input.area ?? "Sanat & Edebiyat").check();
   await page.getByLabel("Şifre").fill(input.password);
-  await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Yazar hesabı oluştur" }).click();
   await page.waitForURL("**/verify-email/pending");
 }

@@ -40,11 +40,14 @@ export function ProfileCard({
   user,
   bio,
   socialLinks,
+  writerArea,
 }: {
   csrfToken: string;
   user: SessionUser;
   bio: string | null;
   socialLinks: SocialLinks | null;
+  /** The writing area chosen at registration, shown read-only (D-051). */
+  writerArea?: string | null;
 }) {
   return (
     <Card>
@@ -100,6 +103,12 @@ export function ProfileCard({
                 disabled={Boolean(user.birthDate)}
               />
             </Field>
+
+            {writerArea && (
+              <p className="text-sm text-muted">
+                Alan: <span className="text-ink">{writerArea}</span>
+              </p>
+            )}
 
             <fieldset className="grid gap-3 sm:grid-cols-2">
               <legend className="mb-1.5 text-sm font-medium">Bağlantılar</legend>

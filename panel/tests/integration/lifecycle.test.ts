@@ -497,7 +497,7 @@ describe("public issue listing", () => {
 });
 
 describe("a new contract version", () => {
-  it("knocks active writers back to pending until they accept it", async () => {
+  it("does not lock active writers anymore (D-050)", async () => {
     const { admin, writerRow } = await scenario();
 
     let current = await db.select().from(users).where(eq(users.id, writerRow.id));
@@ -518,7 +518,7 @@ describe("a new contract version", () => {
     }
 
     current = await db.select().from(users).where(eq(users.id, writerRow.id));
-    expect(current[0]!.writerStatus).toBe("pending_agreement");
+    expect(current[0]!.writerStatus).toBe("active");
   });
 
   it("refuses a version whose template is already on file", async () => {

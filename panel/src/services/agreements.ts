@@ -233,9 +233,10 @@ async function findVersion(versionId: string): Promise<AgreementVersion> {
 }
 
 /**
- * Publishing has consequences beyond this table: every earlier acceptance is
- * marked superseded and every active writer drops back to `pending_agreement`
- * until they accept the new text (§7.1 of the base specification).
+ * Publishing marks every earlier acceptance superseded and makes this version
+ * the current one. Writers are not dropped back to `pending_agreement`
+ * anymore: the contract is handled outside the panel for now, so a new version
+ * does not lock anyone (D-050).
  */
 export async function publishAgreementVersion(
   actor: Actor,
@@ -273,36 +274,16 @@ export async function publishAgreementVersion(
         ),
       );
 
-    await tx
-      .update(users)
-      .set({ writerStatus: "pending_agreement", updatedAt: now })
-      .where(and(eq(users.role, "writer"), eq(users.writerStatus, "active")));
-
     return row!;
   });
-
-  // Tell the writers why their panel just locked
-  const writers = await db
-    .select({ email: users.email, displayName: users.displayName })
-    .from(users)
-    .where(and(eq(users.role, "writer"), isNull(users.deletedAt)));
-
-  const url = `${env().APP_URL}/writer/agreement`;
-  for (const writer of writers) {
-    const message = templates.newAgreementVersion({
-      displayName: writer.displayName,
-      version: published.version,
-      url,
-    });
-    await sendMail({ to: writer.email, subject: message.subject, text: message.text });
-  }
 
   await writeAudit({
     actorId: actor.id,
     action: "agreement.published",
     entityType: "agreement_versions",
-    entityId: versionId,
-    after: { version: published.version, bodyHash: published.bodyHash, notified: writers.length },
+    entityId: published.id,
+    before: { isCurrent: false },
+    after: { version: published.version, isCurrent: true },
     ip: meta.ip,
   });
 

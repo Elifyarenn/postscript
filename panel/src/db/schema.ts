@@ -192,6 +192,9 @@ export const users = pgTable(
      */
     writerIntentAt: timestamp("writer_intent_at", { withTimezone: true }),
 
+    /** The writing area the candidate chose at registration (D-051). */
+    writerArea: text("writer_area"),
+
     role: roleEnum("role").notNull().default("user"),
     writerStatus: writerStatusEnum("writer_status"),
     /** Belongs to editors only; admins and writers leave it null (D-039). */

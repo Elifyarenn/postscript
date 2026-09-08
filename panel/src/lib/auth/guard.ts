@@ -15,8 +15,9 @@ import type { Role } from "@/db/schema";
 
 /**
  * The inner writer pages, which need an active writer with no outstanding
- * mandatory announcement. The lock sends the writer to the page that clears it,
- * rather than showing a dead end.
+ * mandatory announcement. A frozen writer is sent to the dashboard, which
+ * explains the lock, rather than being shown a dead end. There is no contract
+ * gate anymore (D-050): writers are active from the moment they are approved.
  */
 export async function guardWriterInnerPages(): Promise<AuthContext> {
   const context = await guardPanel("writer");
@@ -25,7 +26,7 @@ export async function guardWriterInnerPages(): Promise<AuthContext> {
   // Editors and admins outrank the writer status gate
   if (canAccessEditorPanel(user)) return context;
 
-  if (user.writerStatus !== "active") redirect("/writer/agreement");
+  if (user.writerStatus === "suspended") redirect("/writer");
 
   const { pendingAcknowledgements } = await import("@/services/announcements");
   const pending = await pendingAcknowledgements(user);

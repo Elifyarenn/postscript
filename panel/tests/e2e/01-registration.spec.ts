@@ -1,6 +1,6 @@
 /**
  * §13.2 — writer registration (/yazar-basvuru), e-mail verification, the
- * auto-approval to writer, and login.
+ * auto-approval to an active writer, and login.
  */
 import { expect, test } from "@playwright/test";
 import { linkFrom, registerWriter, submitLogin, waitForMail } from "./helpers";
@@ -10,6 +10,7 @@ const NEW_WRITER = {
   password: "Yeni-Yazar-Sifre-2026",
   displayName: "Yeni Yazar",
   birthDate: "1994-04-12",
+  area: "Sanat & Edebiyat",
 };
 
 test.describe.configure({ mode: "serial" });
@@ -30,7 +31,7 @@ test("registers as a writer, verifies the address, and gets auto-approved", asyn
   expect(message.subject).toContain("doğrulayın");
 
   // Following the link in the same browser verifies and auto-approves: the
-  // account becomes a writer and lands on the locked panel
+  // account becomes an active writer, with no agreement lock (D-050)
   await page.goto(linkFrom(message.text));
   await page.getByRole("button", { name: "Doğrula" }).click();
   await page.waitForURL("**/writer**");
@@ -39,30 +40,14 @@ test("registers as a writer, verifies the address, and gets auto-approved", asyn
   const approved = await waitForMail(NEW_WRITER.email);
   expect(approved.subject).toContain("yetkilendirildiniz");
 
-  // The writer panel is still locked until the agreement is signed
-  await expect(page.getByText("Yazar sayfalarınız kilitli")).toBeVisible();
-  await page.getByRole("link", { name: "Sözleşmeye git" }).click();
-  await page.waitForURL("**/writer/agreement");
-  await expect(
-    page.getByRole("heading", { name: "Yazar sözleşmesi ve kullanım ruhsatı taahhüdü" }),
-  ).toBeVisible();
+  // The writer panel is open right away — no "sözleşme" lock
+  await expect(page.getByRole("heading", { name: "Merhaba, Yeni Yazar" })).toBeVisible();
+  await expect(page.getByText("Yazar sayfalarınız kilitli")).toHaveCount(0);
 
-  // The writer signs the agreement; the panel then unlocks
-  const checkbox = page.getByRole("checkbox");
-  await expect(checkbox).toBeDisabled();
-  await page.locator("div.overflow-y-auto").first().evaluate((element) => {
-    element.scrollTop = element.scrollHeight;
-  });
-  await expect(checkbox).toBeEnabled();
-  await checkbox.check();
-  await page.getByRole("button", { name: /kabul ediyorum/i }).click();
-  await expect(page.getByText("Bu sürümü onayladınız")).toBeVisible();
-
-  // The writer panel works, and the account is usable
-  await page.goto("/writer");
-  await page.waitForURL("**/writer");
+  // and the account is usable, showing the chosen area
   await page.goto("/account");
   await page.waitForURL("**/account");
+  await expect(page.getByText("Sanat & Edebiyat")).toBeVisible();
   await page.getByLabel("Ad Soyad").fill("Yeni Yazar Düzeltildi");
   await page.getByRole("button", { name: "Profili kaydet" }).click();
   await expect(page.getByText("Profiliniz güncellendi")).toBeVisible();
@@ -102,8 +87,8 @@ test("refuses a password that is too common", async ({ page }) => {
   await page.getByLabel("Ad Soyad").fill("Zayıf Şifre");
   await page.getByLabel("Doğum Tarihi").fill("1994-04-12");
   await page.getByLabel("E-posta").fill("zayif@example.com");
+  await page.getByLabel("Sanat & Edebiyat").check();
   await page.getByLabel("Şifre").fill("Password1");
-  await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Yazar hesabı oluştur" }).click();
 
   await expect(page.getByText(/yaygın kullanılıyor/i).first()).toBeVisible();
@@ -115,8 +100,8 @@ test("refuses an underage writer and says why", async ({ page }) => {
   await page.getByLabel("Ad Soyad").fill("Genç Yazar");
   await page.getByLabel("Doğum Tarihi").fill("2012-05-05");
   await page.getByLabel("E-posta").fill("genc-yazar@example.com");
+  await page.getByLabel("Sanat & Edebiyat").check();
   await page.getByLabel("Şifre").fill("Genc-Yazar-Sifre-2026");
-  await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Yazar hesabı oluştur" }).click();
 
   await expect(page.getByText(/18 yaşını doldurmuş olmanız gerekir/).first()).toBeVisible();
@@ -138,7 +123,7 @@ test("ticks the password rules off and keeps the button shut until all three are
   await page.getByLabel("Ad Soyad").fill("Kural Denemesi");
   await page.getByLabel("Doğum Tarihi").fill("1994-04-12");
   await page.getByLabel("E-posta").fill("kural@example.com");
-  await page.getByRole("checkbox").check();
+  await page.getByLabel("Sanat & Edebiyat").check();
 
   const submit = page.getByRole("button", { name: "Yazar hesabı oluştur" });
   const password = page.getByLabel("Şifre");
