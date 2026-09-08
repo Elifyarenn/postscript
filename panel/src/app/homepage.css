@@ -99,14 +99,14 @@
 }
 
   .ps-home .brand {
-  text-align: center;
-  padding: 2.5rem 0 1.75rem;
+  text-align: left;
+  padding: 1.25rem 0 1rem;
 }
 
   .ps-home .logo {
   font-family: var(--font-display, "Cormorant Garamond", Georgia, serif);
   font-weight: 500;
-  font-size: clamp(2.6rem, 7vw, 4.2rem);
+  font-size: clamp(1.5rem, 4vw, 2.1rem);
   letter-spacing: 0.04em;
   line-height: 1;
 }
@@ -116,10 +116,10 @@
 }
 
   .ps-home .tagline {
-  margin-top: 0.6rem;
+  margin-top: 0.3rem;
   font-family: var(--font-display, "Cormorant Garamond", Georgia, serif);
   font-style: italic;
-  font-size: clamp(1rem, 2.4vw, 1.3rem);
+  font-size: clamp(0.85rem, 2vw, 1.05rem);
   color: var(--muted);
 }
 
