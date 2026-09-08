@@ -10,7 +10,12 @@ import {
 } from "@/lib/writer-areas";
 
 function quota(currentCount: number): WriterAreaQuota {
-  return { name: "Sanat & Edebiyat", currentCount, full: currentCount >= AREA_QUOTA };
+  return {
+    name: "Sanat & Edebiyat",
+    quota: AREA_QUOTA,
+    currentCount,
+    full: currentCount >= AREA_QUOTA,
+  };
 }
 
 describe("writer area selection", () => {

@@ -17,7 +17,7 @@ import { checkPasswordPolicy, hashPassword, isPwned, verifyPassword } from "@/li
 import { clearAttempts, consumeAttempt, currentAttemptCount, failureDelayMs } from "@/lib/rate-limit";
 import { writeAudit } from "@/lib/audit";
 import { isAdult, parseIsoDate } from "@/lib/age";
-import { isWriterArea, writerAreaSelectionIssues } from "@/lib/writer-areas";
+import { writerAreaSelectionIssues } from "@/lib/writer-areas";
 import { normalisePhone } from "@/lib/phone";
 import { sendMail } from "@/lib/mail/transport";
 import { getAccessMode } from "./access-mode";
@@ -209,12 +209,9 @@ export async function registerWriterCandidate(
     throw badRequest(message, { birthDate: [message] });
   }
 
-  if (!isWriterArea(input.area)) {
-    throw badRequest("Seçilen alan geçersiz.", { area: ["Seçilen alan geçersiz."] });
-  }
-
-  // A full area refuses registration: the count is live, so a slot that just
-  // filled up is refused here even if the form had not caught it (D-052)
+  // The area must be an active one with room: the count is live, so a slot
+  // that just filled up is refused here even if the form had not caught it
+  // (D-052, D-055). Unknown areas are refused the same way.
   const quota = await listWriterAreasWithQuota();
   const areaIssues = writerAreaSelectionIssues(input.area, quota);
   if (areaIssues.length > 0) {

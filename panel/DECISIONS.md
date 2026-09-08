@@ -879,6 +879,28 @@ oturum olamaz).
 
 ---
 
+## D-055 — Yazı alanları yönetilebilir tablo
+
+**Karar:** D-051'deki sabit kod listesi `writer_areas` tablosuna taşındı ve
+admin panelinden yönetilebilir hale getirildi (`/admin/categories` → "Yazı
+alanları"): alan ekleme (ad + kontenjan), düzenleme (ad, kontenjan, sıra,
+aktif/pasif), silme. `users.writer_area` metin alanı adla eşleşir; yeniden
+adlandırma aynı işlemde kullanıcıları da günceller. Kurallar:
+
+- Alan silme yalnızca **içinde yazar yokken** mümkündür; yazarları olan alan
+  pasife alınır (yazarlar alan adını tarih olarak korur).
+- Kontenjan, mevcut yazar sayısının altına indirilemez.
+- Kamuya açık kayıt formu yalnızca aktif alanları gösterir; pasif alan ve dolu
+  alan hem formda hem sunucuda reddedilir.
+- Seed, tablo boşken D-051 listesini 3 kontenjanla yeniden kurar.
+
+**Gerekçe:** Ürün sahibi alan listesini kod değişikliği olmadan güncellemek
+istedi (ekleme/çıkarma/sıralama). Tek seferlik sabit liste kararı (D-051)
+yönetim ekranıyla birlikte ürünün gereksinimine dönüştü; form sözleşmesi
+(tek seçim, kontenjan, tek alan) aynı kaldı.
+
+---
+
 ## D-049 — Yazar kaydı: ilgi formundan e-posta doğrulamalı geçici yazar hesabına
 
 **Karar:** `writer_leads` ilgi havuzu (kategori kontenjanları, `/admin/writer-leads`,

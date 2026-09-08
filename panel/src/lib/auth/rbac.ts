@@ -125,3 +125,8 @@ export function canFinalizeApplications(actor: Actor): boolean {
 export function canModerateCommunity(actor: Actor): boolean {
   return canAccessAdminPanel(actor);
 }
+
+/** The writing areas are managed from the admin panel (D-055). */
+export function canManageWriterAreas(actor: Actor): boolean {
+  return canAccessAdminPanel(actor);
+}

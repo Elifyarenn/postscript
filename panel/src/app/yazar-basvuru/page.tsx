@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { readCsrfToken } from "@/lib/csrf";
-import { AREA_QUOTA } from "@/lib/writer-areas";
 import { listWriterAreasWithQuota } from "@/services/writer-areas";
 import { Alert, Card, Field, Input } from "@/components/ui";
 import { PasswordField } from "@/components/password-field";
@@ -55,7 +54,7 @@ export default async function WriterRegisterPage() {
               Alanınız <span className="text-muted">(yalnızca bir alan)</span>
             </legend>
             <div className="grid gap-2">
-              {areas.map(({ name, currentCount, full }) => (
+              {areas.map(({ name, quota, currentCount, full }) => (
                 <label
                   key={name}
                   className={
@@ -76,7 +75,7 @@ export default async function WriterRegisterPage() {
                   <span className="flex-1">{name}</span>
                   <span className="flex items-center gap-2">
                     <span className="text-xs text-muted">
-                      {currentCount}/{AREA_QUOTA}
+                      {currentCount}/{quota}
                     </span>
                     {full && (
                       <span className="text-xs font-medium text-danger">Kontenjan Dolu</span>

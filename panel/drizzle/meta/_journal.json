@@ -120,6 +120,13 @@
       "when": 1788878878679,
       "tag": "0016_giant_meteorite",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1788881627442,
+      "tag": "0017_noisy_rictor",
+      "breakpoints": true
     }
   ]
 }

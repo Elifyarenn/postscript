@@ -12,7 +12,7 @@ import { register, registerWriterCandidate, verifyEmail } from "@/services/auth"
 import { setAccessMode } from "@/services/access-mode";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import { isAppError } from "@/lib/errors";
-import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
+import { resetTables, seedDefaultWriterAreas, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
 import { actorOf, createUser, noMeta, publishContract } from "../helpers/factories";
 
 let database: Database;
@@ -38,6 +38,7 @@ const validReader = {
 beforeAll(async () => {
   database = await setupTestDatabase();
   setMailAdapter(mailbox);
+  await seedDefaultWriterAreas();
 });
 
 afterAll(async () => {
@@ -46,6 +47,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await resetTables(database);
+  await seedDefaultWriterAreas();
   mailbox.clear();
 });
 

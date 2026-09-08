@@ -28,6 +28,11 @@ import {
   removeChatMessage,
   removeCommunityComment,
 } from "@/services/community";
+import {
+  createWriterArea,
+  deleteWriterArea,
+  updateWriterArea,
+} from "@/services/writer-areas";
 import { saveSiteSettings, SITE_SETTING_KEYS } from "@/services/site-settings";
 import { requestMetadata, requireRole, revokeAllSessions } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
@@ -495,5 +500,72 @@ export async function publishKvkkVersionAction(
     revalidatePath("/admin/settings");
     revalidatePath("/kvkk");
     return { success: `KVKK metni sürüm ${version} olarak yayınlandı.` };
+  });
+}
+
+export async function createWriterAreaAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
+
+    await createWriterArea(
+      { ...user },
+      {
+        name: text(formData, "name"),
+        quota: numberField(formData, "quota") ?? 3,
+      },
+      meta,
+    );
+
+    revalidatePath("/admin/categories");
+    return { success: "Alan eklendi." };
+  });
+}
+
+export async function updateWriterAreaAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
+
+    await updateWriterArea(
+      { ...user },
+      {
+        id: text(formData, "id"),
+        name: optionalText(formData, "name") ?? undefined,
+        quota: numberField(formData, "quota") ?? undefined,
+        isActive: checkbox(formData, "isActive"),
+        sortOrder: numberField(formData, "sortOrder") ?? undefined,
+      },
+      meta,
+    );
+
+    revalidatePath("/admin/categories");
+    revalidatePath("/yazar-basvuru");
+    return { success: "Alan güncellendi." };
+  });
+}
+
+export async function deleteWriterAreaAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
+
+    await deleteWriterArea({ ...user }, text(formData, "id"), meta);
+
+    revalidatePath("/admin/categories");
+    revalidatePath("/yazar-basvuru");
+    return { success: "Alan silindi." };
   });
 }

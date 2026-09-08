@@ -36,6 +36,20 @@ export async function teardownTestDatabase(): Promise<void> {
   await closeDatabase();
 }
 
+/** The areas the product launched with, as the seed would insert them (D-055). */
+export async function seedDefaultWriterAreas(): Promise<void> {
+  const { writerAreas } = await import("@/db/schema");
+  const { db } = await import("@/db/client");
+  const { AREA_QUOTA, DEFAULT_WRITER_AREAS } = await import("@/lib/writer-areas");
+  await db.insert(writerAreas).values(
+    DEFAULT_WRITER_AREAS.map((name, index) => ({
+      name,
+      quota: AREA_QUOTA,
+      sortOrder: index + 1,
+    })),
+  );
+}
+
 /**
  * Empties every table between tests. `audit_log` and `role_changes` carry a
  * DELETE-blocking trigger, so the trigger is disabled for the truncate and put

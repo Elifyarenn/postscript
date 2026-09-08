@@ -39,6 +39,7 @@ export const ADMIN_NAV: NavGroup[] = [
     label: "Yönetim & Kullanıcılar",
     items: [
       { href: "/admin/users", label: "Kullanıcılar" },
+      { href: "/admin/categories", label: "Yazı alanları" },
       { href: "/admin/applications", label: "Yazar başvuruları" },
     ],
   },

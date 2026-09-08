@@ -24,9 +24,11 @@ import {
   issues,
   kvkkVersions,
   users,
+  writerAreas,
   type Role,
 } from "@/db/schema";
 import { hashPassword } from "@/lib/password";
+import { AREA_QUOTA, DEFAULT_WRITER_AREAS } from "@/lib/writer-areas";
 import { encryptSecret, sha256Hex } from "@/lib/crypto";
 import { slugify } from "@/lib/slug";
 import { normalizeBannedWord } from "@/lib/moderation";
@@ -218,6 +220,21 @@ async function main(): Promise<void> {
     { ip: null, userAgent: "seed" },
   );
   console.log("  · saved");
+
+  console.log("Seeding writer areas ...");
+  const areaCount = await db.select({ id: writerAreas.id }).from(writerAreas).limit(1);
+  if (areaCount.length === 0) {
+    await db.insert(writerAreas).values(
+      DEFAULT_WRITER_AREAS.map((name, index) => ({
+        name,
+        quota: AREA_QUOTA,
+        sortOrder: index + 1,
+      })),
+    );
+    console.log(`  · inserted ${DEFAULT_WRITER_AREAS.length} areas`);
+  } else {
+    console.log("  · already present");
+  }
 
   console.log("Seeding the community blacklist ...");
   const bannedSource = readFileSync(

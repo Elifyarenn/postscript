@@ -363,6 +363,35 @@ export const loginChallenges = pgTable(
 );
 
 /* ------------------------------------------------------------------ */
+/* writer_areas (managed by the admin panel, D-055)                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The writing areas a candidate picks from at registration. Managed from the
+ * admin panel (D-055); the fixed code list from D-051 is now the seed set.
+ * `users.writer_area` holds the area's name as free text, so a rename keeps
+ * the users in step inside the same transaction.
+ */
+export const writerAreas = pgTable(
+  "writer_areas",
+  {
+    id: id(),
+    name: text("name").notNull(),
+    /** How many approved writers the area may hold (D-052). */
+    quota: integer("quota").notNull().default(3),
+    isActive: boolean("is_active").notNull().default(true),
+    /** Stable hand ordering for the public form and the admin list. */
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("writer_areas_name_unique").on(t.name),
+    index("writer_areas_active_sort_idx").on(t.isActive, t.sortOrder),
+  ],
+);
+
+/* ------------------------------------------------------------------ */
 /* auth_attempts (rate limiting, D-007)                                */
 /* ------------------------------------------------------------------ */
 
