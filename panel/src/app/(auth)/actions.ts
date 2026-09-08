@@ -67,6 +67,7 @@ export async function registerWriterAction(
         displayName: text(formData, "displayName"),
         birthDate: text(formData, "birthDate"),
         area: text(formData, "area"),
+        phone: text(formData, "phone"),
       },
       meta,
     );

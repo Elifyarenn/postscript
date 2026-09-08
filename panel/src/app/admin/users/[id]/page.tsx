@@ -100,6 +100,32 @@ export default async function AdminUserDetailPage({
       />
 
       <div className="space-y-6">
+        <Card>
+          <h2 className="mb-4 font-serif text-lg">Kayıt bilgileri</h2>
+          <dl className="grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-muted">E-posta</dt>
+              <dd className="text-ink">{target.email}</dd>
+            </div>
+            <div>
+              <dt className="text-muted">Telefon</dt>
+              <dd className="text-ink">{target.phone ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted">Doğum tarihi</dt>
+              <dd className="text-ink">{target.birthDate ? formatDate(target.birthDate) : "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted">Alan</dt>
+              <dd className="text-ink">{target.writerArea ?? "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-muted">Kayıt</dt>
+              <dd className="text-ink">{formatDateTime(target.createdAt)}</dd>
+            </div>
+          </dl>
+        </Card>
+
         {target.isBanned && (
           <Alert tone="danger" title="Bu hesap yasaklı">
             Gerekçe: {target.bannedReason ?? "—"}
@@ -184,12 +210,6 @@ export default async function AdminUserDetailPage({
 
         <Card>
           <h2 className="mb-4 font-serif text-lg">Rol ve durum</h2>
-
-          {target.writerArea && (
-            <p className="mb-4 text-sm text-muted">
-              Alan: <span className="text-ink">{target.writerArea}</span>
-            </p>
-          )}
 
           <div className="grid gap-6 lg:grid-cols-2">
             <PanelForm

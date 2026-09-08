@@ -985,5 +985,22 @@ Kontenjanın onaylı yazar sayması, alanı 3 onaylı yazar dolduracağı için 
 form hem sunucu aynı fonksiyonu kullanır. Doğrulanmamış adaylar (rol `user`)
 sayaca katılmaz; bu, eski "onaylı aday" kuralıyla tutarlıdır.
 
+---
+
+## D-053 — Yazar kayıt bilgileri yönetim panelinde
+
+**Karar:** Yazar kaydına telefon alanı geri eklendi (`users.phone`,
+migration 0016; sadece rakam/`+`/boşluk/`-`/parantez, saklama kompakt biçimde
+— boşluk ve ayraçlar atılır). Yönetim panelindeki kullanıcı sayfasına
+(`/admin/users/[id]`) "Kayıt bilgileri" kartı eklendi: e-posta, telefon,
+doğum tarihi, alan ve kayıt tarihi. Bu bilgiler yalnızca admin tarafından
+görülür; public API'ye sızmaz.
+
+**Gerekçe:** Ürün sahibi "yazarların girdikleri e-posta ve telefon gibi
+bilgiler yönetim panelinde hesaplarında görünmüyor, ekle" dedi. E-posta zaten
+başlıkta vardı ama telefon toplanmıyordu; alan seçimi gibi kayıt bilgileri de
+tek kartta toplanarak yöneticinin işi kolaylaştı.
+
+
 
 

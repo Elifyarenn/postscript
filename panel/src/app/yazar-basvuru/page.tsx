@@ -46,6 +46,10 @@ export default async function WriterRegisterPage() {
             <Input id="email" name="email" type="email" autoComplete="email" required />
           </Field>
 
+          <Field label="Telefon" htmlFor="phone" hint="Size ulaşabilmemiz için.">
+            <Input id="phone" name="phone" type="tel" required maxLength={20} placeholder="05XX XXX XX XX" />
+          </Field>
+
           <fieldset>
             <legend className="mb-1.5 text-sm font-medium">
               Alanınız <span className="text-muted">(yalnızca bir alan)</span>

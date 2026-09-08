@@ -59,6 +59,12 @@ export const writerRegisterSchema = z.strictObject({
   displayName: z.string().trim().min(2, "Ad en az 2 karakter olmalı.").max(80),
   birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Tarih YYYY-AA-GG biçiminde olmalı."),
   area: z.string().trim().min(1, "Bir alan seçmelisiniz.").max(120),
+  phone: z
+    .string()
+    .trim()
+    .min(7, "Telefon numarası geçersiz.")
+    .max(20, "Telefon numarası geçersiz.")
+    .regex(/^\+?[0-9\s()-]+$/, "Telefon numarası yalnızca rakam içerebilir."),
 });
 
 export const loginSchema = z.strictObject({
@@ -81,6 +87,11 @@ export const changeEmailSchema = z.strictObject({
 
 export function normaliseEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+/** Normalises a phone number to a compact, comparable form. */
+export function normalisePhone(raw: string): string {
+  return raw.replace(/[\s()-]/g, "");
 }
 
 /* ------------------------------------------------------------------ */
@@ -215,6 +226,7 @@ export async function registerWriterCandidate(
   }
 
   const email = normaliseEmail(input.email);
+  const phone = normalisePhone(input.phone);
   const existing = await db
     .select({ id: users.id })
     .from(users)
@@ -232,6 +244,7 @@ export async function registerWriterCandidate(
       displayName: input.displayName,
       birthDate: input.birthDate,
       writerArea: input.area,
+      phone,
       // The server decides the role. It is never read from the request.
       role: "user",
       writerIntentAt: new Date(),
@@ -249,7 +262,13 @@ export async function registerWriterCandidate(
     action: "user.writer_registered",
     entityType: "users",
     entityId: user!.id,
-    after: { email, displayName: user!.displayName, birthDate: input.birthDate, area: input.area },
+    after: {
+      email,
+      displayName: user!.displayName,
+      birthDate: input.birthDate,
+      area: input.area,
+      phone,
+    },
     ip: meta.ip,
   });
 

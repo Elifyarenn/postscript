@@ -87,6 +87,7 @@ test("refuses a password that is too common", async ({ page }) => {
   await page.getByLabel("Ad Soyad").fill("Zayıf Şifre");
   await page.getByLabel("Doğum Tarihi").fill("1994-04-12");
   await page.getByLabel("E-posta").fill("zayif@example.com");
+  await page.getByLabel("Telefon").fill("0532 123 45 67");
   await page.getByLabel("Sanat & Edebiyat").check();
   await page.getByLabel("Şifre").fill("Password1");
   await page.getByRole("button", { name: "Yazar hesabı oluştur" }).click();
@@ -100,6 +101,7 @@ test("refuses an underage writer and says why", async ({ page }) => {
   await page.getByLabel("Ad Soyad").fill("Genç Yazar");
   await page.getByLabel("Doğum Tarihi").fill("2012-05-05");
   await page.getByLabel("E-posta").fill("genc-yazar@example.com");
+  await page.getByLabel("Telefon").fill("0532 123 45 67");
   await page.getByLabel("Sanat & Edebiyat").check();
   await page.getByLabel("Şifre").fill("Genc-Yazar-Sifre-2026");
   await page.getByRole("button", { name: "Yazar hesabı oluştur" }).click();
@@ -123,6 +125,7 @@ test("ticks the password rules off and keeps the button shut until all three are
   await page.getByLabel("Ad Soyad").fill("Kural Denemesi");
   await page.getByLabel("Doğum Tarihi").fill("1994-04-12");
   await page.getByLabel("E-posta").fill("kural@example.com");
+  await page.getByLabel("Telefon").fill("0532 123 45 67");
   await page.getByLabel("Sanat & Edebiyat").check();
 
   const submit = page.getByRole("button", { name: "Yazar hesabı oluştur" });

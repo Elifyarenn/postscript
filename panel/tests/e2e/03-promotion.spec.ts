@@ -38,6 +38,10 @@ test("promotes an eligible reader, who can use the panel right away", async ({ p
 
   await openUser(page, SEED.reader.email);
 
+  // §9: the account shows the registration/contact details the writer entered
+  await expect(page.getByText("Kayıt bilgileri")).toBeVisible();
+  await expect(page.getByRole("definition").filter({ hasText: SEED.reader.email })).toBeVisible();
+
   // §9: every precondition is listed with a tick or a cross
   await expect(page.getByText("sağlanmadı")).toHaveCount(0);
 

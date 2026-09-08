@@ -24,6 +24,7 @@ const validWriter = {
   displayName: "Yeni Yazar",
   birthDate: "1994-04-12",
   area: "Sanat & Edebiyat",
+  phone: "0532 123 45 67",
 };
 
 /** The reader registration has no birth-date field, so it is a different shape. */
@@ -78,6 +79,7 @@ describe("writer registration (/yazar-basvuru)", () => {
     // No KVKK consent is collected at registration for now (D-050)
     expect(user.kvkkConsentAt).toBeNull();
     expect(user.writerArea).toBe("Sanat & Edebiyat");
+    expect(user.phone).toBe("05321234567"); // normalised
     expect(mailbox.lastTo("yeni.yazar@example.com")?.subject).toContain("doğrulayın");
   });
 
@@ -102,6 +104,13 @@ describe("writer registration (/yazar-basvuru)", () => {
   it("refuses an area outside the fixed list", async () => {
     const error = await captureError(
       registerWriterCandidate({ ...validWriter, area: "Boyle bir alan yok" }, noMeta),
+    );
+    expect(error.status).toBe(400);
+  });
+
+  it("refuses an invalid phone number", async () => {
+    const error = await captureError(
+      registerWriterCandidate({ ...validWriter, phone: "harfler" }, noMeta),
     );
     expect(error.status).toBe(400);
   });
