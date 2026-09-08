@@ -1,14 +1,21 @@
 import { redirect } from "next/navigation";
 import { getAuthContext } from "@/lib/auth/session";
+import { HomePage } from "@/components/homepage";
+import "./homepage.css";
 
-/** The root simply routes each visitor to the area their role belongs in. */
-export default async function HomePage() {
+/**
+ * The public homepage: anonymous visitors get the marketing page; a signed-in
+ * account is routed straight to the area its role belongs in (D-035).
+ */
+export default async function HomePageRoute() {
   const context = await getAuthContext();
-  if (!context) redirect("/login");
+  if (context) {
+    const { role } = context.user;
+    if (role === "admin") redirect("/admin");
+    if (role === "editor") redirect("/editor");
+    if (role === "writer") redirect("/writer");
+    redirect("/magazine");
+  }
 
-  const { role } = context.user;
-  if (role === "admin") redirect("/admin");
-  if (role === "editor") redirect("/editor");
-  if (role === "writer") redirect("/writer");
-  redirect("/magazine");
+  return <HomePage />;
 }
