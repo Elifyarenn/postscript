@@ -5,6 +5,7 @@
  * place and are handed the data they need.
  */
 import Link from "next/link";
+import Image from "next/image";
 import { PanelForm, ActionButton } from "./form";
 import {
   Card,
@@ -473,12 +474,15 @@ export function TwoFactorCard({
   enabled,
   pendingSecret,
   pendingUri,
+  pendingQrUrl,
 }: {
   csrfToken: string;
   enabled: boolean;
   /** A fresh secret to scan; only generated when 2FA is off. */
   pendingSecret: string;
   pendingUri: string;
+  /** A data URL of the QR code for the setup URI, when 2FA is off. */
+  pendingQrUrl: string;
 }) {
   if (enabled) {
     return (
@@ -530,12 +534,22 @@ export function TwoFactorCard({
       <p className="mb-4 text-sm text-muted">
         Editör ve yönetici hesapları için zorunludur. Kimlik doğrulayıcı
         uygulamanızda (Google Authenticator, 1Password, Aegis vb.) aşağıdaki
-        kodu ekleyin, sonra uygulamanın ürettiği kodu buraya yazın.
+        kodu taratın, sonra uygulamanın ürettiği kodu buraya yazın.
       </p>
 
       <div className="mb-4 rounded-md border border-line bg-paper p-4">
+        {pendingQrUrl ? (
+          <Image
+            src={pendingQrUrl}
+            alt="Kimlik doğrulayıcı uygulamanıza ekleyeceğiniz QR kod"
+            width={176}
+            height={176}
+            unoptimized
+            className="mx-auto mb-3 h-44 w-44 rounded bg-white p-2"
+          />
+        ) : null}
         <p className="mb-1 text-[10px] font-semibold tracking-[0.18em] text-muted uppercase">
-          Uygulamanıza ekleyeceğiniz bağlantı
+          Taratamıyorsanız girebileceğiniz bağlantı
         </p>
         <p className="break-all font-mono text-xs text-ink">{pendingUri}</p>
         <p className="mt-3 mb-1 text-[10px] font-semibold tracking-[0.18em] text-muted uppercase">

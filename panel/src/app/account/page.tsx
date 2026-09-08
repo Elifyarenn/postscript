@@ -20,6 +20,7 @@ import { formatDate } from "@/lib/utils";
 import { checkWriterEligibility } from "@/services/users";
 import { cooldownInfo, latestApplication } from "@/services/writer-applications";
 import { generateTotpSecret, otpauthUri } from "@/services/two-factor";
+import QRCode from "qrcode";
 import { cancelDeletionAction, requestDeletionAction } from "./actions";
 
 export const metadata = { title: "Hesabım" };
@@ -41,9 +42,16 @@ export default async function AccountPage({
   const profile = rows[0]!;
   const sessions = await listSessions(context.user.id);
 
-  // A fresh secret for the setup form; only needed while 2FA is off
+  // A fresh secret for the setup form; only needed while 2FA is off. The QR
+  // code is generated server side as SVG so nothing client side is required.
   const pendingSecret = profile.totpEnabledAt === null ? generateTotpSecret() : "";
   const pendingUri = pendingSecret ? otpauthUri(pendingSecret, profile.email) : "";
+  const pendingQrUrl =
+    pendingSecret && pendingUri
+      ? `data:image/svg+xml;base64,${Buffer.from(
+          await QRCode.toString(pendingUri, { type: "svg", width: 176, margin: 1 }),
+        ).toString("base64")}`
+      : "";
 
   // The writer application block: prerequisites, cooldown and current status
   const eligibility = checkWriterEligibility(profile);
@@ -127,6 +135,7 @@ export default async function AccountPage({
           enabled={profile.totpEnabledAt !== null}
           pendingSecret={pendingSecret}
           pendingUri={pendingUri}
+          pendingQrUrl={pendingQrUrl}
         />
 
         <SessionsCard

@@ -854,6 +854,9 @@ belgesiz ilerler.
 - **Saklama:** `users.totp_secret` (SESSION_SECRET pepper'ı ile AES-256-GCM
   şifreli, `encryptSecret`) + `users.totp_enabled_at`. Sır yalnızca geçerli bir
   kod doğrulandıktan sonra kaydedilir; kurulum formu sırrı bir kez gösterir.
+  Kurulum kartı önce **QR kod** (`qrcode` paketi, sunucuda SVG data URL)
+  gösterir; tarayamayanlar için bağlantı ve gizli anahtar metni aynı kutuda
+  durur.
 - **Giriş:** Şifre doğrulandıktan sonra tek kullanımlık `login_challenges`
   bileti (5 dk, sadece peppered hash saklanır, tek kullanım) düzenlenir;
   `/login/2fa` kod girişinden sonra oturum açılır. `login_2fa` rate limit
