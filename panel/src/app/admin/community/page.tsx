@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { guardPanel } from "@/lib/auth/guard";
 import { readCsrfToken } from "@/lib/csrf";
 import { PanelForm } from "@/components/form";
@@ -211,12 +210,6 @@ export default async function AdminCommunityPage() {
             </Table>
           )}
         </Card>
-
-        <p className="text-sm text-muted">
-          <Link href="/community" className="text-accent underline">
-            Topluluk sohbetini aç
-          </Link>
-        </p>
       </div>
     </>
   );

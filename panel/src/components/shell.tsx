@@ -48,7 +48,6 @@ export const ADMIN_NAV: NavGroup[] = [
     items: [
       { href: "/admin/announcements", label: "Duyurular" },
       { href: "/admin/community", label: "Topluluk yönetimi" },
-      { href: "/community", label: "Topluluk sohbeti" },
       { href: "/magazine", label: "Dergi" },
     ],
   },
@@ -89,7 +88,6 @@ export const EDITOR_NAV: NavGroup[] = [
     label: "Dergi & Topluluk",
     items: [
       { href: "/magazine", label: "Dergi" },
-      { href: "/community", label: "Topluluk" },
     ],
   },
 ];
@@ -99,7 +97,6 @@ export const READER_NAV: NavGroup[] = [
     items: [
       { href: "/magazine", label: "Dergi" },
       { href: "/magazine/issues", label: "Sayılar" },
-      { href: "/community", label: "Topluluk" },
       { href: "/account", label: "Hesabım" },
     ],
   },
@@ -118,7 +115,6 @@ export function writerNav(locked: boolean): NavGroup[] {
         { href: "/writer/articles", label: "Makalelerim", disabled: locked },
         { href: "/writer/profile", label: "Profil ve güvenlik" },
         { href: "/magazine", label: "Dergi" },
-        { href: "/community", label: "Topluluk" },
       ],
     },
   ];

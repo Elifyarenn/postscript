@@ -24,7 +24,9 @@ import {
 import { writeAudit } from "@/lib/audit";
 import { canModerateCommunity, type Actor } from "@/lib/auth/rbac";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
+import { isChatOpen } from "@/lib/chat-mode";
 import { maskBannedWords, normalizeBannedWord } from "@/lib/moderation";
+import { getChatMode } from "./chat-mode";
 import type { RequestMeta } from "./auth";
 
 export const MAX_COMMENT_LENGTH = 2000;
@@ -242,6 +244,11 @@ export async function addChatMessage(
   rawInput: unknown,
   meta: RequestMeta,
 ): Promise<CommunityMessage> {
+  // While the chat is passive, nobody posts — not even the admin (D-056)
+  if (!isChatOpen(await getChatMode())) {
+    throw conflict("Sohbet şu an kapalı.");
+  }
+
   const parsed = chatMessageSchema.safeParse(rawInput);
   if (!parsed.success) {
     throw badRequest("Mesaj geçersiz.", z.flattenError(parsed.error).fieldErrors);

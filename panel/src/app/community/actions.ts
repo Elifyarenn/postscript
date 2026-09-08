@@ -1,9 +1,8 @@
 "use server";
 
 /**
- * Community actions: commenting on an article.
- * The chat room posts through its own API endpoint instead (live polling),
- * so there is no page reload for chat messages.
+ * Community actions: commenting on an article. The chat room was removed from
+ * the panel (D-056); its API endpoints stay, but new posts are refused.
  */
 import { revalidatePath } from "next/cache";
 import { addCommunityComment } from "@/services/community";

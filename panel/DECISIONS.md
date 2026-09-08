@@ -1041,4 +1041,34 @@ yeni hem eski hesaplar için numarayı sistemde toplar.
 
 
 
+## D-056 — Topluluk sohbeti panelden kaldırıldı
+
+**Karar:** "Pasif (okunur, gönderim yok)" mod yeterli gelmedi; sohbet tamamen
+görünmez ve okunamaz yapıldı:
+
+- Kenar çubuğundaki "Topluluk sohbeti" / "Topluluk" sekmeleri tüm rollerden
+  (admin, editör, yazar, okuyucu) çıkarıldı.
+- `/community` sayfası artık 404 döndürür; oda bileşeni (`chat-room.tsx`)
+  silindi. Sekme görünmez, sayfa okunamaz durumda.
+- Servis katmanında bir güvenlik ağı kaldı: `addChatMessage` çağrısı başında
+  `getChatMode` okunur; varsayılan `'disabled'` olduğu için
+  `POST /api/community/messages` yeni mesajı 409 ile reddeder — arayüzü
+  kaldırılmış bir sohbet, doğrudan API'den beslenemez.
+- Yorumlar ve moderasyon etkilenmez: `/admin/community` "Topluluk yönetimi"
+  sekmesi (yasaklı kelimeler, yorum/mesaj kaldırma) durur; oradaki "Topluluk
+  sohbetini aç" bağlantısı kaldırıldı.
+- Yönetici Sistem sayfasındaki sohbet aç/kapat kartı kaldırıldı: görünür alanı
+  olmayan bir özelliğin anahtarı anlamsızdır. `setChatMode` servisi yalnızca
+  testlerde kullanılır (`site-settings` içindeki `clearSiteSetting` ile aynı
+  gerekçe); `getChatMode` gönderim engelinin kaynağı olarak canlıdır.
+
+**Gerekçe:** Ürün sahibi "hayır, komple sekmeyi görünür yapma, kaldır,
+okunmasın" dedi. Okunur-pasif mod yerine sekmenin görünmemesi ve sayfanın
+okunamaması istendi. Sohbet tablosu ve servisleri kodda durur — geri getirmek
+istenirse yalnızca sekme + sayfa + gönderim engeli kaldırılır, veri kaybı
+olmaz. Gönderim engeli muhafazakâr güvenlik ağıdır: gizlenmiş bir arayüz,
+doğrudan API çağrısını engellemez.
+
+
+
 

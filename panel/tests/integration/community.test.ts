@@ -18,6 +18,7 @@ import {
   removeChatMessage,
   removeCommunityComment,
 } from "@/services/community";
+import { setChatMode } from "@/services/chat-mode";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import { isAppError } from "@/lib/errors";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
@@ -80,6 +81,12 @@ async function draftArticle() {
     })
     .returning();
   return row!;
+}
+
+/** Opens the chat for a test; the default is passive (D-056). */
+async function enableChat() {
+  const admin = await createUser({ role: "admin" });
+  await setChatMode(actorOf(admin), { mode: "enabled" }, noMeta);
 }
 
 describe("banned word blacklist", () => {
@@ -162,6 +169,10 @@ describe("comments on articles", () => {
 });
 
 describe("community chat", () => {
+  beforeEach(async () => {
+    await enableChat();
+  });
+
   it("posts messages with quotes, masking banned words", async () => {
     const admin = await createUser({ role: "admin" });
     await addBannedWord(actorOf(admin), { word: "küfür" }, noMeta);
@@ -227,7 +238,47 @@ describe("community chat", () => {
   });
 });
 
+describe("passive chat (D-056)", () => {
+  it("refuses new messages while the chat is disabled by default", async () => {
+    const reader = await createUser();
+    const error = await captureError(
+      addChatMessage(actorOf(reader), { body: "kapalı" }, noMeta),
+    );
+    expect(error.status).toBe(409);
+  });
+
+  it("lets only an admin re-enable the chat", async () => {
+    const reader = await createUser();
+    const refused = await captureError(
+      setChatMode(actorOf(reader), { mode: "enabled" }, noMeta),
+    );
+    expect(refused.status).toBe(403);
+
+    const admin = await createUser({ role: "admin" });
+    await setChatMode(actorOf(admin), { mode: "enabled" }, noMeta);
+
+    const msg = await addChatMessage(actorOf(reader), { body: "açıldı" }, noMeta);
+    expect(msg.body).toBe("açıldı");
+  });
+
+  it("blocks posting again once an admin turns the chat back off", async () => {
+    const admin = await createUser({ role: "admin" });
+    await setChatMode(actorOf(admin), { mode: "enabled" }, noMeta);
+    await setChatMode(actorOf(admin), { mode: "disabled" }, noMeta);
+
+    const reader = await createUser();
+    const error = await captureError(
+      addChatMessage(actorOf(reader), { body: "yine kapalı" }, noMeta),
+    );
+    expect(error.status).toBe(409);
+  });
+});
+
 describe("role badges (data)", () => {
+  beforeEach(async () => {
+    await enableChat();
+  });
+
   it("exposes the author role next to each comment and message", async () => {
     const article = await publishedArticle();
     const editor = await createUser({ role: "editor" });
@@ -243,6 +294,10 @@ describe("role badges (data)", () => {
 });
 
 describe("self-referential chat integrity", () => {
+  beforeEach(async () => {
+    await enableChat();
+  });
+
   it("deletes the quote reference when the quoted message row goes away", async () => {
     const reader = await createUser();
     const msg = await addChatMessage(actorOf(reader), { body: "kaynak" }, noMeta);
