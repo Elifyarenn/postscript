@@ -85,6 +85,20 @@
       "when": 1788793020646,
       "tag": "0011_exotic_doctor_doom",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1788864017314,
+      "tag": "0012_clear_quasar",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1788864890725,
+      "tag": "0013_wealthy_sandman",
+      "breakpoints": true
     }
   ]
 }

@@ -23,6 +23,7 @@ import {
 } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
 import { listAnnouncementsFor } from "@/services/announcements";
+import { disableTotp, enableTotp } from "@/services/two-factor";
 import { runAction, optionalText, text, type ActionState } from "@/lib/action";
 import { badRequest } from "@/lib/errors";
 
@@ -226,6 +227,53 @@ export async function selfFreezeDutyAction(
         "Göreviniz donduruldu. Paneliniz kapatıldı; kayıtlarınız korunur. " +
         "Görevinizi yeniden aktifleştirmek için bir yöneticiye başvurun.",
     };
+  });
+}
+
+export async function enableTwoFactorAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireAuth();
+    const meta = await requestMetadata();
+
+    await enableTotp(
+      {
+        userId: user.id,
+        password: text(formData, "currentPassword"),
+        pendingSecret: text(formData, "pendingSecret"),
+        code: text(formData, "code"),
+      },
+      meta,
+    );
+
+    revalidatePath("/account");
+    return { success: "İki adımlı doğrulama açıldı. Güvenlik için yeniden giriş yapmanız gerekiyor." };
+  });
+}
+
+export async function disableTwoFactorAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireAuth();
+    const meta = await requestMetadata();
+
+    await disableTotp(
+      {
+        userId: user.id,
+        password: text(formData, "currentPassword"),
+        code: text(formData, "code"),
+      },
+      meta,
+    );
+
+    revalidatePath("/account");
+    return { success: "İki adımlı doğrulama kapatıldı." };
   });
 }
 

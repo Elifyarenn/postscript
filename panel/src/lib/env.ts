@@ -34,7 +34,6 @@ const envSchema = z.object({
   S3_ACCESS_KEY_ID: z.string().default("postscript"),
   S3_SECRET_ACCESS_KEY: z.string().default("postscript"),
   S3_BUCKET: z.string().default("postscript"),
-  S3_IDENTITY_BUCKET: z.string().default("postscript-identity"),
   S3_FORCE_PATH_STYLE: booleanish,
 
   REVALIDATE_WEBHOOK_URL: z.string().optional(),

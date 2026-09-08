@@ -15,6 +15,7 @@ export type AppErrorCode =
   | "gone"
   | "conflict"
   | "rate_limited"
+  | "two_factor_required"
   | "internal";
 
 const STATUS_BY_CODE: Record<AppErrorCode, number> = {
@@ -25,6 +26,7 @@ const STATUS_BY_CODE: Record<AppErrorCode, number> = {
   gone: 410,
   conflict: 409,
   rate_limited: 429,
+  two_factor_required: 403,
   internal: 500,
 };
 

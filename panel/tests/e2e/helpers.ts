@@ -4,6 +4,7 @@
 import type { Page } from "@playwright/test";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
+import { generateSync } from "otplib";
 
 export const MAIL_DIR = path.join(process.cwd(), ".e2e", "mail");
 
@@ -15,6 +16,14 @@ export const SEED = {
   minor: { email: "genc@postscript.local", password: "Genc!Parola2026" },
   applicant: { email: "aday@postscript.local", password: "Aday!Parola2026" },
 };
+
+/** The fixed second factor the e2e seed gives the staff accounts. */
+const E2E_TOTP_SECRET = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP";
+
+/** A valid six digit code for the e2e TOTP secret, right now. */
+export function totpCode(): string {
+  return generateSync({ secret: E2E_TOTP_SECRET, strategy: "totp" });
+}
 
 /* ------------------------------------------------------------------ */
 /* Mail                                                                */
@@ -77,6 +86,19 @@ export async function submitLogin(
   await page.getByRole("button", { name: "Giriş yap" }).click();
 }
 
+/**
+ * Completes the second factor when the login landed on the code screen.
+ * The staff accounts seeded for e2e have 2FA on with a known secret, so the
+ * code is generated rather than read from a mail. Waits for the redirect so
+ * the URL check cannot race the server action.
+ */
+export async function completeTwoFactorIfAsked(page: Page): Promise<void> {
+  await page.waitForURL(/(\/login\/2fa|\/admin|\/editor|\/writer|\/magazine)/);
+  if (!page.url().includes("/login/2fa")) return;
+  await page.getByLabel("Doğrulama kodu").fill(totpCode());
+  await page.getByRole("button", { name: "Doğrula" }).click();
+}
+
 export async function logout(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Çıkış" }).click();
   await page.waitForURL("**/login");
@@ -92,5 +114,6 @@ export async function loginElevated(
   credentials: { email: string; password: string },
 ): Promise<void> {
   await submitLogin(page, credentials);
+  await completeTwoFactorIfAsked(page);
   await page.waitForURL(name === "admin" ? "**/admin" : "**/editor");
 }

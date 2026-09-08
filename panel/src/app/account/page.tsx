@@ -14,10 +14,12 @@ import {
   EmailCard,
   WriterApplicationCard,
   DutyCard,
+  TwoFactorCard,
 } from "@/components/account-forms";
 import { formatDate } from "@/lib/utils";
 import { checkWriterEligibility } from "@/services/users";
 import { cooldownInfo, latestApplication } from "@/services/writer-applications";
+import { generateTotpSecret, otpauthUri } from "@/services/two-factor";
 import { cancelDeletionAction, requestDeletionAction } from "./actions";
 
 export const metadata = { title: "Hesabım" };
@@ -29,7 +31,7 @@ export const metadata = { title: "Hesabım" };
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ verified?: string; emailChanged?: string }>;
+  searchParams: Promise<{ verified?: string; emailChanged?: string; twoFactor?: string }>;
 }) {
   const context = await requireSession();
   const csrfToken = (await readCsrfToken()) ?? "";
@@ -38,6 +40,10 @@ export default async function AccountPage({
   const rows = await db.select().from(users).where(eq(users.id, context.user.id)).limit(1);
   const profile = rows[0]!;
   const sessions = await listSessions(context.user.id);
+
+  // A fresh secret for the setup form; only needed while 2FA is off
+  const pendingSecret = profile.totpEnabledAt === null ? generateTotpSecret() : "";
+  const pendingUri = pendingSecret ? otpauthUri(pendingSecret, profile.email) : "";
 
   // The writer application block: prerequisites, cooldown and current status
   const eligibility = checkWriterEligibility(profile);
@@ -67,6 +73,14 @@ export default async function AccountPage({
         {params.emailChanged && (
           <Alert tone="success" title="E-posta adresi güncellendi">
             E-posta adresiniz değiştirildi ve doğrulandı.
+          </Alert>
+        )}
+
+        {params.twoFactor && (
+          <Alert tone="warning" title="İki adımlı doğrulama zorunlu">
+            Editör ve yönetici panellerine girebilmek için önce iki adımlı
+            doğrulamayı açmanız gerekiyor. Aşağıdaki karttan kurun; kurulumdan
+            sonra yeniden giriş yapmanız istenecek.
           </Alert>
         )}
 
@@ -107,6 +121,13 @@ export default async function AccountPage({
         />
 
         <PasswordCard csrfToken={csrfToken} />
+
+        <TwoFactorCard
+          csrfToken={csrfToken}
+          enabled={profile.totpEnabledAt !== null}
+          pendingSecret={pendingSecret}
+          pendingUri={pendingUri}
+        />
 
         <SessionsCard
           csrfToken={csrfToken}

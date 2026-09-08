@@ -1,7 +1,7 @@
 "use server";
 
 /**
- * Admin actions: role changes, identity verification, bans, agreement versions,
+ * Admin actions: role changes, bans, agreement versions,
  * the rights form template and the KVKK notice.
  *
  * Every one of these re-checks `requireRole("admin")`; nothing here trusts the

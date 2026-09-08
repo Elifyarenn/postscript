@@ -7,6 +7,8 @@
  * is made here beyond that: the services own the rules.
  */
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { badRequest } from "@/lib/errors";
 import {
   register,
   requestPasswordReset,
@@ -22,8 +24,17 @@ import {
   requestMetadata,
   revokeAllSessions,
 } from "@/lib/auth/session";
+import {
+  checkLoginCodeLimit,
+  consumeLoginChallenge,
+  createLoginChallenge,
+  verifyLoginCode,
+  TWO_FACTOR_COOKIE,
+} from "@/services/two-factor";
 import { assertCsrfFromForm } from "@/lib/csrf";
 import { runAction, text, checkbox, type ActionState } from "@/lib/action";
+import { clearAttempts } from "@/lib/rate-limit";
+import { isProduction } from "@/lib/env";
 import type { Role } from "@/db/schema";
 
 /** Where a signed-in user belongs, by role. */
@@ -76,6 +87,22 @@ export async function loginAction(_state: ActionState, formData: FormData): Prom
       meta,
     );
 
+    // Second factor half: the password was right, but the session is only
+    // created once the authenticator code follows (D-048)
+    if (outcome.user.totpEnabledAt !== null) {
+      const rawToken = await createLoginChallenge(outcome.user.id);
+      const cookieStore = await cookies();
+      cookieStore.set(TWO_FACTOR_COOKIE, rawToken, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: isProduction(),
+        path: "/",
+        maxAge: 5 * 60,
+      });
+      destination = "/login/2fa";
+      return;
+    }
+
     await createSession({
       userId: outcome.user.id,
       ip: meta.ip,
@@ -86,6 +113,53 @@ export async function loginAction(_state: ActionState, formData: FormData): Prom
       outcome.user.emailVerifiedAt === null
         ? "/verify-email/pending"
         : homeFor(outcome.user.role);
+  });
+
+  if (destination) redirect(destination);
+  return result;
+}
+
+/**
+ * The second half of a two-factor login: the code in the authenticator app.
+ * The challenge cookie proves the password half already succeeded in this
+ * browser, so the code is only ever checked against that ticket's user.
+ */
+export async function loginTwoFactorAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  let destination: string | null = null;
+
+  const result = await runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const meta = await requestMetadata();
+
+    const cookieStore = await cookies();
+    const rawToken = cookieStore.get(TWO_FACTOR_COOKIE)?.value;
+    if (!rawToken) {
+      throw badRequest("Doğrulama adımının süresi doldu, tekrar giriş yapın.");
+    }
+
+    const userId = await consumeLoginChallenge(rawToken);
+    if (!userId) {
+      throw badRequest("Doğrulama adımının süresi doldu, tekrar giriş yapın.");
+    }
+
+    await checkLoginCodeLimit(userId);
+
+    const code = text(formData, "code");
+    if (!(await verifyLoginCode(userId, code))) {
+      throw badRequest("Kod doğrulanamadı.", { code: ["Kod doğrulanamadı."] });
+    }
+
+    // A success must not keep counting against the second-factor bucket
+    await clearAttempts("login_2fa", userId);
+
+    await createSession({ userId, ip: meta.ip, userAgent: meta.userAgent });
+    cookieStore.delete(TWO_FACTOR_COOKIE);
+
+    const context = await getAuthContext();
+    destination = context ? homeFor(context.user.role) : "/login";
   });
 
   if (destination) redirect(destination);

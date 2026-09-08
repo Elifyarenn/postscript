@@ -50,7 +50,9 @@ export async function requireSession(): Promise<AuthContext> {
 
 /**
  * Guards a panel area. Identity first, then the role, so a user is never told
- * "forbidden" for a problem they could fix.
+ * "forbidden" for a problem they could fix. An editor or admin who has not
+ * set up the mandatory second factor is sent to the account page that offers
+ * exactly that (D-048).
  */
 export async function guardPanel(minimum: Role): Promise<AuthContext> {
   const context = await requireSession();
@@ -65,6 +67,10 @@ export async function guardPanel(minimum: Role): Promise<AuthContext> {
     (minimum === "admin" && canAccessAdminPanel(user));
 
   if (!allowed) forbidden();
+
+  if (minimum === "editor" || minimum === "admin") {
+    if (!context.user.totpEnabled) redirect("/account?twoFactor=1");
+  }
 
   return context;
 }

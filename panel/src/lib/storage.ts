@@ -1,9 +1,8 @@
 /**
  * Object storage behind an adapter (specification §2 and §11).
  *
- * Two buckets: the ordinary one for article media and contract PDFs, and a
- * separate identity bucket that only admins can read, through signed URLs that
- * live for five minutes (DECISIONS.md D-009).
+ * One bucket: article media and contract PDFs. The identity-document bucket
+ * from D-009 was dropped in D-047.
  */
 import "server-only";
 import {
@@ -18,7 +17,7 @@ import path from "node:path";
 import { env, isProduction } from "@/lib/env";
 import { badRequest } from "@/lib/errors";
 
-export type Bucket = "media" | "identity";
+export type Bucket = "media";
 
 export type StoredObject = { key: string; bucket: Bucket; size: number; mime: string };
 
@@ -69,8 +68,7 @@ function createS3Adapter(): StorageAdapter {
     },
   });
 
-  const bucketName = (bucket: Bucket) =>
-    bucket === "identity" ? config.S3_IDENTITY_BUCKET : config.S3_BUCKET;
+  const bucketName = (_bucket: Bucket) => config.S3_BUCKET;
 
   return {
     async put({ bucket, key, body, mime }) {
@@ -197,7 +195,4 @@ export function getStorage(): StorageAdapter {
   return adapter;
 }
 
-/** Identity documents: admin only, five minute window (§11). */
-export async function signIdentityDocumentUrl(key: string): Promise<string> {
-  return getStorage().signedUrl({ bucket: "identity", key, expiresInSeconds: 300 });
-}
+

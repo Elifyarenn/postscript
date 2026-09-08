@@ -113,7 +113,7 @@ işaretiyle tutulur; `auto_delete_at = yükleme + 90 gün`. Silme işini
 `scripts/purge-identity-documents.ts` yapar (cron ile günlük çalışacak şekilde
 README'de anlatıldı). İmzalı URL ömrü 5 dakika ve yalnızca `admin` üretebilir.~~
 
-**İPTAL EDİLDİ — D-045:** Kimlik belgesi adımı ürün kapsamından çıkarıldı;
+**İPTAL EDİLDİ — D-047:** Kimlik belgesi adımı ürün kapsamından çıkarıldı;
 `S3_IDENTITY_BUCKET`, ilgili depolama yardımcıları ve env değişkeni kaldırıldı.
 Bu kararın geri kalanı yalnızca tarihî kayıttır.
 
@@ -781,3 +781,47 @@ eklenecek (D-045'in açtığı yüzeyde).
 SEO kuralları gerçekte dizine giren sayfalara uygulanır. Landing'i İngilizce
 "postscript" markasıyla bırakmak, "PostScript Dergi" hedef anahtar kelimesinde
 marka bütünlüğünü arama sonucunda kurmazdı.
+
+---
+
+## D-047 — Kimlik belgesi adımı iptal edildi
+
+**Karar:** Kimlik belgesi toplama adımı (D-009) ürün kapsamından çıkarıldı.
+`S3_IDENTITY_BUCKET` env değişkeni, depolama katmanındaki identity bucket
+yardımcıları ve ilgili dokümantasyon kaldırıldı; depolama artık tek bucket
+("media") kullanır. D-009'da tasarlanan `purge-identity-documents` scripti hiç
+oluşturulmadığı için temizlenecek kalıntı yoktur.
+
+**Gerekçe:** Ürün sahibi adımın yükünü (belge doğrulama akışı, 90 günlük
+otomatik silme, admin iş yükü) kapsam dışı bıraktı; yazar başvurusu ve terfisi
+belgesiz ilerler.
+
+---
+
+## D-048 — Editör ve yönetici için TOTP iki adımlı doğrulama
+
+**Karar:** TOTP 2FA uygulandı ve editor/admin rolleri için **zorunlu** kılındı
+(CLAUDE.md güvenlik kuralları):
+
+- **Saklama:** `users.totp_secret` (SESSION_SECRET pepper'ı ile AES-256-GCM
+  şifreli, `encryptSecret`) + `users.totp_enabled_at`. Sır yalnızca geçerli bir
+  kod doğrulandıktan sonra kaydedilir; kurulum formu sırrı bir kez gösterir.
+- **Giriş:** Şifre doğrulandıktan sonra tek kullanımlık `login_challenges`
+  bileti (5 dk, sadece peppered hash saklanır, tek kullanım) düzenlenir;
+  `/login/2fa` kod girişinden sonra oturum açılır. `login_2fa` rate limit
+  kovası (5 deneme / 15 dk) kod kaba kuvvetini engeller; başarılı giriş kovayı
+  temizler.
+- **Zorunluluk:** `requireRole("editor"/"admin")` ve `guardPanel` 2FA'sız
+  kullanıcıyı `/account?twoFactor=1` kurulum ekranına yönlendirir; kapatma
+  (disable) da şifre + geçerli kod ister. 2FA açıldığında tüm oturumlar
+  iptal edilir (öncesine ait hiçbir oturum yaşamaz); kapatıldığında oturumlar
+  korunur (kullanıcı bilinçli olarak düşürüyor).
+- **Doğrulama:** otplib v13 (`generateSecret`/`generateURI`/`verifySync`),
+  tek adım tolerans (epochTolerance: 1). Log/audit redaksiyonunda zaten var
+  olan `totp_secret` anahtarı korundu.
+
+**Gerekçe:** Kural "zorunlu" diyordu ama uygulamada yalnızca kripto ilkelleri
+vardı; giriş akışında 2FA adımı yoktu. Üretimdeki iki adminin parolası tek
+faktördü. Şifre + kod yerine yalnızca koda güvenmeyen, biletli iki adımlı akış,
+oturumun her zaman 2FA'dan geçmiş olmasını garanti eder (2FA açıkken şifresiz
+oturum olamaz).

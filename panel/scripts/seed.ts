@@ -28,7 +28,7 @@ import {
   type Role,
 } from "@/db/schema";
 import { hashPassword } from "@/lib/password";
-import { sha256Hex } from "@/lib/crypto";
+import { encryptSecret, sha256Hex } from "@/lib/crypto";
 import { slugify } from "@/lib/slug";
 import { normalizeBannedWord } from "@/lib/moderation";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
@@ -59,6 +59,8 @@ type SeedUser = {
   penName?: string;
   birthDate?: string | null;
   verified?: boolean;
+  /** When set, the account starts with the TOTP second factor enabled. */
+  totpSecret?: string;
 };
 
 async function upsertUser(input: SeedUser): Promise<string> {
@@ -90,6 +92,12 @@ async function upsertUser(input: SeedUser): Promise<string> {
       kvkkConsentAt: now,
       kvkkConsentVersion: 1,
       birthDate: input.birthDate === undefined ? "1994-04-12" : input.birthDate,
+      // The e2e run sets SEED_TOTP_SECRET so the editorial logins exercise the
+      // second factor the way production users will
+      totpSecret: input.totpSecret
+        ? encryptSecret(input.totpSecret, process.env.SESSION_SECRET!)
+        : null,
+      totpEnabledAt: input.totpSecret ? now : null,
     })
     .returning();
 
@@ -130,11 +138,14 @@ async function main(): Promise<void> {
   }
 
   console.log("Seeding accounts ...");
+  // The e2e run gives the seeded staff accounts a known second factor
+  const seedTotp = process.env.SEED_TOTP_SECRET || undefined;
   const adminId = await upsertUser({
     email: process.env.SEED_ADMIN_EMAIL ?? "admin@postscriptmag.com",
     displayName: process.env.SEED_ADMIN_NAME ?? "Site Admin",
     password: process.env.SEED_ADMIN_PASSWORD ?? "ChangeMe!Admin2026",
     role: "admin",
+    totpSecret: seedTotp,
   });
 
   let writerId: string | null = null;
@@ -145,6 +156,7 @@ async function main(): Promise<void> {
       displayName: "Deniz Editör",
       password: "Editor!Parola2026",
       role: "editor",
+      totpSecret: seedTotp,
     });
 
     const writer = await upsertUser({

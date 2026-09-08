@@ -1,0 +1,1 @@
+ALTER TYPE "public"."auth_scope" ADD VALUE 'login_2fa' BEFORE 'password_reset_ip';

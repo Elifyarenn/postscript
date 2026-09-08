@@ -66,8 +66,12 @@ SEED_DEMO_USERS=1 pnpm seed
 > Demo hesapları bilinen, depoda yazılı şifrelerle çalışır — üretimde yalnızca
 > admin CLI ile oluşturulur (D-038).
 
-> İki adımlı doğrulama şu anda **kapalıdır** ve yayın öncesi yeniden
-> tasarlanacaktır (D-033). Tüm roller yalnızca e-posta ve şifreyle girer.
+> İki adımlı doğrulama (TOTP) **editör ve yönetici için zorunludur** (D-048):
+> bu rollerdeki bir hesap 2FA kurmadan panele giremez — ilk girişte
+> `/account?twoFactor=1` kurulum ekranı açılır. Kurulum sırasında tüm mevcut
+> oturumlar iptal edilir ve yeniden girişte kimlik doğrulayıcı kodu istenir.
+> E2E koşusu `SEED_TOTP_SECRET` ile 2FA'lı personel hesapları üretir; yerel
+> geliştirmede 2FA, ilk girişte kurulur.
 
 Yardımcı adresler: Mailpit gelen kutusu `http://localhost:8025`, MinIO konsolu
 `http://localhost:9001`.
@@ -140,7 +144,7 @@ Tam liste `.env.example` içindedir. Kritik olanlar:
 | `SESSION_MAX_AGE_DAYS` / `SESSION_IDLE_DAYS` | Oturum ömrü (30) ve hareketsizlik sınırı (7) |
 | `SMTP_*`, `MAIL_FROM` | E-posta gönderimi |
 | `MAIL_TRANSPORT=file`, `MAIL_DIR` | SMTP yerine dosyaya yazar (yalnızca geliştirme) |
-| `S3_*` | Nesne depolama. `S3_IDENTITY_BUCKET` kimlik belgeleri için ayrıdır. |
+| `S3_*` | Nesne depolama (medya ve sözleşme PDF'leri). |
 | `REVALIDATE_WEBHOOK_URL` / `_SECRET` | Yayın ve geri çekme sonrası ön yüz önbelleğini tazeler; gövde HMAC-SHA256 ile imzalanır (`x-postscript-signature`). |
 | `PASSWORD_HIBP_CHECK=true` | Şifreleri HIBP k-anonymity ile de kontrol eder (varsayılan kapalı) |
 
@@ -370,7 +374,7 @@ Uygulama içinde zamanlayıcı yoktur; işler dışarıdan tetiklenir ve idempot
 ```
 
 Bir zaman damgalı dizin oluşturur: `postscript.dump` (PostgreSQL custom format),
-`media/` ve `identity/`.
+`media/`.
 
 **Geri yükleme:**
 
@@ -386,7 +390,6 @@ pg_restore --no-owner --no-privileges \
 # 3. Nesne depolamayı geri yükleyin
 mc alias set restore http://localhost:9000 postscript postscript
 mc mirror --overwrite ./backups/<zaman-damgası>/media     restore/postscript
-mc mirror --overwrite ./backups/<zaman-damgası>/identity  restore/postscript-identity
 
 # 4. Bekleyen migration varsa uygulayın
 DATABASE_URL=postgres://…/postscript_restore pnpm db:migrate
@@ -397,10 +400,6 @@ Notlar:
 - `SESSION_SECRET` yedekte değildir ve olmamalıdır. Aynı değer kullanılmazsa
   geri yüklenen sistemde oturumlar ve bekleyen doğrulama bağlantıları geçersiz
   olur; kullanıcılar yeniden giriş yapar.
-- `identity/` kişisel veridir. Geri yükleme gerçekten gerekmedikçe bu dizini
-  atlayın; `identity_verified_at` bilgisi veritabanında zaten durur.
-- Geri yükleme sonrası bir kez `pnpm purge-identity-documents` çalıştırın:
-  saklama süresi dolmuş belgeler tekrar canlanmasın.
 
 ---
 

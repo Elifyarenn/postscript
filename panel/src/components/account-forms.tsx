@@ -21,6 +21,8 @@ import {
 import { formatDate, formatDateTime } from "@/lib/utils";
 import {
   changePasswordAction,
+  disableTwoFactorAction,
+  enableTwoFactorAction,
   requestEmailChangeAction,
   revokeOtherSessionsAction,
   revokeSessionAction,
@@ -459,6 +461,122 @@ export type SessionRow = {
   lastSeenAt: Date;
   createdAt: Date;
 };
+
+/**
+ * The TOTP second factor block (D-048). The setup form receives a freshly
+ * generated secret from the server page; once the authenticator app holds it,
+ * the code the user types proves the app received it, and only then is the
+ * secret stored.
+ */
+export function TwoFactorCard({
+  csrfToken,
+  enabled,
+  pendingSecret,
+  pendingUri,
+}: {
+  csrfToken: string;
+  enabled: boolean;
+  /** A fresh secret to scan; only generated when 2FA is off. */
+  pendingSecret: string;
+  pendingUri: string;
+}) {
+  if (enabled) {
+    return (
+      <Card>
+        <h2 className="mb-3 font-serif text-lg">İki adımlı doğrulama</h2>
+        <div className="mb-4">
+          <Alert tone="success" title="Açık">
+            Girişinizde kimlik doğrulayıcı kodunuz da istenir.
+          </Alert>
+        </div>
+
+        <PanelForm
+          action={disableTwoFactorAction}
+          csrfToken={csrfToken}
+          submitLabel="İki adımlı doğrulamayı kapat"
+          submitVariant="secondary"
+        >
+          <>
+            <Field label="Mevcut şifre" htmlFor="totpCurrentPassword">
+              <Input
+                id="totpCurrentPassword"
+                name="currentPassword"
+                type="password"
+                autoComplete="current-password"
+                required
+              />
+            </Field>
+            <Field label="Doğrulama kodu" htmlFor="totpCode">
+              <Input
+                id="totpCode"
+                name="code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                required
+              />
+            </Field>
+          </>
+        </PanelForm>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <h2 className="mb-3 font-serif text-lg">İki adımlı doğrulama</h2>
+      <p className="mb-4 text-sm text-muted">
+        Editör ve yönetici hesapları için zorunludur. Kimlik doğrulayıcı
+        uygulamanızda (Google Authenticator, 1Password, Aegis vb.) aşağıdaki
+        kodu ekleyin, sonra uygulamanın ürettiği kodu buraya yazın.
+      </p>
+
+      <div className="mb-4 rounded-md border border-line bg-paper p-4">
+        <p className="mb-1 text-[10px] font-semibold tracking-[0.18em] text-muted uppercase">
+          Uygulamanıza ekleyeceğiniz bağlantı
+        </p>
+        <p className="break-all font-mono text-xs text-ink">{pendingUri}</p>
+        <p className="mt-3 mb-1 text-[10px] font-semibold tracking-[0.18em] text-muted uppercase">
+          Gizli anahtar (elle girmek isterseniz)
+        </p>
+        <p className="break-all font-mono text-xs text-ink">{pendingSecret}</p>
+      </div>
+
+      <PanelForm
+        action={enableTwoFactorAction}
+        csrfToken={csrfToken}
+        submitLabel="Doğrulamayı aç"
+      >
+        <>
+          <input type="hidden" name="pendingSecret" value={pendingSecret} />
+          <Field label="Mevcut şifre" htmlFor="totpSetupPassword">
+            <Input
+              id="totpSetupPassword"
+              name="currentPassword"
+              type="password"
+              autoComplete="current-password"
+              required
+            />
+          </Field>
+          <Field label="Doğrulama kodu" htmlFor="totpSetupCode">
+            <Input
+              id="totpSetupCode"
+              name="code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              pattern="[0-9]{6}"
+              maxLength={6}
+              required
+            />
+          </Field>
+        </>
+      </PanelForm>
+    </Card>
+  );
+}
 
 export function SessionsCard({
   csrfToken,

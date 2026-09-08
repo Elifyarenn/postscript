@@ -12,7 +12,7 @@ import { db } from "@/db/client";
 import { sessions, users, type EditorStatus, type Role, type WriterStatus } from "@/db/schema";
 import { hashToken, randomToken } from "@/lib/crypto";
 import { env, isProduction } from "@/lib/env";
-import { forbidden, unauthorized } from "@/lib/errors";
+import { AppError, forbidden, unauthorized } from "@/lib/errors";
 import { isEntryAllowed } from "@/lib/access-mode";
 import { getAccessMode } from "@/services/access-mode";
 import {
@@ -31,6 +31,8 @@ export type SessionUser = Actor & {
   penName: string | null;
   kvkkConsentAt: Date | null;
   birthDate: string | null;
+  /** True once the user completed the TOTP setup; the login then needs a code. */
+  totpEnabled: boolean;
 };
 
 export type AuthContext = {
@@ -163,6 +165,7 @@ export async function getAuthContext(): Promise<AuthContext | null> {
       isBanned: users.isBanned,
       kvkkConsentAt: users.kvkkConsentAt,
       birthDate: users.birthDate,
+      totpEnabledAt: users.totpEnabledAt,
       deletedAt: users.deletedAt,
     })
     .from(sessions)
@@ -208,6 +211,7 @@ export async function getAuthContext(): Promise<AuthContext | null> {
     isBanned: row.isBanned,
     kvkkConsentAt: row.kvkkConsentAt,
     birthDate: row.birthDate,
+    totpEnabled: row.totpEnabledAt !== null,
   };
 
   return { user, sessionId: row.sessionId };
@@ -255,5 +259,18 @@ export async function requireRole(minimum: Role): Promise<AuthContext> {
     (minimum === "admin" && canAccessAdminPanel(user));
 
   if (!allowed) throw forbidden();
+
+  // TOTP is mandatory for the editorial and admin roles (CLAUDE.md rules).
+  // A session for such a user only exists after the code passed, so anyone who
+  // has not set the second factor up yet is bounced to the setup screen.
+  if (minimum === "editor" || minimum === "admin") {
+    if (!user.totpEnabled) throw twoFactorRequired();
+  }
+
   return context;
+}
+
+/** 403 with a code the panel layout turns into the 2FA setup screen. */
+export function twoFactorRequired(): AppError {
+  return new AppError("two_factor_required", "Bu panel için iki adımlı doğrulama zorunludur.");
 }

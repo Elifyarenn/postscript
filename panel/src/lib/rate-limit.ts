@@ -10,7 +10,7 @@ import { and, eq, lt } from "drizzle-orm";
 import { db } from "@/db/client";
 import { authAttempts } from "@/db/schema";
 
-export type AuthScope = "register_ip" | "login_ip" | "login_account" | "password_reset_ip";
+export type AuthScope = "register_ip" | "login_ip" | "login_account" | "login_2fa" | "password_reset_ip";
 
 export type RateLimitRule = {
   /** How many attempts are allowed inside one window. */
@@ -26,6 +26,8 @@ export const RULES: Record<AuthScope, RateLimitRule> = {
   register_ip: { limit: 5, windowMs: 10 * 60_000, lockMs: 10 * 60_000 },
   login_ip: { limit: 10, windowMs: 15 * 60_000, lockMs: 15 * 60_000 },
   login_account: { limit: 10, windowMs: 15 * 60_000, lockMs: 15 * 60_000 },
+  // The second factor is six digits: five tries a window before a lockout
+  login_2fa: { limit: 5, windowMs: 15 * 60_000, lockMs: 15 * 60_000 },
   password_reset_ip: { limit: 5, windowMs: 15 * 60_000, lockMs: 15 * 60_000 },
 };
 

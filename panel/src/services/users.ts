@@ -373,7 +373,7 @@ export async function selfFreezeDuty(actor: Actor, meta: RequestMeta): Promise<U
 }
 
 /* ------------------------------------------------------------------ */
-/* Bans and identity verification                                      */
+/* Bans                                                                */
 /* ------------------------------------------------------------------ */
 
 export async function setBanned(

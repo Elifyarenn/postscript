@@ -138,6 +138,7 @@ export const authScopeEnum = pgEnum("auth_scope", [
   "register_ip",
   "login_ip",
   "login_account",
+  "login_2fa",
   "password_reset_ip",
 ]);
 
@@ -193,6 +194,14 @@ export const users = pgTable(
 
     kvkkConsentAt: timestamp("kvkk_consent_at", { withTimezone: true }),
     kvkkConsentVersion: integer("kvkk_consent_version"),
+
+    /**
+     * TOTP second factor (D-048). The secret is AES-GCM encrypted with the
+     * session pepper, so a database dump alone yields nothing; `totpEnabledAt`
+     * is null until the code was verified once.
+     */
+    totpSecret: text("totp_secret"),
+    totpEnabledAt: timestamp("totp_enabled_at", { withTimezone: true }),
 
     isBanned: boolean("is_banned").notNull().default(false),
     bannedReason: text("banned_reason"),
@@ -310,6 +319,35 @@ export const emailTokens = pgTable(
   (t) => [
     uniqueIndex("email_tokens_token_hash_unique").on(t.tokenHash),
     index("email_tokens_user_type_idx").on(t.userId, t.type),
+  ],
+);
+
+/* ------------------------------------------------------------------ */
+/* login_challenges (two-factor step, D-048)                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A single-use ticket issued after the password half of a two-factor login.
+ * Carries no secrets itself: only the peppered hash is stored, and the row
+ * dies five minutes after it was issued.
+ */
+export const loginChallenges = pgTable(
+  "login_challenges",
+  {
+    id: id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("login_challenges_token_hash_unique").on(t.tokenHash),
+    index("login_challenges_user_idx").on(t.userId),
+    index("login_challenges_expires_at_idx").on(t.expiresAt),
   ],
 );
 

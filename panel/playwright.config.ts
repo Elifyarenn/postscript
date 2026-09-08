@@ -48,6 +48,10 @@ export default defineConfig({
       SESSION_SECRET: "e2e-session-secret-0123456789abcdef",
       // The specs log in as the demo accounts, so the seed must create them
       SEED_DEMO_USERS: "1",
+      // Staff accounts get a fixed TOTP secret; the helpers complete the
+      // second factor with a code generated from it (32 chars = 20 bytes,
+      // above otplib's 16 byte floor)
+      SEED_TOTP_SECRET: "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP",
     },
   },
 });
