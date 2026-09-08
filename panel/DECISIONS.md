@@ -108,12 +108,16 @@ Yeni tablo eklemek, mevcut tabloları amacı dışında kullanmaktan daha temiz.
 
 ## D-009 — Kimlik belgeleri ayrı bucket ve otomatik silme
 
-**Karar:** Kimlik belgeleri `S3_IDENTITY_BUCKET` içinde, `media.is_identity_document`
+**Karar:** ~~Kimlik belgeleri `S3_IDENTITY_BUCKET` içinde, `media.is_identity_document`
 işaretiyle tutulur; `auto_delete_at = yükleme + 90 gün`. Silme işini
 `scripts/purge-identity-documents.ts` yapar (cron ile günlük çalışacak şekilde
-README'de anlatıldı). İmzalı URL ömrü 5 dakika ve yalnızca `admin` üretebilir.
+README'de anlatıldı). İmzalı URL ömrü 5 dakika ve yalnızca `admin` üretebilir.~~
 
-**Gerekçe:** Spesifikasyon 90 gün sonra otomatik silmeyi istiyor ama zamanlayıcıyı
+**İPTAL EDİLDİ — D-045:** Kimlik belgesi adımı ürün kapsamından çıkarıldı;
+`S3_IDENTITY_BUCKET`, ilgili depolama yardımcıları ve env değişkeni kaldırıldı.
+Bu kararın geri kalanı yalnızca tarihî kayıttır.
+
+**Gerekçe (orijinal):** Spesifikasyon 90 gün sonra otomatik silmeyi istiyor ama zamanlayıcıyı
 tanımlamıyor. Uygulama içi bir zamanlayıcı, çok örnekli dağıtımda mükerrer çalışır;
 dışarıdan tetiklenen idempotent bir script daha güvenli.
 
@@ -709,3 +713,71 @@ Tekli seçim radyo kartlarıyla kullanıcıya net; arka plan (kota = onaylı ada
 sayısı, onay kontrolü, kitle raporu) aynı kaldığı için değişiklik yalnızca seçim
 modelindedir. Bu karar D-041'deki "en fazla 3 kategori" kuralını bilinçli olarak
 günceller.
+
+---
+
+## D-045 — SEO: Türkçe aramalar için halka açık landing sayfası indekslenir
+
+**Karar:** Arama motoru görünürlüğü yalnızca halka açık pazarlama yüzü olan
+landing sayfasına (`index.html`, `postscriptmag.com/`) uygulanır. Kök
+`robots.txt` ve `sitemap.xml` eklendi; `index.html` Türkçe hedefli SEO ile
+güncellendi: `lang="tr"`, Türkçe `title`/`description`, canonical, Open Graph,
+Twitter kart, `theme-color` ve schema.org yapısal verisi (WebSite + Periodical +
+Organization). Görünür içerik Türkçeleştirildi (nav, kategori listesi, örnek
+başlıklar, footer) ve "OBSESSSION" yazım hatası "OBSESSION"a düzeltildi; tipografik
+tasarım (büyük harf, harf aralığı, serif display) korundu. JSON-LD'de
+`postscriptmag.com/#organization` etiketi kullanılır; sosyal paylaşım önizlemesi
+için `og:image` henüz yok — kapak/logo sanatı belirlenince eklenecek.
+
+**Gerekçe:** Panel uygulaması D-035 gereği tümüyle `robots: noindex` çalışır ve
+okuma alanı oturum ister; bu yüzden panelin kendisi arama motorlarına açılmaz.
+Halka açık indekslenebilir yüzey landing sayfasıdır. Türkçe aramalarda (ör.
+"edebiyat dergisi", "e-dergi", "psikoloji") görünmek için sayfanın dili ve meta
+içeriği Türkçe olmalıdır — İngilizce bir landing bu sorgularda sıralanamazdı.
+`robots.txt` kökte landing'in `Allow: /` politikasıdır; panelin kendi
+`public/robots.txt` (`Disallow: /`) uygulamayı kapalı tutar. Dağıtım aynı
+origin'i paylaşırsa `/robots.txt` için hangi politikanın servis edileceği
+dağıtımda netleştirilmeli (Next.js `public/robots.txt` önceliğe sahip olur);
+bu çakışma bilinçli olarak yönetilmek üzere not edildi.
+
+---
+
+## D-046 — SEO marka standardı: "PostScript Dergi" ve kural eşlemesi
+
+**Karar:** Arama motorlarına açık yüzeyde marka her yerde **"PostScript Dergi"**
+olarak sabitlendi; tek başına "PostScript" bu yüzeyde marka olarak
+kullanılmıyor. Landing (`index.html`) güncellendi:
+
+- **Title:** `PostScript Dergi - <Sayfa/İçerik>` kalıbı (ör. "PostScript Dergi -
+  Edebiyat, Kültür ve Psikoloji E-Dergisi", 58 karakter).
+- **Meta description:** markayı içeriyor ve 150–160 karakter bandında (153).
+- **OG / Twitter:** `og:site_name` ve `twitter:title` "PostScript Dergi".
+- **Schema.org:** WebSite + Periodical + Organization düğümlerinin `name` alanı
+  "PostScript Dergi"; `@id` etiketleri değişmedi
+  (`postscriptmag.com/#website|#magazine|#organization`).
+- **H1:** tek `h1` markayı içeriyor ("POSTSCRIPT DERGİ").
+
+Panelin görünür markası `postscript` olarak kalır (D-035); panel D-045 gereği
+tümüyle `robots: noindex` ve oturum kapılı olduğu için title/OG kuralları ona
+uygulanmaz — oradaki title/metadata arama sıralamasını etkilemez.
+
+**URL/slug standardı (kural 2):** Gelecekte halka açık içerik URL'leri için
+standart: küçük harf, Türkçe karakter yok, tire ayracı, marka anahtar kelime
+hiyerarşisi (ürün sahibi örneği: `/makale/postscript-dergi-makale-adi`).
+Landing tek `/` adresinden ibaret olduğu için göç gerekmedi; slug üretimi
+panelde zaten `src/lib/slug.ts` ile bu standarda uygun (ASCII, küçük harf,
+tire). Brand ön eki (`postscript-dergi-`) içerik URL'leri netleşince slug'a
+eklenip eklenmeyeceğine karar verilecek — dergi içi bağlantılar kısa slug'ı
+korur, arama yüzeyi URL'yi olduğu gibi kullanır.
+
+**Article / DiscussionForumPosting (kural 4):** Landing'de bu türlerin
+açıklayabileceği bir düğüm yok (makale gövdesi ve okuyucu yorum zinciri
+yok); geçersiz yapısal veri basmaktansa eklenmedi. Halka açık okuma sayfası
+(makale) ve yorum akışı yayına girince sırasıyla `Article` ve
+`DiscussionForumPosting` şemaları, aynı anda `generateMetadata` ile birlikte
+eklenecek (D-045'in açtığı yüzeyde).
+
+**Gerekçe:** D-035/D-045 gereği arama motorlarına açık tek yüzey landing;
+SEO kuralları gerçekte dizine giren sayfalara uygulanır. Landing'i İngilizce
+"postscript" markasıyla bırakmak, "PostScript Dergi" hedef anahtar kelimesinde
+marka bütünlüğünü arama sonucunda kurmazdı.

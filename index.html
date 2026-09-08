@@ -1,10 +1,25 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>POSTSCRIPT — The things we can't let go</title>
-  <meta name="description" content="postscript — a literary magazine about the things we can't let go." />
+  <title>PostScript Dergi - Edebiyat, Kültür ve Psikoloji E-Dergisi</title>
+  <meta name="description" content="PostScript Dergi — edebiyat, psikoloji ve kültür üzerine bir e-dergi. Ayda iki sayı, yalnızca web. Bırakamadıklarımız üzerine yeni yazılar her ay burada." />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <link rel="canonical" href="https://postscriptmag.com/" />
+  <meta name="theme-color" content="#5c152a" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="PostScript Dergi" />
+  <meta property="og:locale" content="tr_TR" />
+  <meta property="og:title" content="PostScript Dergi - Edebiyat, Kültür ve Psikoloji E-Dergisi" />
+  <meta property="og:description" content="PostScript Dergi — bırakamadıklarımız üzerine bir e-dergi. Ayda iki sayı, yalnızca web." />
+  <meta property="og:url" content="https://postscriptmag.com/" />
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="PostScript Dergi - Edebiyat, Kültür ve Psikoloji E-Dergisi" />
+  <meta name="twitter:description" content="PostScript Dergi — bırakamadıklarımız üzerine bir e-dergi. Ayda iki sayı, yalnızca web." />
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -12,6 +27,38 @@
     rel="stylesheet"
   />
   <link rel="stylesheet" href="style.css" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://postscriptmag.com/#website",
+        "url": "https://postscriptmag.com/",
+        "name": "PostScript Dergi",
+        "description": "PostScript Dergi — edebiyat, psikoloji ve kültür üzerine bir e-dergi. Edebiyat, psikoloji, kültür, ilişkiler, sanat ve teknoloji üzerine yazılar; ayda iki sayı, yalnızca web.",
+        "inLanguage": "tr-TR",
+        "publisher": { "@id": "https://postscriptmag.com/#organization" }
+      },
+      {
+        "@type": "Periodical",
+        "@id": "https://postscriptmag.com/#magazine",
+        "name": "PostScript Dergi",
+        "url": "https://postscriptmag.com/",
+        "description": "Ayda iki sayı yayımlanan, yalnızca web üzerinden okunan bir edebiyat ve kültür e-dergisi.",
+        "inLanguage": "tr-TR",
+        "publisher": { "@id": "https://postscriptmag.com/#organization" }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://postscriptmag.com/#organization",
+        "name": "PostScript Dergi",
+        "url": "https://postscriptmag.com/"
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
 
@@ -19,27 +66,27 @@
   <header class="site-header">
     <div class="topbar">
       <nav class="topbar-links" aria-label="Üst bağlantılar">
-        <a href="#latest">NEWSLETTER!</a>
-        <a href="#hero">WELCOME</a>
+        <a href="#latest">BÜLTEN!</a>
+        <a href="#hero">HOŞ GELDİN</a>
       </nav>
       <div class="topbar-actions">
-        <a class="btn btn-ghost" href="https://postscriptmag.com/login">SIGN IN</a>
-        <a class="btn btn-solid" href="https://postscriptmag.com/register">JOIN NOW</a>
+        <a class="btn btn-ghost" href="https://postscriptmag.com/login">GİRİŞ YAP</a>
+        <a class="btn btn-solid" href="https://postscriptmag.com/register">HEMEN KATIL</a>
       </div>
     </div>
 
     <div class="brand">
-      <h1 class="logo">POSTSCRIPT<span class="logo-pipe">|</span></h1>
-      <p class="tagline">The things we can't let go</p>
+      <h1 class="logo">POSTSCRIPT DERGİ<span class="logo-pipe">|</span></h1>
+      <p class="tagline">Bırakamadıklarımız üzerine</p>
     </div>
 
     <nav class="main-nav" aria-label="Ana menü">
-      <a href="#hero">HOME</a>
-      <a href="#categories">CATEGORIES</a>
-      <a href="#about">ABOUT</a>
-      <a href="#latest">MAGAZINES</a>
-      <a href="#community">COMMUNITY</a>
-      <a href="#contact">CONTACT</a>
+      <a href="#hero">ANA SAYFA</a>
+      <a href="#categories">KATEGORİLER</a>
+      <a href="#about">HAKKINDA</a>
+      <a href="#latest">SAYILAR</a>
+      <a href="#community">TOPLULUK</a>
+      <a href="#contact">İLETİŞİM</a>
       <button class="search-btn" aria-label="Ara" title="Ara">🔍</button>
     </nav>
   </header>
@@ -47,9 +94,9 @@
   <!-- ════════════ Hero ════════════ -->
   <section class="hero" id="hero">
     <div class="hero-copy">
-      <p class="issue">ISSUE 01</p>
-      <h2 class="hero-title">OBSESSSION</h2>
-      <a class="read-now" href="https://postscriptmag.com">READ NOW!</a>
+      <p class="issue">SAYI 01</p>
+      <h2 class="hero-title">OBSESSION</h2>
+      <a class="read-now" href="https://postscriptmag.com">HEMEN OKU!</a>
     </div>
 
     <div class="hero-art" id="about">
@@ -60,11 +107,11 @@
       </div>
 
       <ul class="hero-categories" id="categories">
-        <li>PSYCHOLOGY</li>
-        <li>CULTURE</li>
-        <li>RELATIONSHIPS</li>
-        <li>SCIENCE &amp; TECHNOLOGY</li>
-        <li>ART &amp; LITERATURE</li>
+        <li>PSİKOLOJİ</li>
+        <li>KÜLTÜR</li>
+        <li>İLİŞKİLER</li>
+        <li>BİLİM &amp; TEKNOLOJİ</li>
+        <li>SANAT &amp; EDEBİYAT</li>
       </ul>
     </div>
   </section>
@@ -72,30 +119,30 @@
   <!-- ════════════ Latest ════════════ -->
   <section class="latest" id="latest">
     <div class="section-head">
-      <h2 class="section-title">LATEST</h2>
-      <a class="view-all" href="#latest">VIEW ALL →</a>
+      <h2 class="section-title">SON YAZILAR</h2>
+      <a class="view-all" href="#latest">TÜMÜNÜ GÖR →</a>
     </div>
 
     <div class="cards">
       <article class="card">
         <div class="card-art"></div>
-        <span class="card-tag">Art &amp; Literature</span>
-        <h3 class="card-title">The Quiet Rooms We Keep</h3>
+        <span class="card-tag">Sanat &amp; Edebiyat</span>
+        <h3 class="card-title">Sakladığımız Sessiz Odalar</h3>
       </article>
       <article class="card">
         <div class="card-art"></div>
-        <span class="card-tag">Science &amp; Technology</span>
-        <h3 class="card-title">The Algorithm and the Soul</h3>
+        <span class="card-tag">Bilim &amp; Teknoloji</span>
+        <h3 class="card-title">Algoritma ve Ruh</h3>
       </article>
       <article class="card">
         <div class="card-art"></div>
-        <span class="card-tag">Psychology</span>
-        <h3 class="card-title">On Letting Go Slowly</h3>
+        <span class="card-tag">Psikoloji</span>
+        <h3 class="card-title">Yavaşça Bırakmak Üzerine</h3>
       </article>
       <article class="card">
         <div class="card-art"></div>
-        <span class="card-tag">Relationships</span>
-        <h3 class="card-title">Letters Never Sent</h3>
+        <span class="card-tag">İlişkiler</span>
+        <h3 class="card-title">Hiç Gönderilmemiş Mektuplar</h3>
       </article>
     </div>
   </section>
@@ -103,10 +150,10 @@
   <!-- ════════════ Feature blocks ════════════ -->
   <section class="blocks" id="community">
     <div class="feature-block">
-      <p class="feature-label">THE OBSESSION SERIES</p>
+      <p class="feature-label">OBSESYON SERİSİ</p>
     </div>
     <div class="feature-block">
-      <p class="feature-label">COMMUNITY VOICES</p>
+      <p class="feature-label">TOPLULUK SESLERİ</p>
     </div>
   </section>
 
@@ -115,15 +162,15 @@
     <div class="footer-logo">postscript<span class="logo-pipe">|</span></div>
 
     <nav class="footer-links" aria-label="Yardım bağlantıları">
-      <a href="#contact">help</a>
-      <a href="#contact">faq</a>
-      <a href="#contact">terms &amp; conditions</a>
-      <a href="#contact">privacy</a>
-      <a href="#contact">contact</a>
+      <a href="#contact">yardım</a>
+      <a href="#contact">sss</a>
+      <a href="#contact">kullanım şartları</a>
+      <a href="#contact">gizlilik</a>
+      <a href="#contact">iletişim</a>
     </nav>
 
     <div class="footer-social">
-      <p class="friends">let&rsquo;s be friends!</p>
+      <p class="friends">arkadaş olalım!</p>
       <div class="social-icons">
         <a href="#" aria-label="X" title="X">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zM17.083 19.07h1.833L7.084 4.126H5.117z"/></svg>
