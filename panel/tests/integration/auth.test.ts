@@ -384,4 +384,23 @@ describe("changing a password from the panel", () => {
     const rows = await db.select().from(users).where(eq(users.id, user.id));
     expect(rows[0]!.passwordHash).not.toBe(user.passwordHash);
   });
+
+  it("stores a phone number given from the profile form (D-054)", async () => {
+    const user = await createUser({ email: "phone@example.com" });
+
+    const updated = await updateProfile(
+      actorOf(user),
+      { displayName: user.displayName, phone: "0532 123 45 67" },
+      noMeta,
+    );
+    expect(updated.phone).toBe("05321234567");
+
+    // Clearing the field removes it again
+    const cleared = await updateProfile(
+      actorOf(user),
+      { displayName: user.displayName, phone: "" },
+      noMeta,
+    );
+    expect(cleared.phone).toBeNull();
+  });
 });

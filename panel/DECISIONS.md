@@ -1001,6 +1001,22 @@ bilgiler yönetim panelinde hesaplarında görünmüyor, ekle" dedi. E-posta zat
 başlıkta vardı ama telefon toplanmıyordu; alan seçimi gibi kayıt bilgileri de
 tek kartta toplanarak yöneticinin işi kolaylaştı.
 
+---
+
+## D-054 — Telefon formda zorunlu, hesaplardan da sonradan istenebilir
+
+**Karar:** Telefon yazar kayıt formunda zorunlu olmaya devam eder (D-053).
+Ayrıca profil formuna (`/account` ve `/writer/profile` paylaşımlı
+`ProfileCard`) "Telefon" alanı eklendi: yazar, kayıttan sonra numarasını
+girebilir veya güncelleyebilir (zorunlu değil). Bu, telefon alanı canlıya
+çıkmadan kayıt olan hesapların numarasını sonradan tamamlamasını sağlar.
+`normalisePhone` artık ortak kütüphanede (`src/lib/phone.ts`); yönetim
+panelindeki "Kayıt bilgileri" kartı bu değeri gösterir.
+
+**Gerekçe:** Ürün sahibi "şimdi hesaplardan sonradan istenecek, ayrıca formda
+ekle ve zorunlu olsun" dedi. Kayıtta zorunlu + profilde güncellenebilir, hem
+yeni hem eski hesaplar için numarayı sistemde toplar.
+
 
 
 

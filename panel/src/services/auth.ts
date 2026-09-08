@@ -18,6 +18,7 @@ import { clearAttempts, consumeAttempt, currentAttemptCount, failureDelayMs } fr
 import { writeAudit } from "@/lib/audit";
 import { isAdult, parseIsoDate } from "@/lib/age";
 import { isWriterArea, writerAreaSelectionIssues } from "@/lib/writer-areas";
+import { normalisePhone } from "@/lib/phone";
 import { sendMail } from "@/lib/mail/transport";
 import { getAccessMode } from "./access-mode";
 import { isEntryAllowed } from "@/lib/access-mode";
@@ -87,11 +88,6 @@ export const changeEmailSchema = z.strictObject({
 
 export function normaliseEmail(email: string): string {
   return email.trim().toLowerCase();
-}
-
-/** Normalises a phone number to a compact, comparable form. */
-export function normalisePhone(raw: string): string {
-  return raw.replace(/[\s()-]/g, "");
 }
 
 /* ------------------------------------------------------------------ */

@@ -48,6 +48,7 @@ export async function updateProfileAction(
         displayName: text(formData, "displayName"),
         penName: optionalText(formData, "penName"),
         bio: optionalText(formData, "bio"),
+        phone: optionalText(formData, "phone"),
         birthDate: optionalText(formData, "birthDate"),
         ...(Object.keys(socialLinks).length > 0 ? { socialLinks } : {}),
       },

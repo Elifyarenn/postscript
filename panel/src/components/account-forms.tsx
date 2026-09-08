@@ -41,6 +41,7 @@ export function ProfileCard({
   bio,
   socialLinks,
   writerArea,
+  phone,
 }: {
   csrfToken: string;
   user: SessionUser;
@@ -48,6 +49,8 @@ export function ProfileCard({
   socialLinks: SocialLinks | null;
   /** The writing area chosen at registration, shown read-only (D-051). */
   writerArea?: string | null;
+  /** The contact number; editable here so late-comers can add it (D-054). */
+  phone?: string | null;
 }) {
   return (
     <Card>
@@ -109,6 +112,21 @@ export function ProfileCard({
                 Alan: <span className="text-ink">{writerArea}</span>
               </p>
             )}
+
+            <Field
+              label="Telefon"
+              htmlFor="phone"
+              hint="Yazarlık sürecinde size ulaşmak için kullanılır."
+            >
+              <Input
+                id="phone"
+                name="phone"
+                type="tel"
+                maxLength={20}
+                placeholder="05XX XXX XX XX"
+                defaultValue={phone ?? ""}
+              />
+            </Field>
 
             <fieldset className="grid gap-3 sm:grid-cols-2">
               <legend className="mb-1.5 text-sm font-medium">Bağlantılar</legend>

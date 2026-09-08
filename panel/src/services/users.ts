@@ -10,6 +10,7 @@ import { z } from "zod";
 import { db } from "@/db/client";
 import { users, type Role, type User } from "@/db/schema";
 import { isAdult, MINIMUM_WRITER_AGE, parseIsoDate } from "@/lib/age";
+import { normalisePhone } from "@/lib/phone";
 import { recordRoleChange, writeAudit } from "@/lib/audit";
 import { canManageUsers, type Actor } from "@/lib/auth/rbac";
 import { revokeAllSessions } from "@/lib/auth/session";
@@ -453,6 +454,13 @@ export const profileSchema = z.strictObject({
   displayName: z.string().trim().min(2).max(80),
   penName: z.string().trim().max(80).optional().nullable(),
   bio: z.string().trim().max(2000).optional().nullable(),
+  phone: z
+    .string()
+    .trim()
+    .max(20, "Telefon numarası geçersiz.")
+    .regex(/^\+?[0-9\s()-]*$/, "Telefon numarası yalnızca rakam içerebilir.")
+    .optional()
+    .nullable(),
   birthDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Tarih YYYY-AA-GG biçiminde olmalı.")
@@ -506,6 +514,11 @@ export async function updateProfile(
 
   const penName = input.penName?.trim() || null;
 
+  const phone =
+    input.phone !== undefined && input.phone !== null
+      ? normalisePhone(input.phone.trim()) || null
+      : current.phone;
+
   const [updated] = await db
     .update(users)
     .set({
@@ -513,6 +526,7 @@ export async function updateProfile(
       penName,
       penNameSlug: penName ? slugify(penName) : null,
       bio: input.bio ?? null,
+      phone,
       birthDate,
       socialLinks: input.socialLinks ?? current.socialLinks,
       updatedAt: new Date(),
@@ -525,8 +539,8 @@ export async function updateProfile(
     action: "user.profile_updated",
     entityType: "users",
     entityId: actor.id,
-    before: { displayName: current.displayName, penName: current.penName },
-    after: { displayName: input.displayName, penName },
+    before: { displayName: current.displayName, penName: current.penName, phone: current.phone },
+    after: { displayName: input.displayName, penName, phone },
     ip: meta.ip,
   });
 

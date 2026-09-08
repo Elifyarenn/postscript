@@ -30,6 +30,7 @@ export default async function WriterProfilePage() {
           user={context.user}
           bio={profile.bio}
           socialLinks={profile.socialLinks ?? null}
+          phone={profile.phone}
         />
 
         <PasswordCard csrfToken={csrfToken} />
