@@ -70,13 +70,14 @@ export default async function WriterRegisterPage() {
                     className="size-4 rounded-full border-line disabled:opacity-40"
                   />
                   <span className="flex-1">{name}</span>
-                  {full ? (
-                    <span className="text-xs font-medium text-danger">Kontenjan Dolu</span>
-                  ) : (
+                  <span className="flex items-center gap-2">
                     <span className="text-xs text-muted">
                       {currentCount}/{AREA_QUOTA}
                     </span>
-                  )}
+                    {full && (
+                      <span className="text-xs font-medium text-danger">Kontenjan Dolu</span>
+                    )}
+                  </span>
                 </label>
               ))}
             </div>
