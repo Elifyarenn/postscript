@@ -28,8 +28,6 @@ import {
   removeChatMessage,
   removeCommunityComment,
 } from "@/services/community";
-import { createCategory, deleteCategory, updateCategory, updateLead } from "@/services/leads";
-import type { LeadStatus } from "@/db/schema";
 import { saveSiteSettings, SITE_SETTING_KEYS } from "@/services/site-settings";
 import { requestMetadata, requireRole, revokeAllSessions } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
@@ -305,107 +303,6 @@ export async function removeBannedWordAction(
     await removeBannedWord({ ...user }, text(formData, "wordId"), meta);
     revalidatePath("/admin/community");
     return { success: "Kelime listeden çıkarıldı." };
-  });
-}
-
-/* ------------------------------------------------------------------ */
-/* Writer leads and category quotas (module 5)                         */
-/* ------------------------------------------------------------------ */
-
-export async function createCategoryAction(
-  _state: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  return runAction(async () => {
-    await assertCsrfFromForm(formData);
-    const { user } = await requireRole("admin");
-    const meta = await requestMetadata();
-
-    await createCategory(
-      { ...user },
-      {
-        name: text(formData, "name"),
-        description: optionalText(formData, "description"),
-        maxQuota: numberField(formData, "maxQuota") ?? 3,
-        isActive: checkbox(formData, "isActive"),
-      },
-      meta,
-    );
-
-    revalidatePath("/admin/categories");
-    return { success: "Kategori eklendi." };
-  });
-}
-
-export async function updateCategoryAction(
-  _state: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  return runAction(async () => {
-    await assertCsrfFromForm(formData);
-    const { user } = await requireRole("admin");
-    const meta = await requestMetadata();
-
-    const categoryId = text(formData, "categoryId");
-    await updateCategory(
-      { ...user },
-      categoryId,
-      {
-        name: optionalText(formData, "name") ?? undefined,
-        description: optionalText(formData, "description"),
-        maxQuota: numberField(formData, "maxQuota") ?? 3,
-        isActive: checkbox(formData, "isActive"),
-      },
-      meta,
-    );
-
-    revalidatePath("/admin/categories");
-    return { success: "Kategori güncellendi." };
-  });
-}
-
-export async function deleteCategoryAction(
-  _state: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  return runAction(async () => {
-    await assertCsrfFromForm(formData);
-    const { user } = await requireRole("admin");
-    const meta = await requestMetadata();
-
-    await deleteCategory({ ...user }, text(formData, "categoryId"), meta);
-    revalidatePath("/admin/categories");
-    return { success: "Kategori kaldırıldı." };
-  });
-}
-
-export async function updateLeadAction(
-  _state: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  return runAction(async () => {
-    await assertCsrfFromForm(formData);
-    const { user } = await requireRole("admin");
-    const meta = await requestMetadata();
-
-    const leadId = text(formData, "leadId");
-
-    await updateLead(
-      { ...user },
-      leadId,
-      {
-        fullName: text(formData, "fullName"),
-        birthDate: text(formData, "birthDate"),
-        phone: text(formData, "phone"),
-        email: text(formData, "email"),
-        status: text(formData, "status") as LeadStatus,
-        categoryId: optionalText(formData, "categoryId") ?? undefined,
-      },
-      meta,
-    );
-
-    revalidatePath("/admin/writer-leads");
-    return { success: "Başvuru güncellendi." };
   });
 }
 

@@ -1,6 +1,9 @@
 ﻿import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
 import { guardPanel } from "@/lib/auth/guard";
 import { pendingAcknowledgements } from "@/services/announcements";
+import { getAccessMode } from "@/services/access-mode";
+import { restrictToAccountWhenClosed } from "@/lib/access-mode";
 import { hasRole } from "@/lib/auth/rbac";
 import { PanelShell, writerNav } from "@/components/shell";
 
@@ -12,10 +15,19 @@ import { PanelShell, writerNav } from "@/components/shell";
  * announcements and agreement pages stay open in both cases, otherwise there
  * would be no way out of the lock. Greying the links out is only a courtesy —
  * each page checks for itself.
+ *
+ * While the site is closed, writers see only the account area; the one
+ * exception is a writer who still has to sign the contract, because that page
+ * is the way out of the lock (D-049).
  */
 export default async function WriterLayout({ children }: { children: ReactNode }) {
   const context = await guardPanel("writer");
   const { user } = context;
+
+  const closed = (await getAccessMode()) === "closed";
+  if (closed && restrictToAccountWhenClosed(user.role) && user.writerStatus !== "pending_agreement") {
+    redirect("/account");
+  }
 
   const pending = await pendingAcknowledgements({ ...user });
 

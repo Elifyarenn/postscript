@@ -1,82 +1,11 @@
-import Link from "next/link";
-import { readCsrfToken } from "@/lib/csrf";
-import { Alert, Card, Field, Input } from "@/components/ui";
-import { getAccessMode } from "@/services/access-mode";
-import { PasswordField } from "@/components/password-field";
-import { PanelForm } from "@/components/form";
-import { registerAction } from "../actions";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "Kayıt" };
+export const metadata = { title: "Yazar hesabı oluştur" };
 
-export default async function RegisterPage() {
-  const csrfToken = (await readCsrfToken()) ?? "";
-  const closed = (await getAccessMode()) === "closed";
-
-  if (closed) {
-    return (
-      <Card>
-        <h1 className="mb-1 font-serif text-xl">Hesap oluştur</h1>
-        <Alert tone="warning" title="Kayıtlar şu anda kapalı">
-          Yeni hesap alınmıyor. Site açıldığında tekrar kayıt olabilirsiniz.
-        </Alert>
-        <p className="mt-5 text-sm">
-          <Link href="/login" className="text-accent hover:underline">
-            Girişe dön
-          </Link>
-        </p>
-      </Card>
-    );
-  }
-
-  return (
-    <Card>
-      <h1 className="mb-1 font-serif text-xl">Hesap oluştur</h1>
-      <p className="mb-5 text-sm text-muted">
-        Herkes normal kullanıcı olarak kayıt olur. Yazar yetkisini yalnızca yönetici verir.
-      </p>
-
-      <PanelForm
-        action={registerAction}
-        csrfToken={csrfToken}
-        submitLabel="Kayıt ol"
-        requireValid
-      >
-          <>
-            <Field
-              label="Ad Soyad"
-              htmlFor="displayName"
-            >
-              <Input id="displayName" name="displayName" required autoFocus maxLength={80} />
-            </Field>
-
-            <Field label="E-posta" htmlFor="email">
-              <Input id="email" name="email" type="email" autoComplete="email" required />
-            </Field>
-
-            <PasswordField />
-
-            <label className="flex items-start gap-2.5 text-sm">
-              <input
-                type="checkbox"
-                name="kvkkConsent"
-                required
-                className="mt-0.5 size-4 rounded border-line"
-              />
-              <span>
-                <Link href="/kvkk" className="text-accent hover:underline">
-                  KVKK aydınlatma metnini
-                </Link>{" "}
-                okudum ve kişisel verilerimin işlenmesini kabul ediyorum.
-              </span>
-            </label>
-          </>
-      </PanelForm>
-
-      <p className="mt-5 text-sm">
-        <Link href="/login" className="text-accent hover:underline">
-          Zaten hesabım var
-        </Link>
-      </p>
-    </Card>
-  );
+/**
+ * The reader sign-up is retired for now: new accounts are only taken through
+ * the public writer registration at /yazar-basvuru (D-049).
+ */
+export default function RegisterPage() {
+  redirect("/yazar-basvuru");
 }

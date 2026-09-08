@@ -99,6 +99,13 @@
       "when": 1788864890725,
       "tag": "0013_wealthy_sandman",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1788872627961,
+      "tag": "0014_open_dazzler",
+      "breakpoints": true
     }
   ]
 }

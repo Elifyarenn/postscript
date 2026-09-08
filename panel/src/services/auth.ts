@@ -16,9 +16,11 @@ import { badRequest, conflict, forbidden, notFound, rateLimited, unauthorized } 
 import { checkPasswordPolicy, hashPassword, isPwned, verifyPassword } from "@/lib/password";
 import { clearAttempts, consumeAttempt, currentAttemptCount, failureDelayMs } from "@/lib/rate-limit";
 import { writeAudit } from "@/lib/audit";
+import { isAdult, parseIsoDate } from "@/lib/age";
 import { sendMail } from "@/lib/mail/transport";
 import { getAccessMode } from "./access-mode";
 import { isEntryAllowed } from "@/lib/access-mode";
+import { autoApproveWriterCandidate } from "./users";
 import * as templates from "@emails/templates";
 
 export type RequestMeta = { ip: string | null; userAgent: string | null };
@@ -38,6 +40,21 @@ export const registerSchema = z.strictObject({
   email: z.email("Geçerli bir e-posta adresi girin.").max(254),
   password: z.string().min(1, "Şifre gerekli."),
   displayName: z.string().trim().min(2, "Ad en az 2 karakter olmalı.").max(80),
+  kvkkConsent: z.literal(true, { message: "KVKK aydınlatma metnini onaylamanız gerekiyor." }),
+});
+
+/**
+ * The public writer registration (/yazar-basvuru). Unlike the reader path it
+ * has no closed-entry gate: pre-launch the magazine only onboards writers this
+ * way (D-049). The account is created with `writer_intent_at` set, then the
+ * address is verified by e-mail — and verification auto-approves the account
+ * to writer, without an editor/admin review step.
+ */
+export const writerRegisterSchema = z.strictObject({
+  email: z.email("Geçerli bir e-posta adresi girin.").max(254),
+  password: z.string().min(1, "Şifre gerekli."),
+  displayName: z.string().trim().min(2, "Ad en az 2 karakter olmalı.").max(80),
+  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Tarih YYYY-AA-GG biçiminde olmalı."),
   kvkkConsent: z.literal(true, { message: "KVKK aydınlatma metnini onaylamanız gerekiyor." }),
 });
 
@@ -87,9 +104,10 @@ export async function register(
   }
   const input = parsed.data;
 
-  // Closed entry: nobody new registers until an admin reopens the site
+  // Closed entry: nobody new registers as a reader until an admin reopens the
+  // site. The writer registration path is open regardless (D-049).
   const mode = await getAccessMode();
-  if (!isEntryAllowed(mode, "user")) {
+  if (!isEntryAllowed(mode, { role: "user", writerIntentAt: null })) {
     throw conflict("Kayıtlar şu anda kapalı. Yeni hesaplar açılmıyor.");
   }
 
@@ -139,6 +157,85 @@ export async function register(
     entityType: "users",
     entityId: user!.id,
     after: { email, displayName: user!.displayName },
+    ip: meta.ip,
+  });
+
+  return { user: user!, verificationToken };
+}
+
+/**
+ * The writer registration path (D-049). The only deliberate difference from
+ * `register` is that it is open even while the site is closed, and that it
+ * captures the birth date up front: a writer account needs an adult owner, so
+ * refusing here beats creating an account that can never be promoted.
+ */
+export async function registerWriterCandidate(
+  rawInput: unknown,
+  meta: RequestMeta,
+): Promise<{ user: User; verificationToken: string }> {
+  const parsed = writerRegisterSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    throw badRequest("Kayıt bilgileri geçersiz.", z.flattenError(parsed.error).fieldErrors);
+  }
+  const input = parsed.data;
+
+  // Rate limit before hashing: argon2 is deliberately expensive (§5.1)
+  const limit = await consumeAttempt("register_ip", meta.ip ?? "unknown");
+  if (!limit.allowed) throw rateLimited("Çok fazla kayıt denemesi yapıldı, 10 dakika bekleyin.");
+
+  const policy = checkPasswordPolicy(input.password);
+  if (!policy.ok) throw badRequest(policy.reason, { password: [policy.reason] });
+  if (await isPwned(input.password)) {
+    const message = "Bu şifre bilinen veri sızıntılarında görüldü, başka bir şifre seçin.";
+    throw badRequest(message, { password: [message] });
+  }
+
+  if (!parseIsoDate(input.birthDate)) throw badRequest("Doğum tarihi geçersiz.");
+  if (new Date(input.birthDate).getTime() >= Date.now()) {
+    throw badRequest("Doğum tarihi gelecekte olamaz.");
+  }
+  if (!isAdult(input.birthDate)) {
+    const message = "Yazar hesabı açmak için 18 yaşını doldurmuş olmanız gerekir.";
+    throw badRequest(message, { birthDate: [message] });
+  }
+
+  const email = normaliseEmail(input.email);
+  const existing = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(eq(users.email, email), isNull(users.deletedAt)))
+    .limit(1);
+  if (existing.length > 0) throw conflict("Bu e-posta adresi zaten kayıtlı.");
+
+  const passwordHash = await hashPassword(input.password);
+
+  const [user] = await db
+    .insert(users)
+    .values({
+      email,
+      passwordHash,
+      displayName: input.displayName,
+      birthDate: input.birthDate,
+      // The server decides the role. It is never read from the request.
+      role: "user",
+      kvkkConsentAt: new Date(),
+      kvkkConsentVersion: await currentKvkkVersion(),
+      writerIntentAt: new Date(),
+    })
+    .returning();
+
+  const verificationToken = await issueEmailToken(user!.id, "verify_email", VERIFY_TOKEN_TTL_MS);
+
+  const url = `${env().APP_URL}/verify-email?token=${encodeURIComponent(verificationToken)}`;
+  const message = templates.verifyEmail({ displayName: user!.displayName, url });
+  await sendMail({ to: user!.email, subject: message.subject, text: message.text });
+
+  await writeAudit({
+    actorId: user!.id,
+    action: "user.writer_registered",
+    entityType: "users",
+    entityId: user!.id,
+    after: { email, displayName: user!.displayName, birthDate: input.birthDate },
     ip: meta.ip,
   });
 
@@ -211,7 +308,13 @@ export async function verifyEmail(token: string, meta: RequestMeta): Promise<Use
     ip: meta.ip,
   });
 
-  return user!;
+  const verified = user!;
+  // A writer-registration candidate is auto-approved once the address is real:
+  // the e-mail proof replaces the editorial review (D-049)
+  if (verified.writerIntentAt !== null && verified.role === "user") {
+    return autoApproveWriterCandidate(verified.id, meta);
+  }
+  return verified;
 }
 
 /** A new link can be asked for once a minute; the button is otherwise a mail cannon. */
@@ -402,10 +505,11 @@ export async function verifyCredentials(
   }
   if (user.isBanned) throw forbidden("Hesabınız askıya alınmış.");
 
-  // Closed entry: only admins sign in until an admin reopens the site
+  // Closed entry: admin and writer-track accounts may sign in until an admin
+  // reopens the site; plain readers wait (D-049)
   const mode = await getAccessMode();
-  if (!isEntryAllowed(mode, user.role)) {
-    throw forbidden("Şu anda yalnızca yöneticiler giriş yapabilir.");
+  if (!isEntryAllowed(mode, { role: user.role, writerIntentAt: user.writerIntentAt })) {
+    throw forbidden("Şu anda yalnızca yönetici ve yazar hesapları giriş yapabilir.");
   }
 
   await clearAttempts("login_account", email);

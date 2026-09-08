@@ -10,7 +10,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { badRequest } from "@/lib/errors";
 import {
-  register,
+  registerWriterCandidate,
   requestPasswordReset,
   resetPassword,
   verifyCredentials,
@@ -45,7 +45,12 @@ function homeFor(role: Role): string {
   return "/magazine";
 }
 
-export async function registerAction(
+/**
+ * The public writer registration (/yazar-basvuru). The only entry point for
+ * new accounts while the site is closed: the form stays open and the address
+ * proof (D-049) is what turns the account into a writer later.
+ */
+export async function registerWriterAction(
   _state: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -55,11 +60,12 @@ export async function registerAction(
     await assertCsrfFromForm(formData);
     const meta = await requestMetadata();
 
-    const { user } = await register(
+    const { user } = await registerWriterCandidate(
       {
         email: text(formData, "email"),
         password: text(formData, "password"),
         displayName: text(formData, "displayName"),
+        birthDate: text(formData, "birthDate"),
         kvkkConsent: checkbox(formData, "kvkkConsent") as true,
       },
       meta,

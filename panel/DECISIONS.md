@@ -876,3 +876,45 @@ vardı; giriş akışında 2FA adımı yoktu. Üretimdeki iki adminin parolası 
 faktördü. Şifre + kod yerine yalnızca koda güvenmeyen, biletli iki adımlı akış,
 oturumun her zaman 2FA'dan geçmiş olmasını garanti eder (2FA açıkken şifresiz
 oturum olamaz).
+
+---
+
+## D-049 — Yazar kaydı: ilgi formundan e-posta doğrulamalı geçici yazar hesabına
+
+**Karar:** `writer_leads` ilgi havuzu (kategori kontenjanları, `/admin/writer-leads`,
+`/admin/categories` ve ilgili REST uçlarıyla birlikte) tamamen kaldırıldı.
+Halka açık `/yazar-basvuru` artık gerçek bir kayıt formudur:
+
+- Alanlar: Ad Soyad, Doğum Tarihi, E-posta, Şifre, KVKK onayı. Telefon ve
+  kategori alanı yok. **18 yaş kuralı kayıtta uygulanır** (D-041'deki "form
+  yalnızca ilgi toplar, yaş denetlenmez" kararını bilinçli olarak günceller:
+  artık hesap, ileride asla terfi edemeyecek şekilde açılmasın diye).
+- Kayıt, **kapalı erişim modunda da açıktır**; okuyucu kaydı `/register`
+  şimdilik yoktur (`/register` → `/yazar-basvuru` yönlenir). Okuyucu kaydı
+  servisi (`register`) kodda durur; erişim modu açılınca yeniden kullanılır.
+- Hesap `users.writer_intent_at` ile işaretlenir. E-posta doğrulandığında
+  hesap **otomatik onaylanır**: rol `user → writer` (`writerStatus =
+  pending_agreement`), `role_changes` kaydı yazılır, "yazar olarak
+  yetkilendirildiniz" e-postası gider. Editör/yönetici onay adımı yoktur —
+  adaylar dergi tarafından manuel doğrulanmış sayılır, sistemde otomatik
+  onaylı görünürler (ürün sahibi kararı; D-037'nin iki aşamalı başvuru
+  pipeline'ı değişmez, yalnızca yeni kayıtlar onu atlar).
+  `writer_applications` pipeline'ı ve örnek eser akışı durur.
+- Otomatik onay `checkPromotionReadiness` ön koşullarını yeniden doğrular;
+  örneğin yayınlanmış sözleşme sürümü yoksa aday user olarak kalır, gerekçe
+  audit'e yazılır (Hesabım'daki mevcut eksiklik kartı görünür).
+- **Kapalı mod:** yazar izi hesaplar (aday, yazar, editör, admin) oturumlarını
+  korur; düz okuyucu oturumları ölür. Kapalıyken admin dışında herkes yalnızca
+  hesap alanını görür (`/account`); paneller, dergi ve topluluk `/account`'a
+  yönlenir. Tek istisna: sözleşmesi onay bekleyen yazar, kilit çıkışı olan
+  `/writer/agreement` sayfasına gidebilir.
+
+**Gerekçe:** Ürün sahibi yayın öncesi yazar kazanımını, anonim ilgi kaydı
+yerine doğrulanmış hesaplar üzerinden kurmak istedi; "manuel doğrulanmış
+adaylar sistemde otomatik onaylı görünsün, editör/admin onayına gerek yok"
+dedi. E-posta kanıtı (D-034'ün sert kapısı) kimlik güvencesini sağlar; rol
+değişikliği yine `role_changes` kaydı olmadan gerçekleşmez ve terfi için
+gereken tüm ön koşullar (doğrulanmış adres, 18+, KVKK, yasaklı değil) korunur.
+Okuyucu kaydının kaldırılması ve yazar kanalının kapalıyken açık kalması,
+yayın öncesi tek amaçlı (yazar + yönetici) giriş ekranı isteğinin sonucudur.
+

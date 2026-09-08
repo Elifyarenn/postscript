@@ -21,7 +21,6 @@ import {
   agreementVersions,
   articles,
   bannedWords,
-  categories,
   issues,
   kvkkVersions,
   users,
@@ -219,84 +218,6 @@ async function main(): Promise<void> {
     { ip: null, userAgent: "seed" },
   );
   console.log("  · saved");
-
-  console.log("Seeding writing categories ...");
-  const BASE_CATEGORIES: { name: string; description: string }[] = [
-    {
-      name: "1. BİLİM & TEKNOLOJİ",
-      description:
-        "Haftada bir döngü\n- Atom ve Nükleer Fiziğin Tarihçesi + Atom Modelleri\n- Modern Fizik, Nörobilim, Nanobilim\n- Yapay Zeka → Hukuk, tasarım, sanat alanlarında\n- BODY & MIND → Beyin, beden, sağlık bilimi\n- \"Bunları Biliyor Muydunuz?\" → Kısa bilgi kutuları",
-    },
-    {
-      name: "2. PSİKOLOJİ & İLİŞKİLER",
-      description:
-        "- Yaratıcılık\n- Duygudurum & Psikolojik İyi Oluş\n- Eko-Anksiyete\n- Bağlanma Stilleri\n- LOVE & RELATIONSHIPS → İlişkiler, iletişim\n- BURÇLAR → Ayın burç yorumu + psikolojik açıdan burçlar\n- Lisans Tezi Çalışmaları",
-    },
-    {
-      name: "3. FİLM, DİZİ & KİTAP",
-      description:
-        "Tamamen ayrı başlık\n- Film İncelemesi ve Önerileri\n- Dizi İncelemesi ve Önerileri\n- Tiyatro\n- BOOKS & ART → Kitap incelemesi, yazar portreleri\n- Gündeme/temaya göre seçkiler",
-    },
-    {
-      name: "4. SANAT & EDEBİYAT",
-      description:
-        "- SANAT & KÜLTÜR → Türk ve yabancı ressamlar, tabloların tarihi\n- EDEBİYAT → Şiir, Öykü, Edebiyat Yazıları\n- Resim → Editörlerin kendine ait çalışmaları",
-    },
-    {
-      name: "5. POP CULTURE",
-      description:
-        "- TR POP → Türkiye gündemi, müzik, fenomenler\n- K-POP → Gruplar, comebackler, dans analizleri\n- İNG POP → Batı müziği, trendler\n- DANS & TİKTOK TRENDLERİ\n- İnternet Kültürü & Memeler",
-    },
-    {
-      name: "6. TARİH & DÜNYA",
-      description:
-        "- Karşılaştırmalı Tarih / Sosyoekonomi\n- İlginç Tarih Gerçekleri\n- Türkiye ve Avrupa → Karışık köşe\n- Berlin'deki Hayat → Yurtdışı güncesi\n- SEASONAL → Tarihte bu ay",
-    },
-    {
-      name: "7. SOSYAL & FEMİNİZM",
-      description:
-        "- İşçi Hakları ve İşgücü Piyasaları\n- Kadın ve FEMİNİZM\n- Güncel Makroekonomik Problemler\n- COMMUNITY → Topluluk hikayeleri, röportajlar\n- Gündem Köşesi → Haftalık",
-    },
-    {
-      name: "8. FELSEFE & DÜŞÜNCE",
-      description:
-        "- Felsefe Yazıları\n- Kavram Analizleri\n- Düşünce Tarihi",
-    },
-    {
-      name: "9. LIFESTYLE & FASHION",
-      description:
-        "- FASHION & BEAUTY → Tarz, güzellik, kendini ifade\n- LIFESTYLE → Günlük hayat, alışkanlıklar\n- Mekan Önerileri → Sergi, kafe, kitapçı",
-    },
-    {
-      name: "10. YAZAR KÖŞESİ: \"P.S.\"",
-      description:
-        "Serbest alan. İsme de uydu\n- Yazar Anlatıyor → Yazarın kendi bildiği, araştırdığı bir konuyu anlatması\n- Benim Gözümden → Kişisel deneyim, bilgi paylaşımı\n- Okurdan Gelenler",
-    },
-    {
-      name: "11. EĞLENCE & DEDİKODU",
-      description:
-        "Derginin en çok okunacak yeri\n- Kampus Dedikodusu → Yaşanan komik/absürt olaylar. İsim vermeden\n- Okur Hikayeleri → \"Bana böyle oldu\" köşesi\n- Oyunlar → Testler, quizler, \"hangi karakter sensin\", bulmacalar\n- Ayın Fiyaskosu / Ayın Olayı",
-    },
-  ];
-  for (const category of BASE_CATEGORIES) {
-    const existing = await db
-      .select({ id: categories.id })
-      .from(categories)
-      .where(and(eq(categories.name, category.name), isNull(categories.deletedAt)))
-      .limit(1);
-    const existingRow = existing[0];
-    if (!existingRow) {
-      await db
-        .insert(categories)
-        .values({ name: category.name, description: category.description, maxQuota: 3, isActive: true });
-    } else {
-      await db
-        .update(categories)
-        .set({ description: category.description, updatedAt: new Date() })
-        .where(eq(categories.id, existingRow.id));
-    }
-  }
-  console.log(`  · ${BASE_CATEGORIES.length} categories ensured`);
 
   console.log("Seeding the community blacklist ...");
   const bannedSource = readFileSync(

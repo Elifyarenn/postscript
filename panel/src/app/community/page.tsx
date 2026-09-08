@@ -1,5 +1,8 @@
+import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth/guard";
 import { readCsrfToken } from "@/lib/csrf";
+import { getAccessMode } from "@/services/access-mode";
+import { restrictToAccountWhenClosed } from "@/lib/access-mode";
 import { navForRole, PanelShell } from "@/components/shell";
 import { PageHeader } from "@/components/ui";
 import { listChatMessages } from "@/services/community";
@@ -15,6 +18,10 @@ export const metadata = { title: "Topluluk sohbeti" };
 export default async function CommunityPage() {
   const context = await requireSession();
   const csrfToken = (await readCsrfToken()) ?? "";
+
+  // While the site is closed the community waits; only the admin enters (D-049)
+  const closed = (await getAccessMode()) === "closed";
+  if (closed && restrictToAccountWhenClosed(context.user.role)) redirect("/account");
 
   const nav = navForRole(context.user.role);
   const messages = await listChatMessages();

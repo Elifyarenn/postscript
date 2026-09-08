@@ -1,51 +1,69 @@
 /**
- * §13.2 — registration, e-mail verification, login.
+ * §13.2 — writer registration (/yazar-basvuru), e-mail verification, the
+ * auto-approval to writer, and login.
  */
 import { expect, test } from "@playwright/test";
-import { linkFrom, submitLogin, waitForMail } from "./helpers";
+import { linkFrom, registerWriter, submitLogin, waitForMail } from "./helpers";
 
-const NEW_USER = {
-  email: "yeni.okur@example.com",
-  password: "Yeni-Okur-Sifre-2026",
-  displayName: "Yeni Okur",
+const NEW_WRITER = {
+  email: "yeni.yazar@example.com",
+  password: "Yeni-Yazar-Sifre-2026",
+  displayName: "Yeni Yazar",
+  birthDate: "1994-04-12",
 };
 
 test.describe.configure({ mode: "serial" });
 
-test("registers, verifies the address, and logs in", async ({ page }) => {
-  await page.goto("/register");
-
-  await page.getByLabel("Ad Soyad").fill(NEW_USER.displayName);
-  await page.getByLabel("E-posta").fill(NEW_USER.email);
-  await page.getByLabel("Şifre").fill(NEW_USER.password);
-  await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: "Kayıt ol" }).click();
+test("registers as a writer, verifies the address, and gets auto-approved", async ({ page }) => {
+  await registerWriter(page, NEW_WRITER);
 
   // Registration opens a session, but it goes no further than the gate
   await page.waitForURL("**/verify-email/pending");
   await expect(page.getByRole("heading", { name: "E-posta adresinizi doğrulayın" })).toBeVisible();
-  await expect(page.getByText(NEW_USER.email)).toBeVisible();
+  await expect(page.getByText(NEW_WRITER.email)).toBeVisible();
 
   // and every other page bounces back to it
   await page.goto("/account");
   await page.waitForURL("**/verify-email/pending");
 
-  const message = await waitForMail(NEW_USER.email);
+  const message = await waitForMail(NEW_WRITER.email);
   expect(message.subject).toContain("doğrulayın");
 
+  // Following the link in the same browser verifies and auto-approves: the
+  // account becomes a writer and lands on the locked panel
   await page.goto(linkFrom(message.text));
   await page.getByRole("button", { name: "Doğrula" }).click();
+  await page.waitForURL("**/writer**");
 
-  // Following the link in the same browser goes straight in, and a reader's
-  // "in" is the magazine rather than a settings page
-  await page.waitForURL("**/magazine**");
-  await expect(page.getByText("E-posta adresiniz doğrulandı")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "postscript" })).toBeVisible();
+  // The auto-approval is announced by e-mail
+  const approved = await waitForMail(NEW_WRITER.email);
+  expect(approved.subject).toContain("yetkilendirildiniz");
 
-  // and the account is usable now
-  await page.getByRole("link", { name: "Hesabım" }).click();
+  // The writer panel is still locked until the agreement is signed
+  await expect(page.getByText("Yazar sayfalarınız kilitli")).toBeVisible();
+  await page.getByRole("link", { name: "Sözleşmeye git" }).click();
+  await page.waitForURL("**/writer/agreement");
+  await expect(
+    page.getByRole("heading", { name: "Yazar sözleşmesi ve kullanım ruhsatı taahhüdü" }),
+  ).toBeVisible();
+
+  // The writer signs the agreement; the panel then unlocks
+  const checkbox = page.getByRole("checkbox");
+  await expect(checkbox).toBeDisabled();
+  await page.locator("div.overflow-y-auto").first().evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  await expect(checkbox).toBeEnabled();
+  await checkbox.check();
+  await page.getByRole("button", { name: /kabul ediyorum/i }).click();
+  await expect(page.getByText("Bu sürümü onayladınız")).toBeVisible();
+
+  // The writer panel works, and the account is usable
+  await page.goto("/writer");
+  await page.waitForURL("**/writer");
+  await page.goto("/account");
   await page.waitForURL("**/account");
-  await page.getByLabel("Ad Soyad").fill("Yeni Okur Düzeltildi");
+  await page.getByLabel("Ad Soyad").fill("Yeni Yazar Düzeltildi");
   await page.getByRole("button", { name: "Profili kaydet" }).click();
   await expect(page.getByText("Profiliniz güncellendi")).toBeVisible();
 });
@@ -56,12 +74,11 @@ test("sends an unverified account back to the gate when it signs in again", asyn
 }) => {
   await context.clearCookies();
 
-  await page.goto("/register");
-  await page.getByLabel("Ad Soyad").fill("Doğrulanmamış Hesap");
-  await page.getByLabel("E-posta").fill("bekleyen@example.com");
-  await page.getByLabel("Şifre").fill("Bekleyen-Sifre-2026");
-  await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: "Kayıt ol" }).click();
+  await registerWriter(page, {
+    displayName: "Doğrulanmamış Yazar",
+    email: "bekleyen-yazar@example.com",
+    password: "Bekleyen-Sifre-2026",
+  });
   await page.waitForURL("**/verify-email/pending");
 
   await page.getByRole("button", { name: "Başka bir hesapla giriş yap" }).click();
@@ -69,7 +86,7 @@ test("sends an unverified account back to the gate when it signs in again", asyn
 
   // Signing in again lands on the gate rather than the account
   await submitLogin(page, {
-    email: "bekleyen@example.com",
+    email: "bekleyen-yazar@example.com",
     password: "Bekleyen-Sifre-2026",
   });
   await page.waitForURL("**/verify-email/pending");
@@ -80,19 +97,33 @@ test("sends an unverified account back to the gate when it signs in again", asyn
 });
 
 test("refuses a password that is too common", async ({ page }) => {
-  await page.goto("/register");
+  await page.goto("/yazar-basvuru");
 
   await page.getByLabel("Ad Soyad").fill("Zayıf Şifre");
+  await page.getByLabel("Doğum Tarihi").fill("1994-04-12");
   await page.getByLabel("E-posta").fill("zayif@example.com");
   await page.getByLabel("Şifre").fill("Password1");
   await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: "Kayıt ol" }).click();
+  await page.getByRole("button", { name: "Yazar hesabı oluştur" }).click();
 
   await expect(page.getByText(/yaygın kullanılıyor/i).first()).toBeVisible();
 });
 
+test("refuses an underage writer and says why", async ({ page }) => {
+  await page.goto("/yazar-basvuru");
+
+  await page.getByLabel("Ad Soyad").fill("Genç Yazar");
+  await page.getByLabel("Doğum Tarihi").fill("2012-05-05");
+  await page.getByLabel("E-posta").fill("genc-yazar@example.com");
+  await page.getByLabel("Şifre").fill("Genc-Yazar-Sifre-2026");
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Yazar hesabı oluştur" }).click();
+
+  await expect(page.getByText(/18 yaşını doldurmuş olmanız gerekir/).first()).toBeVisible();
+});
+
 test("gives the same answer for a wrong password as for an unknown account", async ({ page }) => {
-  await submitLogin(page, { email: NEW_USER.email, password: "definitely-not-the-password" });
+  await submitLogin(page, { email: NEW_WRITER.email, password: "definitely-not-the-password" });
   await expect(page.getByText("E-posta veya şifre hatalı.").first()).toBeVisible();
 
   await submitLogin(page, { email: "nobody@example.com", password: "definitely-not-either" });
@@ -102,13 +133,14 @@ test("gives the same answer for a wrong password as for an unknown account", asy
 test("ticks the password rules off and keeps the button shut until all three are met", async ({
   page,
 }) => {
-  await page.goto("/register");
+  await page.goto("/yazar-basvuru");
 
   await page.getByLabel("Ad Soyad").fill("Kural Denemesi");
+  await page.getByLabel("Doğum Tarihi").fill("1994-04-12");
   await page.getByLabel("E-posta").fill("kural@example.com");
   await page.getByRole("checkbox").check();
 
-  const submit = page.getByRole("button", { name: "Kayıt ol" });
+  const submit = page.getByRole("button", { name: "Yazar hesabı oluştur" });
   const password = page.getByLabel("Şifre");
   const rules = page.locator("#password-rules li");
 

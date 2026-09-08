@@ -31,6 +31,8 @@ export type SessionUser = Actor & {
   penName: string | null;
   kvkkConsentAt: Date | null;
   birthDate: string | null;
+  /** Set when the account was registered through the public writer form. */
+  writerIntentAt: Date | null;
   /** True once the user completed the TOTP setup; the login then needs a code. */
   totpEnabled: boolean;
 };
@@ -165,6 +167,7 @@ export async function getAuthContext(): Promise<AuthContext | null> {
       isBanned: users.isBanned,
       kvkkConsentAt: users.kvkkConsentAt,
       birthDate: users.birthDate,
+      writerIntentAt: users.writerIntentAt,
       totpEnabledAt: users.totpEnabledAt,
       deletedAt: users.deletedAt,
     })
@@ -187,9 +190,11 @@ export async function getAuthContext(): Promise<AuthContext | null> {
 
   if (invalid) return null;
 
-  // Closed entry: sessions of non-admins stop resolving, so an existing
-  // reader or writer session cannot outlive the closure
-  if (!isEntryAllowed(await getAccessMode(), row.role as Role)) return null;
+  // Closed entry: reader sessions stop resolving, so an existing reader cannot
+  // outlive the closure. Writer-track accounts keep theirs (D-049).
+  if (!isEntryAllowed(await getAccessMode(), { role: row.role as Role, writerIntentAt: row.writerIntentAt })) {
+    return null;
+  }
 
   // Touch the session, but not on every single request: once a minute is plenty
   if (now - row.lastSeenAt.getTime() > 60_000) {
@@ -211,6 +216,7 @@ export async function getAuthContext(): Promise<AuthContext | null> {
     isBanned: row.isBanned,
     kvkkConsentAt: row.kvkkConsentAt,
     birthDate: row.birthDate,
+    writerIntentAt: row.writerIntentAt,
     totpEnabled: row.totpEnabledAt !== null,
   };
 
