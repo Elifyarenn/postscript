@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { readCsrfToken } from "@/lib/csrf";
-import { WRITER_AREAS } from "@/lib/writer-areas";
+import { AREA_QUOTA } from "@/lib/writer-areas";
+import { listWriterAreasWithQuota } from "@/services/writer-areas";
 import { Alert, Card, Field, Input } from "@/components/ui";
 import { PasswordField } from "@/components/password-field";
 import { PanelForm } from "@/components/form";
@@ -16,6 +17,7 @@ export const metadata = { title: "Yazar hesabı oluştur" };
  */
 export default async function WriterRegisterPage() {
   const csrfToken = (await readCsrfToken()) ?? "";
+  const areas = await listWriterAreasWithQuota();
 
   return (
     <Card>
@@ -49,19 +51,32 @@ export default async function WriterRegisterPage() {
               Alanınız <span className="text-muted">(yalnızca bir alan)</span>
             </legend>
             <div className="grid gap-2">
-              {WRITER_AREAS.map((area) => (
+              {areas.map(({ name, currentCount, full }) => (
                 <label
-                  key={area}
-                  className="flex cursor-pointer items-center gap-2.5 rounded-md border border-line bg-surface px-3 py-2 text-sm hover:bg-paper"
+                  key={name}
+                  className={
+                    "flex cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2 text-sm " +
+                    (full
+                      ? "border-line bg-paper"
+                      : "border-line bg-surface hover:bg-paper")
+                  }
                 >
                   <input
                     type="radio"
                     name="area"
-                    value={area}
+                    value={name}
                     required
-                    className="size-4 rounded-full border-line"
+                    disabled={full}
+                    className="size-4 rounded-full border-line disabled:opacity-40"
                   />
-                  {area}
+                  <span className="flex-1">{name}</span>
+                  {full ? (
+                    <span className="text-xs font-medium text-danger">Kontenjan Dolu</span>
+                  ) : (
+                    <span className="text-xs text-muted">
+                      {currentCount}/{AREA_QUOTA}
+                    </span>
+                  )}
                 </label>
               ))}
             </div>

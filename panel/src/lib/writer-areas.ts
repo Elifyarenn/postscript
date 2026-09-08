@@ -21,6 +21,31 @@ export const WRITER_AREAS = [
 
 export type WriterArea = (typeof WRITER_AREAS)[number];
 
+/** How many writers each area may hold (D-052). */
+export const AREA_QUOTA = 3;
+
 export function isWriterArea(value: string): value is WriterArea {
   return (WRITER_AREAS as readonly string[]).includes(value);
 }
+
+export type WriterAreaQuota = {
+  name: string;
+  currentCount: number;
+  full: boolean;
+};
+
+/**
+ * The area selection rules, pure so they can be unit tested. A full area
+ * refuses both the form (disabled radio) and the server. Returns Turkish
+ * messages; an empty array means the selection is fine.
+ */
+export function writerAreaSelectionIssues(
+  area: string,
+  areas: WriterAreaQuota[],
+): string[] {
+  const found = areas.find((candidate) => candidate.name === area);
+  if (!found) return ["Seçilen alan geçersiz."];
+  if (found.full) return [`"${found.name}" alanının kontenjanı dolu.`];
+  return [];
+}
+

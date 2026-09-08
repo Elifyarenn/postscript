@@ -967,4 +967,23 @@ seçim"). Liste kodda olduğu için migration gerektirmeden düzenlenebilir;
 ileride yönetilebilir bir tabloya taşınmak istenirse formun sözleşmesi
 değişmez.
 
+---
+
+## D-052 — Her alanın 3 kontenjanı
+
+**Karar:** Sabit alan listesinin her alanı en fazla `AREA_QUOTA = 3` yazar
+alır. Kontenjan "onaylanmış yazar sayısı"dır: rolü `writer` ve silinmemiş
+hesapların `writer_area` sayacı (eski lead modülündeki "onaylı aday" anlamının
+karşılığı; kayıt otomatik onayladığı için onaylı = yazar). Dolu alan hem
+formda devre dışı + "Kontenjan Dolu" etiketi taşır hem de kayıt servisinde
+sunucuda reddedilir (formu atlayan istekler için). Sayıyı tek yerden veren
+`listWriterAreasWithQuota()` ve saf kural `writerAreaSelectionIssues()` birim
+testlidir.
+
+**Gerekçe:** Ürün sahibi "her kategorinin 3 kontenjanı var, onu da yap" dedi.
+Kontenjanın onaylı yazar sayması, alanı 3 onaylı yazar dolduracağı için hem
+form hem sunucu aynı fonksiyonu kullanır. Doğrulanmamış adaylar (rol `user`)
+sayaca katılmaz; bu, eski "onaylı aday" kuralıyla tutarlıdır.
+
+
 

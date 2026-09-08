@@ -6,7 +6,7 @@
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { roleChanges } from "@/db/schema";
+import { roleChanges, users } from "@/db/schema";
 import { db, type Database } from "@/db/client";
 import { register, registerWriterCandidate, verifyEmail } from "@/services/auth";
 import { setAccessMode } from "@/services/access-mode";
@@ -58,6 +58,14 @@ async function captureError(promise: Promise<unknown>) {
   throw new Error("Expected the call to fail, but it succeeded.");
 }
 
+/** Creates `n` approved writers holding an area, as the quota counts them. */
+async function seedWriters(area: string, n: number): Promise<void> {
+  for (let index = 0; index < n; index += 1) {
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    await db.update(users).set({ writerArea: area }).where(eq(users.id, writer.id));
+  }
+}
+
 describe("writer registration (/yazar-basvuru)", () => {
   it("creates a writer-intent account and sends a verification e-mail", async () => {
     const { user } = await registerWriterCandidate(validWriter, noMeta);
@@ -96,6 +104,28 @@ describe("writer registration (/yazar-basvuru)", () => {
       registerWriterCandidate({ ...validWriter, area: "Boyle bir alan yok" }, noMeta),
     );
     expect(error.status).toBe(400);
+  });
+
+  it("accepts writers up to the area quota and refuses the fourth (D-052)", async () => {
+    // Two approved writers already hold the area; the registration fills the
+    // third slot…
+    await seedWriters("Sanat & Edebiyat", 2);
+    const { user } = await registerWriterCandidate(
+      { ...validWriter, email: "dolmayan@example.com" },
+      noMeta,
+    );
+    expect(user.writerArea).toBe("Sanat & Edebiyat");
+
+    // …and once three hold it, the fourth is refused by name
+    await seedWriters("Sanat & Edebiyat", 1);
+    const error = await captureError(
+      registerWriterCandidate(
+        { ...validWriter, email: "tasiyor@example.com" },
+        noMeta,
+      ),
+    );
+    expect(error.status).toBe(400);
+    expect(error.details?.area?.[0]).toContain("kontenjanı dolu");
   });
 
   it("is open even while the site is closed, unlike the reader registration", async () => {
