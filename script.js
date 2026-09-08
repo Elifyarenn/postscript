@@ -1,7 +1,7 @@
 // Reveal sections as they enter the viewport; hero elements rise on load.
 document.addEventListener("DOMContentLoaded", function () {
   var revealables = document.querySelectorAll(
-    ".hero-copy, .hero-art, .section-title, .view-all, .card, .feature-block, .footer-logo, .footer-links, .footer-social"
+    ".hero-copy, .hero-categories, .section-title, .view-all, .card, .feature-block, .footer-logo, .footer-links, .footer-social"
   );
 
   revealables.forEach(function (element) {
