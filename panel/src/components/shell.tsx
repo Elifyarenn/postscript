@@ -154,14 +154,19 @@ export function PanelShell({
       <PanelSidebar user={user} area={area} groups={groups} />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface px-6 py-3 pl-14 lg:pl-6">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-paper px-6 py-3 pl-14 lg:pl-6">
+          <div className="flex items-center gap-3">
+            <span className="hidden font-serif text-sm tracking-[0.2em] text-accent uppercase sm:block">
+              {area}
+            </span>
+            <BackButton />
+          </div>
+
           <div className="flex items-center gap-2.5 text-sm">
             <span className="font-medium">{user.displayName}</span>
             <StatusBadge status={user.role} />
             {user.writerStatus && <StatusBadge status={user.writerStatus} />}
           </div>
-
-          <BackButton />
         </header>
 
         <main className="flex-1 px-6 py-8">

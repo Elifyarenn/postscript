@@ -1,128 +1,515 @@
-/* ---- Design tokens: all colors and fonts live in one place ---- */
+/* ═══════════════════════════════════════════════════════════════════
+   postscript — public homepage
+   Literary palette: burgundy #5C152A on cream #F5F3EC.
+   Serif display: Cormorant Garamond · UI: Inter
+   ═══════════════════════════════════════════════════════════════════ */
+
 :root {
-  --background: #f4f2ed;   /* warm paper-like background */
-  --text: #1c1b19;         /* almost black, softer than pure black */
-  --muted: #8a857c;        /* light gray for secondary text */
-  --line: #c9c4b8;         /* color of the thin divider line */
+  --burgundy: #5c152a;
+  --burgundy-deep: #3d0e1c;
+  --cream: #f5f3ec;
+  --ink: #141012;
+  --muted: #8a767d;
+  --line: #ddd5c8;
 }
 
-/* ---- Reset: remove default margins and use a predictable box model ---- */
 * {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
 }
 
-/* ---- Page base ---- */
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  min-height: 100vh;
-  background-color: var(--background);
-  color: var(--text);
-  font-family: Georgia, "Times New Roman", serif; /* serif fonts feel like a magazine */
-
-  /* Flexbox in column direction: content in the middle, footer at the bottom */
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-
-  padding: 40px 24px;
-  text-align: center;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* ---- Main content block ---- */
-.page {
-  /* flex: 1 lets this block grow and push the footer down */
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+a {
+  color: inherit;
+  text-decoration: none;
 }
 
-/* Small uppercase label above the title */
-.label {
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 12px;
-  letter-spacing: 0.3em;   /* wide letter spacing looks minimal and elegant */
-  text-transform: uppercase;
+/* ════════════════ Header ════════════════ */
+
+.site-header {
+  border-bottom: 1px solid var(--line);
+  padding: 1rem 2rem 1.5rem;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+}
+
+.topbar-links {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.topbar-links a {
   color: var(--muted);
-  margin-bottom: 24px;
+  transition: color 0.2s;
 }
 
-/* Magazine name */
-.title {
-  /* clamp(min, preferred, max): the font size grows with the screen width */
-  font-size: clamp(2.75rem, 12vw, 6rem);
-  font-weight: 400;        /* light weight keeps the design calm */
-  letter-spacing: -0.02em;
+.topbar-links a:hover {
+  color: var(--burgundy);
+}
+
+.topbar-actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.btn {
+  display: inline-block;
+  padding: 0.45rem 1rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  border: 1px solid var(--burgundy);
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-ghost {
+  color: var(--burgundy);
+}
+
+.btn-ghost:hover {
+  background: var(--burgundy);
+  color: var(--cream);
+}
+
+.btn-solid {
+  background: var(--burgundy);
+  color: var(--cream);
+}
+
+.btn-solid:hover {
+  background: var(--burgundy-deep);
+}
+
+.brand {
+  text-align: center;
+  padding: 2.5rem 0 1.75rem;
+}
+
+.logo {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(2.6rem, 7vw, 4.2rem);
+  letter-spacing: 0.04em;
   line-height: 1;
 }
 
-/* Thin line between the title and the message */
-.divider {
-  display: block;
-  width: 56px;
-  height: 1px;
-  background-color: var(--line);
-  margin: 32px 0;
+.logo-pipe {
+  color: var(--burgundy);
 }
 
-/* The "coming soon" message */
-.message {
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: clamp(0.9rem, 3vw, 1.05rem);
-  letter-spacing: 0.15em;
+.tagline {
+  margin-top: 0.6rem;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-size: clamp(1rem, 2.4vw, 1.3rem);
   color: var(--muted);
 }
 
-/* ---- Footer ---- */
-.footer {
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 12px;
-  margin-top: 48px;
+.main-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1.1rem 1.8rem;
+  font-size: 0.74rem;
+  letter-spacing: 0.18em;
 }
 
-.footer a {
+.main-nav a {
+  color: var(--ink);
+  transition: color 0.2s;
+}
+
+.main-nav a:hover {
+  color: var(--burgundy);
+}
+
+.search-btn {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  width: 2rem;
+  height: 2rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  line-height: 1;
+  transition: border-color 0.2s;
+}
+
+.search-btn:hover {
+  border-color: var(--burgundy);
+}
+
+/* ════════════════ Hero ════════════════ */
+
+.hero {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 3rem;
+  align-items: center;
+  padding: 4.5rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.hero-copy {
+  animation: rise 0.7s ease-out both;
+}
+
+.issue {
+  font-size: 0.72rem;
+  letter-spacing: 0.3em;
+  color: var(--burgundy);
+  margin-bottom: 1rem;
+}
+
+.hero-title {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 300;
+  font-size: clamp(3.4rem, 10vw, 7rem);
+  line-height: 0.95;
+  letter-spacing: 0.01em;
+  margin-bottom: 2rem;
+}
+
+.read-now {
+  display: inline-block;
+  background: var(--cream);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  padding: 0.7rem 2rem;
+  font-size: 0.74rem;
+  letter-spacing: 0.2em;
+  transition: background 0.2s, color 0.2s, transform 0.2s;
+}
+
+.read-now:hover {
+  background: var(--burgundy);
+  border-color: var(--burgundy);
+  color: var(--cream);
+  transform: translateY(-2px);
+}
+
+.hero-art {
+  display: grid;
+  gap: 2rem;
+  animation: rise 0.7s 0.15s ease-out both;
+}
+
+.art-block {
+  background: var(--burgundy);
+  min-height: 260px;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.art-frame {
+  position: absolute;
+  inset: 14px;
+  border: 1px solid rgba(245, 243, 236, 0.35);
+  display: grid;
+  place-items: center;
+}
+
+.art-grain {
+  width: 60%;
+  height: 60%;
+  background: radial-gradient(circle at 30% 30%, rgba(245, 243, 236, 0.28), transparent 60%),
+    radial-gradient(circle at 70% 70%, rgba(245, 243, 236, 0.16), transparent 55%);
+}
+
+.hero-categories {
+  list-style: none;
+  display: grid;
+  gap: 0.55rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
   color: var(--muted);
-  text-decoration: none;
-  border-bottom: 1px solid transparent; /* invisible border, so nothing jumps on hover */
-  padding-bottom: 2px;
-  transition: color 0.3s ease, border-color 0.3s ease;
 }
 
-.footer a:hover {
-  color: var(--text);
-  border-bottom-color: var(--text);
+.hero-categories li {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.55rem;
+  transition: color 0.2s, padding-left 0.2s;
 }
 
-/* ---- Entrance animation ----
-   Elements start invisible and slightly lower, then fade up.
-   The .is-visible class is added by JavaScript after the page loads. */
-.label,
-.title,
-.divider,
-.message,
-.footer {
-  opacity: 0;
-  transform: translateY(12px);
-  transition: opacity 0.9s ease, transform 0.9s ease;
+.hero-categories li:hover {
+  color: var(--burgundy);
+  padding-left: 0.6rem;
 }
 
-.is-visible {
-  opacity: 1;
-  transform: translateY(0);
+/* ════════════════ Latest ════════════════ */
+
+.latest {
+  padding: 3rem 2rem 4rem;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-/* Accessibility: turn the animation off for users who prefer reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  .label,
-  .title,
-  .divider,
-  .message,
-  .footer {
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 0.8rem;
+  margin-bottom: 2rem;
+}
+
+.section-title {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(2rem, 5vw, 3rem);
+  letter-spacing: 0.06em;
+}
+
+.view-all {
+  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  color: var(--ink);
+  transition: color 0.2s;
+}
+
+.view-all:hover {
+  color: var(--burgundy);
+}
+
+.cards {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(240px, 1fr);
+  gap: 1.4rem;
+  overflow-x: auto;
+  padding-bottom: 0.6rem;
+  scroll-snap-type: x mandatory;
+}
+
+.card {
+  scroll-snap-align: start;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(92, 21, 42, 0.1);
+}
+
+.card-art {
+  aspect-ratio: 4 / 3;
+  background: linear-gradient(135deg, var(--burgundy-deep), var(--burgundy) 60%, #7d2a44);
+  border-radius: 3px;
+  margin-bottom: 0.9rem;
+}
+
+.card-tag {
+  display: inline-block;
+  background: var(--burgundy);
+  color: var(--cream);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+
+.card-title {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 500;
+  font-size: 1.2rem;
+  line-height: 1.25;
+}
+
+/* ════════════════ Feature blocks ════════════════ */
+
+.blocks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.4rem;
+  padding: 0 2rem 4rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.feature-block {
+  background: var(--burgundy);
+  color: var(--cream);
+  border-radius: 4px;
+  min-height: 240px;
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-block::after {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(245, 243, 236, 0.3);
+  border-radius: 2px;
+}
+
+.feature-label {
+  position: relative;
+  z-index: 1;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 1.4rem;
+  letter-spacing: 0.24em;
+}
+
+/* ════════════════ Footer ════════════════ */
+
+.site-footer {
+  background: var(--burgundy);
+  color: var(--cream);
+  padding: 3.5rem 2rem 2rem;
+  text-align: center;
+}
+
+.footer-logo {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(2.4rem, 6vw, 3.6rem);
+  letter-spacing: 0.05em;
+  margin-bottom: 1.6rem;
+}
+
+.footer-logo .logo-pipe {
+  color: rgba(245, 243, 236, 0.7);
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.2rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  color: rgba(245, 243, 236, 0.75);
+  margin-bottom: 2.4rem;
+}
+
+.footer-links a {
+  transition: color 0.2s;
+}
+
+.footer-links a:hover {
+  color: var(--cream);
+}
+
+.footer-social {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.friends {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-size: 1.25rem;
+}
+
+.social-icons {
+  display: flex;
+  gap: 1.2rem;
+}
+
+.social-icons a {
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 1px solid rgba(245, 243, 236, 0.4);
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.social-icons svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.social-icons a:hover {
+  background: var(--cream);
+  border-color: var(--cream);
+  color: var(--burgundy);
+}
+
+.credit {
+  margin-top: 2.6rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  color: rgba(245, 243, 236, 0.6);
+}
+
+.credit a {
+  color: rgba(245, 243, 236, 0.85);
+  text-decoration: underline;
+}
+
+/* ════════════════ Animation ════════════════ */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
     opacity: 1;
     transform: none;
-    transition: none;
+  }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ════════════════ Responsive ════════════════ */
+
+@media (max-width: 820px) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    padding-top: 2.5rem;
+  }
+
+  .art-block {
+    min-height: 200px;
+  }
+
+  .blocks {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar {
+    gap: 1rem;
   }
 }

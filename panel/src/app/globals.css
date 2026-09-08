@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
-/* Design tokens. The panel is a working tool, so the palette is quiet:
-   one neutral ramp, one accent, and clear state colours. */
+/* Design tokens. The panel carries the magazine's literary palette: a deep
+   burgundy accent on cream paper, with clear state colours. */
 @theme {
-  --color-paper: #f7f6f3;
-  --color-ink: #171614;
-  --color-muted: #6f6a61;
-  --color-line: #dedad2;
+  --color-paper: #f5f3ec;
+  --color-ink: #241218;
+  --color-muted: #8a767d;
+  --color-line: #ddd5c8;
   --color-surface: #ffffff;
-  --color-accent: #1f4b3f;
-  --color-accent-soft: #e6efe9;
+  --color-accent: #5c152a;
+  --color-accent-soft: #f2e6e9;
   --color-danger: #9a2c2c;
   --color-danger-soft: #fbeaea;
   --color-warning: #8a5a12;

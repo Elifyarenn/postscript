@@ -1,16 +1,31 @@
-// Wait until the HTML is fully parsed before touching the elements
+// Reveal sections as they enter the viewport; hero elements rise on load.
 document.addEventListener("DOMContentLoaded", function () {
-
-  // The elements we want to reveal, in the order they should appear
-  const elements = document.querySelectorAll(
-    ".label, .title, .divider, .message, .footer"
+  var revealables = document.querySelectorAll(
+    ".hero-copy, .hero-art, .section-title, .view-all, .card, .feature-block, .footer-logo, .footer-links, .footer-social"
   );
 
-  // Reveal each element one after another (150ms between them)
-  elements.forEach(function (element, index) {
-    setTimeout(function () {
-      element.classList.add("is-visible"); // the CSS transition does the animation
-    }, 150 * index);
+  revealables.forEach(function (element) {
+    element.classList.add("reveal");
   });
 
+  if ("IntersectionObserver" in window) {
+    var observer = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.12 }
+    );
+    revealables.forEach(function (element) {
+      observer.observe(element);
+    });
+  } else {
+    revealables.forEach(function (element) {
+      element.classList.add("is-visible");
+    });
+  }
 });

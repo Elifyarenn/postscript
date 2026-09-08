@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * The responsive sidebar: sticky full-height aside on desktop, hamburger
- * drawer on mobile. The current page is highlighted in both, with a small
- * accent bar beside the active link.
+ * The responsive sidebar: sticky full-height burgundy aside on desktop,
+ * hamburger drawer on mobile. The current page is highlighted in both, with a
+ * small cream accent bar beside the active link.
  */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -11,7 +11,6 @@ import { useState, type ReactNode } from "react";
 import { ArrowRight, LayoutDashboard, Megaphone, Menu, Scale, Users, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logoutAction } from "@/app/(auth)/actions";
-import { StatusBadge } from "./ui";
 import type { NavGroup } from "./shell";
 import type { SessionUser } from "@/lib/auth/session";
 
@@ -35,7 +34,7 @@ function NavLink({
   if (item.disabled) {
     return (
       <span
-        className="cursor-not-allowed rounded-md px-3 py-2 text-sm whitespace-nowrap text-muted/50"
+        className="cursor-not-allowed rounded-md px-3 py-2 text-sm whitespace-nowrap text-paper/40"
         title="Bu sayfa şu anda kilitli"
       >
         {item.label}
@@ -54,13 +53,15 @@ function NavLink({
       onClick={onNavigate}
       className={cn(
         "relative flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors",
-        active ? "bg-accent-soft font-medium text-accent" : "text-ink hover:bg-paper",
+        active
+          ? "bg-white/12 font-medium text-white"
+          : "text-paper/85 hover:bg-white/10 hover:text-white",
       )}
     >
       {active && (
         <span
           aria-hidden
-          className="absolute top-1/2 left-0 h-5 w-0.5 -translate-y-1/2 rounded-full bg-accent"
+          className="absolute top-1/2 left-0 h-5 w-0.5 -translate-y-1/2 rounded-full bg-paper"
         />
       )}
       {item.label}
@@ -78,13 +79,13 @@ function NavContent({
   onNavigate?: () => void;
 }) {
   return (
-    <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-5">
+    <nav className="flex-1 space-y-1 px-3 py-5">
       {groups.map((group, groupIndex) => (
         <div key={group.label ?? groupIndex}>
           {group.label && (
             <div className="flex items-center gap-1.5 px-3 pt-4 pb-1.5">
               {group.icon ?? GROUP_ICONS[group.label]}
-              <span className="text-[10px] font-semibold tracking-[0.18em] text-muted uppercase">
+              <span className="text-[10px] font-semibold tracking-[0.18em] text-paper/60 uppercase">
                 {group.label}
               </span>
             </div>
@@ -101,13 +102,11 @@ function NavContent({
 }
 
 function SidebarFrame({
-  user,
   area,
   groups,
   pathname,
   onNavigate,
 }: {
-  user: SessionUser;
   area: string;
   groups: NavGroup[];
   pathname: string;
@@ -116,23 +115,19 @@ function SidebarFrame({
   return (
     <>
       <Link href="/" className="block px-5 pt-5 pb-4">
-        <span className="font-serif text-xl tracking-tight">postscript</span>
-        <span className="mt-0.5 block text-[10px] tracking-[0.25em] text-muted uppercase">
+        <span className="font-serif text-xl tracking-tight text-paper">postscript</span>
+        <span className="mt-0.5 block text-[10px] tracking-[0.25em] text-paper/60 uppercase">
           {area}
         </span>
       </Link>
 
       <NavContent groups={groups} pathname={pathname} onNavigate={onNavigate} />
 
-      <div className="border-t border-line p-4">
-        <div className="mb-3 flex items-center gap-2 text-sm">
-          <span className="font-medium">{user.displayName}</span>
-          <StatusBadge status={user.role} />
-        </div>
+      <div className="border-t border-white/15 p-4">
         <form action={logoutAction}>
           <button
             type="submit"
-            className="w-full rounded-md border border-line px-3 py-1.5 text-sm text-muted hover:bg-paper hover:text-ink"
+            className="w-full rounded-md border border-white/20 px-3 py-1.5 text-sm text-paper/80 hover:bg-white/10 hover:text-white"
           >
             Çıkış
           </button>
@@ -156,9 +151,9 @@ export function PanelSidebar({
 
   return (
     <>
-      {/* Desktop: sticky aside, content scrolls beside it */}
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-line bg-surface lg:sticky lg:top-0 lg:flex lg:h-screen">
-        <SidebarFrame user={user} area={area} groups={groups} pathname={pathname} />
+      {/* Desktop: sticky burgundy aside, content scrolls beside it */}
+      <aside className="hidden w-64 shrink-0 flex-col bg-accent lg:sticky lg:top-0 lg:flex lg:h-screen lg:overflow-y-auto">
+        <SidebarFrame area={area} groups={groups} pathname={pathname} />
       </aside>
 
       {/* Mobile: hamburger button */}
@@ -166,7 +161,7 @@ export function PanelSidebar({
         type="button"
         aria-label="Menüyü aç"
         onClick={() => setOpen(true)}
-        className="fixed top-3 left-3 z-40 rounded-md border border-line bg-surface p-2 lg:hidden"
+        className="fixed top-3 left-3 z-40 rounded-md bg-accent p-2 text-paper shadow lg:hidden"
       >
         <Menu className="size-4" />
       </button>
@@ -178,19 +173,18 @@ export function PanelSidebar({
             type="button"
             aria-label="Menüyü kapat"
             onClick={() => setOpen(false)}
-            className="absolute inset-0 bg-ink/30 backdrop-blur-sm"
+            className="absolute inset-0 bg-ink/40 backdrop-blur-sm"
           />
-          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-surface shadow-xl">
+          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-accent shadow-xl">
             <button
               type="button"
               aria-label="Menüyü kapat"
               onClick={() => setOpen(false)}
-              className="absolute top-3 right-3 rounded-md border border-line p-1.5"
+              className="absolute top-3 right-3 rounded-md border border-white/20 p-1.5 text-paper"
             >
               <X className="size-4" />
             </button>
             <SidebarFrame
-              user={user}
               area={area}
               groups={groups}
               pathname={pathname}
