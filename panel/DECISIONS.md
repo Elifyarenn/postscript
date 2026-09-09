@@ -1093,5 +1093,23 @@ kontenjanı alan sayfasından yükseltir.
 
 
 
+## D-058 — Yönetici kullanıcı silme
+
+**Karar:** Yönetim panelindeki kullanıcı sayfasına "Kullanıcıyı sil" eklendi
+(`deleteUserAsAdmin`). Silme, self-service hesap silmenin hukuki muamelesinin
+aynısını kullanır: kişisel veriler anonimleştirilir, hesap yumuşak silinir
+(`deleted_at`), tüm oturumlar iptal edilir; imzalı hak devri kayıtları ve rol
+değişikliği geçmişi saklanır (yayının dayanağı). Gerekçe zorunludur ve onay
+kutusu istenir; `user.deleted_by_admin` denetim kaydına gerekçe ve işlemi
+yapan yönetici yazılır. Yönetici kendini silemez.
+
+**Gerekçe:** Ürün sahibi "kullanıcıları silme özelliği getir, sadece yasaklama
+var şu an" dedi. Yasaklama hesabı kilitler ama kişisel verileri durur; silme,
+self-service yolun zaten tanımlı yasal çerçevesini (imzalı devirler korunur)
+yöneticiye de açar. Zorunlu gerekçe + onay kutusu, geri alınamaz bir işlemi
+yanlışlıkla tetiklemeyi zorlaştırır.
+
+
+
 
 

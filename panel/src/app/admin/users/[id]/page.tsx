@@ -26,6 +26,7 @@ import {
 import { formatDate, formatDateTime } from "@/lib/utils";
 import {
   changeRoleAction,
+  deleteUserAction,
   promoteToWriterAction,
   revokeUserSessionsAction,
   setBannedAction,
@@ -375,6 +376,36 @@ export default async function AdminUserDetailPage({
                     required
                   />
                 </Field>
+              </PanelForm>
+            </div>
+
+            <div className="border-t border-line pt-4">
+              <PanelForm
+                action={deleteUserAction}
+                csrfToken={csrfToken}
+                submitLabel="Kullanıcıyı sil"
+                submitVariant="danger"
+                requireValid
+              >
+                <>
+                  <input type="hidden" name="userId" value={target.id} />
+                  <Field
+                    label="Gerekçe"
+                    htmlFor="deleteReason"
+                    hint="Kişisel veriler anonimleştirilir; imzalı hak devri kayıtları hukuki dayanak gereği saklanır."
+                  >
+                    <Input id="deleteReason" name="reason" required maxLength={500} />
+                  </Field>
+                  <label className="flex cursor-pointer items-start gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      name="confirm"
+                      required
+                      className="mt-0.5 size-4 rounded border-line"
+                    />
+                    Bu hesabı kalıcı olarak siliyorum; tüm oturumları kapatılacak.
+                  </label>
+                </>
               </PanelForm>
             </div>
 

@@ -10,6 +10,7 @@
 import { revalidatePath } from "next/cache";
 import {
   changeRole,
+  deleteUserAsAdmin,
   exportUserData,
   promoteToWriter,
   setBanned,
@@ -194,6 +195,31 @@ export async function revokeUserSessionsAction(
 
     await revokeAllSessions(text(formData, "userId"));
     return { success: "Kullanıcının tüm oturumları kapatıldı." };
+  });
+}
+
+/**
+ * Admin-only hard deletion. The account is anonymised and soft deleted (the
+ * self-service path's legal treatment), the reason goes to the audit trail.
+ */
+export async function deleteUserAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
+
+    const targetId = text(formData, "userId");
+    if (!checkbox(formData, "confirm")) {
+      throw badRequest("Silme onayını işaretlemelisiniz.");
+    }
+    await deleteUserAsAdmin({ ...user }, targetId, text(formData, "reason"), meta);
+
+    revalidatePath(`/admin/users/${targetId}`);
+    revalidatePath("/admin/users");
+    return { success: "Kullanıcı silindi." };
   });
 }
 

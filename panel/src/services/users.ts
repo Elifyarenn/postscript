@@ -608,13 +608,13 @@ export async function cancelAccountDeletion(actor: Actor): Promise<void> {
 }
 
 /**
- * Runs 30 days after the request (cron). Personal data is replaced, but signed
- * rights grants and their signature evidence are kept: they are the proof that
- * the magazine may publish the work, and that is a lawful basis to retain.
+ * The shared deletion core: personal data is replaced, the account is soft
+ * deleted, and every session dies. Signed rights grants and role changes are
+ * kept — they are the proof that the magazine may publish the work, which is
+ * a lawful basis to retain them (§5.4). Used by the 30 day self-service
+ * completion and by the admin deletion.
  */
-export async function anonymiseUser(userId: string): Promise<void> {
-  const user = await findUserById(userId);
-
+async function anonymise(user: User): Promise<void> {
   await db
     .update(users)
     .set({
@@ -630,9 +630,19 @@ export async function anonymiseUser(userId: string): Promise<void> {
       deletedAt: new Date(),
       updatedAt: new Date(),
     })
-    .where(eq(users.id, userId));
+    .where(eq(users.id, user.id));
 
-  await revokeAllSessions(userId);
+  await revokeAllSessions(user.id);
+}
+
+/**
+ * Runs 30 days after the request (cron). Personal data is replaced, but signed
+ * rights grants and their signature evidence are kept: they are the proof that
+ * the magazine may publish the work, and that is a lawful basis to retain.
+ */
+export async function anonymiseUser(userId: string): Promise<void> {
+  const user = await findUserById(userId);
+  await anonymise(user);
 
   await writeAudit({
     actorId: null,
@@ -640,6 +650,35 @@ export async function anonymiseUser(userId: string): Promise<void> {
     entityType: "users",
     entityId: userId,
     ip: null,
+  });
+}
+
+/**
+ * Admin-initiated deletion. The same legal treatment as the self-service
+ * path applies — the account is anonymised and soft deleted, signed grants
+ * stay — but the acting admin and the reason land in the audit trail.
+ */
+export async function deleteUserAsAdmin(
+  actor: Actor,
+  targetUserId: string,
+  reason: string,
+  meta: RequestMeta,
+): Promise<void> {
+  if (!canManageUsers(actor)) throw forbidden();
+  if (actor.id === targetUserId) throw badRequest("Kendi hesabınızı silemezsiniz.");
+  if (!reason.trim()) throw badRequest("Silme gerekçesi zorunludur.");
+
+  const target = await findUserById(targetUserId);
+  await anonymise(target);
+
+  await writeAudit({
+    actorId: actor.id,
+    action: "user.deleted_by_admin",
+    entityType: "users",
+    entityId: target.id,
+    before: { role: target.role, isBanned: target.isBanned },
+    after: { deleted: true, reason: reason.trim() },
+    ip: meta.ip,
   });
 }
 

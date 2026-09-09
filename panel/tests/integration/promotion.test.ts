@@ -5,10 +5,11 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
-import { roleChanges } from "@/db/schema";
+import { auditLog, roleChanges, sessions } from "@/db/schema";
 import {
   changeRole,
   checkWriterEligibility,
+  deleteUserAsAdmin,
   promoteToWriter,
   setBanned,
   setWriterStatus,
@@ -198,5 +199,79 @@ describe("suspension and demotion", () => {
     const banned = await setBanned(actorOf(admin), target.id, true, "Spam", noMeta);
     expect(banned.isBanned).toBe(true);
     expect(banned.bannedReason).toBe("Spam");
+  });
+});
+
+describe("admin deletes a user", () => {
+  it("anonymises, soft deletes and revokes the sessions", async () => {
+    const admin = await createUser({ role: "admin" });
+    const target = await createUser({ role: "writer", writerStatus: "active" });
+
+    // A live session: deletion must kill it with the account
+    await db.insert(sessions).values({
+      userId: target.id,
+      tokenHash: "deleted-session-test",
+      expiresAt: new Date(Date.now() + 86_400_000),
+    });
+
+    await deleteUserAsAdmin(actorOf(admin), target.id, "İstek üzerine", noMeta);
+
+    const deleted = await reloadUser(target.id);
+    expect(deleted.deletedAt).not.toBeNull();
+    expect(deleted.anonymizedAt).not.toBeNull();
+    expect(deleted.email).toBe(`deleted+${target.id}@invalid.local`);
+    expect(deleted.displayName).toBe("Silinmiş kullanıcı");
+    expect(deleted.passwordHash).toBe("disabled");
+
+    const remainingSessions = await db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.userId, target.id));
+    expect(remainingSessions).toHaveLength(1);
+    expect(remainingSessions[0]!.revokedAt).not.toBeNull();
+
+    const audit = await db
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.action, "user.deleted_by_admin"));
+    expect(audit).toHaveLength(1);
+    expect(audit[0]!.actorId).toBe(admin.id);
+    expect(audit[0]!.ip).toBe(noMeta.ip);
+    expect(audit[0]!.after).toMatchObject({ deleted: true, reason: "İstek üzerine" });
+  });
+
+  it("refuses a non-admin actor", async () => {
+    const editor = await createUser({ role: "editor" });
+    const target = await createUser();
+
+    const error = await captureError(deleteUserAsAdmin(actorOf(editor), target.id, "Neden", noMeta));
+    expect(error.status).toBe(403);
+  });
+
+  it("refuses deleting yourself", async () => {
+    const admin = await createUser({ role: "admin" });
+
+    const error = await captureError(deleteUserAsAdmin(actorOf(admin), admin.id, "Neden", noMeta));
+    expect(error.status).toBe(400);
+  });
+
+  it("requires a reason", async () => {
+    const admin = await createUser({ role: "admin" });
+    const target = await createUser();
+
+    const error = await captureError(deleteUserAsAdmin(actorOf(admin), target.id, "   ", noMeta));
+    expect(error.status).toBe(400);
+
+    const intact = await reloadUser(target.id);
+    expect(intact.deletedAt).toBeNull();
+  });
+
+  it("refuses a user that was already deleted", async () => {
+    const admin = await createUser({ role: "admin" });
+    const target = await createUser();
+    await deleteUserAsAdmin(actorOf(admin), target.id, "İlk silme", noMeta);
+
+    const error = await captureError(deleteUserAsAdmin(actorOf(admin), target.id, "İkinci silme", noMeta));
+    expect(error.status).toBe(404);
   });
 });
