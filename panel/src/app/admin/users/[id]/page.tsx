@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { roleChanges, users } from "@/db/schema";
+import { roleChanges, users, type User } from "@/db/schema";
 import { guardPanel } from "@/lib/auth/guard";
+import { isAppError } from "@/lib/errors";
 import { checkPromotionReadiness, findUserById } from "@/services/users";
 import { renderAgreementForWriter } from "@/services/agreements";
 import { listAllWriterAreasWithQuota } from "@/services/writer-areas";
@@ -55,7 +57,15 @@ export default async function AdminUserDetailPage({
   const { id } = await params;
   const csrfToken = (await readCsrfToken()) ?? "";
 
-  const target = await findUserById(id);
+  // A deleted (or otherwise missing) account has no detail page; a real 404
+  // keeps a stale link or a back button from turning into a 500.
+  let target: User;
+  try {
+    target = await findUserById(id);
+  } catch (error) {
+    if (isAppError(error) && error.status === 404) notFound();
+    throw error;
+  }
   const readiness = await checkPromotionReadiness(target);
   const areas = await listAllWriterAreasWithQuota();
 

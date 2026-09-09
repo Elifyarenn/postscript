@@ -2,6 +2,7 @@ import Link from "next/link";
 import { guardPanel } from "@/lib/auth/guard";
 import { listUsers } from "@/services/users";
 import {
+  Alert,
   Card,
   EmptyState,
   Field,
@@ -21,7 +22,7 @@ export const metadata = { title: "Kullanıcılar" };
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; role?: string }>;
+  searchParams: Promise<{ q?: string; role?: string; deleted?: string }>;
 }) {
   const { user } = await guardPanel("admin");
   const filters = await searchParams;
@@ -40,6 +41,12 @@ export default async function AdminUsersPage({
       />
 
       <div className="space-y-6">
+        {filters.deleted && (
+          <Alert tone="success" title="Kullanıcı silindi">
+            Hesap anonimleştirildi ve listeden kaldırıldı.
+          </Alert>
+        )}
+
         <Card>
           <form method="get" className="grid gap-3 sm:grid-cols-3">
             <Field label="Ara" htmlFor="q">

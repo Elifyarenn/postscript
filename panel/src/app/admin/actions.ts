@@ -8,6 +8,7 @@
  * fact that the page rendered.
  */
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import {
   changeRole,
   deleteUserAsAdmin,
@@ -201,12 +202,16 @@ export async function revokeUserSessionsAction(
 /**
  * Admin-only hard deletion. The account is anonymised and soft deleted (the
  * self-service path's legal treatment), the reason goes to the audit trail.
+ * The deleted user's own page no longer exists, so the admin is sent back to
+ * the list instead of re-rendering a 404 in place.
  */
 export async function deleteUserAction(
   _state: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  return runAction(async () => {
+  let destination: string | null = null;
+
+  const result = await runAction(async () => {
     await assertCsrfFromForm(formData);
     const { user } = await requireRole("admin");
     const meta = await requestMetadata();
@@ -216,11 +221,11 @@ export async function deleteUserAction(
       throw badRequest("Silme onayını işaretlemelisiniz.");
     }
     await deleteUserAsAdmin({ ...user }, targetId, text(formData, "reason"), meta);
-
-    revalidatePath(`/admin/users/${targetId}`);
-    revalidatePath("/admin/users");
-    return { success: "Kullanıcı silindi." };
+    destination = "/admin/users?deleted=1";
   });
+
+  if (destination) redirect(destination);
+  return result;
 }
 
 /* ------------------------------------------------------------------ */
