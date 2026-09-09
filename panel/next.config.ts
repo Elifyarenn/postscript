@@ -1,5 +1,11 @@
 import type { NextConfig } from "next";
 
+// React dev mode uses eval() to reconstruct call stacks, so the strict
+// production CSP (no unsafe-eval) has to be relaxed for local development.
+// Production React never calls eval, so the shipped policy stays strict.
+const scriptSrc = ["'self'", "'unsafe-inline'"];
+if (process.env.NODE_ENV === "development") scriptSrc.push("'unsafe-eval'");
+
 const securityHeaders = [
   // No MIME sniffing; the declared content type is authoritative
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -12,7 +18,7 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline'",
+      `script-src ${scriptSrc.join(" ")}`,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",
       "font-src 'self' data:",
