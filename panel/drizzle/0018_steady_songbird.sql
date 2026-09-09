@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "writer_area_2" text;

@@ -195,6 +195,13 @@ export const users = pgTable(
     /** The writing area the candidate chose at registration (D-051). */
     writerArea: text("writer_area"),
 
+    /**
+     * An optional second area, assigned only from the admin panel (D-057).
+     * The writer holds at most two areas; the value is a `writer_areas` name,
+     * kept in step with a rename exactly like `writer_area`.
+     */
+    writerArea2: text("writer_area_2"),
+
     /** Contact number collected at writer registration; stored compact (D-053). */
     phone: text("phone"),
 

@@ -1071,4 +1071,27 @@ doğrudan API çağrısını engellemez.
 
 
 
+## D-057 — Yazarlara ikinci alan atama (yalnızca admin paneli)
+
+**Karar:** Bir yazar en fazla iki alanda yer alır. `users.writer_area_2`
+kolonu eklendi (migration 0018); yazarın ilk ve ikinci alanı yalnızca yönetim
+panelinden (`/admin/users/[id]`) değiştirilir. `setWriterAreas` servisi admin
+yetkisi ister, alan adlarını `writer_areas` tablosuna karşı doğrular, iki alan
+aynı olamaz ve yeni eklenen bir alanın kontenjanı doluysa 409 döner. Kontenjan
+sayımı her iki kolonu da sayar (D-052 ile tutarlı): alan ister ilk ister ikinci
+slotta olsun, onu tutan yazar sayılır; `count(distinct user_id)` aynı adı iki
+slotta tutanı tek sayar. Alan yeniden adlandırıldığında `writer_area_2` de aynı
+işlemde güncellenir. Yazar hesabında alanlar salt okunur görünür; kullanıcı
+kendisi değiştiremez.
+
+**Gerekçe:** Ürün sahibi "yazarların kategorilerini admin panelinden
+değiştirip 2. bir kategori ekleme alanı yap, bu yetkiye sadece admin panelinden
+ulaşılabilsin" dedi. Kayıtta tek alan seçilir (D-051); ikinci alan, yazarlık
+başladıktan sonra yönetimin işidir. Kontenjan kuralı yalnızca kayıt için değil
+yönetim ataması için de sürer: dolu bir alana yönetim de yazar ekleyemez,
+kontenjanı alan sayfasından yükseltir.
+
+
+
+
 

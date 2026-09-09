@@ -5,6 +5,7 @@ import { roleChanges, users } from "@/db/schema";
 import { guardPanel } from "@/lib/auth/guard";
 import { checkPromotionReadiness, findUserById } from "@/services/users";
 import { renderAgreementForWriter } from "@/services/agreements";
+import { listAllWriterAreasWithQuota } from "@/services/writer-areas";
 import { AgreementRenderError } from "@/lib/agreement/render";
 import { readCsrfToken } from "@/lib/csrf";
 import { renderMarkdown } from "@/lib/markdown";
@@ -30,6 +31,7 @@ import {
   setBannedAction,
   setBirthDateAction,
   setEditorStatusAction,
+  setWriterAreasAction,
   setWriterStatusAction,
 } from "../../actions";
 
@@ -54,6 +56,7 @@ export default async function AdminUserDetailPage({
 
   const target = await findUserById(id);
   const readiness = await checkPromotionReadiness(target);
+  const areas = await listAllWriterAreasWithQuota();
 
   // §9: the admin may look at the filled contract before promoting. This
   // preview is never stored; it exists only to be read.
@@ -120,11 +123,62 @@ export default async function AdminUserDetailPage({
               <dd className="text-ink">{target.writerArea ?? "—"}</dd>
             </div>
             <div>
+              <dt className="text-muted">2. alan</dt>
+              <dd className="text-ink">{target.writerArea2 ?? "—"}</dd>
+            </div>
+            <div>
               <dt className="text-muted">Kayıt</dt>
               <dd className="text-ink">{formatDateTime(target.createdAt)}</dd>
             </div>
           </dl>
         </Card>
+
+        {target.role === "writer" && (
+          <Card>
+            <h2 className="mb-1 font-serif text-lg">Yazar alanları</h2>
+            <p className="mb-4 text-sm text-muted">
+              Yalnızca yönetici değiştirebilir; yazar kendi alanlarını kendisi
+              düzenleyemez. Bir yazar en fazla iki alanda yer alır ve dolu bir
+              alan seçilemez.
+            </p>
+            <PanelForm
+              action={setWriterAreasAction}
+              csrfToken={csrfToken}
+              submitLabel="Alanları güncelle"
+              submitVariant="secondary"
+            >
+              <>
+                <input type="hidden" name="userId" value={target.id} />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="1. alan" htmlFor="area">
+                    <Select id="area" name="area" defaultValue={target.writerArea ?? ""}>
+                      <option value="">Yok</option>
+                      {areas.map((area) => (
+                        <option key={area.id} value={area.name}>
+                          {area.name} ({area.currentCount}/{area.quota})
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field
+                    label="2. alan"
+                    htmlFor="area2"
+                    hint="Boş bırakılırsa yazar tek alanda kalır."
+                  >
+                    <Select id="area2" name="area2" defaultValue={target.writerArea2 ?? ""}>
+                      <option value="">Yok</option>
+                      {areas.map((area) => (
+                        <option key={area.id} value={area.name}>
+                          {area.name} ({area.currentCount}/{area.quota})
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                </div>
+              </>
+            </PanelForm>
+          </Card>
+        )}
 
         {target.isBanned && (
           <Alert tone="danger" title="Bu hesap yasaklı">

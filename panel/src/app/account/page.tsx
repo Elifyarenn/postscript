@@ -115,6 +115,7 @@ export default async function AccountPage({
           bio={profile.bio}
           socialLinks={profile.socialLinks ?? null}
           writerArea={profile.writerArea}
+          writerArea2={profile.writerArea2}
           phone={profile.phone}
         />
 

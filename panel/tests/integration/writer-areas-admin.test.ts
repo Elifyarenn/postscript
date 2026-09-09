@@ -12,11 +12,12 @@ import {
   deleteWriterArea,
   listAllWriterAreasWithQuota,
   listWriterAreasWithQuota,
+  setWriterAreas,
   updateWriterArea,
 } from "@/services/writer-areas";
 import { isAppError } from "@/lib/errors";
 import { resetTables, seedDefaultWriterAreas, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
-import { actorOf, createUser, noMeta } from "../helpers/factories";
+import { actorOf, createUser, noMeta, reloadUser } from "../helpers/factories";
 
 let database: Database;
 let actor: ReturnType<typeof actorOf>;
@@ -85,6 +86,20 @@ describe("updating areas", () => {
     expect(held[0]!.writerArea).toBe("Sanat & Kültür");
   });
 
+  it("keeps a writer's second slot in step when its area is renamed", async () => {
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    await db
+      .update(users)
+      .set({ writerArea2: "Sanat & Edebiyat" })
+      .where(eq(users.id, writer.id));
+
+    const row = await areaByName("Sanat & Edebiyat");
+    await updateWriterArea(actor, { id: row.id, name: "Sanat & Kültür" }, noMeta);
+
+    const held = await reloadUser(writer.id);
+    expect(held.writerArea2).toBe("Sanat & Kültür");
+  });
+
   it("refuses to lower the quota below the writer count", async () => {
     const row = await areaByName("Sanat & Edebiyat");
     for (let index = 0; index < 2; index += 1) {
@@ -138,6 +153,111 @@ describe("permissions", () => {
     const editor = await createUser({ role: "editor" });
     const error = await captureError(
       createWriterArea(actorOf(editor), { name: "X", quota: 3 }, noMeta),
+    );
+    expect(error.code).toBe("forbidden");
+  });
+});
+
+describe("setting a writer's own areas (admin only, D-057)", () => {
+  it("changes the first area and adds a second one", async () => {
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    await db
+      .update(users)
+      .set({ writerArea: "Sanat & Edebiyat" })
+      .where(eq(users.id, writer.id));
+
+    await setWriterAreas(
+      actor,
+      writer.id,
+      { area: "Bilim & Teknoloji", area2: "Felsefe & Düşünce" },
+      noMeta,
+    );
+
+    const held = await reloadUser(writer.id);
+    expect(held.writerArea).toBe("Bilim & Teknoloji");
+    expect(held.writerArea2).toBe("Felsefe & Düşünce");
+  });
+
+  it("clears both areas when nulls are passed", async () => {
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    await db
+      .update(users)
+      .set({ writerArea: "Sanat & Edebiyat", writerArea2: "Tarih & Dünya" })
+      .where(eq(users.id, writer.id));
+
+    await setWriterAreas(actor, writer.id, { area: null, area2: null }, noMeta);
+
+    const held = await reloadUser(writer.id);
+    expect(held.writerArea).toBeNull();
+    expect(held.writerArea2).toBeNull();
+  });
+
+  it("refuses an unknown area name", async () => {
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    const error = await captureError(
+      setWriterAreas(actor, writer.id, { area: "Yok boyle bir alan", area2: null }, noMeta),
+    );
+    expect(error.code).toBe("bad_request");
+  });
+
+  it("refuses the same area in both slots", async () => {
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    const error = await captureError(
+      setWriterAreas(
+        actor,
+        writer.id,
+        { area: "Sanat & Edebiyat", area2: "Sanat & Edebiyat" },
+        noMeta,
+      ),
+    );
+    expect(error.code).toBe("bad_request");
+  });
+
+  it("refuses a second area whose quota is full", async () => {
+    for (let index = 0; index < 3; index += 1) {
+      const holder = await createUser({ role: "writer", writerStatus: "active" });
+      await db
+        .update(users)
+        .set({ writerArea: "Eğlence & Dedikodu" })
+        .where(eq(users.id, holder.id));
+    }
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+
+    const error = await captureError(
+      setWriterAreas(
+        actor,
+        writer.id,
+        { area: "Sanat & Edebiyat", area2: "Eğlence & Dedikodu" },
+        noMeta,
+      ),
+    );
+    expect(error.code).toBe("conflict");
+  });
+
+  it("counts a second-slot holder towards that area's quota", async () => {
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    await db
+      .update(users)
+      .set({ writerArea: "Sanat & Edebiyat", writerArea2: "Eğlence & Dedikodu" })
+      .where(eq(users.id, writer.id));
+
+    const areas = await listWriterAreasWithQuota();
+    expect(areas.find((area) => area.name === "Eğlence & Dedikodu")?.currentCount).toBe(1);
+  });
+
+  it("refuses a non-writer target", async () => {
+    const reader = await createUser({ role: "user" });
+    const error = await captureError(
+      setWriterAreas(actor, reader.id, { area: "Sanat & Edebiyat", area2: null }, noMeta),
+    );
+    expect(error.code).toBe("conflict");
+  });
+
+  it("refuses a non-admin actor", async () => {
+    const editor = await createUser({ role: "editor" });
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    const error = await captureError(
+      setWriterAreas(actorOf(editor), writer.id, { area: "Sanat & Edebiyat", area2: null }, noMeta),
     );
     expect(error.code).toBe("forbidden");
   });

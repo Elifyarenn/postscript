@@ -41,6 +41,7 @@ export function ProfileCard({
   bio,
   socialLinks,
   writerArea,
+  writerArea2,
   phone,
 }: {
   csrfToken: string;
@@ -49,6 +50,8 @@ export function ProfileCard({
   socialLinks: SocialLinks | null;
   /** The writing area chosen at registration, shown read-only (D-051). */
   writerArea?: string | null;
+  /** A second area, assigned from the admin panel only, shown read-only (D-057). */
+  writerArea2?: string | null;
   /** The contact number; editable here so late-comers can add it (D-054). */
   phone?: string | null;
 }) {
@@ -107,9 +110,15 @@ export function ProfileCard({
               />
             </Field>
 
-            {writerArea && (
+            {(writerArea || writerArea2) && (
               <p className="text-sm text-muted">
-                Alan: <span className="text-ink">{writerArea}</span>
+                Alan: <span className="text-ink">{writerArea ?? "—"}</span>
+                {writerArea2 && (
+                  <>
+                    {" · 2. alan: "}
+                    <span className="text-ink">{writerArea2}</span>
+                  </>
+                )}
               </p>
             )}
 

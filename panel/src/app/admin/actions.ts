@@ -31,6 +31,7 @@ import {
 import {
   createWriterArea,
   deleteWriterArea,
+  setWriterAreas,
   updateWriterArea,
 } from "@/services/writer-areas";
 import { saveSiteSettings, SITE_SETTING_KEYS } from "@/services/site-settings";
@@ -567,5 +568,35 @@ export async function deleteWriterAreaAction(
     revalidatePath("/admin/categories");
     revalidatePath("/yazar-basvuru");
     return { success: "Alan silindi." };
+  });
+}
+
+/**
+ * Admin-only: (re)assign a writer's first and second area. There is no
+ * writer-facing path to this — the writer never edits their own areas.
+ */
+export async function setWriterAreasAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
+
+    const targetId = text(formData, "userId");
+    await setWriterAreas(
+      { ...user },
+      targetId,
+      {
+        area: optionalText(formData, "area"),
+        area2: optionalText(formData, "area2"),
+      },
+      meta,
+    );
+
+    revalidatePath(`/admin/users/${targetId}`);
+    revalidatePath("/admin/users");
+    return { success: "Yazar alanları güncellendi." };
   });
 }
