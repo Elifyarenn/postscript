@@ -120,6 +120,8 @@ export async function listUsers(actor: Actor, filters: UserListFilters = {}) {
       emailVerifiedAt: users.emailVerifiedAt,
       birthDate: users.birthDate,
       isBanned: users.isBanned,
+      writerArea: users.writerArea,
+      writerArea2: users.writerArea2,
       createdAt: users.createdAt,
     })
     .from(users)
