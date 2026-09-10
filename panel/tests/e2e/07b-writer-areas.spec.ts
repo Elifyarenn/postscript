@@ -1,6 +1,6 @@
 /**
- * Admin-managed writing areas (D-055): a new area appears on the public
- * registration form, and a disabled one disappears from it.
+ * Admin-managed writing areas (D-055): an admin adds, renames, re-quotas and
+ * disables areas from the "Yazı alanları" screen.
  */
 import { expect, test } from "@playwright/test";
 import { loginElevated, logout, SEED } from "./helpers";
@@ -30,12 +30,4 @@ test("an admin adds and disables a writing area", async ({ page }) => {
   await expect(row.getByText("Pasif")).toBeVisible();
 
   await logout(page);
-});
-
-test("a disabled area is gone from the public registration form", async ({ page }) => {
-  await page.goto("/yazar-basvuru");
-  await expect(page.getByRole("heading", { name: "Yazar hesabı oluştur" })).toBeVisible();
-
-  const radio = page.locator('input[name="area"]', { has: page.getByText("Yemek & Seyahat") });
-  await expect(radio).toHaveCount(0);
 });

@@ -559,7 +559,6 @@ export async function updateWriterAreaAction(
     );
 
     revalidatePath("/admin/categories");
-    revalidatePath("/yazar-basvuru");
     return { success: "Alan güncellendi." };
   });
 }
@@ -576,7 +575,6 @@ export async function deleteWriterAreaAction(
     await deleteWriterArea({ ...user }, text(formData, "id"), meta);
 
     revalidatePath("/admin/categories");
-    revalidatePath("/yazar-basvuru");
     return { success: "Alan silindi." };
   });
 }

@@ -77,28 +77,19 @@ export function linkFrom(text: string): string {
 /* ------------------------------------------------------------------ */
 
 /**
- * Registers a new writer through the public form (/yazar-basvuru) and waits
- * for the verification gate. The birth date defaults to an adult, fixed one.
+ * Registers a new reader through the standard form (/register) and waits for
+ * the verification gate. The account always gets the plain `user` role.
  */
-export async function registerWriter(
+export async function registerReader(
   page: Page,
-  input: {
-    displayName: string;
-    email: string;
-    password: string;
-    birthDate?: string;
-    area?: string;
-    phone?: string;
-  },
+  input: { displayName: string; email: string; password: string },
 ): Promise<void> {
-  await page.goto("/yazar-basvuru");
+  await page.goto("/register");
   await page.getByLabel("Ad Soyad").fill(input.displayName);
-  await page.getByLabel("Doğum Tarihi").fill(input.birthDate ?? "1994-04-12");
   await page.getByLabel("E-posta").fill(input.email);
-  await page.getByLabel("Telefon").fill(input.phone ?? "0532 123 45 67");
-  await page.getByLabel(input.area ?? "Sanat & Edebiyat").check();
+  await page.locator('input[name="kvkkConsent"]').check();
   await page.getByLabel("Şifre").fill(input.password);
-  await page.getByRole("button", { name: "Yazar hesabı oluştur" }).click();
+  await page.getByRole("button", { name: "Okuyucu hesabı oluştur" }).click();
   await page.waitForURL("**/verify-email/pending");
 }
 

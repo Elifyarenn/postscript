@@ -9,8 +9,8 @@ export const metadata = { title: "Okuyucu kaydı" };
 
 /**
  * The standard reader/user registration. Every new account gets the plain
- * `user` role; the writer registration (/yazar-basvuru) stays a separate flow
- * (D-049). The address has to be verified by e-mail before the account can do
+ * `user` role; writer and editor roles are granted from the admin panel only
+ * (D-064). The address has to be verified by e-mail before the account can do
  * anything (D-034).
  */
 export default async function RegisterPage() {
@@ -59,11 +59,6 @@ export default async function RegisterPage() {
       </PanelForm>
 
       <p className="mt-5 text-sm">
-        Yazar hesabı için{" "}
-        <Link href="/yazar-basvuru" className="text-accent hover:underline">
-          yazar kaydını
-        </Link>{" "}
-        kullanın. ·{" "}
         <Link href="/login" className="text-accent hover:underline">
           Zaten hesabım var
         </Link>

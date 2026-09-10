@@ -1267,6 +1267,34 @@ servis kapıları kalsaydı modu açıkken bile kod aynı kısıtlamayı uygular
 Mekanizmanın tamamını kaldırmak, ölü bir ayar kartı ve iki kaynaklı bir
 davranış (DB ayarı vs. kod) bırakmamak içindir.
 
+---
+
+## D-064 — Yazar kaydı kaldırıldı; yazar/editör rolleri yalnızca yönetimden
+
+**Karar:** Herkese açık yazar kaydı tamamen kaldırıldı. `/yazar-basvuru`
+sayfası, `registerWriterCandidate`/`writerRegisterSchema` servisi,
+`registerWriterAction` ve e-posta doğrulamasındaki otomatik yazar onayı
+(`autoApproveWriterCandidate`) silindi. `verifyEmail` artık yalnızca adresi
+doğrular, kimseyi yükseltmez; `writer_intent_at` kolonu yalnızca eski
+kayıtların tarihî verisi olarak kalır (migration gerektirmez, yeni kayıt yok).
+
+**Kalan tek kayıt:** `/register` — standart okuyucu kaydı; sunucu her zaman
+`role = user` atar. Giriş sayfasındaki "Yazar kaydı" bağlantısı kaldırıldı.
+
+**Rol ataması artık yalnızca yönetim panelinden:** `promoteToWriter`
+(okuyucudan yazara), `changeRole` (herhangi bir role), `setHybridWriterRole`
+(editor → "Editor & Yazar"), `setEditorDuties` (editör alanları + ana editör)
+ve yazar başvurusu pipeline'ı (`/admin/applications`, admin onaylı ayrı akış)
+— tümü yönetici kararıyla.
+
+**Gerekçe:** Ürün sahibi "yazar kaydını komple kaldır, normal kayıt kalsın;
+editör/yazar yapılacaksa kullanıcıyı panelden yapıyoruz" dedi. Kendi kendine
+yazar olma yolunun kapanması, terfinin tek yetkili kaynağını (yönetici kararı +
+`role_changes` kaydı) korur; D-049'daki otomatik onay bu kararla birlikte
+geçersiz kalır. D-061'deki "yazar kendi yazısını yazar" akışı bundan
+etkilenmez: zaten yazar olmuş hesaplar yazar panelinden makale göndermeye
+devam eder.
+
 
 
 

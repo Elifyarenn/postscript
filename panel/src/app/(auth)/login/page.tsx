@@ -72,11 +72,7 @@ export default async function LoginPage({
         <p className="text-muted">
           Hesabınız yok mu?{" "}
           <Link href="/register" className="text-accent hover:underline">
-            Okuyucu kaydı
-          </Link>{" "}
-          ·{" "}
-          <Link href="/yazar-basvuru" className="text-accent hover:underline">
-            Yazar kaydı
+            Kayıt ol
           </Link>
         </p>
       </div>

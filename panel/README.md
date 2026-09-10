@@ -282,20 +282,14 @@ Yönetici panelindeki **"Topluluk yönetimi"** sekmesinde tüm yorumlar, sohbet
 mesajları ve yasaklı kelimeler yönetilir; kaldırma yumuşak silmedir
 (kayıt geçmişte kalır).
 
-### Yazar bilgi formu ve kategori kontenjanları
+### Kayıt ve roller
 
-`/yazar-basvuru` adresindeki herkese açık form, adayların ilgi alanını
-toplar: ad soyad, doğum tarihi, telefon, e-posta ve **tek bir kategori**.
-Kontenjanı dolan (3 onaylı aday) kategoriler formda pasif görünür ve "Kontenjan
-Dolu" etiketi taşır; sunucu aynı kuralı yeniden çalıştırır (dolu kategoriye
-başvuru 400). Başvurular `pending` olarak `writer_leads` tablosuna düşer — bu,
-sözleşme odaklı `writer_applications` pipeline'ından ayrı bir ilgi havuzudur.
-
-API: `GET /api/categories`, `POST /api/writers/apply`,
-`GET /api/admin/writers`, `PUT /api/admin/writers/:id`,
-`POST/PUT/DELETE /api/admin/categories(/:id)`. Admin panelinde **"Yazar
-adayları"** ve **"Kategoriler"** ekranları başvuruları ve kontenjanları yönetir
-(2/3 göstergesi, aktif/pasif, yumuşak silme) (D-041).
+Herkese açık tek kayıt **okuyucu kaydı**dır (`/register`): ad soyad,
+e-posta, şifre ve KVKK onayı. Yeni hesaba sunucu her zaman `user` (okuyucu)
+rolü atar; e-posta doğrulaması kimseyi yükseltmez. Yazar ve editör rolleri
+yalnızca yönetici panelinden verilir (`/admin/users` → terfi / rol değişimi /
+"Editor & Yazar" hibriti) veya yazar başvurusu pipeline'ından
+(`/admin/applications`) admin onayıyla geçer. (D-063, D-064)
 
 ### İç duyurular ve okundu onayı
 

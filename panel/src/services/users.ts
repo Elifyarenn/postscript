@@ -189,68 +189,6 @@ export async function promoteToWriter(
   return updated!;
 }
 
-/**
- * The auto-approval of a writer-registration candidate (D-049). Runs once the
- * candidate's e-mail address is verified: the address proof stands in for the
- * editorial review the old application pipeline needed. The same eligibility
- * an admin promotion checks is enforced here — an underage or unverified
- * candidate stays a reader, and the audit trail records why. The account
- * becomes an active writer right away; the contract is handled outside the
- * panel for now (D-050).
- */
-export async function autoApproveWriterCandidate(
-  userId: string,
-  meta: RequestMeta,
-): Promise<User> {
-  const user = await findUserById(userId);
-  if (user.writerIntentAt === null || user.role !== "user") return user;
-
-  const eligibility = await checkPromotionReadiness(user);
-  if (!eligibility.eligible) {
-    await writeAudit({
-      actorId: user.id,
-      action: "writer_auto_approval_skipped",
-      entityType: "users",
-      entityId: user.id,
-      after: { requirements: eligibility.messages },
-      ip: meta.ip,
-    });
-    return user;
-  }
-
-  const now = new Date();
-  const [updated] = await db
-    .update(users)
-    .set({ role: "writer", writerStatus: "active", updatedAt: now })
-    .where(eq(users.id, user.id))
-    .returning();
-
-  // No role ever changes without its role_changes row
-  await recordRoleChange({
-    userId: user.id,
-    oldRole: "user",
-    newRole: "writer",
-    changedBy: user.id,
-    note: "Yazar kaydı e-posta doğrulamasıyla otomatik onaylandı",
-    ip: meta.ip,
-  });
-
-  await writeAudit({
-    actorId: user.id,
-    action: "writer_auto_approved",
-    entityType: "users",
-    entityId: user.id,
-    after: { role: "writer", writerStatus: "active" },
-    ip: meta.ip,
-  });
-
-  const url = `${env().APP_URL}/writer`;
-  const message = templates.promotedToWriter({ displayName: user.displayName, url });
-  await sendMail({ to: user.email, subject: message.subject, text: message.text });
-
-  return updated!;
-}
-
 /** Any role change other than the writer promotion, including making an admin. */
 export async function changeRole(
   actor: Actor,
