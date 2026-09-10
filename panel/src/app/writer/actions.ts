@@ -2,16 +2,23 @@
 
 /**
  * Writer panel actions: acknowledging announcements, accepting the framework
- * agreement, and signing or declining a rights grant.
+ * agreement, signing or declining a rights grant, and the author's own
+ * article writing (step 1 of the review chain, D-059).
  */
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { acknowledge, markRead } from "@/services/announcements";
 import { acceptAgreement } from "@/services/agreements";
-import { declineWorkAndReturnForRevision } from "@/services/articles";
+import {
+  createArticleAsWriter,
+  declineWorkAndReturnForRevision,
+  transitionArticle,
+  updateArticleAsWriter,
+} from "@/services/articles";
 import { approveWork } from "@/services/rights";
 import { requestMetadata, requireRole } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
-import { checkbox, runAction, text, type ActionState } from "@/lib/action";
+import { checkbox, listField, optionalText, runAction, text, type ActionState } from "@/lib/action";
 
 export async function acknowledgeAnnouncementAction(
   _state: ActionState,
@@ -109,5 +116,87 @@ export async function declineWorkAction(
 
     revalidatePath("/writer/approvals");
     return { success: "Onayı reddettiniz, editöre bildirildi." };
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* The author's own articles (step 1 of the review chain, D-059)      */
+/* ------------------------------------------------------------------ */
+
+export async function createArticleAsWriterAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  let destination: string | null = null;
+
+  const result = await runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("writer");
+    const meta = await requestMetadata();
+
+    const article = await createArticleAsWriter(
+      { ...user },
+      {
+        title: text(formData, "title"),
+        summary: optionalText(formData, "summary"),
+        bodyMarkdown: text(formData, "bodyMarkdown"),
+        category: optionalText(formData, "category"),
+        tags: listField(formData, "tags"),
+      },
+      meta,
+    );
+
+    destination = `/writer/articles/${article.id}`;
+  });
+
+  if (destination) redirect(destination);
+  return result;
+}
+
+export async function updateArticleAsWriterAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("writer");
+    const meta = await requestMetadata();
+
+    const articleId = text(formData, "articleId");
+    await updateArticleAsWriter(
+      { ...user },
+      articleId,
+      {
+        title: text(formData, "title"),
+        summary: optionalText(formData, "summary"),
+        bodyMarkdown: text(formData, "bodyMarkdown"),
+        category: optionalText(formData, "category"),
+        tags: listField(formData, "tags"),
+      },
+      meta,
+    );
+
+    revalidatePath(`/writer/articles/${articleId}`);
+    revalidatePath("/writer/articles");
+    return { success: "Yazı kaydedildi." };
+  });
+}
+
+/** Sends the author's draft to the review chain: `draft → in_review` (D-059). */
+export async function submitArticleAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("writer");
+    const meta = await requestMetadata();
+
+    const articleId = text(formData, "articleId");
+    await transitionArticle({ ...user }, articleId, "in_review", meta, {});
+
+    revalidatePath(`/writer/articles/${articleId}`);
+    revalidatePath("/writer/articles");
+    return { success: "Yazı incelemeye gönderildi. Kategori editörünüz onaylayana dek bekleyecek." };
   });
 }

@@ -169,7 +169,12 @@ export function UsersTable({ rows }: { rows: UserListRow[] }) {
                 {show("email") && <Td className="text-xs">{row.email}</Td>}
                 {show("role") && (
                   <Td>
-                    <StatusBadge status={row.role} />
+                    {/* A hybrid editor holds both duties; their combined title (D-060) */}
+                    {row.role === "editor" && row.writerStatus !== null ? (
+                      <StatusBadge status="editor_writer" />
+                    ) : (
+                      <StatusBadge status={row.role} />
+                    )}
                   </Td>
                 )}
                 {show("status") && (

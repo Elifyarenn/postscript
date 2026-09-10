@@ -1,4 +1,4 @@
-import { guardPanel } from "@/lib/auth/guard";
+import { guardAdminWithinEditor } from "@/lib/auth/guard";
 import { listIssueArticles, listIssues } from "@/services/issues";
 import { listMedia } from "@/services/media";
 import { readCsrfToken } from "@/lib/csrf";
@@ -24,7 +24,7 @@ import {
 export const metadata = { title: "Sayılar" };
 
 export default async function EditorIssuesPage() {
-  const { user } = await guardPanel("editor");
+  const { user } = await guardAdminWithinEditor();
   const actor = { ...user };
   const csrfToken = (await readCsrfToken()) ?? "";
 

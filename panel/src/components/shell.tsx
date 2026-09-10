@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { StatusBadge } from "./ui";
 import { PanelSidebar } from "./sidebar";
 import { BackButton } from "./back-button";
+import { PanelModeSwitch } from "./panel-switch";
 import type { SessionUser } from "@/lib/auth/session";
 
 export type NavItem = { href: string; label: string; disabled?: boolean };
@@ -52,6 +53,15 @@ export const ADMIN_NAV: NavGroup[] = [
     ],
   },
   {
+    label: "Editör işleri",
+    items: [
+      { href: "/editor/articles", label: "Makaleler & yayın kuyruğu" },
+      { href: "/editor/issues", label: "Sayılar" },
+      { href: "/editor/approvals", label: "Eser Onayı takibi" },
+      { href: "/editor/media", label: "Medya kütüphanesi" },
+    ],
+  },
+  {
     label: "Yasal & Sistem",
     items: [
       { href: "/admin/agreements", label: "Sözleşme sürümleri" },
@@ -59,12 +69,14 @@ export const ADMIN_NAV: NavGroup[] = [
       { href: "/admin/settings", label: "Sistem" },
     ],
   },
-  {
-    label: "Hızlı Geçiş",
-    items: [{ href: "/editor", label: "Editör paneli" }],
-  },
 ];
 
+/**
+ * The editor panel is deliberately narrow (D-059): an editor reviews the
+ * articles that fall into their own areas and manages the media library.
+ * Issue planning, announcements, work approvals and writer applications are
+ * the admin's business and do not appear here.
+ */
 export const EDITOR_NAV: NavGroup[] = [
   {
     label: "Genel",
@@ -74,20 +86,10 @@ export const EDITOR_NAV: NavGroup[] = [
     ],
   },
   {
-    label: "İçerik",
+    label: "İnceleme",
     items: [
-      { href: "/editor/articles", label: "Makaleler" },
-      { href: "/editor/issues", label: "Sayılar" },
+      { href: "/editor/articles", label: "Kategoriye düşen yazılar" },
       { href: "/editor/media", label: "Medya kütüphanesi" },
-      { href: "/editor/announcements", label: "Duyurular" },
-      { href: "/editor/approvals", label: "Eser Onayı takibi" },
-      { href: "/editor/applications", label: "Yazar başvuruları" },
-    ],
-  },
-  {
-    label: "Dergi & Topluluk",
-    items: [
-      { href: "/magazine", label: "Dergi" },
     ],
   },
 ];
@@ -157,10 +159,18 @@ export function PanelShell({
             <BackButton />
           </div>
 
-          <div className="flex items-center gap-2.5 text-sm">
+          <div className="flex flex-wrap items-center justify-end gap-2.5 text-sm">
+            <PanelModeSwitch user={user} />
             <span className="font-medium">{user.displayName}</span>
-            <StatusBadge status={user.role} />
-            {user.writerStatus && <StatusBadge status={user.writerStatus} />}
+            {/* A hybrid editor holds both duties and is titled "Editor & Yazar" (D-060) */}
+            {user.role === "editor" && user.writerStatus !== null ? (
+              <StatusBadge status="editor_writer" />
+            ) : (
+              <>
+                <StatusBadge status={user.role} />
+                {user.writerStatus && <StatusBadge status={user.writerStatus} />}
+              </>
+            )}
           </div>
         </header>
 

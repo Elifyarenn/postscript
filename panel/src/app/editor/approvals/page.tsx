@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { guardPanel } from "@/lib/auth/guard";
+import { guardAdminWithinEditor } from "@/lib/auth/guard";
 import { listPendingApprovals, LICENCE_TERMS } from "@/services/rights";
 import { getCurrentAgreement } from "@/services/agreements";
 import { readCsrfToken } from "@/lib/csrf";
@@ -11,7 +11,7 @@ import { sendRemindersAction } from "../actions";
 export const metadata = { title: "Eser Onayı takibi" };
 
 export default async function EditorApprovalsPage() {
-  const { user } = await guardPanel("editor");
+  const { user } = await guardAdminWithinEditor();
   const csrfToken = (await readCsrfToken()) ?? "";
 
   const pending = await listPendingApprovals({ ...user });

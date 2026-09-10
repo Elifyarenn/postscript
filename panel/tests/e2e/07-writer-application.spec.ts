@@ -1,9 +1,13 @@
 /**
  * The writer application pipeline.
  *
+ * Since the editor panel was narrowed to review and media (D-059), the
+ * applications module lives on under the editor path but only for admins; both
+ * review stages are admin work.
+ *
  *  - a reader submits an application with a sample work from the account page
- *  - the editor approves it (stage one)
- *  - the admin approves it (stage two), which defines the contract
+ *  - an admin approves it (stage one, /editor/applications)
+ *  - the same admin approves it (stage two), which defines the contract
  *  - the applicant signs the contract and the account becomes a writer
  */
 import { expect, test } from "@playwright/test";
@@ -37,19 +41,16 @@ test("a reader applies, gets reviewed twice, and becomes a writer by signing", a
 
   await logout(page);
 
-  // 2. Stage one: the editor approves
-  await loginElevated(page, "editor", SEED.editor);
-  await page.getByRole("link", { name: "Yazar başvuruları" }).click();
-  await page.waitForURL("**/editor/applications");
+  // 2. Stage one: an admin reviews the submitted application
+  await loginElevated(page, "admin", SEED.admin);
+  await page.goto("/editor/applications");
   await expect(page.getByText("Aylin Aday")).toBeVisible();
   await page.getByRole("button", { name: "Onayla" }).click();
 
   // The queue empties: the application moved to the admin stage
   await expect(page.getByText("İnceleme bekleyen başvuru yok.")).toBeVisible();
-  await logout(page);
 
   // 3. Stage two: the admin approves, which defines the contract
-  await loginElevated(page, "admin", SEED.admin);
   await page.getByRole("link", { name: "Yazar başvuruları" }).click();
   await page.waitForURL("**/admin/applications");
   await expect(page.getByText("Aylin Aday").first()).toBeVisible();

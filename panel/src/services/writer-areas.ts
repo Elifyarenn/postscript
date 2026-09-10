@@ -17,6 +17,7 @@ import { writeAudit } from "@/lib/audit";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import type { Actor } from "@/lib/auth/rbac";
 import { canManageWriterAreas } from "@/lib/auth/rbac";
+import { areaHasEditor } from "./editor-categories";
 import type { RequestMeta } from "./auth";
 
 type AreaRow = typeof writerAreas.$inferSelect;
@@ -211,6 +212,9 @@ export async function deleteWriterArea(
   const countByArea = await countWritersByArea();
   if ((countByArea.get(current.name) ?? 0) > 0) {
     throw conflict("Bu alanda yazarlar var; silmek yerine devre dışı bırakabilirsiniz.");
+  }
+  if (await areaHasEditor(current.id)) {
+    throw conflict("Bu alan bir editöre atanmış; önce editör atamasını kaldırın.");
   }
 
   await db.delete(writerAreas).where(eq(writerAreas.id, current.id));

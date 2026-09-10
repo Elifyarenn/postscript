@@ -13,9 +13,11 @@ const clean = {
 };
 
 describe("allowed edges", () => {
-  it("matches the graph in the specification", () => {
+  it("matches the staged review chain in the specification (D-059)", () => {
     expect(allowedTargets("draft")).toEqual(["in_review", "archived"]);
-    expect(allowedTargets("in_review")).toEqual(["revision_requested", "accepted", "draft"]);
+    expect(allowedTargets("in_review")).toEqual(["category_approved", "revision_requested", "draft"]);
+    expect(allowedTargets("category_approved")).toEqual(["admin_review", "revision_requested", "draft"]);
+    expect(allowedTargets("admin_review")).toEqual(["accepted", "revision_requested", "draft"]);
     expect(allowedTargets("revision_requested")).toEqual(["in_review", "draft"]);
     expect(allowedTargets("accepted")).toEqual(["awaiting_rights", "draft"]);
     expect(allowedTargets("awaiting_rights")).toEqual(["scheduled", "revision_requested"]);

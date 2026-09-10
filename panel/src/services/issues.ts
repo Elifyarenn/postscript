@@ -1,5 +1,8 @@
 /**
  * Issues: planning, ordering and publication (§9.2).
+ *
+ * Issue management is the admin's business since the editor panel was narrowed
+ * to review and media (D-059); reading stays open to every editor.
  */
 import "server-only";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
@@ -7,7 +10,7 @@ import { z } from "zod";
 import { db } from "@/db/client";
 import { articles, issues, type Issue } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
-import { canAccessEditorPanel, type Actor } from "@/lib/auth/rbac";
+import { canAccessAdminPanel, canAccessEditorPanel, type Actor } from "@/lib/auth/rbac";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { triggerRevalidate } from "@/lib/revalidate";
 import type { RequestMeta } from "./auth";
@@ -49,7 +52,7 @@ export async function createIssue(
   rawInput: unknown,
   meta: RequestMeta,
 ): Promise<Issue> {
-  if (!canAccessEditorPanel(actor)) throw forbidden();
+  if (!canAccessAdminPanel(actor)) throw forbidden("Sayı yönetimi yalnızca yöneticinindir (D-059).");
 
   const parsed = issueInputSchema.safeParse(rawInput);
   if (!parsed.success) {
@@ -93,7 +96,7 @@ export async function updateIssue(
   rawInput: unknown,
   meta: RequestMeta,
 ): Promise<Issue> {
-  if (!canAccessEditorPanel(actor)) throw forbidden();
+  if (!canAccessAdminPanel(actor)) throw forbidden("Sayı yönetimi yalnızca yöneticinindir (D-059).");
 
   const parsed = issueInputSchema.safeParse(rawInput);
   if (!parsed.success) {
@@ -134,7 +137,7 @@ export async function setIssueStatus(
   status: "planning" | "in_production" | "published" | "archived",
   meta: RequestMeta,
 ): Promise<Issue> {
-  if (!canAccessEditorPanel(actor)) throw forbidden();
+  if (!canAccessAdminPanel(actor)) throw forbidden("Sayı yönetimi yalnızca yöneticinindir (D-059).");
 
   const existing = await findIssue(issueId);
   const now = new Date();
@@ -166,14 +169,14 @@ export async function setIssueStatus(
   return updated!;
 }
 
-/** Drag and drop ordering in the editor panel: the whole order arrives at once. */
+/** Drag and drop ordering: the whole order arrives at once. */
 export async function reorderArticles(
   actor: Actor,
   issueId: string,
   orderedArticleIds: string[],
   meta: RequestMeta,
 ): Promise<void> {
-  if (!canAccessEditorPanel(actor)) throw forbidden();
+  if (!canAccessAdminPanel(actor)) throw forbidden("Sayı yönetimi yalnızca yöneticinindir (D-059).");
   await findIssue(issueId);
 
   await db.transaction(async (tx) => {

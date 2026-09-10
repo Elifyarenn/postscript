@@ -1,4 +1,4 @@
-import { guardPanel } from "@/lib/auth/guard";
+import { guardAdminWithinEditor } from "@/lib/auth/guard";
 import { listAllAnnouncements, readReport } from "@/services/announcements";
 import { readCsrfToken } from "@/lib/csrf";
 import { PageHeader } from "@/components/ui";
@@ -12,7 +12,7 @@ export default async function EditorAnnouncementsPage({
 }: {
   searchParams: Promise<{ report?: string }>;
 }) {
-  const { user } = await guardPanel("editor");
+  const { user } = await guardAdminWithinEditor();
   const csrfToken = (await readCsrfToken()) ?? "";
   const { report } = await searchParams;
 

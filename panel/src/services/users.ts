@@ -13,6 +13,7 @@ import { isAdult, MINIMUM_WRITER_AGE, parseIsoDate } from "@/lib/age";
 import { normalisePhone } from "@/lib/phone";
 import { recordRoleChange, writeAudit } from "@/lib/audit";
 import { canManageUsers, type Actor } from "@/lib/auth/rbac";
+import { clearEditorAreas } from "./editor-categories";
 import { revokeAllSessions } from "@/lib/auth/session";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { env } from "@/lib/env";
@@ -281,9 +282,21 @@ export async function changeRole(
         ? (target.writerStatus ?? "active")
         : target.writerStatus;
 
+  // Leaving the editor duty drops its scope: area assignments and the main
+  // editor flag belong to editors only (D-059). The editor_status freeze is
+  // harmless to keep — it is only read while the role is `editor`.
+  if (newRole !== "editor") {
+    await clearEditorAreas(target.id);
+  }
+
   const [updated] = await db
     .update(users)
-    .set({ role: newRole, writerStatus, updatedAt: new Date() })
+    .set({
+      role: newRole,
+      writerStatus,
+      isMainEditor: newRole === "editor" ? target.isMainEditor : false,
+      updatedAt: new Date(),
+    })
     .where(eq(users.id, target.id))
     .returning();
 
@@ -362,6 +375,51 @@ export async function setEditorStatus(
     entityId: target.id,
     before: { editorStatus: target.editorStatus },
     after: { editorStatus: status },
+    ip: meta.ip,
+  });
+
+  return updated!;
+}
+
+/**
+ * Makes an editor a hybrid ("Editor & Yazar", D-060) or takes that back.
+ *
+ * A hybrid editor holds `role = editor` and `writer_status = active` at once,
+ * so they can switch between the writer and the editor panel. The role itself
+ * never changes — only the writer duty is toggled — so no `role_changes` row
+ * is written; the audit log records the effective capability change.
+ */
+export async function setHybridWriterRole(
+  actor: Actor,
+  targetUserId: string,
+  enabled: boolean,
+  meta: RequestMeta,
+): Promise<User> {
+  if (!canManageUsers(actor)) throw forbidden();
+
+  const target = await findUserById(targetUserId);
+  if (target.role !== "editor") {
+    throw conflict("Yalnızca editör rolü bir yazarlıkla birleştirilebilir.");
+  }
+
+  const nextStatus = enabled ? "active" : null;
+  if (target.writerStatus === nextStatus) {
+    throw conflict(enabled ? "Bu editör zaten yazar." : "Bu editör zaten yazar değil.");
+  }
+
+  const [updated] = await db
+    .update(users)
+    .set({ writerStatus: nextStatus, updatedAt: new Date() })
+    .where(eq(users.id, target.id))
+    .returning();
+
+  await writeAudit({
+    actorId: actor.id,
+    action: "user.hybrid_writer_toggled",
+    entityType: "users",
+    entityId: target.id,
+    before: { writerStatus: target.writerStatus },
+    after: { writerStatus: nextStatus },
     ip: meta.ip,
   });
 

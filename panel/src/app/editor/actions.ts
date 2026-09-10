@@ -3,8 +3,11 @@
 /**
  * Editor panel actions.
  *
- * Each one re-checks the role through `requireRole("editor")` before touching a
- * service, so a hand-crafted POST is refused even though the menu is hidden.
+ * Each one re-checks the role before touching a service, so a hand-crafted
+ * POST is refused even though the menu is hidden. The review/media actions are
+ * open to every editor; the issue, announcement, approval-reminder and writer
+ * application actions belong to the admin-only editor routes (D-059) and
+ * demand the admin role.
  */
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -199,7 +202,7 @@ export async function createIssueAction(
 ): Promise<ActionState> {
   return runAction(async () => {
     await assertCsrfFromForm(formData);
-    const { user } = await requireRole("editor");
+    const { user } = await requireRole("admin");
     const meta = await requestMetadata();
 
     const number = numberField(formData, "number");
@@ -228,7 +231,7 @@ export async function updateIssueAction(
 ): Promise<ActionState> {
   return runAction(async () => {
     await assertCsrfFromForm(formData);
-    const { user } = await requireRole("editor");
+    const { user } = await requireRole("admin");
     const meta = await requestMetadata();
 
     const number = numberField(formData, "number");
@@ -258,7 +261,7 @@ export async function setIssueStatusAction(
 ): Promise<ActionState> {
   return runAction(async () => {
     await assertCsrfFromForm(formData);
-    const { user } = await requireRole("editor");
+    const { user } = await requireRole("admin");
     const meta = await requestMetadata();
 
     await setIssueStatus(
@@ -279,7 +282,7 @@ export async function reorderIssueArticlesAction(
 ): Promise<ActionState> {
   return runAction(async () => {
     await assertCsrfFromForm(formData);
-    const { user } = await requireRole("editor");
+    const { user } = await requireRole("admin");
     const meta = await requestMetadata();
 
     const issueId = text(formData, "issueId");
@@ -394,7 +397,7 @@ export async function createAnnouncementAction(
 ): Promise<ActionState> {
   return runAction(async () => {
     await assertCsrfFromForm(formData);
-    const { user } = await requireRole("editor");
+    const { user } = await requireRole("admin");
     const meta = await requestMetadata();
 
     await createAnnouncement(
@@ -420,7 +423,7 @@ export async function publishAnnouncementAction(
 ): Promise<ActionState> {
   return runAction(async () => {
     await assertCsrfFromForm(formData);
-    const { user } = await requireRole("editor");
+    const { user } = await requireRole("admin");
     const meta = await requestMetadata();
 
     await publishAnnouncement({ ...user }, text(formData, "announcementId"), meta);
@@ -436,7 +439,7 @@ export async function sendRemindersAction(
 ): Promise<ActionState> {
   return runAction(async () => {
     await assertCsrfFromForm(formData);
-    await requireRole("editor");
+    await requireRole("admin");
 
     const count = await sendApprovalReminders();
     revalidatePath("/editor/approvals");
@@ -454,7 +457,7 @@ export async function editorApproveApplicationAction(
 ): Promise<ActionState> {
   return runAction(async () => {
     await assertCsrfFromForm(formData);
-    const { user } = await requireRole("editor");
+    const { user } = await requireRole("admin");
     const meta = await requestMetadata();
 
     await editorDecideApplication(
@@ -476,7 +479,7 @@ export async function editorRejectApplicationAction(
 ): Promise<ActionState> {
   return runAction(async () => {
     await assertCsrfFromForm(formData);
-    const { user } = await requireRole("editor");
+    const { user } = await requireRole("admin");
     const meta = await requestMetadata();
 
     await editorDecideApplication(

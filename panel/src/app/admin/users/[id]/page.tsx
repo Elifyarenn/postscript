@@ -8,6 +8,7 @@ import { isAppError } from "@/lib/errors";
 import { checkPromotionReadiness, findUserById } from "@/services/users";
 import { renderAgreementForWriter } from "@/services/agreements";
 import { listAllWriterAreasWithQuota } from "@/services/writer-areas";
+import { listEditorAreasWithHolders, listEditorCategories } from "@/services/editor-categories";
 import { AgreementRenderError } from "@/lib/agreement/render";
 import { readCsrfToken } from "@/lib/csrf";
 import { renderMarkdown } from "@/lib/markdown";
@@ -33,7 +34,9 @@ import {
   revokeUserSessionsAction,
   setBannedAction,
   setBirthDateAction,
+  setEditorDutiesAction,
   setEditorStatusAction,
+  setHybridWriterRoleAction,
   setWriterAreasAction,
   setWriterStatusAction,
 } from "../../actions";
@@ -68,6 +71,15 @@ export default async function AdminUserDetailPage({
   }
   const readiness = await checkPromotionReadiness(target);
   const areas = await listAllWriterAreasWithQuota();
+
+  // Editor duty data: the areas this editor already holds and every area with
+  // its current holder, so the form can disable areas owned by others.
+  const editorDuties =
+    target.role === "editor" ? await listEditorCategories(id) : [];
+  const editorAreas =
+    target.role === "editor" ? await listEditorAreasWithHolders() : [];
+  const areaIdBySlot = new Map(editorDuties.map((duty) => [duty.slot, duty.areaId]));
+  const hybrid = target.role === "editor" && target.writerStatus !== null;
 
   // §9: the admin may look at the filled contract before promoting. This
   // preview is never stored; it exists only to be read.
@@ -107,8 +119,14 @@ export default async function AdminUserDetailPage({
         description={target.email}
         actions={
           <>
-            <StatusBadge status={target.role} />
-            {target.writerStatus && <StatusBadge status={target.writerStatus} />}
+            {target.role === "editor" && target.writerStatus !== null ? (
+              <StatusBadge status="editor_writer" />
+            ) : (
+              <>
+                <StatusBadge status={target.role} />
+                {target.writerStatus && <StatusBadge status={target.writerStatus} />}
+              </>
+            )}
           </>
         }
       />
@@ -188,6 +206,120 @@ export default async function AdminUserDetailPage({
                 </div>
               </>
             </PanelForm>
+          </Card>
+        )}
+
+        {target.role === "editor" && (
+          <Card>
+            <h2 className="mb-1 font-serif text-lg">Editör görevleri</h2>
+            <p className="mb-4 text-sm text-muted">
+              Bir editör en fazla iki alandan sorumlu olabilir (1. alan ve 2.
+              alan); bir alanın yalnızca bir editörü olur. Başka bir editörün
+              sahiplendiği alan seçilemez. Ana editör tüm kategorileri okur ve
+              ikinci onay aşamasını yürütür.
+            </p>
+
+            <PanelForm
+              action={setEditorDutiesAction}
+              csrfToken={csrfToken}
+              submitLabel="Görevleri güncelle"
+              submitVariant="secondary"
+            >
+              <>
+                <input type="hidden" name="userId" value={target.id} />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="1. alan" htmlFor="editorAreaId">
+                    <Select
+                      id="editorAreaId"
+                      name="areaId"
+                      defaultValue={areaIdBySlot.get(1) ?? ""}
+                    >
+                      <option value="">Yok</option>
+                      {editorAreas.map((area) => (
+                        <option
+                          key={area.id}
+                          value={area.id}
+                          disabled={
+                            area.holderEditorId !== null && area.holderEditorId !== target.id
+                          }
+                        >
+                          {area.name}
+                          {area.holderEditorName
+                            ? ` (${area.holderEditorName})`
+                            : area.isActive
+                              ? ""
+                              : " — devre dışı"}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+
+                  <Field
+                    label="2. alan"
+                    htmlFor="editorAreaId2"
+                    hint="Boş bırakılırsa editör tek alanda kalır."
+                  >
+                    <Select
+                      id="editorAreaId2"
+                      name="areaId2"
+                      defaultValue={areaIdBySlot.get(2) ?? ""}
+                    >
+                      <option value="">Yok</option>
+                      {editorAreas.map((area) => (
+                        <option
+                          key={area.id}
+                          value={area.id}
+                          disabled={
+                            area.holderEditorId !== null && area.holderEditorId !== target.id
+                          }
+                        >
+                          {area.name}
+                          {area.holderEditorName
+                            ? ` (${area.holderEditorName})`
+                            : area.isActive
+                              ? ""
+                              : " — devre dışı"}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                </div>
+
+                <label className="flex cursor-pointer items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="isMainEditor"
+                    defaultChecked={target.isMainEditor}
+                    className="mt-0.5 size-4 rounded border-line"
+                  />
+                  Ana editör — tüm kategorileri okur, kategori editöründen gelen
+                  yazıyı onaylar.
+                </label>
+              </>
+            </PanelForm>
+
+            <div className="mt-5 border-t border-line pt-4">
+              <PanelForm
+                action={setHybridWriterRoleAction}
+                csrfToken={csrfToken}
+                submitLabel={hybrid ? "Yazarlığı kaldır" : "Yazar yap"}
+                submitVariant={hybrid ? "secondary" : "primary"}
+              >
+                <>
+                  <input type="hidden" name="userId" value={target.id} />
+                  <label className="flex cursor-pointer items-start gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      name="enabled"
+                      defaultChecked={hybrid}
+                      className="mt-0.5 size-4 rounded border-line"
+                    />
+                    Aynı zamanda yazar — unvanı &ldquo;Editor &amp; Yazar&rdquo;
+                    olur ve panel anahtarıyla iki panel arasında geçiş yapabilir.
+                  </label>
+                </>
+              </PanelForm>
+            </div>
           </Card>
         )}
 

@@ -1,9 +1,11 @@
 /**
  * §13.2 — the editorial lifecycle through the interface.
  *
- * accepted → a work approval opens → scheduling is refused while it is
- * unapproved → the writer approves → scheduled → published → withdrawn answers
- * 410 from the public API.
+ * The staged review chain (D-059): the category editor approves first, the
+ * main editor passes the article to the admin, and the admin's acceptance
+ * drops it into the publication queue where the Eser Onayı opens. The work is
+ * scheduled and published only after the writer approves, and a withdrawn
+ * article answers 410 from the public API.
  */
 import { expect, test, type Page } from "@playwright/test";
 import { loginElevated, logout, SEED, submitLogin } from "./helpers";
@@ -36,8 +38,8 @@ async function transitionTo(page: Page, label: string, expectedBadge = label): P
   await expect(statusBadge(page)).toHaveText(expectedBadge);
 }
 
-test("takes an article from draft to published and then withdraws it", async ({ page }) => {
-  /* ---------- the editor creates and accepts it ---------- */
+test("takes an article through the review chain to publication and withdraws it", async ({ page }) => {
+  /* ---------- the category editor opens a record and submits it to review ---------- */
 
   await loginElevated(page, "editor", SEED.editor);
 
@@ -46,6 +48,7 @@ test("takes an article from draft to published and then withdraws it", async ({ 
   await page.getByLabel("Özet").fill("Uçtan uca test için oluşturuldu.");
   // The filter form has a "Yazar" select too, so the create form's id is used
   await page.locator("#newAuthorId").selectOption({ label: "Ada Y." });
+  await page.getByLabel("Kategori").fill("Sanat & Edebiyat");
   await page.getByLabel("Gövde (markdown)").fill("## Giriş\n\nDeneme gövdesi.\n");
   await page.getByRole("button", { name: "Oluştur" }).click();
 
@@ -53,7 +56,25 @@ test("takes an article from draft to published and then withdraws it", async ({ 
   const articleUrl = page.url();
   const slug = await readSlug(page);
 
+  // Step 2: the category editor (of "Sanat & Edebiyat") reviews and approves
   await transitionTo(page, "İncelemede");
+  await transitionTo(page, "Kategori onayı geçti");
+
+  await logout(page);
+
+  /* ---------- step 3: the main editor approves ---------- */
+
+  await loginElevated(page, "editor", SEED.mainEditor);
+  await page.goto(articleUrl);
+
+  await transitionTo(page, "Yönetici kuyruğunda");
+
+  await logout(page);
+
+  /* ---------- step 4: the admin accepts; the work approval opens ---------- */
+
+  await loginElevated(page, "admin", SEED.admin);
+  await page.goto(articleUrl);
 
   // Acceptance is not a resting state: it opens the work approval and the
   // article moves on to "awaiting rights" by itself (§7.1)
@@ -101,9 +122,9 @@ test("takes an article from draft to published and then withdraws it", async ({ 
 
   await logout(page);
 
-  /* ---------- the editor schedules and publishes ---------- */
+  /* ---------- the admin schedules and publishes ---------- */
 
-  await loginElevated(page, "editor", SEED.editor);
+  await loginElevated(page, "admin", SEED.admin);
   await page.goto(articleUrl);
 
   await transitionTo(page, "Yayına planlandı");
@@ -135,7 +156,7 @@ test("takes an article from draft to published and then withdraws it", async ({ 
   await expect(page.getByRole("link", { name: "Genel bakış" })).toHaveCount(0);
 
   await logout(page);
-  await loginElevated(page, "editor", SEED.editor);
+  await loginElevated(page, "admin", SEED.admin);
   await page.goto(articleUrl);
 
   /* ---------- withdrawal ---------- */
@@ -156,13 +177,14 @@ test("takes an article from draft to published and then withdraws it", async ({ 
 test("a content change revokes the approval and asks for a new one", async ({ page }) => {
   const title = "İçerik Değişikliği Denemesi";
 
-  /* ---------- editor creates and accepts ---------- */
+  /* ---------- the category editor opens the record and walks it to the queue ---------- */
 
   await loginElevated(page, "editor", SEED.editor);
 
   await page.goto("/editor/articles");
   await page.getByLabel("Başlık").fill(title);
   await page.locator("#newAuthorId").selectOption({ label: "Ada Y." });
+  await page.getByLabel("Kategori").fill("Sanat & Edebiyat");
   await page.getByLabel("Gövde (markdown)").fill("## İlk\n\nİlk gövde.\n");
   await page.getByRole("button", { name: "Oluştur" }).click();
 
@@ -170,6 +192,16 @@ test("a content change revokes the approval and asks for a new one", async ({ pa
   const articleUrl = page.url();
 
   await transitionTo(page, "İncelemede");
+  await transitionTo(page, "Kategori onayı geçti");
+
+  await logout(page);
+  await loginElevated(page, "editor", SEED.mainEditor);
+  await page.goto(articleUrl);
+  await transitionTo(page, "Yönetici kuyruğunda");
+
+  await logout(page);
+  await loginElevated(page, "admin", SEED.admin);
+  await page.goto(articleUrl);
   await transitionTo(page, "Kabul edildi", "Devir formu bekleniyor");
 
   /* ---------- the writer approves ---------- */

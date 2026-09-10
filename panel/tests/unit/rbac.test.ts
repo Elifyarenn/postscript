@@ -9,13 +9,21 @@ import {
   canAccessEditorPanel,
   canAccessRestrictedWriterPages,
   canAccessWriterPanel,
+  canFinalizePublication,
   canManageUsers,
+  canPerformTransition,
   canReadArticle,
+  canReviewCategoryStage,
+  canReviewMainStage,
   canSignRightsGrant,
   canViewContractDocuments,
   hasRole,
+  isActiveWriter,
+  isHybrid,
   type Actor,
+  type EditorAssignment,
 } from "@/lib/auth/rbac";
+import type { ArticleStatus } from "@/db/schema";
 
 function actor(overrides: Partial<Actor> = {}): Actor {
   return {
@@ -142,5 +150,100 @@ describe("rights grant signing", () => {
   it("does not let an admin sign on a writer's behalf", () => {
     const admin = actor({ id: "admin-1", role: "admin" });
     expect(canSignRightsGrant(admin, { grantorId: "user-1" })).toBe(false);
+  });
+});
+
+describe("the hybrid role (D-060)", () => {
+  it("recognises an editor with a writer duty as hybrid", () => {
+    expect(isHybrid(actor({ role: "editor", writerStatus: "active" }))).toBe(true);
+  });
+
+  it("does not call a plain editor or writer hybrid", () => {
+    expect(isHybrid(actor({ role: "editor", writerStatus: null }))).toBe(false);
+    expect(isHybrid(actor({ role: "writer", writerStatus: "active" }))).toBe(false);
+  });
+
+  it("treats an active writer (or hybrid) as an author", () => {
+    expect(isActiveWriter(actor({ role: "writer", writerStatus: "active" }))).toBe(true);
+    expect(isActiveWriter(actor({ role: "editor", writerStatus: "active" }))).toBe(true);
+    expect(isActiveWriter(actor({ role: "writer", writerStatus: "pending_agreement" }))).toBe(false);
+    expect(isActiveWriter(actor({ role: "writer", writerStatus: null }))).toBe(false);
+  });
+});
+
+describe("the staged review chain (D-059)", () => {
+  const noAssignment: EditorAssignment = { isMainEditor: false, assignedAreas: [] };
+  const artEditor: EditorAssignment = { isMainEditor: false, assignedAreas: ["Sanat"] };
+  const mainEditor: EditorAssignment = { isMainEditor: true, assignedAreas: [] };
+
+  it("lets a category editor review articles of their own areas only", () => {
+    const editor = actor({ role: "editor" });
+    expect(canReviewCategoryStage(editor, artEditor, { status: "in_review", authorId: null, category: "Sanat" })).toBe(true);
+    expect(canReviewCategoryStage(editor, artEditor, { status: "in_review", authorId: null, category: "Bilim" })).toBe(false);
+    expect(canReviewCategoryStage(editor, noAssignment, { status: "in_review", authorId: null, category: "Sanat" })).toBe(false);
+  });
+
+  it("lets a main editor and an admin cover any category", () => {
+    const editor = actor({ role: "editor" });
+    const admin = actor({ role: "admin" });
+    expect(canReviewCategoryStage(editor, mainEditor, { status: "in_review", authorId: null, category: "Sanat" })).toBe(true);
+    expect(canReviewCategoryStage(admin, noAssignment, { status: "in_review", authorId: null, category: null })).toBe(true);
+  });
+
+  it("reserves the main stage and the publication flow for main editors and admins", () => {
+    const editor = actor({ role: "editor" });
+    const admin = actor({ role: "admin" });
+    expect(canReviewMainStage(editor, artEditor)).toBe(false);
+    expect(canReviewMainStage(editor, mainEditor)).toBe(true);
+    expect(canReviewMainStage(admin, noAssignment)).toBe(true);
+    expect(canFinalizePublication(editor)).toBe(false);
+    expect(canFinalizePublication(admin)).toBe(true);
+  });
+
+  const article = (status: ArticleStatus, overrides: Partial<{ category: string | null; authorId: string | null }> = {}) => ({
+    status,
+    category: overrides.category ?? "Sanat",
+    authorId: overrides.authorId ?? "writer-1",
+  });
+
+  it("lets the author submit their own draft and resubmit a revision", () => {
+    const author = actor({ id: "writer-1", role: "writer", writerStatus: "active" });
+    expect(canPerformTransition(author, noAssignment, article("draft"), "in_review")).toBe(true);
+    expect(canPerformTransition(author, noAssignment, article("revision_requested"), "in_review")).toBe(true);
+    // …but not someone else's draft, and not an approval
+    const stranger = actor({ id: "writer-2", role: "writer", writerStatus: "active" });
+    expect(canPerformTransition(stranger, noAssignment, article("draft"), "in_review")).toBe(false);
+    expect(canPerformTransition(author, noAssignment, article("draft"), "category_approved")).toBe(false);
+  });
+
+  it("walks the chain exactly: category editor, then main editor, then admin", () => {
+    const editor = actor({ role: "editor" });
+    const admin = actor({ role: "admin" });
+
+    // Stage 2: only the category editor (or main/admin) approves
+    expect(canPerformTransition(editor, artEditor, article("in_review"), "category_approved")).toBe(true);
+    expect(canPerformTransition(editor, noAssignment, article("in_review"), "category_approved")).toBe(false);
+
+    // Stage 3: the main editor hands it to the admin
+    expect(canPerformTransition(editor, artEditor, article("category_approved"), "admin_review")).toBe(false);
+    expect(canPerformTransition(editor, mainEditor, article("category_approved"), "admin_review")).toBe(true);
+
+    // Stage 4: only the admin accepts it into the publication flow
+    expect(canPerformTransition(admin, noAssignment, article("admin_review"), "accepted")).toBe(true);
+    expect(canPerformTransition(editor, mainEditor, article("admin_review"), "accepted")).toBe(false);
+
+    // Publication is the admin's alone
+    expect(canPerformTransition(editor, mainEditor, article("awaiting_rights"), "scheduled")).toBe(false);
+    expect(canPerformTransition(admin, noAssignment, article("awaiting_rights"), "scheduled")).toBe(true);
+    expect(canPerformTransition(admin, noAssignment, article("published"), "withdrawn")).toBe(true);
+  });
+
+  it("lets a reviewer send an article back for revision at their own stage", () => {
+    const editor = actor({ role: "editor" });
+    expect(canPerformTransition(editor, artEditor, article("in_review"), "revision_requested")).toBe(true);
+    expect(canPerformTransition(editor, mainEditor, article("category_approved"), "revision_requested")).toBe(true);
+    expect(canPerformTransition(editor, artEditor, article("category_approved"), "revision_requested")).toBe(false);
+    expect(canPerformTransition(editor, mainEditor, article("admin_review"), "revision_requested")).toBe(false);
+    expect(canPerformTransition(actor({ role: "admin" }), noAssignment, article("admin_review"), "revision_requested")).toBe(true);
   });
 });

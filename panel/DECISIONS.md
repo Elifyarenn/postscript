@@ -1109,6 +1109,116 @@ self-service yolun zaten tanımlı yasal çerçevesini (imzalı devirler korunur
 yöneticiye de açar. Zorunlu gerekçe + onay kutusu, geri alınamaz bir işlemi
 yanlışlıkla tetiklemeyi zorlaştırır.
 
+---
+
+## D-059 — Editör alan atamaları ve dört aşamalı onay zinciri
+
+**Karar:** Editörlerin sorumluluğu iki yeni kavramla düzenlendi:
+
+- **Alan ataması.** `editor_categories` tablosu eklendi: `(editor_id, area_id,
+  slot)`; `slot` 1 ("1. alan") veya 2 ("2. alan"). Alan listesi, derginin 11
+  ana kategorisi olan `writer_areas` ile aynıdır. Bir alanın yalnızca **bir**
+  editörü olabilir — bu, `area_id` üzerindeki unique index ile veritabanında
+  zorlanır; arayüz başka editörün alanını pasifleştirir ve servis okunabilir
+  bir 409 döner. Bir editör en fazla **iki** alan tutar; iki slot olduğu için
+  bu, atamayı sil-yeniden-yaz yapan `setEditorDuties` servisinde kendiliğinden
+  sağlanır (DB'de "en fazla iki" sayısı unique index ile zorlanamaz). Alan
+  silme, editör atanmış alanı da bloklar (yazar kontenjanıyla aynı ilke).
+  `users.is_main_editor` bayrağı eklendi: ana editör tüm kategorileri okur ve
+  ikinci onay aşamasını yürütür. Hepsi yalnızca admin panelinden
+  (`/admin/users/[id]` → "Editör görevleri" kartı) yönetilir.
+
+- **Dört aşamalı onay zinciri.** `articles.status` enum'una
+  `category_approved` ve `admin_review` eklendi ve durum makinesi yeniden
+  kuruldu: `draft → in_review → category_approved → admin_review → accepted →
+  awaiting_rights → scheduled → published` (+ `revision_requested`, `draft`,
+  `archived`, `withdrawn`). Adımlar:
+  1. **Yazar:** içeriği yazar, taslağı kaydeder, "İncelemeye gönder" der
+     (`draft → in_review`). Yazar yalnızca kendi alanlarında yazabilir ve
+     kendi taslağını düzenleyebilir.
+  2. **Kategori editörü:** yalnızca kendi 1./2. alanına düşen yazıyı inceler,
+     düzenler ve onaylar (`in_review → category_approved`); geri
+     gönderebilir (`revision_requested`).
+  3. **Ana editör:** kategori editöründen gelen yazıyı yönetici kuyruğuna
+     aktarır (`category_approved → admin_review`).
+  4. **Yönetici:** yazıyı kabul eder (`admin_review → accepted`); kabul
+     otomatik olarak yayın kuyruğunu açar (`awaiting_rights` + Eser Onayı).
+     Yayınlama akışı (`scheduled`, `published`, `withdrawn`) yalnızca
+     yöneticinindir.
+
+  Yetki kontrolü `rbac.ts`'te saf `canPerformTransition(actor, assignment,
+  article, to)` fonksiyonundadır; durum makinesi grafiğin geçerliliğine bakar,
+  bu fonksiyon "bu aktör bu kolu çekebilir mi" sorusunu çözer (yetki yoksa
+  403, grafik/ön koşul hatasında 409). `listArticles` ve makale detay sayfası
+  kategori editörünü yalnızca kendi alanlarına kısıtlar; ana editör ve yönetici
+  tüm kategorileri okur.
+
+**Editör paneli kapsamı (aynı kararın parçası):** Editör paneli yalnızca
+"Genel bakış", "Kategoriye düşen yazılar (İnceleme/Düzenleme)" ve "Medya
+kütüphanesi" modüllerinden oluşur. Sayı yönetimi, duyurular, Eser Onayı
+takibi ve yazar başvuruları editör panelinden çıkarıldı; bu rotalar
+(`/editor/issues`, `/editor/announcements`, `/editor/approvals`,
+`/editor/applications`) ve ilgili server action'lar artık yalnızca yöneticiye
+açıktır (`guardAdminWithinEditor` + `requireRole("admin")`), sayı servislerinin
+mutasyonları da admin'e kısıtlandı. Admin, `/editor/*` altına düştüğünde yönetim
+yan menüsünü görür (layout admin'e `ADMIN_NAV` basar), böylece hem `/admin/*`
+hem taşınan `/editor/*` modülleri tek çatıda toplanır.
+
+**Gerekçe:** Ürün sahibi, yayının baştan sona denetim altında ilerlemesini
+istedi: her alanın tek sorumlu editörü olsun, editör kendi alanının dışına
+karışamasın, yayın kararı sonunda yönetimde kalsın. "11 ana kategori" listesi
+zaten `writer_areas` (seed 11 alan) olduğu için ayrı bir kategori tablosu
+açılmadı; ek tablo açmak yerine aynı tabloya atıf yapmak, alan yeniden
+adlandırma/silme kurallarını da tek yerde tutar. `canPerformTransition`'ın saf
+olması, birim testlerde zincirin her kolunu aktör başına doğrulamayı sağlar.
+
+---
+
+## D-060 — Hibrit rol "Editor & Yazar" ve panel anahtarı
+
+**Karar:** `role = editor` ve `writerStatus = active` aynı anda olan hesap
+"Editor & Yazar"dır. Admin, kullanıcı sayfasındaki "Editör görevleri"
+kartından `setHybridWriterRole` ile bunu açar/kapatır (açmak `writerStatus =
+active`, kapatmak `null`). Rol değişmez (rol `editor` kalır), bu yüzden
+`role_changes` yazılmaz; etkin yetki değişikliği `user.hybrid_writer_toggled`
+denetim kaydına düşer. Arayüzde:
+
+- Panel başlığında (ve yönetici kullanıcı listesinde/detayında) unvan
+  "Editor & Yazar" olarak tek rozette görünür (`STATUS_LABELS.editor_writer`).
+- `PanelModeSwitch` bileşeni, hibrit kullanıcıya başlıkta "Yazar Paneli" ve
+  "Editör Paneli" arasında bir anahtar sunar; iki panel ayrı rota ağaçları
+  olduğu için anahtar bir bağlantı çiftidir ve aktif tarafı vurgular.
+- Hibrit, yazar panelinde de yazar olarak yazı yazabilir
+  (`isActiveWriter`): seçilebilir kategorileri kendi `writer_area` /
+  `writer_area_2` değerleri artı (editör olduğu için) `editor_categories`
+  alanlarıdır.
+
+**Gerekçe:** Ürün sahibi, hem yazar hem editör olan kişilerin iki paneli tek
+oturumda, tek tıkla değiştirebilmesini istedi. Rol enum'ına yeni bir değer
+eklemek (ör. `editor_writer`) sıralı rol modelini (rank) bozardı; mevcut
+`writerStatus` kolonu, editörün yazarlık görevini taşımak için zaten doğru
+yerdi. Unvanın tek rozette görünmesi, "iki rozet yan yana" karışıklığını
+önler; anahtar ise rotaları açık tutarken keşfedilebilirliği sağlar.
+
+---
+
+## D-061 — Yazar tarafından makale gönderimi açıldı (önceden yasaktı)
+
+**Karar:** "Yazar tarafından makale gönderimi yapılmaz" kuralı kaldırıldı.
+Onay zincirinin 1. adımı (D-059) yazarın içeriği yazıp "İncelemeye gönder"
+demesidir; yazar panelinde makale oluşturma/düzenleme/gönderme akışı
+(`createArticleAsWriter`, `updateArticleAsWriter`, `draft → in_review`) eklendi.
+Yazar yalnızca kendi taslağını ve revizyon isteği dönmüş yazısını düzenler;
+kategorisi kendine tanımlı alanlar olmalıdır. Editörler dışarıdan gelen yazılar
+için makale kaydı açmayı sürdürür (mevcut `createArticle`).
+
+**Gerekçe:** D-059'un dört aşamalı zinciri, içeriğin ilk adımını yazarın
+yazmasını gerektirir; eski "yazılar dışarıdan gelir" kuralı bu akışla çelişirdi.
+Ürün sahibinin açık isteği (adım 1 = yazar yazar) spesifikasyondaki eski yasağı
+bilinçli olarak günceller. Güvenlik çekirdeği korunur: yazar yalnızca kendine
+atanmış alanlarda yazabilir, `role` alanı client'tan kabul edilmez ve her
+mutasyon sunucuda yetki kontrolünden geçer.
+
 
 
 

@@ -75,3 +75,14 @@ export async function guardPanel(minimum: Role): Promise<AuthContext> {
 
   return context;
 }
+
+/**
+ * The editorial routes that are admin-only since the editor panel was narrowed
+ * to review and media (D-059): issue planning, announcements, work approvals
+ * and writer applications live on under the editor path, but only for admins.
+ */
+export async function guardAdminWithinEditor(): Promise<AuthContext> {
+  const context = await guardPanel("editor");
+  if (context.user.role !== "admin") forbidden();
+  return context;
+}

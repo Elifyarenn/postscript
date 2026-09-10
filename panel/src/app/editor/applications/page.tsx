@@ -1,4 +1,4 @@
-import { guardPanel } from "@/lib/auth/guard";
+import { guardAdminWithinEditor } from "@/lib/auth/guard";
 import { listApplicationsByStatus } from "@/services/writer-applications";
 import { readCsrfToken } from "@/lib/csrf";
 import { PanelForm } from "@/components/form";
@@ -14,7 +14,7 @@ export const metadata = { title: "Yazar başvuruları" };
  * closes it with a reason the applicant receives by e-mail.
  */
 export default async function EditorApplicationsPage() {
-  const { user } = await guardPanel("editor");
+  const { user } = await guardAdminWithinEditor();
   const csrfToken = (await readCsrfToken()) ?? "";
 
   const queue = await listApplicationsByStatus({ ...user }, ["submitted"], 100);

@@ -4,6 +4,8 @@ import { db } from "@/db/client";
 import { articleMedia, media, users } from "@/db/schema";
 import { guardPanel } from "@/lib/auth/guard";
 import {
+  allowedTargetsForActor,
+  assertCanReadArticle,
   findArticleById,
   listArticleVersions,
   listComments,
@@ -11,7 +13,6 @@ import {
 import { listIssues } from "@/services/issues";
 import { findLiveApproval } from "@/services/rights";
 import { allMediaLicensed, listMedia } from "@/services/media";
-import { allowedTargets } from "@/lib/article-status";
 import { readCsrfToken } from "@/lib/csrf";
 import { renderMarkdown } from "@/lib/markdown";
 import { ActionButton, PanelForm } from "@/components/form";
@@ -50,17 +51,23 @@ export default async function EditorArticleDetailPage({
 }) {
   const { user } = await guardPanel("editor");
   const actor = { ...user };
+  const isAdmin = user.role === "admin";
   const { id } = await params;
   const csrfToken = (await readCsrfToken()) ?? "";
 
   const article = await findArticleById(id);
+  // A category editor may only open articles in their own areas (D-059)
+  await assertCanReadArticle(actor, article);
+  const targets = await allowedTargetsForActor(actor, article);
 
   const [grant, versions, comments, issues, writers, library, licensed, attached] =
     await Promise.all([
       findLiveApproval(article.id),
       listArticleVersions(actor, article.id),
       listComments(actor, article.id),
-      listIssues(actor),
+      isAdmin
+        ? listIssues(actor)
+        : Promise.resolve([]),
       db
         .select({ id: users.id, displayName: users.displayName, penName: users.penName })
         .from(users)
@@ -119,7 +126,7 @@ export default async function EditorArticleDetailPage({
             csrfToken={csrfToken}
             articleId={article.id}
             currentStatus={article.status}
-            targets={allowedTargets(article.status)}
+            targets={targets}
           />
         </Card>
 
@@ -150,16 +157,18 @@ export default async function EditorArticleDetailPage({
                     </Select>
                   </Field>
 
-                  <Field label="Sayı" htmlFor="issueId">
-                    <Select id="issueId" name="issueId" defaultValue={article.issueId ?? ""}>
-                      <option value="">Atanmadı</option>
-                      {issues.map((issue) => (
-                        <option key={issue.id} value={issue.id}>
-                          Sayı {issue.number} · {issue.title}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
+                  {isAdmin && (
+                    <Field label="Sayı" htmlFor="issueId">
+                      <Select id="issueId" name="issueId" defaultValue={article.issueId ?? ""}>
+                        <option value="">Atanmadı</option>
+                        {issues.map((issue) => (
+                          <option key={issue.id} value={issue.id}>
+                            Sayı {issue.number} · {issue.title}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                  )}
 
                   <Field label="Kategori" htmlFor="category">
                     <Input id="category" name="category" defaultValue={article.category ?? ""} />

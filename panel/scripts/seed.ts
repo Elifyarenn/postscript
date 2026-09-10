@@ -14,13 +14,14 @@
 import "dotenv/config";
 import path from "node:path";
 import { readFileSync } from "node:fs";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { createConnection } from "@/db/connect";
 import { setDatabase, db } from "@/db/client";
 import {
   agreementVersions,
   articles,
   bannedWords,
+  editorCategories,
   issues,
   kvkkVersions,
   users,
@@ -60,6 +61,10 @@ type SeedUser = {
   penName?: string;
   birthDate?: string | null;
   verified?: boolean;
+  /** The writing area the account registers with (D-051). */
+  writerArea?: string;
+  /** Demo editors: whether the account is a main editor (D-059). */
+  isMainEditor?: boolean;
   /** When set, the account starts with the TOTP second factor enabled. */
   totpSecret?: string;
 };
@@ -89,6 +94,8 @@ async function upsertUser(input: SeedUser): Promise<string> {
       role: input.role,
       // writer_status belongs to writers only; editors and admins leave it null
       writerStatus: input.role === "writer" ? "pending_agreement" : null,
+      writerArea: input.writerArea ?? null,
+      isMainEditor: input.isMainEditor ?? false,
       emailVerifiedAt: input.verified === false ? null : now,
       kvkkConsentAt: now,
       kvkkConsentVersion: 1,
@@ -150,13 +157,24 @@ async function main(): Promise<void> {
   });
 
   let writerId: string | null = null;
+  let editorId: string | null = null;
 
   if (demoEnabled) {
-    await upsertUser({
+    editorId = await upsertUser({
       email: "editor@postscript.local",
       displayName: "Deniz Editör",
       password: "Editor!Parola2026",
       role: "editor",
+      totpSecret: seedTotp,
+    });
+
+    // A main editor reads every category and approves the second stage (D-059)
+    await upsertUser({
+      email: "anaeditor@postscript.local",
+      displayName: "Efe Ana Editör",
+      password: "AnaEditor!Parola2026",
+      role: "editor",
+      isMainEditor: true,
       totpSecret: seedTotp,
     });
 
@@ -166,6 +184,7 @@ async function main(): Promise<void> {
       penName: "Ada Y.",
       password: "Yazar!Parola2026",
       role: "writer",
+      writerArea: "Sanat & Edebiyat",
     });
     writerId = writer;
 
@@ -234,6 +253,38 @@ async function main(): Promise<void> {
     console.log(`  · inserted ${DEFAULT_WRITER_AREAS.length} areas`);
   } else {
     console.log("  · already present");
+  }
+
+  // The demo category editor reviews "Sanat & Edebiyat" (slot 1) and
+  // "Psikoloji & İlişkiler" (slot 2) — the areas the e2e chain uses (D-059).
+  if (demoEnabled && editorId) {
+    const targetAreas = await db
+      .select({ id: writerAreas.id, name: writerAreas.name })
+      .from(writerAreas)
+      .where(inArray(writerAreas.name, ["Sanat & Edebiyat", "Psikoloji & İlişkiler"]));
+    const areaIdByName = new Map(targetAreas.map((area) => [area.name, area.id]));
+    const held = await db
+      .select({ id: editorCategories.id })
+      .from(editorCategories)
+      .where(eq(editorCategories.editorId, editorId))
+      .limit(1);
+    if (held.length === 0) {
+      const slots = [
+        { slot: 1, name: "Sanat & Edebiyat" },
+        { slot: 2, name: "Psikoloji & İlişkiler" },
+      ] as const;
+      for (const slot of slots) {
+        const areaId = areaIdByName.get(slot.name);
+        if (areaId) {
+          await db.insert(editorCategories).values({
+            editorId,
+            areaId,
+            slot: slot.slot,
+          });
+        }
+      }
+      console.log("  · demo editor assigned Sanat & Edebiyat / Psikoloji & İlişkiler");
+    }
   }
 
   console.log("Seeding the community blacklist ...");
@@ -324,6 +375,9 @@ async function main(): Promise<void> {
         summary: "Örnek veri.",
         bodyMarkdown: `## ${sample.title}\n\nBu bir örnek yazı gövdesidir.\n`,
         authorId: writerId,
+        // The demo category editor reviews "Sanat & Edebiyat", so the sample
+        // articles land in their queue (D-059).
+        category: "Sanat & Edebiyat",
         status: sample.status,
         orderInIssue: index + 1,
         dueDate: new Date(Date.now() + (index + 7) * 86_400_000).toISOString().slice(0, 10),

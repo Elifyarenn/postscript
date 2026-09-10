@@ -19,9 +19,15 @@ import {
   type Article,
   type ArticleStatus,
 } from "@/db/schema";
-import { autoTransitionAfter, checkTransition } from "@/lib/article-status";
+import { allowedTargets, autoTransitionAfter, checkTransition } from "@/lib/article-status";
 import { writeAudit } from "@/lib/audit";
-import { canAccessEditorPanel, canReadArticle, type Actor } from "@/lib/auth/rbac";
+import {
+  canAccessEditorPanel,
+  canPerformTransition,
+  canReadArticle,
+  isActiveWriter,
+  type Actor,
+} from "@/lib/auth/rbac";
 import { env } from "@/lib/env";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { sendMail } from "@/lib/mail/transport";
@@ -29,6 +35,7 @@ import { triggerRevalidate } from "@/lib/revalidate";
 import { uniqueSlug } from "@/lib/slug";
 import * as templates from "@emails/templates";
 import { allMediaLicensed } from "./media";
+import { getEditorAssignment, selectableWriterCategories } from "./editor-categories";
 import {
   declineWork,
   findLiveApproval,
@@ -62,6 +69,19 @@ export const articleInputSchema = z.strictObject({
   changeKind: z.enum(["correction", "content_change"]).optional(),
 });
 
+/**
+ * The fields an author controls when writing their own article in the writer
+ * panel (step 1 of the review chain, D-059). There is no author/issue picker:
+ * the author is the caller and issue assignment is the admin's job.
+ */
+export const writerArticleInputSchema = z.strictObject({
+  title: z.string().trim().min(3, "Başlık en az 3 karakter olmalı.").max(200),
+  summary: z.string().trim().max(600).optional().nullable(),
+  bodyMarkdown: z.string().max(200_000).optional(),
+  category: z.string().trim().max(80).optional().nullable(),
+  tags: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
+});
+
 /* ------------------------------------------------------------------ */
 /* Lookups                                                             */
 /* ------------------------------------------------------------------ */
@@ -88,10 +108,23 @@ export type ArticleFilters = {
 export async function listArticles(actor: Actor, filters: ArticleFilters = {}) {
   if (!canAccessEditorPanel(actor)) throw forbidden();
 
+  const assignment = await getEditorAssignment(actor.id);
+
   const conditions: SQL[] = [isNull(articles.deletedAt)];
   if (filters.status) conditions.push(eq(articles.status, filters.status));
   if (filters.issueId) conditions.push(eq(articles.issueId, filters.issueId));
   if (filters.authorId) conditions.push(eq(articles.authorId, filters.authorId));
+
+  // A plain category editor only sees the articles that fall into their own
+  // areas ("Kategoriye Düşen Yazılar"). Main editors and admins read every
+  // category (D-059). An editor with no assigned areas sees an empty queue.
+  if (actor.role !== "admin" && !assignment.isMainEditor) {
+    if (assignment.assignedAreas.length === 0) {
+      conditions.push(sql`false`);
+    } else {
+      conditions.push(inArray(articles.category, assignment.assignedAreas));
+    }
+  }
 
   return db
     .select({
@@ -99,6 +132,7 @@ export async function listArticles(actor: Actor, filters: ArticleFilters = {}) {
       title: articles.title,
       slug: articles.slug,
       status: articles.status,
+      category: articles.category,
       issueId: articles.issueId,
       authorId: articles.authorId,
       authorName: users.displayName,
@@ -123,6 +157,7 @@ export async function listArticlesForWriter(actor: Actor) {
       id: articles.id,
       title: articles.title,
       status: articles.status,
+      category: articles.category,
       dueDate: articles.dueDate,
       issueId: articles.issueId,
       publishedAt: articles.publishedAt,
@@ -131,6 +166,43 @@ export async function listArticlesForWriter(actor: Actor) {
     .from(articles)
     .where(and(isNull(articles.deletedAt), eq(articles.authorId, actor.id)))
     .orderBy(desc(articles.updatedAt));
+}
+
+/**
+ * Service-level read gate for the article pages. An admin reads everything, a
+ * main editor reads every category, a plain category editor only their own
+ * areas, and an author only their own article. This is the counter to the
+ * pure `canReadArticle`, which cannot know the editor's assignments.
+ */
+export async function assertCanReadArticle(actor: Actor, article: Article): Promise<void> {
+  if (canAccessEditorPanel(actor)) {
+    if (actor.role === "admin") return;
+    const assignment = await getEditorAssignment(actor.id);
+    if (assignment.isMainEditor) return;
+    if (article.category !== null && assignment.assignedAreas.includes(article.category)) return;
+    throw forbidden("Bu makale sizin sorumlu olduğunuz alanlara düşmüyor.");
+  }
+  if (!canReadArticle(actor, article)) throw forbidden();
+}
+
+/**
+ * The status targets this actor may actually trigger, for the status panel.
+ * The state machine says which edges exist; this says which of them the
+ * signed-in reviewer may pull (D-059).
+ */
+export async function allowedTargetsForActor(
+  actor: Actor,
+  article: Article,
+): Promise<ArticleStatus[]> {
+  const assignment = await getEditorAssignment(actor.id);
+  return allowedTargets(article.status).filter((to) =>
+    canPerformTransition(
+      actor,
+      assignment,
+      { status: article.status, authorId: article.authorId, category: article.category },
+      to,
+    ),
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -206,6 +278,136 @@ async function assertAuthorIsWriter(authorId: string): Promise<void> {
   const role = rows[0]?.role;
   if (!role) throw badRequest("Yazar bulunamadı.");
   if (role === "user") throw badRequest("Yalnızca yazar rolündeki kullanıcılar makaleye atanabilir.");
+}
+
+/**
+ * Step 1 of the review chain (D-059): the author writes their own article in
+ * the writer panel. It is created as a draft for themselves; submission
+ * (`draft → in_review`) happens in `transitionArticle`.
+ */
+export async function createArticleAsWriter(
+  actor: Actor,
+  rawInput: unknown,
+  meta: RequestMeta,
+): Promise<Article> {
+  if (!isActiveWriter(actor)) throw forbidden();
+
+  const parsed = writerArticleInputSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    throw badRequest("Makale bilgileri geçersiz.", z.flattenError(parsed.error).fieldErrors);
+  }
+  const input = parsed.data;
+  const category = await assertAuthorCategoryAllowed(actor, input.category);
+
+  const slug = await uniqueSlug(input.title, (candidate) => slugExists(candidate));
+
+  const [article] = await db
+    .insert(articles)
+    .values({
+      title: input.title,
+      slug,
+      summary: input.summary ?? null,
+      bodyMarkdown: input.bodyMarkdown ?? "",
+      authorId: actor.id,
+      category,
+      tags: input.tags ?? [],
+      status: "draft",
+    })
+    .returning();
+
+  await snapshotVersion(article!, actor.id, "İlk sürüm");
+
+  await writeAudit({
+    actorId: actor.id,
+    action: "article.created_by_author",
+    entityType: "articles",
+    entityId: article!.id,
+    after: { title: article!.title, slug: article!.slug },
+    ip: meta.ip,
+  });
+
+  return article!;
+}
+
+/**
+ * The category of an author's submission must be one of the areas they hold
+ * (their writer areas, plus their editor areas for hybrids), so the article
+ * lands in the review queue of the right category editor.
+ */
+async function assertAuthorCategoryAllowed(actor: Actor, category: string | null | undefined) {
+  const value = category?.trim() || null;
+  if (!value) {
+    throw badRequest("Makalenin kategorisini seçmelisiniz.");
+  }
+  const allowed = await selectableWriterCategories(actor);
+  if (!allowed.includes(value)) {
+    throw badRequest(`"${value}" alanı size tanımlı değil; yazılarınızın alanını seçin.`);
+  }
+  return value;
+}
+
+/**
+ * An author edits their own draft or an article sent back for revision. Once
+ * it is in review, only the reviewers touch it. There is no change-kind
+ * distinction here: a draft has no approval to protect yet (D-059).
+ */
+export async function updateArticleAsWriter(
+  actor: Actor,
+  articleId: string,
+  rawInput: unknown,
+  meta: RequestMeta,
+): Promise<Article> {
+  if (!isActiveWriter(actor)) throw forbidden();
+
+  const existing = await findArticleById(articleId);
+  if (existing.authorId !== actor.id) {
+    throw forbidden("Yalnızca kendi yazılarınızı düzenleyebilirsiniz.");
+  }
+  if (existing.status !== "draft" && existing.status !== "revision_requested") {
+    throw conflict("İncelemedeki bir yazı yalnızca editörler tarafından düzenlenebilir.");
+  }
+
+  const parsed = writerArticleInputSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    throw badRequest("Makale bilgileri geçersiz.", z.flattenError(parsed.error).fieldErrors);
+  }
+  const input = parsed.data;
+  const category = await assertAuthorCategoryAllowed(actor, input.category);
+
+  const slug =
+    input.title !== existing.title
+      ? await uniqueSlug(input.title, (candidate) => slugExists(candidate, articleId))
+      : existing.slug;
+
+  const [updated] = await db
+    .update(articles)
+    .set({
+      title: input.title,
+      slug,
+      summary: input.summary ?? null,
+      bodyMarkdown: input.bodyMarkdown ?? existing.bodyMarkdown,
+      category,
+      tags: input.tags ?? existing.tags,
+      updatedAt: new Date(),
+    })
+    .where(eq(articles.id, articleId))
+    .returning();
+
+  if (input.bodyMarkdown !== undefined && input.bodyMarkdown !== existing.bodyMarkdown) {
+    await snapshotVersion(updated!, actor.id, null, false, "content_change");
+  }
+
+  await writeAudit({
+    actorId: actor.id,
+    action: "article.updated_by_author",
+    entityType: "articles",
+    entityId: articleId,
+    before: { title: existing.title, status: existing.status },
+    after: { title: updated!.title, status: existing.status },
+    ip: meta.ip,
+  });
+
+  return updated!;
 }
 
 export async function updateArticle(
@@ -360,8 +562,9 @@ export type TransitionOptions = {
 };
 
 /**
- * The only way an article's status changes. Refuses with 409 for any edge the
- * state machine does not allow, and for the guards it attaches.
+ * The only way an article's status changes. Refuses with 403 for an actor the
+ * staged chain does not allow to pull the lever, and 409 for any edge the
+ * state machine does not allow plus the guards it attaches.
  */
 export async function transitionArticle(
   actor: Actor,
@@ -370,9 +573,22 @@ export async function transitionArticle(
   meta: RequestMeta,
   options: TransitionOptions = {},
 ): Promise<Article> {
-  if (!canAccessEditorPanel(actor)) throw forbidden();
-
   const article = await findArticleById(articleId);
+
+  // Who may trigger this edge (author submitting their draft, the category
+  // editor approving, the main editor passing it on, the admin accepting).
+  const assignment = await getEditorAssignment(actor.id);
+  if (
+    !canPerformTransition(
+      actor,
+      assignment,
+      { status: article.status, authorId: article.authorId, category: article.category },
+      to,
+    )
+  ) {
+    throw forbidden("Bu durum geçişi için yetkiniz yok.");
+  }
+
   const grant = await findLiveApproval(article.id);
 
   const check = checkTransition(article.status, to, {

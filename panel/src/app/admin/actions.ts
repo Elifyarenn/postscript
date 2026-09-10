@@ -36,6 +36,8 @@ import {
   setWriterAreas,
   updateWriterArea,
 } from "@/services/writer-areas";
+import { setEditorDuties } from "@/services/editor-categories";
+import { setHybridWriterRole } from "@/services/users";
 import { saveSiteSettings, SITE_SETTING_KEYS } from "@/services/site-settings";
 import { requestMetadata, requireRole, revokeAllSessions } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
@@ -629,5 +631,61 @@ export async function setWriterAreasAction(
     revalidatePath(`/admin/users/${targetId}`);
     revalidatePath("/admin/users");
     return { success: "Yazar alanları güncellendi." };
+  });
+}
+
+/**
+ * Admin-only: (re)assign an editor's areas (at most two, each unique to one
+ * editor) and the main-editor flag in one step (D-059). The unique per-area
+ * rule and the two-slot limit are enforced in the service.
+ */
+export async function setEditorDutiesAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
+
+    const targetId = text(formData, "userId");
+    await setEditorDuties(
+      { ...user },
+      targetId,
+      {
+        areaId: optionalText(formData, "areaId") || null,
+        areaId2: optionalText(formData, "areaId2") || null,
+        isMainEditor: checkbox(formData, "isMainEditor"),
+      },
+      meta,
+    );
+
+    revalidatePath(`/admin/users/${targetId}`);
+    revalidatePath("/admin/users");
+    return { success: "Editör görevleri güncellendi." };
+  });
+}
+
+/** Admin-only: makes an editor a hybrid "Editor & Yazar" or takes it back (D-060). */
+export async function setHybridWriterRoleAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
+
+    const targetId = text(formData, "userId");
+    const enabled = checkbox(formData, "enabled");
+    await setHybridWriterRole({ ...user }, targetId, enabled, meta);
+
+    revalidatePath(`/admin/users/${targetId}`);
+    revalidatePath("/admin/users");
+    return {
+      success: enabled
+        ? "Editör artık aynı zamanda yazar; panel anahtarıyla iki panel arasında geçebilir."
+        : "Editörün yazarlığı kaldırıldı.",
+    };
   });
 }

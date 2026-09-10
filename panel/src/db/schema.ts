@@ -85,9 +85,17 @@ export const issueStatusEnum = pgEnum("issue_status", [
   "archived",
 ]);
 
+/**
+ * The editorial chain is staged (D-059): a draft reaches the category editor
+ * (`in_review`), their approval hands it to a main editor (`category_approved`),
+ * and the main editor's approval drops it into the admin queue (`admin_review`).
+ * `accepted` and everything after it belong to the admin/publication flow.
+ */
 export const articleStatusEnum = pgEnum("article_status", [
   "draft",
   "in_review",
+  "category_approved",
+  "admin_review",
   "revision_requested",
   "accepted",
   "awaiting_rights",
@@ -209,6 +217,12 @@ export const users = pgTable(
     writerStatus: writerStatusEnum("writer_status"),
     /** Belongs to editors only; admins and writers leave it null (D-039). */
     editorStatus: editorStatusEnum("editor_status"),
+    /**
+     * A main editor reads every category and approves the second review stage;
+     * a plain editor only sees the categories assigned in `editor_categories`
+     * and approves the first stage (D-059).
+     */
+    isMainEditor: boolean("is_main_editor").notNull().default(false),
 
     kvkkConsentAt: timestamp("kvkk_consent_at", { withTimezone: true }),
     kvkkConsentVersion: integer("kvkk_consent_version"),
@@ -395,6 +409,44 @@ export const writerAreas = pgTable(
   (t) => [
     uniqueIndex("writer_areas_name_unique").on(t.name),
     index("writer_areas_active_sort_idx").on(t.isActive, t.sortOrder),
+  ],
+);
+
+/* ------------------------------------------------------------------ */
+/* editor_categories (editor area assignments, D-059)                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Which magazine areas an editor is responsible for. The area list is the same
+ * `writer_areas` table (the 11 categories), but the rule here is the reverse
+ * of the writer quota: one area belongs to exactly one editor (enforced by the
+ * unique index on `area_id`), and an editor holds at most two slots (1 and 2,
+ * enforced in the service — a unique index cannot count).
+ *
+ * A category editor reviews `in_review` articles of their own areas only; a
+ * main editor (`users.is_main_editor`) reads every category and approves the
+ * second review stage (D-059).
+ */
+export const editorCategories = pgTable(
+  "editor_categories",
+  {
+    id: id(),
+    editorId: uuid("editor_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    areaId: uuid("area_id")
+      .notNull()
+      .references(() => writerAreas.id, { onDelete: "restrict" }),
+    /** 1 or 2; "1. alan" and "2. alan" as the product calls them. */
+    slot: integer("slot").notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    // The requested unique constraint: a category can never be assigned twice
+    uniqueIndex("editor_categories_area_unique").on(t.areaId),
+    uniqueIndex("editor_categories_editor_slot_unique").on(t.editorId, t.slot),
+    index("editor_categories_editor_idx").on(t.editorId),
   ],
 );
 
@@ -932,6 +984,8 @@ export type CommunityMessage = typeof communityMessages.$inferSelect;
 export type BannedWord = typeof bannedWords.$inferSelect;
 export type AgreementVersion = typeof agreementVersions.$inferSelect;
 export type Announcement = typeof announcements.$inferSelect;
+export type WriterArea = typeof writerAreas.$inferSelect;
+export type EditorCategory = typeof editorCategories.$inferSelect;
 export type AnnouncementSeverity = (typeof announcementSeverityEnum.enumValues)[number];
 export type Role = (typeof roleEnum.enumValues)[number];
 export type ArticleStatus = (typeof articleStatusEnum.enumValues)[number];

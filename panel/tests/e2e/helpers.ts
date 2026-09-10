@@ -11,6 +11,7 @@ export const MAIL_DIR = path.join(process.cwd(), ".e2e", "mail");
 export const SEED = {
   admin: { email: "admin@postscriptmag.com", password: "ChangeMe!Admin2026" },
   editor: { email: "editor@postscript.local", password: "Editor!Parola2026" },
+  mainEditor: { email: "anaeditor@postscript.local", password: "AnaEditor!Parola2026" },
   writer: { email: "yazar@postscript.local", password: "Yazar!Parola2026" },
   reader: { email: "okur@postscript.local", password: "Okur!Parola2026" },
   minor: { email: "genc@postscript.local", password: "Genc!Parola2026" },
@@ -142,4 +143,12 @@ export async function loginElevated(
   await submitLogin(page, credentials);
   await completeTwoFactorIfAsked(page);
   await page.waitForURL(name === "admin" ? "**/admin" : "**/editor");
+}
+
+/** Logs in as an editor and waits for the editor home; used for both editors. */
+export async function loginAsEditor(
+  page: Page,
+  credentials: { email: string; password: string },
+): Promise<void> {
+  await loginElevated(page, "editor", credentials);
 }
