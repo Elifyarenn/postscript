@@ -1236,6 +1236,37 @@ olmayan bir kolonu istiyordu. Migration'ı başlangıca taşımak, yeni bir dal
 çekildiğinde `pnpm dev`'in sessizce bozulmasını bitirir; üretim davranışı
 değişmez.
 
+---
+
+## D-063 — Kapalı erişim modu kaldırıldı; okuyucu kaydı standartlaştı
+
+**Karar:** Yayın öncesi "kapalı erişim" kısıtlamaları kaldırıldı:
+
+- `src/lib/access-mode.ts` ve `src/services/access-mode.ts` silindi; login/kayıt
+  servisleri, oturum çözümü ve panel layout'larındaki kapalı-mod kapıları
+  (kayıt reddi, admin dışı giriş yasağı, oturum iptali, `/account`'a
+  yönlendirme) temizlendi. Yönetici Sistem ekranındaki "Erişim modu" kartı ve
+  `setAccessMode` action'ı kaldırıldı (D-043, D-049'da anlatılan kapalı mod
+  artık tarihî kayıttır).
+- `/login` standartlaştı: sarı "Site henüz yayında değil" uyarısı ve yazar
+  kaydı ön kutusu kaldırıldı; altında okuyucu ve yazar kaydı bağlantıları
+  duruyor.
+- `/register` gerçek bir okuyucu kayıt formu oldu (eskiden `/yazar-basvuru`'ya
+  yönleniyordu). `registerReaderAction` eklendi; yeni hesaba sunucu her zaman
+  `role = user` atar (formdan rol kabul edilmez). `/yazar-basvuru` yazar kaydı
+  akışı aynen durur (D-049: e-posta doğrulaması yazar otomatik onayı).
+- Giriş sonrası yönlendirme rol tabanlı kalır: admin → `/admin`, editör/ana
+  editör/hibrit → `/editor` (hibrit başlıktaki panel anahtarıyla geçer), yazar
+  → `/writer`, okuyucu → `/magazine`. Panel başlığındaki kullanıcı adı artık
+  `/account`'a giden bir profil bağlantısıdır (her rolde sağ üstte).
+
+**Gerekçe:** Ürün sahibi, "geçici kısıtlamalar" olarak tasarlanan yayın öncesi
+kapıları kaldırmak ve siteyi standart okuyucu/yazar/yönetim rolleriyle normal
+işleyişe geçirmek istedi. Kapalı modun yalnızca arayüzde gizlenmesi yetmezdi:
+servis kapıları kalsaydı modu açıkken bile kod aynı kısıtlamayı uygulardı.
+Mekanizmanın tamamını kaldırmak, ölü bir ayar kartı ve iki kaynaklı bir
+davranış (DB ayarı vs. kod) bırakmamak içindir.
+
 
 
 

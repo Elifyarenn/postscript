@@ -13,8 +13,6 @@ import { sessions, users, type EditorStatus, type Role, type WriterStatus } from
 import { hashToken, randomToken } from "@/lib/crypto";
 import { env, isProduction } from "@/lib/env";
 import { AppError, forbidden, unauthorized } from "@/lib/errors";
-import { isEntryAllowed } from "@/lib/access-mode";
-import { getAccessMode } from "@/services/access-mode";
 import {
   canAccessAdminPanel,
   canAccessEditorPanel,
@@ -189,12 +187,6 @@ export async function getAuthContext(): Promise<AuthContext | null> {
     now - row.lastSeenAt.getTime() > idleLimitMs;
 
   if (invalid) return null;
-
-  // Closed entry: reader sessions stop resolving, so an existing reader cannot
-  // outlive the closure. Writer-track accounts keep theirs (D-049).
-  if (!isEntryAllowed(await getAccessMode(), { role: row.role as Role, writerIntentAt: row.writerIntentAt })) {
-    return null;
-  }
 
   // Touch the session, but not on every single request: once a minute is plenty
   if (now - row.lastSeenAt.getTime() > 60_000) {

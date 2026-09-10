@@ -9,7 +9,6 @@ import { eq } from "drizzle-orm";
 import { roleChanges, users } from "@/db/schema";
 import { db, type Database } from "@/db/client";
 import { register, registerWriterCandidate, verifyEmail } from "@/services/auth";
-import { setAccessMode } from "@/services/access-mode";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import { isAppError } from "@/lib/errors";
 import { resetTables, seedDefaultWriterAreas, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
@@ -139,15 +138,13 @@ describe("writer registration (/yazar-basvuru)", () => {
     expect(error.details?.area?.[0]).toContain("kontenjanı dolu");
   });
 
-  it("is open even while the site is closed, unlike the reader registration", async () => {
-    const admin = await createUser({ role: "admin" });
-    await setAccessMode(actorOf(admin), { mode: "closed" }, noMeta);
+  it("registers readers and writers side by side", async () => {
+    // The reader path always assigns the plain `user` role (D-063)
+    const reader = await register({ ...validReader, email: "okur@example.com" }, noMeta);
+    expect(reader.user.role).toBe("user");
+    expect(reader.user.writerIntentAt).toBeNull();
 
-    const readerError = await captureError(
-      register({ ...validReader, email: "okur@example.com" }, noMeta),
-    );
-    expect(readerError.status).toBe(409);
-
+    // The writer path keeps its own intent marker and auto-approval (D-049)
     const { user } = await registerWriterCandidate(
       { ...validWriter, email: "yazar2@example.com" },
       noMeta,

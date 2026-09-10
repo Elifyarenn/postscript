@@ -1,9 +1,6 @@
 ﻿import type { ReactNode } from "react";
-import { redirect } from "next/navigation";
 import { guardPanel } from "@/lib/auth/guard";
 import { pendingAcknowledgements } from "@/services/announcements";
-import { getAccessMode } from "@/services/access-mode";
-import { restrictToAccountWhenClosed } from "@/lib/access-mode";
 import { hasRole } from "@/lib/auth/rbac";
 import { PanelShell, writerNav } from "@/components/shell";
 
@@ -21,9 +18,6 @@ import { PanelShell, writerNav } from "@/components/shell";
 export default async function WriterLayout({ children }: { children: ReactNode }) {
   const context = await guardPanel("writer");
   const { user } = context;
-
-  const closed = (await getAccessMode()) === "closed";
-  if (closed && restrictToAccountWhenClosed(user.role)) redirect("/account");
 
   const pending = await pendingAcknowledgements({ ...user });
 

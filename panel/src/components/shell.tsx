@@ -11,6 +11,7 @@
  * mobile drawer); `PanelShell` here stays a server component.
  */
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "./ui";
 import { PanelSidebar } from "./sidebar";
@@ -161,7 +162,14 @@ export function PanelShell({
 
           <div className="flex flex-wrap items-center justify-end gap-2.5 text-sm">
             <PanelModeSwitch user={user} />
-            <span className="font-medium">{user.displayName}</span>
+            {/* The top-right profile button: every role gets home → account */}
+            <Link
+              href="/account"
+              title="Hesabım"
+              className="font-medium hover:text-accent"
+            >
+              {user.displayName}
+            </Link>
             {/* A hybrid editor holds both duties and is titled "Editor & Yazar" (D-060) */}
             {user.role === "editor" && user.writerStatus !== null ? (
               <StatusBadge status="editor_writer" />

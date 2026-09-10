@@ -20,8 +20,6 @@ import { isAdult, parseIsoDate } from "@/lib/age";
 import { writerAreaSelectionIssues } from "@/lib/writer-areas";
 import { normalisePhone } from "@/lib/phone";
 import { sendMail } from "@/lib/mail/transport";
-import { getAccessMode } from "./access-mode";
-import { isEntryAllowed } from "@/lib/access-mode";
 import { autoApproveWriterCandidate } from "./users";
 import { listWriterAreasWithQuota } from "./writer-areas";
 import * as templates from "@emails/templates";
@@ -113,13 +111,6 @@ export async function register(
     throw badRequest("Kayıt bilgileri geçersiz.", z.flattenError(parsed.error).fieldErrors);
   }
   const input = parsed.data;
-
-  // Closed entry: nobody new registers as a reader until an admin reopens the
-  // site. The writer registration path is open regardless (D-049).
-  const mode = await getAccessMode();
-  if (!isEntryAllowed(mode, { role: "user", writerIntentAt: null })) {
-    throw conflict("Kayıtlar şu anda kapalı. Yeni hesaplar açılmıyor.");
-  }
 
   // Rate limit before hashing: argon2 is deliberately expensive (§5.1)
   const limit = await consumeAttempt("register_ip", meta.ip ?? "unknown");
@@ -530,13 +521,6 @@ export async function verifyCredentials(
     throw unauthorized("E-posta veya şifre hatalı.");
   }
   if (user.isBanned) throw forbidden("Hesabınız askıya alınmış.");
-
-  // Closed entry: admin and writer-track accounts may sign in until an admin
-  // reopens the site; plain readers wait (D-049)
-  const mode = await getAccessMode();
-  if (!isEntryAllowed(mode, { role: user.role, writerIntentAt: user.writerIntentAt })) {
-    throw forbidden("Şu anda yalnızca yönetici ve yazar hesapları giriş yapabilir.");
-  }
 
   await clearAttempts("login_account", email);
   await clearAttempts("login_ip", ipKey);

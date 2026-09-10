@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { badRequest } from "@/lib/errors";
 import {
+  register,
   registerWriterCandidate,
   requestPasswordReset,
   resetPassword,
@@ -46,9 +47,9 @@ function homeFor(role: Role): string {
 }
 
 /**
- * The public writer registration (/yazar-basvuru). The only entry point for
- * new accounts while the site is closed: the form stays open and the address
- * proof (D-049) is what turns the account into a writer later.
+ * The public writer registration (/yazar-basvuru). A separate flow from the
+ * reader sign-up: the account is created with a writer intent, and address
+ * verification auto-approves it to an active writer (D-049).
  */
 export async function registerWriterAction(
   _state: ActionState,
@@ -68,6 +69,40 @@ export async function registerWriterAction(
         birthDate: text(formData, "birthDate"),
         area: text(formData, "area"),
         phone: text(formData, "phone"),
+      },
+      meta,
+    );
+
+    // A session is opened so the account can ask for another link, but that is
+    // all it can do until the address is verified (D-034)
+    await createSession({ userId: user.id, ip: meta.ip, userAgent: meta.userAgent });
+    destination = "/verify-email/pending";
+  });
+
+  if (destination) redirect(destination);
+  return result;
+}
+
+/**
+ * The standard reader/user registration (/register). The service always
+ * assigns the plain `user` role — the server decides, the form never sends one.
+ */
+export async function registerReaderAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  let destination: string | null = null;
+
+  const result = await runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const meta = await requestMetadata();
+
+    const { user } = await register(
+      {
+        email: text(formData, "email"),
+        password: text(formData, "password"),
+        displayName: text(formData, "displayName"),
+        kvkkConsent: checkbox(formData, "kvkkConsent") as true,
       },
       meta,
     );

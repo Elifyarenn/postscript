@@ -22,7 +22,6 @@ import {
 import { createVersionFromTemplate, publishAgreementVersion } from "@/services/agreements";
 import { adminDecideApplication } from "@/services/writer-applications";
 import { createAnnouncement, publishAnnouncement } from "@/services/announcements";
-import { setAccessMode } from "@/services/access-mode";
 import type { AnnouncementSeverity } from "@/db/schema";
 import {
   addBannedWord,
@@ -388,28 +387,6 @@ export async function publishAnnouncementAction(
     await publishAnnouncement({ ...user }, text(formData, "announcementId"), meta);
     revalidatePath("/admin/announcements");
     return { success: "Duyuru yayınlandı." };
-  });
-}
-
-export async function setAccessModeAction(
-  _state: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  return runAction(async () => {
-    await assertCsrfFromForm(formData);
-    const { user } = await requireRole("admin");
-    const meta = await requestMetadata();
-
-    await setAccessMode(
-      { ...user },
-      { mode: text(formData, "mode") as "open" | "closed" },
-      meta,
-    );
-
-    revalidatePath("/admin/settings");
-    revalidatePath("/login");
-    revalidatePath("/register");
-    return { success: "Erişim modu güncellendi." };
   });
 }
 
