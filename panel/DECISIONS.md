@@ -1219,6 +1219,23 @@ bilinçli olarak günceller. Güvenlik çekirdeği korunur: yazar yalnızca kend
 atanmış alanlarda yazabilir, `role` alanı client'tan kabul edilmez ve her
 mutasyon sunucuda yetki kontrolünden geçer.
 
+---
+
+## D-062 — PGlite geliştirme veritabanı başlangıçta otomatik migrate edilir
+
+**Karar:** `src/instrumentation.ts`, sunucu PGlite (`pglite://…`) ile açılırken
+bağlantıyı kurduktan sonra bekleyen migration'ları uygular (idempotent;
+drizzle'in `__drizzle_migrations` kaydı zaten uygulanmış dosyaları atlar).
+Gerçek PostgreSQL (`postgres://…`) asla otomatik migrate edilmez; orada
+`pnpm db:migrate` (veya seed) açık komut olarak kalır.
+
+**Gerekçe:** D-059'daki şema değişikliği (`users.is_main_editor` kolonu,
+`editor_categories` tablosu) `pnpm dev`'i eski bir `.pglite` ile açan herkesin
+giriş ekranında 500 almasına yol açtı: `db.select().from(users)` artık var
+olmayan bir kolonu istiyordu. Migration'ı başlangıca taşımak, yeni bir dal
+çekildiğinde `pnpm dev`'in sessizce bozulmasını bitirir; üretim davranışı
+değişmez.
+
 
 
 

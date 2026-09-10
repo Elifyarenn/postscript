@@ -11,6 +11,9 @@ export const metadata: Metadata = {
     template: "PostScript Dergi - %s",
   },
   description: "PostScript Dergi — edebiyat, psikoloji ve kültür üzerine bir e-dergi.",
+  icons: {
+    icon: "/favicon.ico",
+  },
   ...devRobots,
 };
 
