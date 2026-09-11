@@ -14,6 +14,7 @@ import { hashToken, randomToken, sha256Hex } from "@/lib/crypto";
 import { env } from "@/lib/env";
 import { badRequest, conflict, forbidden, notFound, rateLimited, unauthorized } from "@/lib/errors";
 import { checkPasswordPolicy, hashPassword, isPwned, verifyPassword } from "@/lib/password";
+import { calculateAge } from "@/lib/age";
 import { clearAttempts, consumeAttempt, currentAttemptCount, failureDelayMs } from "@/lib/rate-limit";
 import { writeAudit } from "@/lib/audit";
 import { sendMail } from "@/lib/mail/transport";
@@ -36,6 +37,9 @@ export const registerSchema = z.strictObject({
   email: z.email("Geçerli bir e-posta adresi girin.").max(254),
   password: z.string().min(1, "Şifre gerekli."),
   displayName: z.string().trim().min(2, "Ad en az 2 karakter olmalı.").max(80),
+  birthDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Doğum tarihi YYYY-AA-GG biçiminde olmalı."),
   kvkkConsent: z.literal(true, { message: "KVKK aydınlatma metnini onaylamanız gerekiyor." }),
 });
 
@@ -85,6 +89,13 @@ export async function register(
   }
   const input = parsed.data;
 
+  // `calculateAge` returns null for malformed dates and for dates in the future
+  if (calculateAge(input.birthDate) === null) {
+    throw badRequest("Doğum tarihi geçersiz.", {
+      birthDate: ["Geçerli bir doğum tarihi girin."],
+    });
+  }
+
   // Rate limit before hashing: argon2 is deliberately expensive (§5.1)
   const limit = await consumeAttempt("register_ip", meta.ip ?? "unknown");
   if (!limit.allowed) throw rateLimited("Çok fazla kayıt denemesi yapıldı, 10 dakika bekleyin.");
@@ -112,6 +123,7 @@ export async function register(
       email,
       passwordHash,
       displayName: input.displayName,
+      birthDate: input.birthDate,
       // The server decides the role. It is never read from the request.
       role: "user",
       kvkkConsentAt: new Date(),

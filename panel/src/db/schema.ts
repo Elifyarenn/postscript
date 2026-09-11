@@ -189,7 +189,10 @@ export const users = pgTable(
     avatarMediaId: uuid("avatar_media_id"),
     socialLinks: jsonb("social_links").$type<SocialLinks>(),
 
-    /** Required before a promotion to writer; immutable for the user once set. */
+    /**
+     * Collected at registration; required before a promotion to writer and
+     * immutable for the user once set.
+     */
     birthDate: date("birth_date"),
 
     /**

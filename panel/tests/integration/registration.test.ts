@@ -22,6 +22,7 @@ const validReader = {
   email: "Yeni.Okur@Example.com",
   password: "Cok-Guclu-Sifre-2026",
   displayName: "Yeni Okur",
+  birthDate: "1995-05-20",
   kvkkConsent: true as const,
 };
 
@@ -57,8 +58,26 @@ describe("reader registration", () => {
     expect(user.writerIntentAt).toBeNull();
     expect(user.writerStatus).toBeNull();
     expect(user.email).toBe("yeni.okur@example.com");
+    expect(user.birthDate).toBe("1995-05-20");
     expect(verificationToken).toBeTruthy();
     expect(mailbox.lastTo(user.email)?.subject).toContain("doğrula");
+  });
+
+  it("requires a birth date and refuses invalid or future ones", async () => {
+    const missing = await captureError(
+      register({ ...validReader, email: "tarihsiz@example.com", birthDate: undefined }, noMeta),
+    );
+    expect(missing.status).toBe(400);
+
+    const impossible = await captureError(
+      register({ ...validReader, email: "imkansiz@example.com", birthDate: "2025-02-30" }, noMeta),
+    );
+    expect(impossible.status).toBe(400);
+
+    const future = await captureError(
+      register({ ...validReader, email: "gelecek@example.com", birthDate: "2999-01-01" }, noMeta),
+    );
+    expect(future.status).toBe(400);
   });
 
   it("never accepts a role from the request", async () => {

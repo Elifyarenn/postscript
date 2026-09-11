@@ -39,6 +39,20 @@ export default async function RegisterPage() {
             <Input id="email" name="email" type="email" autoComplete="email" required />
           </Field>
 
+          <Field
+            label="Doğum tarihi"
+            htmlFor="birthDate"
+            hint="Yazar olabilmek için gereklidir ve bir kez kaydedilir."
+          >
+            <Input
+              id="birthDate"
+              name="birthDate"
+              type="date"
+              required
+              max={new Date().toISOString().slice(0, 10)}
+            />
+          </Field>
+
           <PasswordField />
 
           <label className="flex cursor-pointer items-start gap-2 text-sm">

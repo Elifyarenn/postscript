@@ -82,11 +82,12 @@ export function linkFrom(text: string): string {
  */
 export async function registerReader(
   page: Page,
-  input: { displayName: string; email: string; password: string },
+  input: { displayName: string; email: string; password: string; birthDate?: string },
 ): Promise<void> {
   await page.goto("/register");
   await page.getByLabel("Ad Soyad").fill(input.displayName);
   await page.getByLabel("E-posta").fill(input.email);
+  await page.getByLabel("Doğum tarihi").fill(input.birthDate ?? "1995-05-20");
   await page.locator('input[name="kvkkConsent"]').check();
   await page.getByLabel("Şifre").fill(input.password);
   await page.getByRole("button", { name: "Okuyucu hesabı oluştur" }).click();

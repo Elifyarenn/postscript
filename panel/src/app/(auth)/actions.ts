@@ -65,6 +65,7 @@ export async function registerReaderAction(
         email: text(formData, "email"),
         password: text(formData, "password"),
         displayName: text(formData, "displayName"),
+        birthDate: text(formData, "birthDate"),
         kvkkConsent: checkbox(formData, "kvkkConsent") as true,
       },
       meta,

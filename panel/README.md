@@ -285,7 +285,7 @@ mesajları ve yasaklı kelimeler yönetilir; kaldırma yumuşak silmedir
 ### Kayıt ve roller
 
 Herkese açık tek kayıt **okuyucu kaydı**dır (`/register`): ad soyad,
-e-posta, şifre ve KVKK onayı. Yeni hesaba sunucu her zaman `user` (okuyucu)
+doğum tarihi, e-posta, şifre ve KVKK onayı. Yeni hesaba sunucu her zaman `user` (okuyucu)
 rolü atar; e-posta doğrulaması kimseyi yükseltmez. Yazar ve editör rolleri
 yalnızca yönetici panelinden verilir (`/admin/users` → terfi / rol değişimi /
 "Editor & Yazar" hibriti) veya yazar başvurusu pipeline'ından

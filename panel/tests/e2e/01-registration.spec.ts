@@ -42,6 +42,11 @@ test("registers as a reader, verifies the address, and stays a reader", async ({
   // The top-right profile button leads to the account page
   await page.getByRole("link", { name: NEW_READER.displayName }).click();
   await page.waitForURL("**/account");
+
+  // The birth date given at registration is stored and locked for the user
+  await expect(page.getByLabel("Doğum tarihi")).toHaveValue("1995-05-20");
+  await expect(page.getByLabel("Doğum tarihi")).toBeDisabled();
+
   await page.getByLabel("Ad Soyad").fill("Yeni Okur Düzeltildi");
   await page.getByRole("button", { name: "Profili kaydet" }).click();
   await expect(page.getByText("Profiliniz güncellendi")).toBeVisible();
@@ -80,6 +85,7 @@ test("refuses a password that is too common", async ({ page }) => {
 
   await page.getByLabel("Ad Soyad").fill("Zayıf Şifre");
   await page.getByLabel("E-posta").fill("zayif@example.com");
+  await page.getByLabel("Doğum tarihi").fill("1995-05-20");
   await page.locator('input[name="kvkkConsent"]').check();
   await page.getByLabel("Şifre").fill("Password1");
   await page.getByRole("button", { name: "Okuyucu hesabı oluştur" }).click();
@@ -102,6 +108,7 @@ test("ticks the password rules off and keeps the button shut until all three are
 
   await page.getByLabel("Ad Soyad").fill("Kural Denemesi");
   await page.getByLabel("E-posta").fill("kural@example.com");
+  await page.getByLabel("Doğum tarihi").fill("1995-05-20");
   await page.locator('input[name="kvkkConsent"]').check();
 
   const submit = page.getByRole("button", { name: "Okuyucu hesabı oluştur" });

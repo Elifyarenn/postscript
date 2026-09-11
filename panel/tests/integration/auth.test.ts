@@ -46,6 +46,7 @@ const validRegistration = {
   email: "Yeni.Kullanici@Example.com",
   password: "Cok-Guclu-Sifre-2026",
   displayName: "Yeni Kullanıcı",
+  birthDate: "1995-05-20",
   kvkkConsent: true as const,
 };
 

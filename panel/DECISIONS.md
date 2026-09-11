@@ -1295,6 +1295,31 @@ geçersiz kalır. D-061'deki "yazar kendi yazısını yazar" akışı bundan
 etkilenmez: zaten yazar olmuş hesaplar yazar panelinden makale göndermeye
 devam eder.
 
+---
+
+## D-065 — Doğum tarihi okuyucu kaydında alınıyor
+
+**Karar:** Okuyucu kayıt formuna (`/register`) zorunlu "Doğum tarihi" alanı
+eklendi; değer `users.birth_date` kolonuna kayıt anında yazılır.
+
+- Alan `YYYY-AA-GG` biçiminde `type="date"` girdisidir; kayıt şeması biçimi,
+  servis katmanı takvim geçerliliğini ve gelecekte olmama durumunu doğrular
+  (`calculateAge` geçersiz ve gelecek tarihler için `null` döner).
+- Yaş barajı kayıtta uygulanmaz: reşit olmayan okuyucular kayıt olabilir; ≥ 18
+  şartı yalnızca yazar terfisinde (`checkWriterEligibility`) aranır.
+- Doğum tarihi kayıtta bir kez yazılır; §5.4 gereği kullanıcı sonradan kendisi
+  değiştiremez, düzeltme yalnızca yönetici (`setBirthDateAsAdmin`) yapabilir.
+- Rol ataması değişmedi: kayıt yine her zaman `user` rolü verir; doğum tarihi
+  hiçbir otomatik terfi tetiklemez.
+
+**Gerekçe:** Ürün sahibi "kayıt olurken doğum tarihi al" dedi. Yazar terfisi ve
+yazar başvurusu zaten doğum tarihi ve ≥ 18 ön koşuluna bağlı; alanın kayıtta
+alınması sonradan profil üzerinden tamamlama adımını ortadan kaldırır ve
+başvuru öncesi eksik veri sorununu baştan çözer. Alan zorunlu tutuldu çünkü
+isteğe bağlı bırakılsaydı akış değişmezdi; ancak yaş barajı eklenmedi, çünkü
+okuyucu kaydı reşit olmayanlara da açıktır.
+
+
 
 
 
