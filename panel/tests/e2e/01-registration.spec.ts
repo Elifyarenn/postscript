@@ -88,7 +88,7 @@ test("refuses a password that is too common", async ({ page }) => {
   await page.getByLabel("Doğum tarihi").fill("1995-05-20");
   await page.locator('input[name="kvkkConsent"]').check();
   await page.getByLabel("Şifre").fill("Password1");
-  await page.getByRole("button", { name: "Okuyucu hesabı oluştur" }).click();
+  await page.getByRole("button", { name: "Hesabı oluştur" }).click();
 
   await expect(page.getByText(/yaygın kullanılıyor/i).first()).toBeVisible();
 });
@@ -111,7 +111,7 @@ test("ticks the password rules off and keeps the button shut until all three are
   await page.getByLabel("Doğum tarihi").fill("1995-05-20");
   await page.locator('input[name="kvkkConsent"]').check();
 
-  const submit = page.getByRole("button", { name: "Okuyucu hesabı oluştur" });
+  const submit = page.getByRole("button", { name: "Hesabı oluştur" });
   const password = page.getByLabel("Şifre");
   const rules = page.locator("#password-rules li");
 

@@ -90,7 +90,7 @@ export async function registerReader(
   await page.getByLabel("Doğum tarihi").fill(input.birthDate ?? "1995-05-20");
   await page.locator('input[name="kvkkConsent"]').check();
   await page.getByLabel("Şifre").fill(input.password);
-  await page.getByRole("button", { name: "Okuyucu hesabı oluştur" }).click();
+  await page.getByRole("button", { name: "Hesabı oluştur" }).click();
   await page.waitForURL("**/verify-email/pending");
 }
 

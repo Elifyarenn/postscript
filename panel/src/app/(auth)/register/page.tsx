@@ -27,7 +27,7 @@ export default async function RegisterPage() {
       <PanelForm
         action={registerReaderAction}
         csrfToken={csrfToken}
-        submitLabel="Okuyucu hesabı oluştur"
+        submitLabel="Hesabı oluştur"
         requireValid
       >
         <>
@@ -39,11 +39,7 @@ export default async function RegisterPage() {
             <Input id="email" name="email" type="email" autoComplete="email" required />
           </Field>
 
-          <Field
-            label="Doğum tarihi"
-            htmlFor="birthDate"
-            hint="Yazar olabilmek için gereklidir ve bir kez kaydedilir."
-          >
+          <Field label="Doğum tarihi" htmlFor="birthDate">
             <Input
               id="birthDate"
               name="birthDate"

@@ -97,7 +97,7 @@ export function ProfileCard({
               hint={
                 user.birthDate
                   ? "Kaydedildikten sonra yalnızca yönetici değiştirebilir."
-                  : "Yazar olabilmek için gereklidir ve bir kez kaydedilir."
+                  : undefined
               }
             >
               <Input
