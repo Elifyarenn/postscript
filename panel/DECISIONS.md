@@ -1521,3 +1521,37 @@ mutation" diyor — iki istisna vardı, ikisi de kapandı.
 
 ---
 
+## D-073 — 2FA bileti koddan sonra harcanır; giriş ve şifre yolları sertleştirildi
+
+**Karar:** Kimlik doğrulama akışındaki beş sorun kapatıldı.
+
+- **2FA bileti:** `consumeLoginChallenge` ikiye ayrıldı. `readLoginChallenge`
+  bileti harcamadan okur, `consumeLoginChallenge` yalnızca kod doğrulandıktan
+  sonra harcar ve `consumed_at is null` koşulunu UPDATE'in içine koyarak yarışı
+  önler. Eskiden bilet kod kontrolünden **önce** harcanıyordu: tek bir yanlış
+  hane bileti yakıyor, kullanıcı şifre ekranına dönüyordu ve `login_2fa`'nın
+  beş denemelik penceresine hiç sıra gelmiyordu — kural vardı, erişilemiyordu.
+- **Giriş zamanlaması:** Hesap yokken de bir argon2 doğrulaması çalışır
+  (`decoyPasswordHash`, süreç başına bir kez üretilen rastgele bir parolanın
+  hash'i). Mesaj zaten aynıydı ama süre değildi: hesap yoksa cevap birkaç
+  milisaniyede, varsa ~100ms'de dönüyordu; bu fark tek başına hesap
+  numaralandırmaya yetiyordu.
+- **E-posta token'ı:** `consumeEmailToken` artık `consumePendingRegistration`
+  gibi atomik. SELECT ile UPDATE arasında koşul yoktu, yani aynı sıfırlama
+  bağlantısına iki eşzamanlı tıklama ikisi birden geçebiliyordu.
+- **Şifre barı tek yerde:** `assertPasswordAcceptable` politika + sızıntı
+  listesini birlikte uygular; kayıt, sıfırlama ve panel içi değiştirme üçü de
+  onu çağırır. Önceden yalnızca kayıt `isPwned` bakıyordu, yani kayıtta
+  reddedilen bir şifre "şifremi unuttum" üzerinden kabul ediliyordu.
+- **Oturum iptali servise taşındı:** `resetPassword` ve `confirmEmailChange`
+  `revokeAllSessions`'ı kendileri çağırır. Çağrı action katmanındaydı; iki
+  fonksiyonun doküman yorumu bunu zaten vaat ediyordu ama ikinci bir çağıran
+  sessizce atlayabilirdi.
+
+**Gerekçe:** CLAUDE.md "İş kuralı servis katmanında, tek yerde" diyor; oturum
+iptali ve şifre barı bunun iki ihlaliydi. 2FA bileti ve token tüketimi ise
+doğruluk hatasıydı: biri ürünü kullanılamaz hale getiriyor (tek deneme), diğeri
+sessiz bir yarış bırakıyordu.
+
+---
+

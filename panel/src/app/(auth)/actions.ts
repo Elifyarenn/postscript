@@ -23,12 +23,12 @@ import {
   destroyCurrentSession,
   getAuthContext,
   requestMetadata,
-  revokeAllSessions,
 } from "@/lib/auth/session";
 import {
   checkLoginCodeLimit,
   consumeLoginChallenge,
   createLoginChallenge,
+  readLoginChallenge,
   verifyLoginCode,
   TWO_FACTOR_COOKIE,
 } from "@/services/two-factor";
@@ -162,7 +162,9 @@ export async function loginTwoFactorAction(
       throw badRequest("Doğrulama adımının süresi doldu, tekrar giriş yapın.");
     }
 
-    const userId = await consumeLoginChallenge(rawToken);
+    // Read the ticket, do not spend it yet: a wrong code must leave the user on
+    // this screen with tries left, not send them back to the password (D-073)
+    const userId = await readLoginChallenge(rawToken);
     if (!userId) {
       throw badRequest("Doğrulama adımının süresi doldu, tekrar giriş yapın.");
     }
@@ -172,6 +174,12 @@ export async function loginTwoFactorAction(
     const code = text(formData, "code");
     if (!(await verifyLoginCode(userId, code))) {
       throw badRequest("Kod doğrulanamadı.", { code: ["Kod doğrulanamadı."] });
+    }
+
+    // Only now is the ticket spent, and only the request that spends it opens a
+    // session — two racing submissions cannot both get one
+    if (!(await consumeLoginChallenge(rawToken))) {
+      throw badRequest("Doğrulama adımının süresi doldu, tekrar giriş yapın.");
     }
 
     // A success must not keep counting against the second-factor bucket
@@ -233,9 +241,8 @@ export async function confirmEmailChangeAction(
     await assertCsrfFromForm(formData);
     const meta = await requestMetadata();
 
+    // `confirmEmailChange` drops the sessions itself (D-073)
     const user = await confirmEmailChange(text(formData, "token"), meta);
-    // The address changed, so every other session must go (a reset does the same)
-    await revokeAllSessions(user.id);
 
     // Whoever is still signed in on this browser goes straight home
     const context = await getAuthContext();
@@ -271,12 +278,12 @@ export async function resetPasswordAction(
     await assertCsrfFromForm(formData);
     const meta = await requestMetadata();
 
-    const userId = await resetPassword(
+    // §5.3: a reset invalidates every session the account had; `resetPassword`
+    // does that itself (D-073)
+    await resetPassword(
       { token: text(formData, "token"), password: text(formData, "password") },
       meta,
     );
-    // §5.3: a reset invalidates every session the account had
-    await revokeAllSessions(userId);
     done = true;
   });
 

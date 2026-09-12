@@ -6,7 +6,7 @@
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { users, type User } from "@/db/schema";
+import { sessions, users, type User } from "@/db/schema";
 import { db, type Database } from "@/db/client";
 import {
   changePassword,
@@ -293,6 +293,32 @@ describe("password reset", () => {
 
     const error = await captureError(resetPassword({ token: token!, password: "kisa" }, noMeta));
     expect(error.status).toBe(400);
+  });
+
+  // D-073: the revocation moved from the action into the service, so it holds
+  // for every caller rather than only for the one form that remembered it.
+  it("drops every session of the account, from the service itself", async () => {
+    const user = await createUser({ email: "sessions@example.com" });
+    await db.insert(sessions).values([
+      {
+        userId: user.id,
+        tokenHash: "hash-one",
+        expiresAt: new Date(Date.now() + 86_400_000),
+      },
+      {
+        userId: user.id,
+        tokenHash: "hash-two",
+        expiresAt: new Date(Date.now() + 86_400_000),
+      },
+    ]);
+
+    await requestPasswordReset({ email: "sessions@example.com" }, noMeta);
+    const token = /token=([^\s]+)/.exec(mailbox.lastTo("sessions@example.com")?.text ?? "")?.[1];
+    await resetPassword({ token: token!, password: "Yepyeni-Sifre-2026" }, noMeta);
+
+    const rows = await db.select().from(sessions).where(eq(sessions.userId, user.id));
+    expect(rows).toHaveLength(2);
+    expect(rows.every((row) => row.revokedAt !== null)).toBe(true);
   });
 });
 

@@ -10,6 +10,7 @@ import { db, type Database } from "@/db/client";
 import {
   checkLoginCodeLimit,
   consumeLoginChallenge,
+  readLoginChallenge,
   createLoginChallenge,
   disableTotp,
   enableTotp,
@@ -159,12 +160,33 @@ describe("the login challenge ticket", () => {
     const user = await createUser();
 
     const rawToken = await createLoginChallenge(user.id);
-    expect(await consumeLoginChallenge(rawToken)).toBe(user.id);
+    expect(await readLoginChallenge(rawToken)).toBe(user.id);
+    expect(await consumeLoginChallenge(rawToken)).toBe(true);
+
     // The same ticket cannot be spent twice
-    expect(await consumeLoginChallenge(rawToken)).toBeNull();
+    expect(await consumeLoginChallenge(rawToken)).toBe(false);
+    expect(await readLoginChallenge(rawToken)).toBeNull();
 
     // A forged ticket never resolves
-    expect(await consumeLoginChallenge("not-a-real-token")).toBeNull();
+    expect(await readLoginChallenge("not-a-real-token")).toBeNull();
+    expect(await consumeLoginChallenge("not-a-real-token")).toBe(false);
+  });
+
+  /**
+   * D-073: reading and spending are separate, so a mistyped code leaves the
+   * ticket alive and the user stays on the code screen.
+   */
+  it("survives a reading that is not followed by a spend", async () => {
+    const user = await createUser();
+    const rawToken = await createLoginChallenge(user.id);
+
+    // Three failed attempts in a row: the ticket is untouched each time
+    expect(await readLoginChallenge(rawToken)).toBe(user.id);
+    expect(await readLoginChallenge(rawToken)).toBe(user.id);
+    expect(await readLoginChallenge(rawToken)).toBe(user.id);
+
+    // The eventual success still works
+    expect(await consumeLoginChallenge(rawToken)).toBe(true);
   });
 
   it("rejects an expired ticket", async () => {
@@ -175,7 +197,8 @@ describe("the login challenge ticket", () => {
       .set({ expiresAt: new Date(Date.now() - 1_000) })
       .where(eq(loginChallenges.userId, user.id));
 
-    expect(await consumeLoginChallenge(rawToken)).toBeNull();
+    expect(await readLoginChallenge(rawToken)).toBeNull();
+    expect(await consumeLoginChallenge(rawToken)).toBe(false);
   });
 });
 

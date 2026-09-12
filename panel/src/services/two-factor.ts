@@ -170,13 +170,18 @@ export async function createLoginChallenge(userId: string): Promise<string> {
 }
 
 /**
- * Redeems the ticket. Returns the user id it was issued to, or null when the
- * ticket is unknown, expired, already spent, or was re-issued for someone else
- * (the caller may only redeem the one the browser holds).
+ * Reads the ticket without spending it. Returns the user id it was issued to,
+ * or null when the ticket is unknown, expired or already spent.
+ *
+ * Reading and spending are separate on purpose (D-073). They used to be one
+ * call made before the code was checked, so a single mistyped digit burned the
+ * ticket and sent the user back to the password screen — and the five-try
+ * `login_2fa` limit could never be reached, because there was never a second
+ * try to count.
  */
-export async function consumeLoginChallenge(rawToken: string): Promise<string | null> {
+export async function readLoginChallenge(rawToken: string): Promise<string | null> {
   const rows = await db
-    .select({ id: loginChallenges.id, userId: loginChallenges.userId })
+    .select({ userId: loginChallenges.userId })
     .from(loginChallenges)
     .where(
       and(
@@ -186,15 +191,29 @@ export async function consumeLoginChallenge(rawToken: string): Promise<string | 
       ),
     )
     .limit(1);
-  const row = rows[0];
-  if (!row) return null;
 
-  await db
+  return rows[0]?.userId ?? null;
+}
+
+/**
+ * Spends the ticket, once the code has actually passed. The `consumed_at is
+ * null` condition is part of the UPDATE, so two racing requests cannot both
+ * win: only the one that changed a row gets `true`.
+ */
+export async function consumeLoginChallenge(rawToken: string): Promise<boolean> {
+  const consumed = await db
     .update(loginChallenges)
     .set({ consumedAt: new Date(), updatedAt: new Date() })
-    .where(eq(loginChallenges.id, row.id));
+    .where(
+      and(
+        eq(loginChallenges.tokenHash, hashToken(rawToken, env().SESSION_SECRET)),
+        isNull(loginChallenges.consumedAt),
+        gt(loginChallenges.expiresAt, new Date()),
+      ),
+    )
+    .returning({ id: loginChallenges.id });
 
-  return row.userId;
+  return consumed.length > 0;
 }
 
 /** True when the code matches the user's stored secret. */

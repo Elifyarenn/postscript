@@ -14,6 +14,7 @@ import { hashToken, randomToken, sha256Hex } from "@/lib/crypto";
 import { env } from "@/lib/env";
 import { badRequest, conflict, forbidden, notFound, rateLimited, unauthorized } from "@/lib/errors";
 import { checkPasswordPolicy, hashPassword, isPwned, verifyPassword } from "@/lib/password";
+import { revokeAllSessions } from "@/lib/auth/session";
 import { calculateAge } from "@/lib/age";
 import { clearAttempts, consumeAttempt, currentAttemptCount, failureDelayMs } from "@/lib/rate-limit";
 import { writeAudit } from "@/lib/audit";
@@ -111,12 +112,7 @@ export async function register(
   const limit = await consumeAttempt("register_ip", meta.ip ?? "unknown");
   if (!limit.allowed) throw rateLimited("Çok fazla kayıt denemesi yapıldı, 10 dakika bekleyin.");
 
-  const policy = checkPasswordPolicy(input.password);
-  if (!policy.ok) throw badRequest(policy.reason, { password: [policy.reason] });
-  if (await isPwned(input.password)) {
-    const message = "Bu şifre bilinen veri sızıntılarında görüldü, başka bir şifre seçin.";
-    throw badRequest(message, { password: [message] });
-  }
+  await assertPasswordAcceptable(input.password);
 
   const email = normaliseEmail(input.email);
   const existing = await db
@@ -252,10 +248,15 @@ async function consumeEmailToken(
   if (row.usedAt) throw badRequest("Bu bağlantı daha önce kullanılmış.");
   if (row.expiresAt.getTime() <= Date.now()) throw badRequest("Bağlantının süresi dolmuş.");
 
-  await db
+  // Spent atomically, like `consumePendingRegistration`: the `used_at is null`
+  // condition belongs in the UPDATE, or two clicks on the same reset link could
+  // both pass the check above and both proceed (D-073).
+  const consumed = await db
     .update(emailTokens)
     .set({ usedAt: new Date(), updatedAt: new Date() })
-    .where(eq(emailTokens.id, row.id));
+    .where(and(eq(emailTokens.id, row.id), isNull(emailTokens.usedAt)))
+    .returning({ id: emailTokens.id });
+  if (consumed.length === 0) throw badRequest("Bu bağlantı daha önce kullanılmış.");
 
   return row.userId;
 }
@@ -472,8 +473,9 @@ export async function requestEmailChange(
 
 /**
  * Completes the swap after the owner follows the link sent to the new address.
- * The pending address becomes the live one, is marked verified, and every other
- * session is dropped so the change is felt everywhere at once.
+ * The pending address becomes the live one, is marked verified, and every
+ * session is dropped so the change is felt everywhere at once — the revocation
+ * belongs to this rule, so it lives here and not at the action (D-073).
  */
 export async function confirmEmailChange(token: string, meta: RequestMeta): Promise<User> {
   const userId = await consumeEmailToken(token, "change_email");
@@ -494,6 +496,8 @@ export async function confirmEmailChange(token: string, meta: RequestMeta): Prom
     .where(eq(users.id, userId))
     .returning();
 
+  await revokeAllSessions(userId);
+
   await writeAudit({
     actorId: userId,
     action: "user.email_changed",
@@ -512,6 +516,17 @@ export async function confirmEmailChange(token: string, meta: RequestMeta): Prom
 /* ------------------------------------------------------------------ */
 
 export type LoginOutcome = { user: User };
+
+/**
+ * A hash to check a password against when the account does not exist, so the
+ * refusal costs the same as a real one. Built once per process from a random
+ * string: nobody can ever supply the password that matches it.
+ */
+let decoyHash: Promise<string> | null = null;
+function decoyPasswordHash(): Promise<string> {
+  decoyHash ??= hashPassword(randomToken(32));
+  return decoyHash;
+}
 
 /**
  * Verifies credentials only. Creating the session cookie is the caller's job,
@@ -546,8 +561,15 @@ export async function verifyCredentials(
     .limit(1);
   const user = rows[0];
 
-  // Same generic message whether the account exists or the password is wrong
-  if (!user) throw unauthorized("E-posta veya şifre hatalı.");
+  // The message was already the same either way, but the timing was not: with
+  // no account there was nothing to hash, so the refusal came back in a few
+  // milliseconds instead of the ~100ms argon2 takes. Hashing against a decoy
+  // costs the same as the real thing, which is what makes the two look alike
+  // from outside (D-073).
+  if (!user) {
+    await verifyPassword(await decoyPasswordHash(), parsed.data.password);
+    throw unauthorized("E-posta veya şifre hatalı.");
+  }
   if (!(await verifyPassword(user.passwordHash, parsed.data.password))) {
     throw unauthorized("E-posta veya şifre hatalı.");
   }
@@ -590,15 +612,20 @@ export async function requestPasswordReset(rawInput: unknown, meta: RequestMeta)
 }
 
 /**
- * Sets the new password. Every active session is dropped afterwards, which is
- * the point of a reset: whoever held the old session loses it.
+ * Sets the new password and drops every active session, which is the point of
+ * a reset: whoever held the old session loses it.
+ *
+ * The revocation lives here rather than at the action (D-073). The doc comment
+ * always claimed it, but the call sat in `resetPasswordAction`, so a second
+ * caller would have quietly reset a password and left the old sessions alive —
+ * exactly the drift CLAUDE.md's "business rule in the service, in one place"
+ * rule is there to prevent.
  */
 export async function resetPassword(rawInput: unknown, meta: RequestMeta): Promise<string> {
   const parsed = passwordResetSchema.safeParse(rawInput);
   if (!parsed.success) throw badRequest("Bağlantı veya şifre geçersiz.");
 
-  const policy = checkPasswordPolicy(parsed.data.password);
-  if (!policy.ok) throw badRequest(policy.reason, { password: [policy.reason] });
+  await assertPasswordAcceptable(parsed.data.password);
 
   const userId = await consumeEmailToken(parsed.data.token, "reset_password");
   const passwordHash = await hashPassword(parsed.data.password);
@@ -607,6 +634,8 @@ export async function resetPassword(rawInput: unknown, meta: RequestMeta): Promi
     .update(users)
     .set({ passwordHash, updatedAt: new Date() })
     .where(eq(users.id, userId));
+
+  await revokeAllSessions(userId);
 
   await writeAudit({
     actorId: userId,
@@ -617,6 +646,23 @@ export async function resetPassword(rawInput: unknown, meta: RequestMeta): Promi
   });
 
   return userId;
+}
+
+/**
+ * The full password bar, in one place: the policy plus the breach list.
+ *
+ * Registration checked both; the reset and the in-panel change only checked the
+ * policy, so a password refused at sign-up was accepted a minute later through
+ * "forgot my password" (D-073).
+ */
+async function assertPasswordAcceptable(password: string): Promise<void> {
+  const policy = checkPasswordPolicy(password);
+  if (!policy.ok) throw badRequest(policy.reason, { password: [policy.reason] });
+
+  if (await isPwned(password)) {
+    const message = "Bu şifre bilinen veri sızıntılarında görüldü, başka bir şifre seçin.";
+    throw badRequest(message, { password: [message] });
+  }
 }
 
 /** Changing a password from inside the panel; requires the current one. */
@@ -634,8 +680,7 @@ export async function changePassword(
     throw badRequest("Mevcut şifreniz hatalı.", { currentPassword: ["Mevcut şifreniz hatalı."] });
   }
 
-  const policy = checkPasswordPolicy(newPassword);
-  if (!policy.ok) throw badRequest(policy.reason, { password: [policy.reason] });
+  await assertPasswordAcceptable(newPassword);
 
   await db
     .update(users)
