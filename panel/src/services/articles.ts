@@ -623,6 +623,30 @@ export type TransitionOptions = {
 };
 
 /**
+ * The status names the state machine knows. Parsed here rather than cast at the
+ * action, so an unknown name is a 400 that says so instead of reaching the
+ * graph lookup and failing as an opaque 403/409 (D-070).
+ */
+const articleStatusSchema = z.enum([
+  "draft",
+  "in_review",
+  "pending_admin_approval",
+  "ready_for_publishing",
+  "revision_requested",
+  "accepted",
+  "awaiting_rights",
+  "scheduled",
+  "published",
+  "archived",
+  "withdrawn",
+]);
+
+/** A scheduled time must be a real instant; `new Date("abc")` must not reach the DB. */
+const scheduledAtSchema = z
+  .date()
+  .refine((value) => Number.isFinite(value.getTime()), "Geçerli bir tarih girin");
+
+/**
  * The only way an article's status changes. Refuses with 403 for an actor the
  * staged chain does not allow to pull the lever, and 409 for any edge the
  * state machine does not allow plus the guards it attaches.
@@ -630,10 +654,18 @@ export type TransitionOptions = {
 export async function transitionArticle(
   actor: Actor,
   articleId: string,
-  to: ArticleStatus,
+  rawTo: unknown,
   meta: RequestMeta,
   options: TransitionOptions = {},
 ): Promise<Article> {
+  const parsedTo = articleStatusSchema.safeParse(rawTo);
+  if (!parsedTo.success) throw badRequest("Geçersiz makale durumu.");
+  const to: ArticleStatus = parsedTo.data;
+
+  if (options.scheduledAt != null && !scheduledAtSchema.safeParse(options.scheduledAt).success) {
+    throw badRequest("Yayın zamanı geçersiz.", { scheduledAt: ["Geçerli bir tarih girin."] });
+  }
+
   const article = await findArticleById(articleId);
 
   // Who may trigger this edge (author submitting their draft, the category

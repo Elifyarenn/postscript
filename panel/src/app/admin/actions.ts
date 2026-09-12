@@ -53,7 +53,6 @@ import {
   type ActionState,
 } from "@/lib/action";
 import { badRequest } from "@/lib/errors";
-import type { Role } from "@/db/schema";
 
 /* ------------------------------------------------------------------ */
 /* Users                                                               */
@@ -87,10 +86,11 @@ export async function changeRoleAction(
     const meta = await requestMetadata();
 
     const targetId = text(formData, "userId");
+    // The role goes to the service unparsed; `changeRole` validates it (D-070)
     await changeRole(
       { ...user },
       targetId,
-      text(formData, "role") as Role,
+      text(formData, "role"),
       meta,
       optionalText(formData, "note") ?? undefined,
     );

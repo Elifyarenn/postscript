@@ -1,0 +1,85 @@
+$ next dev -p 3001
+⚠ ./src/instrumentation.ts:27:38
+Warning: A Node.js API is used (process.cwd at line: 27) which is not supported in the Edge Runtime.
+    Learn more: https://nextjs.org/docs/api-reference/edge-runtime
+  [90m25 |[0m
+  [90m26 |[0m   [36mconst[0m connection = [36mawait[0m createConnection(url);
+[33m[1m>[0m [90m27 |[0m   [36mawait[0m connection.migrate(path.join(process.cwd(), [32m"drizzle"[0m));
+  [90m   |[0m                                      [33m[1m^^^^^^^^^^^[0m
+  [90m28 |[0m   setDatabase(connection.db, connection.close);
+  [90m29 |[0m
+  [90m30 |[0m   console.log([32m`[postscript] in-process PostgreSQL ready ([0m${url[32m})`[0m);
+
+Ecmascript file had an error
+
+
+⚠ ./src/instrumentation.ts:14:1
+Warning: A Node.js module is loaded ('node:path' at line 14) which is not supported in the Edge Runtime.
+    Learn More: https://nextjs.org/docs/messages/node-module-in-edge-runtime
+  [90m12 |[0m [90m * `pnpm db:migrate` (or the seed), as it always was.[0m
+  [90m13 |[0m [90m */[0m
+[33m[1m>[0m [90m14 |[0m [36mimport[0m path [36mfrom[0m [32m"node:path"[0m;
+  [90m   |[0m [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m15 |[0m
+  [90m16 |[0m [36mexport[0m [36masync[0m [36mfunction[0m register(): [33mPromise[0m<[36mvoid[0m> {
+  [90m17 |[0m   [36mconst[0m url = process.env.[33mDATABASE_URL[0m;
+
+Ecmascript file had an error
+
+
+⚠ ./src/instrumentation.ts:27:38
+Warning: A Node.js API is used (process.cwd at line: 27) which is not supported in the Edge Runtime.
+    Learn more: https://nextjs.org/docs/api-reference/edge-runtime
+  [90m25 |[0m
+  [90m26 |[0m   [36mconst[0m connection = [36mawait[0m createConnection(url);
+[33m[1m>[0m [90m27 |[0m   [36mawait[0m connection.migrate(path.join(process.cwd(), [32m"drizzle"[0m));
+  [90m   |[0m                                      [33m[1m^^^^^^^^^^^[0m
+  [90m28 |[0m   setDatabase(connection.db, connection.close);
+  [90m29 |[0m
+  [90m30 |[0m   console.log([32m`[postscript] in-process PostgreSQL ready ([0m${url[32m})`[0m);
+
+Ecmascript file had an error
+
+
+⚠ ./src/instrumentation.ts:14:1
+Warning: A Node.js module is loaded ('node:path' at line 14) which is not supported in the Edge Runtime.
+    Learn More: https://nextjs.org/docs/messages/node-module-in-edge-runtime
+  [90m12 |[0m [90m * `pnpm db:migrate` (or the seed), as it always was.[0m
+  [90m13 |[0m [90m */[0m
+[33m[1m>[0m [90m14 |[0m [36mimport[0m path [36mfrom[0m [32m"node:path"[0m;
+  [90m   |[0m [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m15 |[0m
+  [90m16 |[0m [36mexport[0m [36masync[0m [36mfunction[0m register(): [33mPromise[0m<[36mvoid[0m> {
+  [90m17 |[0m   [36mconst[0m url = process.env.[33mDATABASE_URL[0m;
+
+Ecmascript file had an error
+
+
+⚠ ./src/instrumentation.ts:27:38
+Warning: A Node.js API is used (process.cwd at line: 27) which is not supported in the Edge Runtime.
+    Learn more: https://nextjs.org/docs/api-reference/edge-runtime
+  [90m25 |[0m
+  [90m26 |[0m   [36mconst[0m connection = [36mawait[0m createConnection(url);
+[33m[1m>[0m [90m27 |[0m   [36mawait[0m connection.migrate(path.join(process.cwd(), [32m"drizzle"[0m));
+  [90m   |[0m                                      [33m[1m^^^^^^^^^^^[0m
+  [90m28 |[0m   setDatabase(connection.db, connection.close);
+  [90m29 |[0m
+  [90m30 |[0m   console.log([32m`[postscript] in-process PostgreSQL ready ([0m${url[32m})`[0m);
+
+Ecmascript file had an error
+
+
+⚠ ./src/instrumentation.ts:14:1
+Warning: A Node.js module is loaded ('node:path' at line 14) which is not supported in the Edge Runtime.
+    Learn More: https://nextjs.org/docs/messages/node-module-in-edge-runtime
+  [90m12 |[0m [90m * `pnpm db:migrate` (or the seed), as it always was.[0m
+  [90m13 |[0m [90m */[0m
+[33m[1m>[0m [90m14 |[0m [36mimport[0m path [36mfrom[0m [32m"node:path"[0m;
+  [90m   |[0m [33m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m15 |[0m
+  [90m16 |[0m [36mexport[0m [36masync[0m [36mfunction[0m register(): [33mPromise[0m<[36mvoid[0m> {
+  [90m17 |[0m   [36mconst[0m url = process.env.[33mDATABASE_URL[0m;
+
+Ecmascript file had an error
+
+

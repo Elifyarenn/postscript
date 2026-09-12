@@ -6,8 +6,18 @@
  * so a mistake here cannot quietly rewrite history.
  */
 import "server-only";
-import { db } from "@/db/client";
+import { db, type Database } from "@/db/client";
 import { auditLog, roleChanges, type Role } from "@/db/schema";
+
+/**
+ * Either the ambient connection or an open transaction.
+ *
+ * A role change and its `role_changes` row must land together or not at all
+ * (CLAUDE.md security rules), which means the caller has to be able to hand its
+ * transaction down. Everything else keeps calling these without an executor and
+ * writes on the ambient connection as before.
+ */
+export type Executor = Database | Parameters<Parameters<Database["transaction"]>[0]>[0];
 
 export type AuditEntry = {
   actorId: string | null;
@@ -48,8 +58,8 @@ export function redact(value: unknown): unknown {
   return value;
 }
 
-export async function writeAudit(entry: AuditEntry): Promise<void> {
-  await db.insert(auditLog).values({
+export async function writeAudit(entry: AuditEntry, executor: Executor = db): Promise<void> {
+  await executor.insert(auditLog).values({
     actorId: entry.actorId,
     action: entry.action,
     entityType: entry.entityType,
@@ -63,16 +73,23 @@ export async function writeAudit(entry: AuditEntry): Promise<void> {
 /**
  * A role change is only legal together with its `role_changes` row, so the two
  * always happen in the same call.
+ *
+ * Pass the caller's transaction as `executor`: the `users.role` write and this
+ * record must commit together, or a crash between them would leave a changed
+ * role with no trace of who changed it.
  */
-export async function recordRoleChange(input: {
-  userId: string;
-  oldRole: Role;
-  newRole: Role;
-  changedBy: string | null;
-  note?: string | null;
-  ip?: string | null;
-}): Promise<void> {
-  await db.insert(roleChanges).values({
+export async function recordRoleChange(
+  input: {
+    userId: string;
+    oldRole: Role;
+    newRole: Role;
+    changedBy: string | null;
+    note?: string | null;
+    ip?: string | null;
+  },
+  executor: Executor = db,
+): Promise<void> {
+  await executor.insert(roleChanges).values({
     userId: input.userId,
     oldRole: input.oldRole,
     newRole: input.newRole,
@@ -80,13 +97,16 @@ export async function recordRoleChange(input: {
     note: input.note ?? null,
   });
 
-  await writeAudit({
-    actorId: input.changedBy,
-    action: "user.role_changed",
-    entityType: "users",
-    entityId: input.userId,
-    before: { role: input.oldRole },
-    after: { role: input.newRole },
-    ip: input.ip ?? null,
-  });
+  await writeAudit(
+    {
+      actorId: input.changedBy,
+      action: "user.role_changed",
+      entityType: "users",
+      entityId: input.userId,
+      before: { role: input.oldRole },
+      after: { role: input.newRole },
+      ip: input.ip ?? null,
+    },
+    executor,
+  );
 }

@@ -70,6 +70,17 @@ describe("eligibility", () => {
     expect(result.eligible).toBe(false);
     expect(result.problems).toEqual(["email_not_verified", "birth_date_missing"]);
   });
+
+  // D-070: registration collects KVKK consent again, so the CLAUDE.md
+  // prerequisite is enforced once more (D-050 had dropped it).
+  it("refuses an account with no KVKK consent", async () => {
+    const candidate = await createUser({ kvkkConsent: false });
+
+    const result = checkWriterEligibility(candidate);
+    expect(result.eligible).toBe(false);
+    expect(result.problems).toContain("kvkk_not_accepted");
+    expect(result.messages).toContain("KVKK aydınlatma metni onaylanmamış.");
+  });
 });
 
 describe("promoteToWriter", () => {
@@ -187,6 +198,38 @@ describe("suspension and demotion", () => {
     const admin = await createUser({ role: "admin" });
     const error = await captureError(changeRole(actorOf(admin), admin.id, "user", noMeta));
     expect(error.status).toBe(400);
+  });
+
+  // D-070: an unknown role used to survive the cast, clear the target's editor
+  // areas, and only then fail at the UPDATE — leaving the areas gone.
+  it("refuses an unknown role without touching the target", async () => {
+    const admin = await createUser({ role: "admin" });
+    const editor = await createUser({ role: "editor" });
+
+    const error = await captureError(
+      changeRole(actorOf(admin), editor.id, "superadmin", noMeta),
+    );
+    expect(error.status).toBe(400);
+
+    const unchanged = await reloadUser(editor.id);
+    expect(unchanged.role).toBe("editor");
+
+    const changes = await db.select().from(roleChanges).where(eq(roleChanges.userId, editor.id));
+    expect(changes).toHaveLength(0);
+  });
+
+  it("writes the role and its role_changes row as one unit", async () => {
+    const admin = await createUser({ role: "admin" });
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+
+    await changeRole(actorOf(admin), writer.id, "editor", noMeta, "Terfi");
+
+    const updated = await reloadUser(writer.id);
+    const changes = await db.select().from(roleChanges).where(eq(roleChanges.userId, writer.id));
+
+    expect(updated.role).toBe("editor");
+    expect(changes).toHaveLength(1);
+    expect(changes[0]).toMatchObject({ oldRole: "writer", newRole: "editor", note: "Terfi" });
   });
 
   it("requires a reason when banning", async () => {

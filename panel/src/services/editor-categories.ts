@@ -15,7 +15,7 @@ import "server-only";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { editorCategories, users, writerAreas, type EditorCategory } from "@/db/schema";
-import { writeAudit } from "@/lib/audit";
+import { writeAudit, type Executor } from "@/lib/audit";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { canManageUsers, type Actor, type EditorAssignment } from "@/lib/auth/rbac";
 import type { RequestMeta } from "./auth";
@@ -289,6 +289,9 @@ export async function areaExists(areaId: string): Promise<boolean> {
 }
 
 /** Deletes an editor's area rows; used when an editor loses the role. */
-export async function clearEditorAreas(editorId: string): Promise<void> {
-  await db.delete(editorCategories).where(eq(editorCategories.editorId, editorId));
+export async function clearEditorAreas(
+  editorId: string,
+  executor: Executor = db,
+): Promise<void> {
+  await executor.delete(editorCategories).where(eq(editorCategories.editorId, editorId));
 }

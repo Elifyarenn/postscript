@@ -30,12 +30,14 @@ export type EligibilityProblem =
   | "email_not_verified"
   | "birth_date_missing"
   | "under_age"
+  | "kvkk_not_accepted"
   | "banned";
 
 const PROBLEM_LABELS: Record<EligibilityProblem, string> = {
   email_not_verified: "E-posta adresi doğrulanmamış.",
   birth_date_missing: "Doğum tarihi girilmemiş.",
   under_age: `Kullanıcı ${MINIMUM_WRITER_AGE} yaşından küçük.`,
+  kvkk_not_accepted: "KVKK aydınlatma metni onaylanmamış.",
   banned: "Kullanıcı yasaklı.",
 };
 
@@ -49,8 +51,12 @@ export type Eligibility = {
 /**
  * The preconditions that can be judged from the user row alone, in one place so
  * the screen and the mutation cannot drift apart. `at` is injectable so the age
- * rule is testable. KVKK consent and a published contract are not required for
- * now: they will be handled outside the panel later (D-050).
+ * rule is testable.
+ *
+ * KVKK consent is back (D-070). D-050 dropped it because registration had
+ * stopped collecting it; since D-065/D-067 every account is born with
+ * `kvkk_consent_at` set, so the CLAUDE.md prerequisite can be enforced again.
+ * A published contract is still not required — that half of D-050 stands.
  */
 export function checkWriterEligibility(user: User, at: Date = new Date()): Eligibility {
   const problems: EligibilityProblem[] = [];
@@ -62,6 +68,8 @@ export function checkWriterEligibility(user: User, at: Date = new Date()): Eligi
   } else if (!isAdult(user.birthDate, at)) {
     problems.push("under_age");
   }
+
+  if (!user.kvkkConsentAt) problems.push("kvkk_not_accepted");
 
   if (user.isBanned) problems.push("banned");
 
@@ -167,38 +175,60 @@ export async function promoteToWriter(
     });
   }
 
-  const [updated] = await db
-    .update(users)
-    .set({ role: "writer", writerStatus: "active", updatedAt: new Date() })
-    .where(eq(users.id, target.id))
-    .returning();
+  // The role and its `role_changes` row commit together or not at all (D-070)
+  const updated = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(users)
+      .set({ role: "writer", writerStatus: "active", updatedAt: new Date() })
+      .where(eq(users.id, target.id))
+      .returning();
 
-  await recordRoleChange({
-    userId: target.id,
-    oldRole: target.role,
-    newRole: "writer",
-    changedBy: actor.id,
-    note: note ?? null,
-    ip: meta.ip,
+    await recordRoleChange(
+      {
+        userId: target.id,
+        oldRole: target.role,
+        newRole: "writer",
+        changedBy: actor.id,
+        note: note ?? null,
+        ip: meta.ip,
+      },
+      tx,
+    );
+
+    return row!;
   });
 
   const url = `${env().APP_URL}/writer`;
   const message = templates.promotedToWriter({ displayName: target.displayName, url });
   await sendMail({ to: target.email, subject: message.subject, text: message.text });
 
-  return updated!;
+  return updated;
 }
+
+/**
+ * The role names the database accepts. Validated here rather than only at the
+ * action, so no caller can reach the write path with an unchecked cast — an
+ * unknown name used to survive as far as the UPDATE and fail there, after the
+ * editor-area cleanup had already committed (D-070).
+ */
+const roleSchema = z.enum(["user", "writer", "editor", "admin"]);
 
 /** Any role change other than the writer promotion, including making an admin. */
 export async function changeRole(
   actor: Actor,
   targetUserId: string,
-  newRole: Role,
+  rawRole: unknown,
   meta: RequestMeta,
   note?: string,
 ): Promise<User> {
   if (!canManageUsers(actor)) throw forbidden("Rol değiştirme yalnızca admin yetkisidir.");
   if (actor.id === targetUserId) throw badRequest("Kendi rolünüzü değiştiremezsiniz.");
+
+  const parsedRole = roleSchema.safeParse(rawRole);
+  if (!parsedRole.success) {
+    throw badRequest("Geçersiz rol.", { role: ["Geçerli bir rol seçin."] });
+  }
+  const newRole: Role = parsedRole.data;
 
   const target = await findUserById(targetUserId);
   if (target.role === newRole) throw conflict("Kullanıcı zaten bu role sahip.");
@@ -220,37 +250,47 @@ export async function changeRole(
         ? (target.writerStatus ?? "active")
         : target.writerStatus;
 
-  // Leaving the editor duty drops its scope: area assignments and the main
-  // editor flag belong to editors only (D-059). The editor_status freeze is
-  // harmless to keep — it is only read while the role is `editor`.
-  if (newRole !== "editor") {
-    await clearEditorAreas(target.id);
-  }
+  // The area cleanup, the role and its `role_changes` row are one unit (D-070).
+  // The cleanup used to commit on its own, so a failed UPDATE left an editor
+  // stripped of their areas but still holding the role.
+  const updated = await db.transaction(async (tx) => {
+    // Leaving the editor duty drops its scope: area assignments and the main
+    // editor flag belong to editors only (D-059). The editor_status freeze is
+    // harmless to keep — it is only read while the role is `editor`.
+    if (newRole !== "editor") {
+      await clearEditorAreas(target.id, tx);
+    }
 
-  const [updated] = await db
-    .update(users)
-    .set({
-      role: newRole,
-      writerStatus,
-      isMainEditor: newRole === "editor" ? target.isMainEditor : false,
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, target.id))
-    .returning();
+    const [row] = await tx
+      .update(users)
+      .set({
+        role: newRole,
+        writerStatus,
+        isMainEditor: newRole === "editor" ? target.isMainEditor : false,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, target.id))
+      .returning();
 
-  await recordRoleChange({
-    userId: target.id,
-    oldRole: target.role,
-    newRole,
-    changedBy: actor.id,
-    note: note ?? null,
-    ip: meta.ip,
+    await recordRoleChange(
+      {
+        userId: target.id,
+        oldRole: target.role,
+        newRole,
+        changedBy: actor.id,
+        note: note ?? null,
+        ip: meta.ip,
+      },
+      tx,
+    );
+
+    return row!;
   });
 
   // Dropping privileges must take effect now, not when the session expires
   if (newRole === "user") await revokeAllSessions(target.id);
 
-  return updated!;
+  return updated;
 }
 
 /** Suspends a writer: the panel closes, signed rights grants stay untouched (§6). */

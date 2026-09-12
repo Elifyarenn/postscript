@@ -188,6 +188,31 @@ describe("acceptance opens the work approval", () => {
   });
 });
 
+describe("transition input validation (D-070)", () => {
+  it("answers 400 for a status the state machine does not know", async () => {
+    const { admin, article } = await scenario();
+
+    const error = await captureError(transitionArticle(admin, article.id, "publish_now", noMeta));
+
+    expect(error.status).toBe(400);
+
+    const unchanged = await db.select().from(articles).where(eq(articles.id, article.id));
+    expect(unchanged[0]!.status).toBe("draft");
+  });
+
+  it("answers 400 for an unparsable scheduled time rather than a database error", async () => {
+    const { admin, article } = await scenario();
+
+    const error = await captureError(
+      transitionArticle(admin, article.id, "in_review", noMeta, {
+        scheduledAt: new Date("not-a-date"),
+      }),
+    );
+
+    expect(error.status).toBe(400);
+  });
+});
+
 describe("no publication without an approval", () => {
   it("refuses to schedule while the approval is pending, with 409", async () => {
     const { admin, editor, article } = await scenario();

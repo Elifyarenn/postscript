@@ -1425,3 +1425,41 @@ kütüphanesi üzerinden girer (lisans seçimi zorunlu olan mevcut akış).
 
 
 
+## D-070 — Rol değişikliği tek transaction; roller ve durumlar serviste zod ile doğrulanır
+
+**Karar:** Kod gözden geçirmesinde çıkan üç bağlantılı sorun birlikte kapatıldı.
+
+- **Atomiklik:** `promoteToWriter` ve `changeRole` artık `db.transaction`
+  içinde çalışır. `users.role` güncellemesi, `changeRole`'deki
+  `clearEditorAreas` temizliği ve `role_changes` kaydı (ve onun `audit_log`
+  satırı) aynı işlemde commit olur. `writeAudit` ve `recordRoleChange` isteğe
+  bağlı bir `Executor` parametresi alır (`lib/audit.ts`); veren çağıran kendi
+  transaction'ını aşağı geçirir, vermeyen eskisi gibi ortam bağlantısına yazar.
+  `clearEditorAreas` de aynı parametreyi alır.
+- **Rol doğrulaması:** `changeRole` rolü `unknown` olarak alır ve içeride
+  `z.enum` ile doğrular. Eskiden action katmanında `as Role` cast'i vardı;
+  `role=superadmin` gibi bir gönderim `clearEditorAreas`'i çalıştırıp commit
+  ediyor, sonra Postgres enum'unda patlıyordu — editörün alan atamaları silinmiş,
+  rolü değişmemiş halde kalıyordu.
+- **Durum doğrulaması:** `transitionArticle` hedef durumu `unknown` alır ve
+  `z.enum` ile doğrular; ayrıca `scheduledAt` için `Invalid Date` kontrolü
+  yapar (`new Date("abc")` eskiden veritabanına kadar gidip 500 üretiyordu).
+  `editor/actions.ts`'teki `as ArticleStatus` cast'i kaldırıldı.
+- **KVKK ön koşulu geri geldi:** `checkWriterEligibility` artık
+  `kvkk_consent_at` arar. D-050 bu şartı, kayıt akışı KVKK onayı toplamayı
+  bıraktığı için kaldırmıştı; D-065/D-067 ile kayıt onayı yeniden topluyor
+  (`registerSchema.kvkkConsent`, doğrulamada `kvkkConsentAt` yazılıyor) ve
+  seed/`create-admin` de dolduruyor. D-050'nin "yayınlanmış sözleşme aranmaz"
+  yarısı yürürlükte kalır.
+
+**Gerekçe:** CLAUDE.md'nin ihlal edilemez kuralları "Rol değişikliği
+`role_changes` kaydı olmadan gerçekleşmez", "`writer` terfisi için … KVKK
+onayı" ve "Tüm girdiler zod ile doğrulanır" diyor. Üçü de kodda karşılıksızdı:
+iki ayrı yazma arasında süreç ölürse denetim izi olmadan rol değişebiliyor,
+KVKK hiç kontrol edilmiyor, roller ve durumlar yalnızca TypeScript cast'iyle
+geçiyordu. Doğrulamayı action yerine servise koymak CLAUDE.md'nin "İş kuralı
+servis katmanında, tek yerde" kuralını da izler: ikinci bir çağıran
+doğrulamayı unutamaz.
+
+---
+

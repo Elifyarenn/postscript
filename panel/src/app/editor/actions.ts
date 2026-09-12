@@ -39,7 +39,7 @@ import {
   type ActionState,
 } from "@/lib/action";
 import { badRequest } from "@/lib/errors";
-import type { ArticleStatus, LicenseType } from "@/db/schema";
+import type { LicenseType } from "@/db/schema";
 
 /* ------------------------------------------------------------------ */
 /* Articles                                                            */
@@ -124,7 +124,8 @@ export async function transitionArticleAction(
     const meta = await requestMetadata();
 
     const articleId = text(formData, "articleId");
-    const target = text(formData, "status") as ArticleStatus;
+    // The target status goes to the service unparsed; it validates it (D-070)
+    const target = text(formData, "status");
     const scheduledAtRaw = optionalText(formData, "scheduledAt");
 
     await transitionArticle({ ...user }, articleId, target, meta, {
