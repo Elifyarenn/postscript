@@ -314,3 +314,49 @@ describe("self-referential chat integrity", () => {
     expect(replyItem.quotedBody).toBeNull(); // quoted row no longer visible
   });
 });
+/**
+ * D-072: the chat endpoint used `getAuthContext`, which only proves a session
+ * exists. The service asked nothing at all, so a banned account kept posting.
+ */
+describe("a banned or unverified account cannot post (D-072)", () => {
+  it("refuses a chat message from a banned account", async () => {
+    const banned = await createUser({ isBanned: true });
+
+    const error = await captureError(addChatMessage(actorOf(banned), { body: "yasaklı" }, noMeta));
+    expect(error.status).toBe(403);
+
+    const rows = await db.select().from(communityMessages);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("refuses a chat message from an unverified account", async () => {
+    const unverified = await createUser({ emailVerified: false });
+
+    const error = await captureError(
+      addChatMessage(actorOf(unverified), { body: "doğrulanmamış" }, noMeta),
+    );
+    expect(error.status).toBe(403);
+  });
+
+  it("refuses a comment from a banned account", async () => {
+    const article = await publishedArticle();
+    const banned = await createUser({ isBanned: true });
+
+    const error = await captureError(
+      addCommunityComment(actorOf(banned), { articleId: article.id, body: "yasaklı" }, noMeta),
+    );
+    expect(error.status).toBe(403);
+
+    expect(await listCommentsForArticle(article.id)).toHaveLength(0);
+  });
+
+  it("still lets an operational reader post", async () => {
+    // The chat is passive by default (D-056), so open it first
+    const admin = await createUser({ role: "admin" });
+    await setChatMode(actorOf(admin), { mode: "enabled" }, noMeta);
+
+    const reader = await createUser();
+    const msg = await addChatMessage(actorOf(reader), { body: "merhaba" }, noMeta);
+    expect(msg.body).toBe("merhaba");
+  });
+});

@@ -7,14 +7,14 @@
 import { NextResponse } from "next/server";
 import { addChatMessage, getChatMessage, listChatMessagesAfter } from "@/services/community";
 import { errorJson } from "@/lib/api";
-import { getAuthContext, requestMetadata } from "@/lib/auth/session";
+import { requireAuth, requestMetadata } from "@/lib/auth/session";
 import { assertCsrf } from "@/lib/csrf";
-import { unauthorized } from "@/lib/errors";
 
 export async function GET(request: Request) {
   try {
-    const context = await getAuthContext();
-    if (!context) throw unauthorized();
+    // `requireAuth`, not `getAuthContext`: a banned or unverified account gets
+    // nothing here either (D-072)
+    await requireAuth();
 
     const { searchParams } = new URL(request.url);
     const afterParam = searchParams.get("after");
@@ -42,8 +42,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     await assertCsrf(request.headers.get("x-csrf-token"));
-    const context = await getAuthContext();
-    if (!context) throw unauthorized();
+    const context = await requireAuth();
     const meta = await requestMetadata();
 
     const body = await request.json().catch(() => null);

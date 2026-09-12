@@ -121,6 +121,21 @@ async function mask(text: string): Promise<string> {
   return maskBannedWords(text, words);
 }
 
+/**
+ * Who may put text into the community: anyone whose account is operational.
+ *
+ * Checked here and not only at the caller (D-072). The comment action already
+ * went through `requireAuth`, but the chat endpoint did not, so a banned
+ * account could keep posting — the kind of gap that only closes for good when
+ * the rule sits in the service the way CLAUDE.md asks.
+ */
+function assertMayPost(actor: Actor): void {
+  if (actor.isBanned) throw forbidden("Hesabınız askıya alınmış.");
+  if (actor.emailVerifiedAt === null) {
+    throw forbidden("Önce e-posta adresinizi doğrulamanız gerekiyor.");
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* Comments on articles                                                */
 /* ------------------------------------------------------------------ */
@@ -135,6 +150,8 @@ export async function addCommunityComment(
   rawInput: unknown,
   meta: RequestMeta,
 ): Promise<CommunityComment> {
+  assertMayPost(actor);
+
   const parsed = communityCommentSchema.safeParse(rawInput);
   if (!parsed.success) {
     throw badRequest("Yorum geçersiz.", z.flattenError(parsed.error).fieldErrors);
@@ -244,6 +261,8 @@ export async function addChatMessage(
   rawInput: unknown,
   meta: RequestMeta,
 ): Promise<CommunityMessage> {
+  assertMayPost(actor);
+
   // While the chat is passive, nobody posts — not even the admin (D-056)
   if (!isChatOpen(await getChatMode())) {
     throw conflict("Sohbet şu an kapalı.");

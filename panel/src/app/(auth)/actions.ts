@@ -188,7 +188,13 @@ export async function loginTwoFactorAction(
   return result;
 }
 
-export async function logoutAction(): Promise<void> {
+/**
+ * Signing out. It carries the same double-submit token as every other
+ * mutation (D-072): a forced sign-out is only an annoyance, but §11 says every
+ * mutation is checked, and a silent exception is how the rule erodes.
+ */
+export async function logoutAction(formData: FormData): Promise<void> {
+  await assertCsrfFromForm(formData);
   await destroyCurrentSession();
   redirect("/login");
 }

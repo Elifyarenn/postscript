@@ -105,11 +105,13 @@ function SidebarFrame({
   area,
   groups,
   pathname,
+  csrfToken,
   onNavigate,
 }: {
   area: string;
   groups: NavGroup[];
   pathname: string;
+  csrfToken: string;
   onNavigate?: () => void;
 }) {
   return (
@@ -125,6 +127,8 @@ function SidebarFrame({
 
       <div className="border-t border-white/15 p-4">
         <form action={logoutAction}>
+          {/* Signing out is a mutation, so it carries the token too (D-072) */}
+          <input type="hidden" name="csrfToken" value={csrfToken} />
           <button
             type="submit"
             className="w-full rounded-md border border-white/20 px-3 py-1.5 text-sm text-paper/80 hover:bg-white/10 hover:text-white"
@@ -141,10 +145,12 @@ export function PanelSidebar({
   user,
   area,
   groups,
+  csrfToken,
 }: {
   user: SessionUser;
   area: string;
   groups: NavGroup[];
+  csrfToken: string;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -153,7 +159,7 @@ export function PanelSidebar({
     <>
       {/* Desktop: sticky burgundy aside, content scrolls beside it */}
       <aside className="hidden w-64 shrink-0 flex-col bg-accent lg:sticky lg:top-0 lg:flex lg:h-screen lg:overflow-y-auto">
-        <SidebarFrame area={area} groups={groups} pathname={pathname} />
+        <SidebarFrame area={area} groups={groups} pathname={pathname} csrfToken={csrfToken} />
       </aside>
 
       {/* Mobile: hamburger button */}
@@ -188,6 +194,7 @@ export function PanelSidebar({
               area={area}
               groups={groups}
               pathname={pathname}
+              csrfToken={csrfToken}
               onNavigate={() => setOpen(false)}
             />
           </div>

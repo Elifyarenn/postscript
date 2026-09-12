@@ -22,7 +22,6 @@ import {
   revokeSession,
 } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
-import { listAnnouncementsFor } from "@/services/announcements";
 import { disableTotp, enableTotp } from "@/services/two-factor";
 import { runAction, optionalText, text, type ActionState } from "@/lib/action";
 import { badRequest } from "@/lib/errors";
@@ -266,9 +265,10 @@ export async function disableTwoFactorAction(
   });
 }
 
-export async function markAnnouncementsReadAction(): Promise<void> {
-  const { user } = await requireAuth();
-  // Reading the list is what records a read; kept here so the writer dashboard
-  // can trigger it without duplicating the query
-  await listAnnouncementsFor({ ...user });
-}
+/*
+ * `markAnnouncementsReadAction` was removed in D-072. Nothing called it, and a
+ * "use server" export is a live endpoint whether or not the UI reaches it —
+ * this one took no FormData, so it was also the one action with no CSRF token
+ * to check. The announcement pages record the read by listing it, which is
+ * what the action did anyway.
+ */

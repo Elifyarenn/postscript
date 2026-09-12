@@ -1490,3 +1490,34 @@ yolları aynı çizgiye getirildi.
 
 ---
 
+## D-072 — Yasaklı/doğrulanmamış hesap için kalan kapılar kapatıldı; CSRF istisnasız
+
+**Karar:** Oturum var diye yetki var sayılan üç yer düzeltildi.
+
+- **Route handler'lar:** `/api/community/messages` (GET ve POST) ve
+  `/api/media/[id]` `getAuthContext()` yerine `requireAuth()` kullanır. İlki
+  yalnızca "oturum çerezi geçerli mi" diye sorar; ban ve e-posta doğrulaması
+  `requireAuth`'ta.
+- **Servis katmanı:** `addChatMessage` ve `addCommunityComment` artık
+  `assertMayPost(actor)` çağırır (yasaklı değil + adres doğrulanmış). Yorum
+  action'ı zaten `requireAuth`'tan geçiyordu, sohbet endpoint'i geçmiyordu;
+  kural servise konunca ikinci bir çağıran atlayamaz.
+- **`requireSession`:** Ban kontrolü eklendi. `guardPanel` bakıyordu ama
+  `requireSession` bakmıyordu, dolayısıyla yasaklı bir okuyucu `/magazine` ve
+  `/account` sayfalarında gezinmeye devam ediyordu. `guardPanel`'deki tekrar
+  eden kontrol kaldırıldı.
+- **CSRF istisnası kalmadı:** `logoutAction` artık `FormData` alır ve
+  `assertCsrfFromForm` çağırır; token `PanelShell` (server component) tarafından
+  okunup `PanelSidebar` → `SidebarFrame` üzerinden gizli alana basılır.
+  `markAnnouncementsReadAction` silindi: hiçbir çağıranı yoktu, `FormData`
+  almadığı için doğrulanacak token'ı da yoktu ve duyuru sayfaları okumayı
+  listeleyerek zaten kaydediyor.
+
+**Gerekçe:** CLAUDE.md "Yetki kontrolü her server action ve route handler'da
+sunucu tarafında" diyor; `getAuthContext()` yetki kontrolü değil, kimlik
+tespitidir. Yasaklı bir hesabın sohbete yazmaya devam edebilmesi moderasyon
+kararını anlamsız kılıyordu. CSRF tarafında `csrf.ts`'in kendi başlığı "every
+mutation" diyor — iki istisna vardı, ikisi de kapandı.
+
+---
+

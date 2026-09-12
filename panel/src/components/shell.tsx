@@ -17,6 +17,7 @@ import { StatusBadge } from "./ui";
 import { PanelSidebar } from "./sidebar";
 import { BackButton } from "./back-button";
 import { PanelModeSwitch } from "./panel-switch";
+import { readCsrfToken } from "@/lib/csrf";
 import type { SessionUser } from "@/lib/auth/session";
 
 export type NavItem = { href: string; label: string; disabled?: boolean };
@@ -136,7 +137,7 @@ export function navForRole(role: SessionUser["role"]): { area: string; groups: N
  * the signed-in user and their role, and the content column. The sidebar is
  * sticky on desktop and a hamburger drawer on mobile.
  */
-export function PanelShell({
+export async function PanelShell({
   user,
   area,
   groups,
@@ -147,9 +148,13 @@ export function PanelShell({
   groups: NavGroup[];
   children: ReactNode;
 }) {
+  // The sign-out form is a mutation like any other, so it carries the same
+  // double-submit token (D-072). Read here rather than at every call site.
+  const csrfToken = (await readCsrfToken()) ?? "";
+
   return (
     <div className="min-h-screen lg:flex">
-      <PanelSidebar user={user} area={area} groups={groups} />
+      <PanelSidebar user={user} area={area} groups={groups} csrfToken={csrfToken} />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-paper px-6 py-3 pl-14 lg:pl-6">

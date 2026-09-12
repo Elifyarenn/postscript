@@ -17,18 +17,19 @@ import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db/client";
 import { agreementAcceptances, media, rightsGrants, writerApplications } from "@/db/schema";
-import { getAuthContext } from "@/lib/auth/session";
+import { requireAuth } from "@/lib/auth/session";
 import { canAccessEditorPanel, canViewContractDocuments } from "@/lib/auth/rbac";
 import { getStorage } from "@/lib/storage";
 import { errorJson } from "@/lib/api";
-import { forbidden, notFound, unauthorized } from "@/lib/errors";
+import { forbidden, notFound } from "@/lib/errors";
 
 const SIGNED_URL_SECONDS = 300;
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const context = await getAuthContext();
-    if (!context) throw unauthorized();
+    // `requireAuth`, not `getAuthContext`: a banned or unverified account must
+    // not pull files out of the library either (D-072)
+    const context = await requireAuth();
 
     const { id } = await params;
     const rows = await db.select().from(media).where(eq(media.id, id)).limit(1);

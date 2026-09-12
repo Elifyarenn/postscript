@@ -40,11 +40,14 @@ export async function guardWriterInnerPages(): Promise<AuthContext> {
  *
  * An unverified address goes no further than the page that explains why: the
  * account exists, but it cannot be used until the link in the e-mail is
- * followed (D-034).
+ * followed (D-034). A banned account gets a 403 here too — `guardPanel`
+ * checked it but this one did not, so a banned reader kept browsing the
+ * magazine and the account pages (D-072).
  */
 export async function requireSession(): Promise<AuthContext> {
   const context = await getAuthContext();
   if (!context) redirect("/login");
+  if (context.user.isBanned) forbidden();
   if (context.user.emailVerifiedAt === null) redirect("/verify-email/pending");
   return context;
 }
@@ -56,10 +59,10 @@ export async function requireSession(): Promise<AuthContext> {
  * exactly that (D-048).
  */
 export async function guardPanel(minimum: Role): Promise<AuthContext> {
+  // `requireSession` now refuses a banned account, so the ban check that used
+  // to sit here would only repeat it (D-072)
   const context = await requireSession();
   const { user } = context;
-
-  if (user.isBanned) forbidden();
 
   const allowed =
     minimum === "user" ||
