@@ -183,10 +183,12 @@ Değişmez kurallar:
 6. İlk admin yalnızca seed veya CLI ile oluşturulur.
 7. İki adımlı doğrulama şu anda yok; §5.2'nin zorunlu kıldığı bu kontrol yayın
    öncesi geri eklenecek (D-033).
-8. E-posta adresi doğrulanmamış hesap hiçbir sayfayı açamaz ve hiçbir mutasyonu
-   çalıştıramaz; yalnızca yeni bağlantı isteyebilir veya çıkış yapabilir. §5.1
-   doğrulanmamış hesabın profilini kullanabilmesini öngörüyordu, bilerek
-   sapıldı (D-034).
+8. Kayıt iki adımlıdır (D-067): form verisi `pending_registrations`'a yazılır ve
+   e-posta doğrulaması tamamlanmadan `users` kaydı oluşmaz — hesap, bağlantı
+   tıklandığında doğrulanmış olarak doğar. İki adımlı akıştan önce oluşmuş
+   doğrulanmamış hesaplar hiçbir sayfayı açamaz ve hiçbir mutasyonu çalıştıramaz
+   (D-034); `purge-unverified` 7 gün sonra onları ve süresi dolan bekleyen
+   kayıtları siler (D-066).
 9. `audit_log` ve `role_changes` yalnızca eklenir; hem uygulama katmanında hem de
    veritabanı trigger'ıyla korunur.
 10. Onaylanmış bir Eser Onayı olmadan hiçbir makale `scheduled` veya `published`
@@ -286,11 +288,14 @@ mesajları ve yasaklı kelimeler yönetilir; kaldırma yumuşak silmedir
 ### Kayıt ve roller
 
 Herkese açık tek kayıt **okuyucu kaydı**dır (`/register`): ad soyad,
-doğum tarihi, e-posta, şifre ve KVKK onayı. Yeni hesaba sunucu her zaman `user` (okuyucu)
-rolü atar; e-posta doğrulaması kimseyi yükseltmez. Yazar ve editör rolleri
-yalnızca yönetici panelinden verilir (`/admin/users` → terfi / rol değişimi /
-"Editor & Yazar" hibriti) veya yazar başvurusu pipeline'ından
-(`/admin/applications`) admin onayıyla geçer. (D-063, D-064)
+doğum tarihi, e-posta, şifre ve KVKK onayı. Kayıt iki adımlıdır (D-067):
+form gönderilince e-posta adresine doğrulama bağlantısı gider ve hesap ancak
+bağlantı tıklandığında, doğrulanmış olarak oluşturulur. Yeni hesaba sunucu her
+zaman `user` (okuyucu) rolü atar; e-posta doğrulaması kimseyi yükseltmez.
+Yazar ve editör rolleri yalnızca yönetici panelinden verilir
+(`/admin/users` → terfi / rol değişimi / "Editor & Yazar" hibriti) veya yazar
+başvurusu pipeline'ından (`/admin/applications`) admin onayıyla geçer.
+(D-063, D-064)
 
 ### İç duyurular ve okundu onayı
 
@@ -445,7 +450,7 @@ orada çalışmaz ve çalıştıkları sanılırsa veri sessizce kaybolur:
 - `S3_ENDPOINT=file://…` — medya yükleme hata verir
 - `MAIL_TRANSPORT=file` — `.mail/` dizinine yazılamaz. Teslim hatası işlemi geri
   almaz (`sendMail` hatayı yutar ve loglar), ama posta hiçbir yere ulaşmaz.
-  E-posta doğrulaması zorunlu olduğu için (D-034), SMTP kurulmadan **yeni
+  E-posta doğrulaması zorunlu olduğu için (D-067), SMTP kurulmadan **yeni
   kullanıcı kaydı tamamlanamaz**; CLI ile oluşturulan admin doğrulanmış sayılır
   ve girebilir.
 
@@ -461,7 +466,7 @@ panel) tek makinede ayağa kaldırır.
 ## Test
 
 ```bash
-pnpm test        # 241 birim + entegrasyon testi
+pnpm test        # 292 birim + entegrasyon testi
 pnpm test:e2e    # 19 uçtan uca senaryo
 ```
 
@@ -473,9 +478,10 @@ Uçtan uca testler kendi veri dizinini (`.e2e/`) her çalıştırmada siler, yen
 seed'ler, üretim derlemesi alır ve gerçek bir tarayıcıyla sürer. Kapsanan
 senaryolar §13.2'dekilerdir:
 
-- kayıt → doğrulama bekleme kapısı → e-posta doğrulama → giriş; doğrulanmamış
-  hesabın her sayfadan kapıya geri gönderilmesi; yaygın şifre reddi; hatalı
-  şifre ile bilinmeyen hesabın aynı yanıtı vermesi
+- kayıt → bekleme sayfası (hesap henüz yok) → e-posta doğrulama → hesap doğar →
+  giriş; doğrulanmamış adresin girişte "hatalı" yanıtı vermesi ve yeniden
+  bağlantı isteğinin hız sınırına takılması; yaygın şifre reddi; hatalı şifre
+  ile bilinmeyen hesabın aynı yanıtı vermesi
 - `user` rolüyle `/writer`, `/editor`, `/admin` ve iç sayfalarına erişim → 403
 - 17 yaşındaki kullanıcıyı yazar yapma denemesi → reddedilir, gerekçe gösterilir
 - terfi → sözleşme onayı → `writer_status = active`
