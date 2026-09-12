@@ -9,6 +9,7 @@ import { addChatMessage, getChatMessage, listChatMessagesAfter } from "@/service
 import { errorJson } from "@/lib/api";
 import { requireAuth, requestMetadata } from "@/lib/auth/session";
 import { assertCsrf } from "@/lib/csrf";
+import { badRequest } from "@/lib/errors";
 
 export async function GET(request: Request) {
   try {
@@ -19,11 +20,9 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const afterParam = searchParams.get("after");
     const after = afterParam ? new Date(afterParam) : null;
+    // Thrown, not hand-built: `errorJson` is the one place the shape is decided
     if (after && Number.isNaN(after.getTime())) {
-      return NextResponse.json(
-        { error: { code: "bad_request", message: "Geçersiz zaman damgası." } },
-        { status: 400 },
-      );
+      throw badRequest("Geçersiz zaman damgası.");
     }
 
     const messages = after

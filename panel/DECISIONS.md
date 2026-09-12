@@ -1577,3 +1577,27 @@ kanıtlar; asıl kazanç üretimdeki havuzlu bağlantıda.
 
 ---
 
+## D-075 — Hata yanıtı CLAUDE.md'deki zarfa getirildi
+
+**Karar:** `toErrorResponse` artık `{ error: { code, message, fields? } }`
+döndürür. Önceki biçim `{ error: "<mesaj>", code, details? }` idi: mesaj
+zarfın yerinde duran düz bir string, alan hataları ise `fields` yerine
+`details` altındaydı. `/api/community/messages` içindeki elle yazılmış 400
+dalı zaten doğru biçimi üretiyordu; o dal da `badRequest()` fırlatacak şekilde
+değiştirildi, böylece biçime karar veren tek yer `errorJson` kaldı.
+
+Yeni `tests/unit/errors.test.ts` zarfı sabitler: `fields` adı, alan yokken
+`fields`'ın hiç olmaması, kod→durum eşlemesi ve beklenmeyen bir hatanın
+mesajının asla dışarı sızmaması.
+
+**Gerekçe:** CLAUDE.md kod stili bölümü biçimi açıkça yazıyor ve kod ona
+uymuyordu; dahası aynı API iki farklı lehçe konuşuyordu. Bu bir ön yüz
+sözleşmesi olduğu için sessiz kalmak yerine kodu belgeye uydurmak doğru yön —
+public API'yi tüketen taraf CLAUDE.md'yi okuyor.
+
+**Not:** Server action'ların döndürdüğü `ActionState.error` bir string olarak
+kalır; o HTTP gövdesi değil, formun yeniden çizilmesi için kullanılan iç bir
+tiptir ve `runAction` tarafından üretilir.
+
+---
+

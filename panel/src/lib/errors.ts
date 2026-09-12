@@ -62,20 +62,38 @@ export function isAppError(error: unknown): error is AppError {
   return error instanceof AppError;
 }
 
-/** Shape returned to the browser. Never leaks internal messages for 500s. */
-export function toErrorResponse(error: unknown): {
-  status: number;
-  body: { error: string; code: AppErrorCode; details?: Record<string, string[]> };
-} {
+/**
+ * The error body every route handler returns: `{ error: { code, message,
+ * fields? } }`, the shape CLAUDE.md names (D-075).
+ *
+ * It used to be `{ error: "<message>", code, details }` — a flat object with
+ * the message where the contract puts the envelope, and `details` where it
+ * puts `fields`. One hand-written branch in the community route already
+ * answered in the documented shape, so the same API spoke two dialects.
+ *
+ * An unexpected failure never leaks its message: it is logged and answered
+ * with a generic one.
+ */
+export type ErrorBody = {
+  error: { code: AppErrorCode; message: string; fields?: Record<string, string[]> };
+};
+
+export function toErrorResponse(error: unknown): { status: number; body: ErrorBody } {
   if (isAppError(error)) {
     return {
       status: error.status,
-      body: { error: error.message, code: error.code, ...(error.details && { details: error.details }) },
+      body: {
+        error: {
+          code: error.code,
+          message: error.message,
+          ...(error.details && { fields: error.details }),
+        },
+      },
     };
   }
   console.error("Unhandled error:", error);
   return {
     status: 500,
-    body: { error: "Beklenmeyen bir hata oluştu.", code: "internal" },
+    body: { error: { code: "internal", message: "Beklenmeyen bir hata oluştu." } },
   };
 }
