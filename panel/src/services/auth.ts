@@ -9,7 +9,7 @@ import "server-only";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { emailTokens, kvkkVersions, users, type User } from "@/db/schema";
+import { emailTokens, kvkkVersions, pendingRegistrations, users, type User } from "@/db/schema";
 import { hashToken, randomToken, sha256Hex } from "@/lib/crypto";
 import { env } from "@/lib/env";
 import { badRequest, conflict, forbidden, notFound, rateLimited, unauthorized } from "@/lib/errors";
@@ -79,10 +79,21 @@ async function currentKvkkVersion(): Promise<number> {
   return rows[0]?.version ?? 1;
 }
 
+export type RegistrationResult = {
+  email: string;
+  verificationToken: string;
+};
+
+/**
+ * Registers a reader (D-067). Nothing is created yet: the account only comes
+ * into existence when the verification link is followed, so an account without
+ * a verified address cannot exist. The form data sits in `pending_registrations`
+ * until then; a newer submission for the same address supersedes the old one.
+ */
 export async function register(
   rawInput: unknown,
   meta: RequestMeta,
-): Promise<{ user: User; verificationToken: string }> {
+): Promise<RegistrationResult> {
   const parsed = registerSchema.safeParse(rawInput);
   if (!parsed.success) {
     throw badRequest("Kayıt bilgileri geçersiz.", z.flattenError(parsed.error).fieldErrors);
@@ -115,38 +126,89 @@ export async function register(
     .limit(1);
   if (existing.length > 0) throw conflict("Bu e-posta adresi zaten kayıtlı.");
 
-  const passwordHash = await hashPassword(input.password);
-
-  const [user] = await db
-    .insert(users)
-    .values({
-      email,
-      passwordHash,
-      displayName: input.displayName,
-      birthDate: input.birthDate,
-      // The server decides the role. It is never read from the request.
-      role: "user",
-      kvkkConsentAt: new Date(),
-      kvkkConsentVersion: await currentKvkkVersion(),
-    })
-    .returning();
-
-  const verificationToken = await issueEmailToken(user!.id, "verify_email", VERIFY_TOKEN_TTL_MS);
-
-  const url = `${env().APP_URL}/verify-email?token=${encodeURIComponent(verificationToken)}`;
-  const message = templates.verifyEmail({ displayName: user!.displayName, url });
-  await sendMail({ to: user!.email, subject: message.subject, text: message.text });
-
-  await writeAudit({
-    actorId: user!.id,
-    action: "user.registered",
-    entityType: "users",
-    entityId: user!.id,
-    after: { email, displayName: user!.displayName },
-    ip: meta.ip,
+  const verificationToken = await issuePendingRegistration({
+    email,
+    passwordHash: await hashPassword(input.password),
+    displayName: input.displayName,
+    birthDate: input.birthDate,
+    kvkkConsentVersion: await currentKvkkVersion(),
   });
 
-  return { user: user!, verificationToken };
+  const url = `${env().APP_URL}/verify-email?token=${encodeURIComponent(verificationToken)}`;
+  const message = templates.verifyEmail({ displayName: input.displayName, url });
+  await sendMail({ to: email, subject: message.subject, text: message.text });
+
+  return { email, verificationToken };
+}
+
+/* ------------------------------------------------------------------ */
+/* Pending registrations (D-067)                                       */
+/* ------------------------------------------------------------------ */
+
+type PendingRegistrationData = {
+  email: string;
+  passwordHash: string;
+  displayName: string;
+  birthDate: string;
+  kvkkConsentVersion: number;
+};
+
+/**
+ * Stores a not-yet-verified registration and returns the link token. Any
+ * earlier unused row for the same address is spent, so only the newest link
+ * works — the same rule as `issueEmailToken`.
+ */
+async function issuePendingRegistration(data: PendingRegistrationData): Promise<string> {
+  await db
+    .update(pendingRegistrations)
+    .set({ usedAt: new Date(), updatedAt: new Date() })
+    .where(and(eq(pendingRegistrations.email, data.email), isNull(pendingRegistrations.usedAt)));
+
+  const token = randomToken(32);
+  await db.insert(pendingRegistrations).values({
+    ...data,
+    tokenHash: hashToken(token, env().SESSION_SECRET),
+    expiresAt: new Date(Date.now() + VERIFY_TOKEN_TTL_MS),
+  });
+  return token;
+}
+
+/**
+ * Spends a pending registration's link token. Returns null when the token is
+ * unknown (so `verifyEmail` can fall back to the legacy path); throws when the
+ * row exists but the link is spent or expired.
+ */
+async function consumePendingRegistration(
+  token: string,
+): Promise<(PendingRegistrationData & { id: string }) | null> {
+  const tokenHash = hashToken(token, env().SESSION_SECRET);
+  const rows = await db
+    .select()
+    .from(pendingRegistrations)
+    .where(eq(pendingRegistrations.tokenHash, tokenHash))
+    .limit(1);
+
+  const row = rows[0];
+  if (!row) return null;
+  if (row.usedAt) throw badRequest("Bu bağlantı daha önce kullanılmış.");
+  if (row.expiresAt.getTime() <= Date.now()) throw badRequest("Bağlantının süresi dolmuş.");
+
+  // Two clicks must not both win: the row is spent atomically
+  const consumed = await db
+    .update(pendingRegistrations)
+    .set({ usedAt: new Date(), updatedAt: new Date() })
+    .where(and(eq(pendingRegistrations.id, row.id), isNull(pendingRegistrations.usedAt)))
+    .returning({ id: pendingRegistrations.id });
+  if (consumed.length === 0) throw badRequest("Bu bağlantı daha önce kullanılmış.");
+
+  return {
+    id: row.id,
+    email: row.email,
+    passwordHash: row.passwordHash,
+    displayName: row.displayName,
+    birthDate: row.birthDate,
+    kvkkConsentVersion: row.kvkkConsentVersion,
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -198,7 +260,56 @@ async function consumeEmailToken(
   return row.userId;
 }
 
+/**
+ * Verifies an e-mail address. Since D-067 this is also the moment a new
+ * account is born: following the link creates the `users` row, already marked
+ * verified. The legacy path (an account created before the two-step flow) only
+ * fills in `email_verified_at` on the existing row.
+ */
 export async function verifyEmail(token: string, meta: RequestMeta): Promise<User> {
+  const pending = await consumePendingRegistration(token);
+  if (pending) {
+    // The address may have been taken out of band between submission and click
+    const taken = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.email, pending.email), isNull(users.deletedAt)))
+      .limit(1);
+    if (taken.length > 0) throw conflict("Bu e-posta adresi zaten kayıtlı.");
+
+    const [user] = await db
+      .insert(users)
+      .values({
+        email: pending.email,
+        passwordHash: pending.passwordHash,
+        displayName: pending.displayName,
+        birthDate: pending.birthDate,
+        // The server decides the role. It is never read from the request.
+        role: "user",
+        // The account is born verified: this is what "registration" means now
+        emailVerifiedAt: new Date(),
+        kvkkConsentAt: new Date(),
+        kvkkConsentVersion: pending.kvkkConsentVersion,
+      })
+      .returning();
+
+    // The pending row carried a password hash and a birth date; once the
+    // account exists it must not stay around (hard delete, like email_tokens)
+    await db.delete(pendingRegistrations).where(eq(pendingRegistrations.id, pending.id));
+
+    await writeAudit({
+      actorId: user!.id,
+      action: "user.registered",
+      entityType: "users",
+      entityId: user!.id,
+      after: { email: pending.email, displayName: user!.displayName },
+      ip: meta.ip,
+    });
+
+    return user!;
+  }
+
+  // Legacy: an account created before the two-step flow verifies the old way
   const userId = await consumeEmailToken(token, "verify_email");
 
   const [user] = await db
@@ -215,22 +326,61 @@ export async function verifyEmail(token: string, meta: RequestMeta): Promise<Use
     ip: meta.ip,
   });
 
-  const verified = user!;
-  return verified;
+  return user!;
 }
 
 /** A new link can be asked for once a minute; the button is otherwise a mail cannon. */
 const RESEND_INTERVAL_MS = 60_000;
 
-/** Sends a new verification link. Used by the "resend" button. */
-export async function resendVerificationEmail(userId: string): Promise<void> {
-  const rows = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+function assertResendAllowed(lastIssuedAt: Date | null): void {
+  if (lastIssuedAt && Date.now() - lastIssuedAt.getTime() < RESEND_INTERVAL_MS) {
+    const wait = Math.ceil((RESEND_INTERVAL_MS - (Date.now() - lastIssuedAt.getTime())) / 1000);
+    throw rateLimited(`Yeni bağlantı istemek için ${wait} saniye bekleyin.`);
+  }
+}
+
+/**
+ * Sends a new verification link. Used by the "resend" button, which sits on a
+ * page that has no session (D-067), so the address is the argument.
+ */
+export async function resendVerificationEmail(email: string): Promise<void> {
+  const normalised = normaliseEmail(email);
+
+  // The common case: a registration that has not been confirmed yet
+  const pending = await db
+    .select()
+    .from(pendingRegistrations)
+    .where(and(eq(pendingRegistrations.email, normalised), isNull(pendingRegistrations.usedAt)))
+    .orderBy(desc(pendingRegistrations.createdAt))
+    .limit(1);
+
+  const pendingRow = pending[0];
+  if (pendingRow) {
+    // Throttled against the last link issued, like the legacy path below
+    assertResendAllowed(pendingRow.createdAt);
+    const token = await issuePendingRegistration({
+      email: pendingRow.email,
+      passwordHash: pendingRow.passwordHash,
+      displayName: pendingRow.displayName,
+      birthDate: pendingRow.birthDate,
+      kvkkConsentVersion: pendingRow.kvkkConsentVersion,
+    });
+    const url = `${env().APP_URL}/verify-email?token=${encodeURIComponent(token)}`;
+    const message = templates.verifyEmail({ displayName: pendingRow.displayName, url });
+    await sendMail({ to: normalised, subject: message.subject, text: message.text });
+    return;
+  }
+
+  // Legacy: an account that exists but never verified its address
+  const rows = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.email, normalised), isNull(users.deletedAt)))
+    .limit(1);
   const user = rows[0];
-  if (!user) throw notFound();
+  if (!user) throw notFound("Bu adrese bekleyen bir doğrulama yok.");
   if (user.emailVerifiedAt) throw badRequest("E-posta adresiniz zaten doğrulanmış.");
 
-  // Throttled against the last link issued rather than a counter table: the
-  // timestamp is already there and cannot drift out of step with reality
   const recent = await db
     .select({ createdAt: emailTokens.createdAt })
     .from(emailTokens)
@@ -238,11 +388,7 @@ export async function resendVerificationEmail(userId: string): Promise<void> {
     .orderBy(desc(emailTokens.createdAt))
     .limit(1);
 
-  const last = recent[0]?.createdAt;
-  if (last && Date.now() - last.getTime() < RESEND_INTERVAL_MS) {
-    const wait = Math.ceil((RESEND_INTERVAL_MS - (Date.now() - last.getTime())) / 1000);
-    throw rateLimited(`Yeni bağlantı istemek için ${wait} saniye bekleyin.`);
-  }
+  assertResendAllowed(recent[0]?.createdAt ?? null);
 
   const token = await issueEmailToken(user.id, "verify_email", VERIFY_TOKEN_TTL_MS);
   const url = `${env().APP_URL}/verify-email?token=${encodeURIComponent(token)}`;
@@ -506,4 +652,10 @@ export async function changePassword(
 }
 
 /** Exposed for tests and for the seed script, which needs a deterministic hash. */
-export const _internals = { issueEmailToken, consumeEmailToken, sha256Hex };
+export const _internals = {
+  issueEmailToken,
+  consumeEmailToken,
+  issuePendingRegistration,
+  consumePendingRegistration,
+  sha256Hex,
+};

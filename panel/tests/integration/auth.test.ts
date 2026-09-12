@@ -6,7 +6,7 @@
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { emailTokens, users, type User } from "@/db/schema";
+import { users, type User } from "@/db/schema";
 import { db, type Database } from "@/db/client";
 import {
   changePassword,
@@ -62,19 +62,23 @@ async function captureError(promise: Promise<unknown>) {
 }
 
 describe("registration", () => {
-  it("creates an unverified account and sends a verification e-mail", async () => {
-    const { user } = await register(validRegistration, noMeta);
+  it("stores the request and sends a verification e-mail, but creates no account (D-067)", async () => {
+    const { email, verificationToken } = await register(validRegistration, noMeta);
 
-    expect(user.email).toBe("yeni.kullanici@example.com"); // normalised
-    expect(user.emailVerifiedAt).toBeNull();
-    expect(user.kvkkConsentAt).not.toBeNull();
+    expect(email).toBe("yeni.kullanici@example.com"); // normalised
+    expect(verificationToken).toBeTruthy();
     expect(mailbox.lastTo("yeni.kullanici@example.com")?.subject).toContain("doğrulayın");
+
+    const accounts = await db.select().from(users).where(eq(users.email, email));
+    expect(accounts).toHaveLength(0);
   });
 
   it("always assigns the user role, and refuses a request that tries to set one", async () => {
-    const { user } = await register(validRegistration, noMeta);
-    expect(user.role).toBe("user");
-    expect(user.writerStatus).toBeNull();
+    // The role is decided when the account is born, i.e. at verification
+    const { verificationToken } = await register(validRegistration, noMeta);
+    const verified = await verifyEmail(verificationToken, noMeta);
+    expect(verified.role).toBe("user");
+    expect(verified.writerStatus).toBeNull();
 
     // §3 rule 2: `role` is not an accepted field on this endpoint
     const error = await captureError(
@@ -103,8 +107,10 @@ describe("registration", () => {
     expect(error.status).toBe(400);
   });
 
-  it("refuses a duplicate address", async () => {
-    await register(validRegistration, noMeta);
+  it("refuses an address that belongs to a live account", async () => {
+    const { verificationToken } = await register(validRegistration, noMeta);
+    await verifyEmail(verificationToken, noMeta);
+
     const error = await captureError(register(validRegistration, noMeta));
     expect(error.status).toBe(409);
   });
@@ -122,18 +128,20 @@ describe("registration", () => {
 });
 
 describe("e-mail verification", () => {
-  it("marks the account verified and burns the token", async () => {
-    const { user, verificationToken } = await register(validRegistration, noMeta);
+  it("creates the account, born verified, and burns the token", async () => {
+    const { verificationToken } = await register(validRegistration, noMeta);
 
     const verified = await verifyEmail(verificationToken, noMeta);
     expect(verified.emailVerifiedAt).not.toBeNull();
+    expect(verified.role).toBe("user");
 
-    // A verification link is single use
+    // A verification link is single use; the consumed pending row is hard
+    // deleted, so a reuse is indistinguishable from an unknown token: 404
     const reuse = await captureError(verifyEmail(verificationToken, noMeta));
-    expect(reuse.status).toBe(400);
+    expect(reuse.status).toBe(404);
 
-    const tokens = await db.select().from(emailTokens).where(eq(emailTokens.userId, user.id));
-    expect(tokens.every((token) => token.usedAt !== null)).toBe(true);
+    const rows = await db.select().from(users).where(eq(users.email, "yeni.kullanici@example.com"));
+    expect(rows).toHaveLength(1);
   });
 
   it("refuses an unknown token", async () => {
@@ -142,18 +150,39 @@ describe("e-mail verification", () => {
   });
 
   it("only lets a new link be asked for once a minute", async () => {
-    const { user } = await register(validRegistration, noMeta);
+    await register(validRegistration, noMeta);
 
-    const tooSoon = await captureError(resendVerificationEmail(user.id));
+    const tooSoon = await captureError(
+      resendVerificationEmail("yeni.kullanici@example.com"),
+    );
     expect(tooSoon.status).toBe(429);
   });
 
   it("refuses to resend once the address is verified", async () => {
-    const { user, verificationToken } = await register(validRegistration, noMeta);
+    const { verificationToken } = await register(validRegistration, noMeta);
     await verifyEmail(verificationToken, noMeta);
 
-    const error = await captureError(resendVerificationEmail(user.id));
+    const error = await captureError(
+      resendVerificationEmail("yeni.kullanici@example.com"),
+    );
     expect(error.status).toBe(400);
+  });
+
+  it("resends a link for a legacy unverified account", async () => {
+    const user = await createUser({ email: "eski@example.com", emailVerified: false });
+
+    await resendVerificationEmail("eski@example.com");
+    expect(mailbox.lastTo("eski@example.com")?.subject).toContain("doğrulayın");
+
+    const tooSoon = await captureError(resendVerificationEmail("eski@example.com"));
+    expect(tooSoon.status).toBe(429);
+
+    // The new link still verifies the existing row the old way
+    const message = mailbox.lastTo("eski@example.com")!;
+    const token = /token=([^\s]+)/.exec(message.text)?.[1]!;
+    const verified = await verifyEmail(token, noMeta);
+    expect(verified.id).toBe(user.id);
+    expect(verified.emailVerifiedAt).not.toBeNull();
   });
 });
 

@@ -358,6 +358,43 @@ export const emailTokens = pgTable(
 );
 
 /* ------------------------------------------------------------------ */
+/* pending_registrations (D-067)                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A registration whose address has not been verified yet. The account only
+ * comes into existence when the link in the verification e-mail is followed;
+ * until then the form data sits here. The row is genuinely disposable, like
+ * `email_tokens`: it is hard deleted once the account is created, a newer
+ * submission for the same address supersedes it, and the purge job drops
+ * expired ones.
+ */
+export const pendingRegistrations = pgTable(
+  "pending_registrations",
+  {
+    id: id(),
+    /** Always stored lowercase and trimmed, exactly like `users.email`. */
+    email: text("email").notNull(),
+    /** Argon2 hash; hashed once at submission so the expensive work is not repeated. */
+    passwordHash: text("password_hash").notNull(),
+    displayName: text("display_name").notNull(),
+    birthDate: date("birth_date").notNull(),
+    /** The KVKK notice version the applicant ticked at submission time. */
+    kvkkConsentVersion: integer("kvkk_consent_version").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("pending_registrations_token_hash_unique").on(t.tokenHash),
+    index("pending_registrations_email_idx").on(t.email),
+    index("pending_registrations_expires_at_idx").on(t.expiresAt),
+  ],
+);
+
+/* ------------------------------------------------------------------ */
 /* login_challenges (two-factor step, D-048)                           */
 /* ------------------------------------------------------------------ */
 

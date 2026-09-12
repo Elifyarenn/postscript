@@ -7,7 +7,7 @@
  * there is one implementation of each rule rather than two.
  */
 import { revalidatePath } from "next/cache";
-import { changePassword, requestEmailChange, resendVerificationEmail } from "@/services/auth";
+import { changePassword, requestEmailChange } from "@/services/auth";
 import { submitWriterApplication } from "@/services/writer-applications";
 import {
   cancelAccountDeletion,
@@ -77,18 +77,6 @@ export async function changePasswordAction(
 
     await changePassword(user.id, text(formData, "currentPassword"), next, meta);
     return { success: "Şifreniz güncellendi." };
-  });
-}
-
-export async function resendVerificationAction(
-  _state: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  return runAction(async () => {
-    await assertCsrfFromForm(formData);
-    const { user } = await requireAuth({ allowUnverified: true });
-    await resendVerificationEmail(user.id);
-    return { success: "Doğrulama bağlantısı tekrar gönderildi." };
   });
 }
 

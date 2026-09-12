@@ -15,6 +15,9 @@ export function PanelModeSwitch({ user }: { user: SessionUser }) {
   const pathname = usePathname();
   if (!(user.role === "editor" && user.writerStatus !== null)) return null;
 
+  // Each button is highlighted only while its own panel is open. On a page
+  // that is neither panel (e.g. /account) neither button is active.
+  const inWriter = pathname.startsWith("/writer");
   const inEditor = pathname.startsWith("/editor");
 
   const buttonClass = (active: boolean) =>
@@ -29,7 +32,7 @@ export function PanelModeSwitch({ user }: { user: SessionUser }) {
       aria-label="Panel seçimi"
       className="inline-flex items-center gap-1 rounded-lg border border-line bg-paper p-1"
     >
-      <Link href="/writer" className={buttonClass(!inEditor)}>
+      <Link href="/writer" className={buttonClass(inWriter)}>
         Yazar Paneli
       </Link>
       <Link href="/editor" className={buttonClass(inEditor)}>

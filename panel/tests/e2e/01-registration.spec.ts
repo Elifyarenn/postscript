@@ -3,7 +3,9 @@
  *
  * The only public sign-up is the reader path: every new account gets the plain
  * `user` role, and verification never promotes anyone — writer and editor
- * roles come from the admin panel only (D-064).
+ * roles come from the admin panel only (D-064). Since D-067 the account is
+ * created when the verification link is followed, so an unverified address
+ * cannot sign in at all.
  */
 import { expect, test } from "@playwright/test";
 import { linkFrom, registerReader, submitLogin, waitForMail } from "./helpers";
@@ -19,21 +21,25 @@ test.describe.configure({ mode: "serial" });
 test("registers as a reader, verifies the address, and stays a reader", async ({ page }) => {
   await registerReader(page, NEW_READER);
 
-  // Registration opens a session, but it goes no further than the gate
+  // Registration opens no session: the address waits in a pending record
   await page.waitForURL("**/verify-email/pending");
   await expect(page.getByRole("heading", { name: "E-posta adresinizi doğrulayın" })).toBeVisible();
   await expect(page.getByText(NEW_READER.email)).toBeVisible();
 
-  // and every other page bounces back to it
+  // and every other page bounces to the login screen instead
   await page.goto("/account");
-  await page.waitForURL("**/verify-email/pending");
+  await page.waitForURL("**/login");
 
   const message = await waitForMail(NEW_READER.email);
   expect(message.subject).toContain("doğrulayın");
 
-  // Following the link in the same browser verifies and lands on the reader home
+  // Following the link creates the account and lands on the login screen
   await page.goto(linkFrom(message.text));
   await page.getByRole("button", { name: "Doğrula" }).click();
+  await page.waitForURL("**/login?verified=1");
+
+  // Signing in works now
+  await submitLogin(page, { email: NEW_READER.email, password: NEW_READER.password });
   await page.waitForURL("**/magazine**");
 
   // The account is a plain reader, not a writer
@@ -52,12 +58,9 @@ test("registers as a reader, verifies the address, and stays a reader", async ({
   await expect(page.getByText("Profiliniz güncellendi")).toBeVisible();
 });
 
-test("sends an unverified account back to the gate when it signs in again", async ({
+test("an unverified address cannot sign in, and the resend button is throttled", async ({
   page,
-  context,
 }) => {
-  await context.clearCookies();
-
   await registerReader(page, {
     displayName: "Doğrulanmamış Okur",
     email: "bekleyen-okur@example.com",
@@ -65,17 +68,17 @@ test("sends an unverified account back to the gate when it signs in again", asyn
   });
   await page.waitForURL("**/verify-email/pending");
 
-  await page.getByRole("button", { name: "Başka bir hesapla giriş yap" }).click();
+  // No account exists yet, so signing in fails exactly like an unknown address
+  await page.getByRole("link", { name: "Girişe dön" }).click();
   await page.waitForURL("**/login");
-
-  // Signing in again lands on the gate rather than the account
   await submitLogin(page, {
     email: "bekleyen-okur@example.com",
     password: "Bekleyen-Sifre-2026",
   });
-  await page.waitForURL("**/verify-email/pending");
+  await expect(page.getByText("E-posta veya şifre hatalı.").first()).toBeVisible();
 
   // A second link cannot be demanded straight away
+  await page.goto("/verify-email/pending?email=bekleyen-okur%40example.com");
   await page.getByRole("button", { name: "Bağlantıyı tekrar gönder" }).click();
   await expect(page.getByText(/saniye bekleyin/)).toBeVisible();
 });

@@ -1340,6 +1340,27 @@ aynı mekanizmadır; fark yalnızca tetikleyicinin ve gerekçenin `audit_log`'a
 **Sınır:** Bu iş yalnızca halihazırda var olan doğrulanmamış hesapları temizler;
 yeni doğrulanmamış hesap üretimini D-067 önler.
 
+---
+
+## D-067 — Kayıt iki adıma bölündü: hesap doğrulama anında doğar
+
+**Karar:** Kayıt artık hesap oluşturmaz. `/register` formu `pending_registrations`
+tablosuna (şifre hash'i, doğum tarihi, KVKK sürümü, tek kullanımlık bağlantı
+token'ı) yazar ve doğrulama e-postasını gönderir; hesap, bağlantı tıklandığında
+`verifyEmail` içinde `email_verified_at` dolu olarak doğar. Aynı adres için yeni
+bir başvuru eski kullanılmamış satırı harcar (400 "daha önce kullanılmış"),
+tüketilen satır ise silinir — bu yüzden kullanılmış bir bağlantı bilinmeyen
+bağlantıyla aynı 404'ü döner. Eski iki aşamalı akıştan kalan hesaplar legacy
+yoldan doğrulamayı sürdürür; `requireAuth` artık "doğrulanmamış ama hesap"
+durumunu yalnızca o eski hesaplar için bekler. `purge-unverified` aynı koşuda
+süresi dolmuş bekleyen kayıtları da siler (D-066).
+
+**Gerekçe:** Ürün sahibi "kullanıcılar kayıt olurken mail doğrulaması olsun
+mutlaka" dedi; D-034'teki sert kapının üstüne, doğrulanmamış hesap hiç
+var olmasın diye iki adımlı kayıt kuruldu. Bekleyen kayıt şifre hash'i taşıdığı
+için tüketimde ve süre aşımında kalıcı olarak silinir; doğrulama anında rol
+yine sunucu tarafından `user` atanır.
+
 
 
 

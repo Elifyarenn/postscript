@@ -7,11 +7,14 @@
  * soft deleted exactly like a user-requested deletion; signed rights grants
  * cannot exist for an unverified account, so nothing of legal value is lost.
  *
+ * Expired pending registrations (D-067) are dropped in the same run: they hold
+ * a password hash and a birth date, so they must not outlive their link.
+ *
  * Suggested cron: once a day.
  */
 import { and, isNull, lte } from "drizzle-orm";
 import { db } from "@/db/client";
-import { users } from "@/db/schema";
+import { pendingRegistrations, users } from "@/db/schema";
 import { anonymiseUser } from "@/services/users";
 import { runScript } from "./_bootstrap";
 
@@ -34,7 +37,6 @@ runScript(async () => {
 
   if (stale.length === 0) {
     console.log("No unverified accounts were due.");
-    return;
   }
 
   for (const account of stale) {
@@ -42,5 +44,10 @@ runScript(async () => {
     console.log(`  · anonymised ${account.email}`);
   }
 
-  console.log(`Purged ${stale.length} unverified account(s).`);
+  const expiredPending = await db
+    .delete(pendingRegistrations)
+    .where(and(isNull(pendingRegistrations.usedAt), lte(pendingRegistrations.expiresAt, new Date())))
+    .returning({ id: pendingRegistrations.id });
+
+  console.log(`Purged ${stale.length} unverified account(s) and ${expiredPending.length} expired pending registration(s).`);
 });

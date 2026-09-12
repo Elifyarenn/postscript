@@ -10,8 +10,8 @@ export const metadata = { title: "Okuyucu kaydı" };
 /**
  * The standard reader/user registration. Every new account gets the plain
  * `user` role; writer and editor roles are granted from the admin panel only
- * (D-064). The address has to be verified by e-mail before the account can do
- * anything (D-034).
+ * (D-064). The account is created when the verification link in the e-mail is
+ * followed (D-067).
  */
 export default async function RegisterPage() {
   const csrfToken = (await readCsrfToken()) ?? "";
@@ -20,8 +20,8 @@ export default async function RegisterPage() {
     <Card>
       <h1 className="mb-1 font-serif text-xl">Okuyucu hesabı oluştur</h1>
       <p className="mb-5 text-sm text-muted">
-        Kaydınızı tamamladıktan sonra e-posta adresinize gelen bağlantıyı
-        doğrulayın; hesabınız okuyucu olarak açılır.
+        E-posta adresinize gelen bağlantıyı doğruladıktan sonra hesabınız
+        oluşturulur ve okuyucu olarak açılır.
       </p>
 
       <PanelForm

@@ -12,6 +12,7 @@ import { badRequest } from "@/lib/errors";
 import {
   register,
   requestPasswordReset,
+  resendVerificationEmail,
   resetPassword,
   verifyCredentials,
   verifyEmail,
@@ -49,6 +50,9 @@ function homeFor(role: Role): string {
  * The standard reader/user registration (/register). The service always
  * assigns the plain `user` role — the server decides, the form never sends one.
  * Writer and editor roles are granted from the admin panel only (D-064).
+ *
+ * No account exists after this action: it is created when the verification
+ * link in the e-mail is followed (D-067), so there is no session to open here.
  */
 export async function registerReaderAction(
   _state: ActionState,
@@ -60,7 +64,7 @@ export async function registerReaderAction(
     await assertCsrfFromForm(formData);
     const meta = await requestMetadata();
 
-    const { user } = await register(
+    const { email } = await register(
       {
         email: text(formData, "email"),
         password: text(formData, "password"),
@@ -71,14 +75,26 @@ export async function registerReaderAction(
       meta,
     );
 
-    // A session is opened so the account can ask for another link, but that is
-    // all it can do until the address is verified (D-034)
-    await createSession({ userId: user.id, ip: meta.ip, userAgent: meta.userAgent });
-    destination = "/verify-email/pending";
+    destination = `/verify-email/pending?email=${encodeURIComponent(email)}`;
   });
 
   if (destination) redirect(destination);
   return result;
+}
+
+/**
+ * The resend button on the verification pending page. It has no session to
+ * read the address from (D-067), so the address comes from the form.
+ */
+export async function resendVerificationAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    await resendVerificationEmail(text(formData, "email"));
+    return { success: "Doğrulama bağlantısı tekrar gönderildi." };
+  });
 }
 
 export async function loginAction(_state: ActionState, formData: FormData): Promise<ActionState> {

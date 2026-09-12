@@ -1,34 +1,40 @@
-import { redirect } from "next/navigation";
-import { getAuthContext } from "@/lib/auth/session";
+import Link from "next/link";
 import { readCsrfToken } from "@/lib/csrf";
-import { logoutAction } from "../../actions";
-import { resendVerificationAction } from "@/app/account/actions";
+import { Alert, Card, Field, Input } from "@/components/ui";
 import { PanelForm } from "@/components/form";
-import { Alert, Card } from "@/components/ui";
+import { resendVerificationAction } from "../../actions";
 
 export const metadata = { title: "E-posta doğrulaması bekleniyor" };
 
 /**
- * Where every signed-in but unverified account lands (D-034).
+ * The "check your inbox" page after registration (D-067).
  *
- * The account exists and the session is real, but nothing else opens until the
- * link in the e-mail is followed. The only two things offered here are asking
- * for another link and signing out.
+ * No account exists yet and there is no session: the address is shown only
+ * when the registration form passed it along in the URL. The only thing on
+ * offer is asking for another link, so a lost e-mail cannot dead-end the
+ * registration.
  */
-export default async function VerifyEmailPendingPage() {
-  const context = await getAuthContext();
-  if (!context) redirect("/login");
-  // Nothing to wait for once the address is confirmed
-  if (context.user.emailVerifiedAt !== null) redirect("/");
-
+export default async function VerifyEmailPendingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ email?: string }>;
+}) {
   const csrfToken = (await readCsrfToken()) ?? "";
+  const { email } = await searchParams;
+  const shownEmail = email ? decodeURIComponent(email) : "";
 
   return (
     <Card>
       <h1 className="mb-1 font-serif text-xl">E-posta adresinizi doğrulayın</h1>
       <p className="mb-5 text-sm text-muted">
-        <strong className="text-ink">{context.user.email}</strong> adresine bir doğrulama
-        bağlantısı gönderdik. Bağlantıya tıklayana kadar hesabınızı kullanamazsınız.
+        Kayıt isteğinizi aldık.{" "}
+        {shownEmail ? (
+          <strong className="text-ink">{shownEmail}</strong>
+        ) : (
+          <strong className="text-ink">E-posta adresinize</strong>
+        )}{" "}
+        bir doğrulama bağlantısı gönderdik. Bağlantıya tıkladığınızda hesabınız
+        oluşturulur.
       </p>
 
       <Alert tone="info">
@@ -41,14 +47,25 @@ export default async function VerifyEmailPendingPage() {
           action={resendVerificationAction}
           csrfToken={csrfToken}
           submitLabel="Bağlantıyı tekrar gönder"
-        />
+        >
+          <Field label="E-posta" htmlFor="email">
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              defaultValue={shownEmail}
+              required
+            />
+          </Field>
+        </PanelForm>
       </div>
 
-      <form action={logoutAction} className="mt-6 border-t border-line pt-4">
-        <button type="submit" className="text-sm text-muted hover:text-ink">
-          Başka bir hesapla giriş yap
-        </button>
-      </form>
+      <p className="mt-5 text-sm">
+        <Link href="/login" className="text-accent hover:underline">
+          Girişe dön
+        </Link>
+      </p>
     </Card>
   );
 }

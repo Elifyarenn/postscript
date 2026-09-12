@@ -1,13 +1,14 @@
 /**
- * The standard reader/user registration (D-063, D-064).
+ * The standard reader/user registration (D-063, D-064, D-067).
  *
- * The only public sign-up is the reader path: every new account gets the plain
- * `user` role, the address has to be verified by e-mail, and verification never
- * promotes anyone — writer and editor roles come from the admin panel only.
+ * The only public sign-up is the reader path: the account does not exist until
+ * the verification link is followed, it always gets the plain `user` role, and
+ * verification never promotes anyone — writer and editor roles come from the
+ * admin panel only.
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { users } from "@/db/schema";
+import { pendingRegistrations, users } from "@/db/schema";
 import { db, type Database } from "@/db/client";
 import { register, verifyEmail } from "@/services/auth";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
@@ -51,16 +52,26 @@ async function captureError(promise: Promise<unknown>) {
 }
 
 describe("reader registration", () => {
-  it("creates a plain `user` account and sends a verification link", async () => {
-    const { user, verificationToken } = await register(validReader, noMeta);
+  it("stores the request and sends a link, but creates no account yet (D-067)", async () => {
+    const { email, verificationToken } = await register(validReader, noMeta);
 
-    expect(user.role).toBe("user");
-    expect(user.writerIntentAt).toBeNull();
-    expect(user.writerStatus).toBeNull();
-    expect(user.email).toBe("yeni.okur@example.com");
-    expect(user.birthDate).toBe("1995-05-20");
+    expect(email).toBe("yeni.okur@example.com"); // normalised
     expect(verificationToken).toBeTruthy();
-    expect(mailbox.lastTo(user.email)?.subject).toContain("doğrula");
+    expect(mailbox.lastTo(email)?.subject).toContain("doğrula");
+
+    // The users table is untouched; only the pending row exists
+    const accounts = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, "yeni.okur@example.com"));
+    expect(accounts).toHaveLength(0);
+
+    const pending = await db
+      .select()
+      .from(pendingRegistrations)
+      .where(eq(pendingRegistrations.email, "yeni.okur@example.com"));
+    expect(pending).toHaveLength(1);
+    expect(pending[0]!.passwordHash).not.toBe(validReader.password);
   });
 
   it("requires a birth date and refuses invalid or future ones", async () => {
@@ -96,10 +107,25 @@ describe("reader registration", () => {
     expect(error.status).toBe(400);
   });
 
-  it("refuses a duplicate address", async () => {
-    await register(validReader, noMeta);
+  it("refuses an address that belongs to a live account", async () => {
+    const { verificationToken } = await register(validReader, noMeta);
+    await verifyEmail(verificationToken, noMeta);
+
     const error = await captureError(register(validReader, noMeta));
     expect(error.status).toBe(409);
+  });
+
+  it("lets a newer submission for the same address supersede the old one", async () => {
+    const first = await register(validReader, noMeta);
+    const second = await register(validReader, noMeta);
+    expect(second.verificationToken).not.toBe(first.verificationToken);
+
+    // Only the newest link works; the first is dead
+    const stale = await captureError(verifyEmail(first.verificationToken, noMeta));
+    expect(stale.status).toBe(400);
+
+    const verified = await verifyEmail(second.verificationToken, noMeta);
+    expect(verified.emailVerifiedAt).not.toBeNull();
   });
 
   it("refuses a password from the common-password list", async () => {
@@ -115,23 +141,35 @@ describe("reader registration", () => {
 });
 
 describe("verification", () => {
-  it("verifies the address and leaves the role untouched (no auto-promotion)", async () => {
-    const { user, verificationToken } = await register(validReader, noMeta);
+  it("creates the account at verification, born verified and as a plain reader", async () => {
+    const { verificationToken } = await register(validReader, noMeta);
 
     const verified = await verifyEmail(verificationToken, noMeta);
     expect(verified.emailVerifiedAt).not.toBeNull();
     expect(verified.role).toBe("user");
+    expect(verified.email).toBe("yeni.okur@example.com");
+    expect(verified.birthDate).toBe("1995-05-20");
+    expect(verified.writerStatus).toBeNull();
+    expect(verified.kvkkConsentAt).not.toBeNull();
 
-    const rows = await db.select().from(users).where(eq(users.id, user.id));
-    expect(rows[0]!.role).toBe("user");
-    expect(rows[0]!.writerStatus).toBeNull();
+    // The pending row (password hash, birth date) is gone once the account exists
+    const pending = await db
+      .select()
+      .from(pendingRegistrations)
+      .where(eq(pendingRegistrations.email, "yeni.okur@example.com"));
+    expect(pending).toHaveLength(0);
   });
 
   it("refuses a spent or unknown token", async () => {
     const { verificationToken } = await register(validReader, noMeta);
     await verifyEmail(verificationToken, noMeta);
 
-    const error = await captureError(verifyEmail(verificationToken, noMeta));
-    expect(error.status).toBe(400);
+    // The consumed pending row is hard-deleted, so a reused link is
+    // indistinguishable from an unknown one: 404 (D-067)
+    const spent = await captureError(verifyEmail(verificationToken, noMeta));
+    expect(spent.status).toBe(404);
+
+    const unknown = await captureError(verifyEmail("made-up-token-value", noMeta));
+    expect(unknown.status).toBe(404);
   });
 });
