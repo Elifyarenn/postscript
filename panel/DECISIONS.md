@@ -1555,3 +1555,25 @@ sessiz bir yarış bırakıyordu.
 
 ---
 
+## D-074 — Rate limit sayacı tek deyimde (upsert), okuma-sonra-yazma değil
+
+**Karar:** `consumeAttempt` artık tek bir `INSERT … ON CONFLICT DO UPDATE`
+çalıştırır. Kilitli mi, pencere devrildi mi, limit aşıldı mı kararlarının hepsi
+`CASE` ifadelerinde; JavaScript yalnızca dönen satıra bakıp `allowed`/
+`retryAfterMs` üretir. `(scope, identifier)` üzerindeki mevcut unique index
+upsert'in hedefi olarak kullanılır.
+
+**Gerekçe:** Eski sürüm SELECT yapıp kararı JavaScript'te veriyor, sonra UPDATE
+ediyordu. Aynı anda gelen iki istek aynı `count` değerini okuyup aynı
+`count + 1`'i yazıyordu; paralel bir tahmin salvosu saldırgana tek deneme
+maliyeti çıkarıyordu — yani limitin kendisi paralellikle aşılabiliyordu. Karar
+veritabanına taşınınca satır kilidi zaten orada olduğu için ek bir transaction
+gerekmiyor.
+
+**Not:** Yeni `tests/integration/rate-limit.test.ts` paralel denemelerin her
+birinin sayıldığını doğrular. Yerel test veritabanı PGlite tek bağlantıyla
+çalıştığı için bu test gerçek eşzamanlılığı değil, sayım mantığının doğruluğunu
+kanıtlar; asıl kazanç üretimdeki havuzlu bağlantıda.
+
+---
+

@@ -6,7 +6,7 @@
  * is correct as long as the application runs against one database.
  */
 import "server-only";
-import { and, eq, lt } from "drizzle-orm";
+import { and, eq, lt, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { authAttempts } from "@/db/schema";
 
@@ -54,6 +54,14 @@ function ruleFor(scope: AuthScope): RateLimitRule {
 /**
  * Counts one attempt against the bucket and reports whether it may proceed.
  * Call this before doing the expensive work (password hashing, sending mail).
+ *
+ * One statement, not a read followed by a write (D-074). The old version
+ * SELECTed the row, decided in JavaScript, then UPDATEd: two requests arriving
+ * together read the same count and both wrote the same `count + 1`, so a burst
+ * of parallel guesses cost the attacker a single attempt. The unique index on
+ * (scope, identifier) turns the insert into an upsert, and the whole decision
+ * moves into the CASE expressions, where the database applies it under the
+ * row lock it already takes.
  */
 export async function consumeAttempt(
   scope: AuthScope,
@@ -63,25 +71,45 @@ export async function consumeAttempt(
   const rule = ruleFor(scope);
   const key = identifier.toLowerCase().trim() || "unknown";
 
-  const existing = await db
-    .select()
-    .from(authAttempts)
-    .where(and(eq(authAttempts.scope, scope), eq(authAttempts.identifier, key)))
-    .limit(1);
+  // A row whose window started before this instant has rolled over
+  const windowCutoff = new Date(now.getTime() - rule.windowMs);
+  const lockUntil = new Date(now.getTime() + rule.lockMs);
 
-  const row = existing[0];
+  // `locked` and `rolled` read the stored row (the `excluded` alias would be
+  // the values we are trying to insert, which are not what the decision needs)
+  const locked = sql`${authAttempts.lockedUntil} is not null and ${authAttempts.lockedUntil} > ${now}`;
+  const rolled = sql`${authAttempts.windowStartedAt} < ${windowCutoff}`;
 
-  if (!row) {
-    await db.insert(authAttempts).values({
-      scope,
-      identifier: key,
-      count: 1,
-      windowStartedAt: now,
-    });
-    return { allowed: true, remaining: rule.limit - 1, retryAfterMs: 0 };
-  }
+  const rows = await db
+    .insert(authAttempts)
+    .values({ scope, identifier: key, count: 1, windowStartedAt: now })
+    .onConflictDoUpdate({
+      target: [authAttempts.scope, authAttempts.identifier],
+      set: {
+        // A locked bucket is left exactly as it is: refusing must not extend it
+        count: sql`case
+          when ${locked} then ${authAttempts.count}
+          when ${rolled} then 1
+          else ${authAttempts.count} + 1
+        end`,
+        windowStartedAt: sql`case
+          when ${locked} then ${authAttempts.windowStartedAt}
+          when ${rolled} then ${now}
+          else ${authAttempts.windowStartedAt}
+        end`,
+        lockedUntil: sql`case
+          when ${locked} then ${authAttempts.lockedUntil}
+          when ${rolled} then null
+          when ${authAttempts.count} + 1 > ${rule.limit} then ${lockUntil}
+          else null
+        end`,
+        updatedAt: now,
+      },
+    })
+    .returning({ count: authAttempts.count, lockedUntil: authAttempts.lockedUntil });
 
-  // Still locked out: do not extend the lock, just refuse
+  const row = rows[0]!;
+
   if (row.lockedUntil && row.lockedUntil.getTime() > now.getTime()) {
     return {
       allowed: false,
@@ -90,25 +118,7 @@ export async function consumeAttempt(
     };
   }
 
-  // The window has rolled over, so the counter starts again
-  const windowExpired = now.getTime() - row.windowStartedAt.getTime() > rule.windowMs;
-  const nextCount = windowExpired ? 1 : row.count + 1;
-  const overLimit = nextCount > rule.limit;
-
-  await db
-    .update(authAttempts)
-    .set({
-      count: nextCount,
-      windowStartedAt: windowExpired ? now : row.windowStartedAt,
-      lockedUntil: overLimit ? new Date(now.getTime() + rule.lockMs) : null,
-      updatedAt: now,
-    })
-    .where(eq(authAttempts.id, row.id));
-
-  if (overLimit) {
-    return { allowed: false, remaining: 0, retryAfterMs: rule.lockMs };
-  }
-  return { allowed: true, remaining: rule.limit - nextCount, retryAfterMs: 0 };
+  return { allowed: true, remaining: Math.max(0, rule.limit - row.count), retryAfterMs: 0 };
 }
 
 /** How many attempts the bucket currently holds, without counting a new one. */
