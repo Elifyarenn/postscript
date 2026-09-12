@@ -57,8 +57,8 @@ test("takes an article through the review chain to publication and withdraws it"
   const slug = await readSlug(page);
 
   // Step 2: the category editor (of "Sanat & Edebiyat") reviews and approves
-  await transitionTo(page, "İncelemede");
-  await transitionTo(page, "Ana editör onayında");
+  await transitionTo(page, "İncelemeye Gönder");
+  await transitionTo(page, "Onayla ve Ana Editöre Gönder");
 
   await logout(page);
 
@@ -67,7 +67,7 @@ test("takes an article through the review chain to publication and withdraws it"
   await loginElevated(page, "editor", SEED.mainEditor);
   await page.goto(articleUrl);
 
-  await transitionTo(page, "Yayın kuyruğunda");
+  await transitionTo(page, "Onayla");
 
   await logout(page);
 
@@ -78,13 +78,13 @@ test("takes an article through the review chain to publication and withdraws it"
 
   // Acceptance is not a resting state: it opens the work approval and the
   // article moves on to "awaiting rights" by itself (§7.1)
-  await transitionTo(page, "Kabul edildi", "Devir formu bekleniyor");
+  await transitionTo(page, "Kabul Et", "Devir formu bekleniyor");
   await expect(page.getByText("Eser Onayı:")).toBeVisible();
 
   /* ---------- scheduling is refused without a signature ---------- */
 
-  await page.getByRole("button", { name: "Yayına planlandı", exact: true }).click();
-  await page.getByRole("button", { name: '"Yayına planlandı" durumuna geç' }).click();
+  await page.getByRole("button", { name: "Yayına Al", exact: true }).click();
+  await page.getByRole("button", { name: '"Yayına Al" durumuna geç' }).click();
 
   await expect(
     page.getByText("İmzalanmış hak devri formu olmadan makale yayına alınamaz."),
@@ -127,8 +127,8 @@ test("takes an article through the review chain to publication and withdraws it"
   await loginElevated(page, "admin", SEED.admin);
   await page.goto(articleUrl);
 
-  await transitionTo(page, "Yayına planlandı");
-  await transitionTo(page, "Yayınlandı");
+  await transitionTo(page, "Yayına Al");
+  await transitionTo(page, "Hemen Yayınla");
 
   // The public API serves it now
   const published = await page.request.get(`/api/public/articles/${slug}`);
@@ -161,9 +161,9 @@ test("takes an article through the review chain to publication and withdraws it"
 
   /* ---------- withdrawal ---------- */
 
-  await page.getByRole("button", { name: "Geri çekildi", exact: true }).click();
+  await page.getByRole("button", { name: "Geri Çek", exact: true }).click();
   await page.getByLabel("Geri çekme gerekçesi").fill("Telif itirazı geldi.");
-  await page.getByRole("button", { name: '"Geri çekildi" durumuna geç' }).click();
+  await page.getByRole("button", { name: '"Geri Çek" durumuna geç' }).click();
   await expect(statusBadge(page)).toHaveText("Geri çekildi");
 
   const withdrawn = await page.request.get(`/api/public/articles/${slug}`);
@@ -191,18 +191,18 @@ test("a content change revokes the approval and asks for a new one", async ({ pa
   await page.waitForURL(/\/editor\/articles\/[0-9a-f-]{36}$/);
   const articleUrl = page.url();
 
-  await transitionTo(page, "İncelemede");
-  await transitionTo(page, "Ana editör onayında");
+  await transitionTo(page, "İncelemeye Gönder");
+  await transitionTo(page, "Onayla ve Ana Editöre Gönder");
 
   await logout(page);
   await loginElevated(page, "editor", SEED.mainEditor);
   await page.goto(articleUrl);
-  await transitionTo(page, "Yayın kuyruğunda");
+  await transitionTo(page, "Onayla");
 
   await logout(page);
   await loginElevated(page, "admin", SEED.admin);
   await page.goto(articleUrl);
-  await transitionTo(page, "Kabul edildi", "Devir formu bekleniyor");
+  await transitionTo(page, "Kabul Et", "Devir formu bekleniyor");
 
   /* ---------- the writer approves ---------- */
 

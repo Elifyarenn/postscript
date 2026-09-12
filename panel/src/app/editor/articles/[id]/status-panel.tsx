@@ -12,6 +12,25 @@ import { useFormStatus } from "react-dom";
 import { Alert, Button, Field, Input, Textarea, STATUS_LABELS } from "@/components/ui";
 import type { ActionState, ServerAction } from "@/components/form";
 
+/**
+ * The wording of the transition buttons, in the product's own words (D-059,
+ * D-068): the category editor asks for a revision or passes the article on to
+ * the main editor, the main editor approves it into the admin's publication
+ * queue, and the admin accepts, schedules or publishes.
+ */
+const TRANSITION_LABELS: Record<string, string> = {
+  draft: "Taslağa Dön",
+  in_review: "İncelemeye Gönder",
+  pending_admin_approval: "Onayla ve Ana Editöre Gönder",
+  ready_for_publishing: "Onayla",
+  accepted: "Kabul Et",
+  revision_requested: "Revizyon İste",
+  scheduled: "Yayına Al",
+  published: "Hemen Yayınla",
+  archived: "Arşivle",
+  withdrawn: "Geri Çek",
+};
+
 function Submit({ label }: { label: string }) {
   const { pending } = useFormStatus();
   return (
@@ -59,7 +78,7 @@ export function StatusPanel({
             variant={selected === target ? "primary" : "secondary"}
             onClick={() => setSelected(selected === target ? null : target)}
           >
-            {STATUS_LABELS[target] ?? target}
+            {TRANSITION_LABELS[target] ?? STATUS_LABELS[target] ?? target}
           </Button>
         ))}
       </div>
@@ -96,7 +115,9 @@ export function StatusPanel({
             </Field>
           )}
 
-          <Submit label={`"${STATUS_LABELS[selected] ?? selected}" durumuna geç`} />
+          <Submit
+            label={`"${TRANSITION_LABELS[selected] ?? STATUS_LABELS[selected] ?? selected}" durumuna geç`}
+          />
         </form>
       )}
     </div>
