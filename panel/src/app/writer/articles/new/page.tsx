@@ -1,6 +1,5 @@
 import { guardWriterInnerPages } from "@/lib/auth/guard";
 import { selectableWriterCategories } from "@/services/editor-categories";
-import { listWriterAreasWithQuota } from "@/services/writer-areas";
 import { readCsrfToken } from "@/lib/csrf";
 import { PanelForm } from "@/components/form";
 import { Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
@@ -11,10 +10,7 @@ export const metadata = { title: "Yeni yazı" };
 export default async function WriterNewArticlePage() {
   const { user } = await guardWriterInnerPages();
   const csrfToken = (await readCsrfToken()) ?? "";
-  const [categories, areas] = await Promise.all([
-    selectableWriterCategories({ ...user }),
-    listWriterAreasWithQuota(),
-  ]);
+  const categories = await selectableWriterCategories({ ...user });
 
   return (
     <>
@@ -54,25 +50,6 @@ export default async function WriterNewArticlePage() {
                 </option>
               ))}
             </Select>
-          </Field>
-
-          <Field
-            label="Alt köşe"
-            htmlFor="subcategory"
-            hint="İsteğe bağlı; yazının ikincil köşesi (11 ana kategoriden)."
-          >
-            <Select id="subcategory" name="subcategory" defaultValue="">
-              <option value="">Yok</option>
-              {areas.map((area) => (
-                <option key={area.name} value={area.name}>
-                  {area.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
-
-          <Field label="Etiketler" htmlFor="tags" hint="Virgülle ayırın.">
-            <Input id="tags" name="tags" placeholder="deneme, çeviri" />
           </Field>
 
           <Field label="Gövde (markdown)" htmlFor="bodyMarkdown">

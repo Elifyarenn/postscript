@@ -6,7 +6,6 @@ import { articleComments, users } from "@/db/schema";
 import { guardWriterInnerPages } from "@/lib/auth/guard";
 import { findArticleById, listArticleVersions } from "@/services/articles";
 import { selectableWriterCategories } from "@/services/editor-categories";
-import { listWriterAreasWithQuota } from "@/services/writer-areas";
 import { readCsrfToken } from "@/lib/csrf";
 import { renderMarkdown } from "@/lib/markdown";
 import { PanelForm } from "@/components/form";
@@ -29,9 +28,8 @@ export default async function WriterArticleDetailPage({
   if (article.authorId !== user.id) notFound();
 
   const editable = article.status === "draft" || article.status === "revision_requested";
-  const [categories, areas, versions, notes] = await Promise.all([
+  const [categories, versions, notes] = await Promise.all([
     editable ? selectableWriterCategories({ ...user }) : Promise.resolve([]),
-    editable ? listWriterAreasWithQuota() : Promise.resolve([]),
     listArticleVersions({ ...user }, id),
     db
       .select({
@@ -102,25 +100,6 @@ export default async function WriterArticleDetailPage({
                         </option>
                       ))}
                     </Select>
-                  </Field>
-
-                  <Field
-                    label="Alt köşe"
-                    htmlFor="subcategory"
-                    hint="İsteğe bağlı; yazının ikincil köşesi (11 ana kategoriden)."
-                  >
-                    <Select id="subcategory" name="subcategory" defaultValue={article.subcategory ?? ""}>
-                      <option value="">Yok</option>
-                      {areas.map((area) => (
-                        <option key={area.name} value={area.name}>
-                          {area.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-
-                  <Field label="Etiketler" htmlFor="tags" hint="Virgülle ayırın.">
-                    <Input id="tags" name="tags" defaultValue={article.tags.join(", ")} />
                   </Field>
 
                   <Field label="Gövde (markdown)" htmlFor="bodyMarkdown">

@@ -1759,3 +1759,37 @@ oluştuğu bilinmiyor. Ayrıca `pending_registrations`'ta bir test satırı var
 
 ---
 
+## D-080 — Yazar formu sadeleşti; editörün makale sayfasından "Görseller" kalktı
+
+**İstek (ürün sahibi):** "Makalelerim" → "Yazılarım"; yazı ekleme formundan
+alt köşe ve etiketler kalksın; editör panelinde görseller bölümü kalksın.
+
+**Yapılan:**
+
+- Yazar menüsü ve `/writer/articles` başlığı "Yazılarım" oldu.
+- `/writer/articles/new` ve `/writer/articles/[id]` formlarından "Alt köşe" ve
+  "Etiketler" alanları çıkarıldı. İkisi aynı formun iki hâli; birinden kalkıp
+  ötekinde kalması tutarsız olurdu.
+- Yazar action'ları `subcategory` ve `tags` alanlarını **hiç göndermiyor**.
+  Formdan kalkan alanı `listField`/`optionalText` ile okumaya devam etmek `[]`
+  ve `null` döndürürdü; servis bunları "boşalt" diye yorumlayıp editörün
+  girdiği değeri her yazar kaydında silerdi. `undefined` ise saklı değeri korur.
+- `/editor/articles/[id]` sayfasındaki "Görseller" kartı (bağlı görsel listesi,
+  "Çıkar", "Görsel ekle") kaldırıldı.
+
+**Bilerek dokunulmayanlar:**
+
+- Veritabanı kolonları (`articles.subcategory`, `articles.tags`) ve servis
+  doğrulaması duruyor: migration yok, dergideki etiket gösterimi çalışmaya
+  devam ediyor.
+- Editörün kendi formları (yeni makale kaydı, makale düzenleme) alt köşe ve
+  etiketleri hâlâ gösteriyor; istek yazı ekleme formuyla sınırlıydı.
+- "Medya kütüphanesi" menüsü ve `attachMediaAction`/`detachMediaAction`
+  yerinde. Lisans uyarısı ve yayın engeli (`allMediaLicensed`) de korunuyor;
+  daha önce bağlanmış lisanssız bir görsel hâlâ yayını durdurur.
+- e2e `05-media-license`: görseli makaleye bağlama adımı arayüzden kalktığı
+  için o kısım çıkarıldı; yerine kartın artık görünmediğini doğrulayan test
+  kondu.
+
+---
+

@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
-import { articleMedia, media, users } from "@/db/schema";
+import { users } from "@/db/schema";
 import { guardPanel } from "@/lib/auth/guard";
 import {
   allowedTargetsForActor,
@@ -12,7 +12,7 @@ import {
 } from "@/services/articles";
 import { listIssues } from "@/services/issues";
 import { findLiveApproval } from "@/services/rights";
-import { allMediaLicensed, listMedia } from "@/services/media";
+import { allMediaLicensed } from "@/services/media";
 import { readCsrfToken } from "@/lib/csrf";
 import { renderMarkdown } from "@/lib/markdown";
 import { ActionButton, PanelForm } from "@/components/form";
@@ -34,8 +34,6 @@ import { formatDate, formatDateTime } from "@/lib/utils";
 import { StatusPanel } from "./status-panel";
 import {
   addCommentAction,
-  attachMediaAction,
-  detachMediaAction,
   resolveCommentAction,
   setPlagiarismAction,
   transitionArticleAction,
@@ -60,7 +58,9 @@ export default async function EditorArticleDetailPage({
   await assertCanReadArticle(actor, article);
   const targets = await allowedTargetsForActor(actor, article);
 
-  const [grant, versions, comments, issues, writers, library, licensed, attached] =
+  // The media card is gone from this page (D-080), but the licence check stays:
+  // media attached earlier still blocks publishing until it is licensed.
+  const [grant, versions, comments, issues, writers, licensed] =
     await Promise.all([
       findLiveApproval(article.id),
       listArticleVersions(actor, article.id),
@@ -73,18 +73,7 @@ export default async function EditorArticleDetailPage({
         .from(users)
         .where(and(inArray(users.role, ["writer", "editor", "admin"]), isNull(users.deletedAt)))
         .orderBy(users.displayName),
-      listMedia(actor, 100),
       allMediaLicensed(article.id),
-      db
-        .select({
-          id: media.id,
-          storageKey: media.storageKey,
-          licenseType: media.licenseType,
-          altText: media.altText,
-        })
-        .from(articleMedia)
-        .innerJoin(media, eq(articleMedia.mediaId, media.id))
-        .where(eq(articleMedia.articleId, article.id)),
     ]);
 
   const preview = await renderMarkdown(article.bodyMarkdown);
@@ -234,65 +223,6 @@ export default async function EditorArticleDetailPage({
         <Card>
           <h2 className="mb-4 font-serif text-lg">Önizleme</h2>
           <div className="prose-panel text-sm" dangerouslySetInnerHTML={{ __html: preview }} />
-        </Card>
-
-        <Card>
-          <h2 className="mb-4 font-serif text-lg">Görseller</h2>
-
-          {attached.length === 0 ? (
-            <EmptyState>Bu makaleye görsel bağlı değil.</EmptyState>
-          ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Dosya</Th>
-                  <Th>Lisans</Th>
-                  <Th />
-                </tr>
-              </thead>
-              <tbody>
-                {attached.map((row) => (
-                  <tr key={row.id}>
-                    <Td className="text-xs">{row.altText ?? row.storageKey}</Td>
-                    <Td className="text-xs">
-                      {row.licenseType ?? <span className="text-danger">Eksik</span>}
-                    </Td>
-                    <Td className="text-right">
-                      <ActionButton
-                        action={detachMediaAction}
-                        csrfToken={csrfToken}
-                        label="Çıkar"
-                        fields={{ articleId: article.id, mediaId: row.id }}
-                      />
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          )}
-
-          <div className="mt-4">
-            <PanelForm
-              action={attachMediaAction}
-              csrfToken={csrfToken}
-              submitLabel="Görsel ekle"
-              submitVariant="secondary"
-            >
-                <>
-                  <input type="hidden" name="articleId" value={article.id} />
-                  <Field label="Kütüphaneden seç" htmlFor="mediaId">
-                    <Select id="mediaId" name="mediaId" required>
-                      <option value="">Seçin…</option>
-                      {library.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.altText ?? item.storageKey} ({item.licenseType ?? "lisanssız"})
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                </>
-            </PanelForm>
-          </div>
         </Card>
 
         <Card>

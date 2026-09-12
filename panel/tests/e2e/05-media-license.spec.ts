@@ -48,7 +48,7 @@ test("refuses a file whose bytes do not match the declared type", async ({ page 
   await expect(page.getByText(/Dosya türü tanınmadı|uyuşmuyor/)).toBeVisible();
 });
 
-test("records the licence and shows where the image is used", async ({ page }) => {
+test("records the licence in the media library", async ({ page }) => {
   await loginElevated(page, "editor", SEED.editor);
 
   await uploadImage(page, "Kapak denemesi");
@@ -56,17 +56,14 @@ test("records the licence and shows where the image is used", async ({ page }) =
   await page.goto("/editor/media");
   await expect(page.getByRole("cell", { name: "Kapak denemesi" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "own_work" })).toBeVisible();
+});
 
-  // Attaching it to an article is only offered for media that has a licence
+test("the article page no longer offers a media card (D-080)", async ({ page }) => {
+  await loginElevated(page, "editor", SEED.editor);
+
   await page.goto("/editor/articles");
   await page.locator("tbody tr").first().getByRole("link").click();
 
-  await page
-    .getByLabel("Kütüphaneden seç")
-    .selectOption({ label: "Kapak denemesi (own_work)" });
-  await page.getByRole("button", { name: "Görsel ekle" }).click();
-  await expect(page.getByText("Görsel makaleye eklendi")).toBeVisible();
-
-  await page.goto("/editor/media");
-  await expect(page.getByRole("cell", { name: "1 makale" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Görseller" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Görsel ekle" })).toHaveCount(0);
 });

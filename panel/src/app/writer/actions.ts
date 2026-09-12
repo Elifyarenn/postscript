@@ -18,7 +18,7 @@ import {
 import { approveWork } from "@/services/rights";
 import { requestMetadata, requireRole } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
-import { checkbox, listField, optionalText, runAction, text, type ActionState } from "@/lib/action";
+import { checkbox, optionalText, runAction, text, type ActionState } from "@/lib/action";
 
 export async function acknowledgeAnnouncementAction(
   _state: ActionState,
@@ -142,8 +142,6 @@ export async function createArticleAsWriterAction(
         bodyMarkdown: text(formData, "bodyMarkdown"),
         slug: optionalText(formData, "slug"),
         category: optionalText(formData, "category"),
-        subcategory: optionalText(formData, "subcategory"),
-        tags: listField(formData, "tags"),
       },
       meta,
     );
@@ -173,9 +171,10 @@ export async function updateArticleAsWriterAction(
         summary: optionalText(formData, "summary"),
         bodyMarkdown: text(formData, "bodyMarkdown"),
         slug: optionalText(formData, "slug"),
+        // Alt köşe and tags are no longer on the writer's form (D-080). They
+        // are left out rather than read as empty, so a save keeps whatever an
+        // editor stored instead of wiping it.
         category: optionalText(formData, "category"),
-        subcategory: optionalText(formData, "subcategory"),
-        tags: listField(formData, "tags"),
       },
       meta,
     );

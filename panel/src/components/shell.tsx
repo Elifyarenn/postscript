@@ -116,7 +116,7 @@ export function writerNav(locked: boolean): NavGroup[] {
         { href: "/writer/announcements", label: "Duyurular" },
         { href: "/writer/agreement", label: "Sözleşme" },
         { href: "/writer/approvals", label: "Eser Onayları", disabled: locked },
-        { href: "/writer/articles", label: "Makalelerim", disabled: locked },
+        { href: "/writer/articles", label: "Yazılarım", disabled: locked },
         { href: "/writer/profile", label: "Profil ve güvenlik" },
         { href: "/magazine", label: "Dergi" },
       ],

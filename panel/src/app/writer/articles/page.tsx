@@ -7,7 +7,7 @@ import { listArticlesForWriter } from "@/services/articles";
 import { Card, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
 
-export const metadata = { title: "Makalelerim" };
+export const metadata = { title: "Yazılarım" };
 
 /**
  * The author's own writing area (step 1 of the review chain, D-059): they
@@ -51,7 +51,7 @@ export default async function WriterArticlesPage() {
   return (
     <>
       <PageHeader
-        title="Makalelerim"
+        title="Yazılarım"
         description="Yazınızı yazın, taslak kaydedin ve incelemeye gönderin."
         actions={
           <Link
