@@ -91,7 +91,9 @@ export async function registerReader(
   await page.locator('input[name="kvkkConsent"]').check();
   await page.getByLabel("Şifre").fill(input.password);
   await page.getByRole("button", { name: "Hesabı oluştur" }).click();
-  await page.waitForURL("**/verify-email/pending");
+  // The redirect carries the address as a query parameter, so the pattern
+  // matches the path only (D-067).
+  await page.waitForURL(/\/verify-email\/pending(\?|$)/);
 }
 
 /** Submits the login form. Does not assume where it lands. */

@@ -21,8 +21,10 @@ test.describe.configure({ mode: "serial" });
 test("registers as a reader, verifies the address, and stays a reader", async ({ page }) => {
   await registerReader(page, NEW_READER);
 
-  // Registration opens no session: the address waits in a pending record
-  await page.waitForURL("**/verify-email/pending");
+  // Registration opens no session: the address waits in a pending record.
+  // The redirect carries the address as a query parameter, so the pattern
+  // matches the path only.
+  await page.waitForURL(/\/verify-email\/pending(\?|$)/);
   await expect(page.getByRole("heading", { name: "E-posta adresinizi doğrulayın" })).toBeVisible();
   await expect(page.getByText(NEW_READER.email)).toBeVisible();
 
@@ -66,7 +68,7 @@ test("an unverified address cannot sign in, and the resend button is throttled",
     email: "bekleyen-okur@example.com",
     password: "Bekleyen-Sifre-2026",
   });
-  await page.waitForURL("**/verify-email/pending");
+  await page.waitForURL(/\/verify-email\/pending(\?|$)/);
 
   // No account exists yet, so signing in fails exactly like an unknown address
   await page.getByRole("link", { name: "Girişe dön" }).click();
@@ -142,5 +144,5 @@ test("ticks the password rules off and keeps the button shut until all three are
   await expect(submit).toBeEnabled();
 
   await submit.click();
-  await page.waitForURL("**/verify-email/pending");
+  await page.waitForURL(/\/verify-email\/pending(\?|$)/);
 });

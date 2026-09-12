@@ -57,8 +57,8 @@ test("takes an article through the review chain to publication and withdraws it"
   const slug = await readSlug(page);
 
   // Step 2: the category editor (of "Sanat & Edebiyat") reviews and approves
-  await transitionTo(page, "İncelemeye Gönder");
-  await transitionTo(page, "Onayla ve Ana Editöre Gönder");
+  await transitionTo(page, "İncelemeye Gönder", "İncelemede");
+  await transitionTo(page, "Onayla ve Ana Editöre Gönder", "Ana editör onayında");
 
   await logout(page);
 
@@ -67,7 +67,7 @@ test("takes an article through the review chain to publication and withdraws it"
   await loginElevated(page, "editor", SEED.mainEditor);
   await page.goto(articleUrl);
 
-  await transitionTo(page, "Onayla");
+  await transitionTo(page, "Onayla", "Yayın kuyruğunda");
 
   await logout(page);
 
@@ -127,8 +127,8 @@ test("takes an article through the review chain to publication and withdraws it"
   await loginElevated(page, "admin", SEED.admin);
   await page.goto(articleUrl);
 
-  await transitionTo(page, "Yayına Al");
-  await transitionTo(page, "Hemen Yayınla");
+  await transitionTo(page, "Yayına Al", "Yayına planlandı");
+  await transitionTo(page, "Hemen Yayınla", "Yayınlandı");
 
   // The public API serves it now
   const published = await page.request.get(`/api/public/articles/${slug}`);
@@ -191,13 +191,13 @@ test("a content change revokes the approval and asks for a new one", async ({ pa
   await page.waitForURL(/\/editor\/articles\/[0-9a-f-]{36}$/);
   const articleUrl = page.url();
 
-  await transitionTo(page, "İncelemeye Gönder");
-  await transitionTo(page, "Onayla ve Ana Editöre Gönder");
+  await transitionTo(page, "İncelemeye Gönder", "İncelemede");
+  await transitionTo(page, "Onayla ve Ana Editöre Gönder", "Ana editör onayında");
 
   await logout(page);
   await loginElevated(page, "editor", SEED.mainEditor);
   await page.goto(articleUrl);
-  await transitionTo(page, "Onayla");
+  await transitionTo(page, "Onayla", "Yayın kuyruğunda");
 
   await logout(page);
   await loginElevated(page, "admin", SEED.admin);
