@@ -216,10 +216,6 @@ export default async function EditorArticlesPage({
                 </Field>
               </div>
 
-              <Field label="Etiketler" htmlFor="tags" hint="Virgülle ayırın.">
-                <Input id="tags" name="tags" placeholder="deneme, çeviri" />
-              </Field>
-
               <Field label="Gövde (markdown)" htmlFor="bodyMarkdown">
                 <Textarea id="bodyMarkdown" name="bodyMarkdown" rows={10} />
               </Field>

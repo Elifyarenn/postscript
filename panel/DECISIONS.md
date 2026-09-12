@@ -1793,3 +1793,25 @@ alt köşe ve etiketler kalksın; editör panelinde görseller bölümü kalksı
 
 ---
 
+## D-081 — Alt köşe ve etiketler editör formlarından da kalktı
+
+**İstek (ürün sahibi):** D-080'de bilerek bırakılan editör formlarından da
+alt köşe ve etiketler kaldırılsın.
+
+**Yapılan:**
+
+- `/editor/articles` "Yeni makale kaydı" formundan "Etiketler" çıkarıldı (bu
+  formda alt köşe zaten yoktu).
+- `/editor/articles/[id]` düzenleme formundan "Alt köşe" ve "Etiketler"
+  çıkarıldı.
+- `createArticleAction` `tags`, `updateArticleAction` `subcategory` ve `tags`
+  göndermiyor. Gerekçe D-080 ile aynı: boş okunan alan saklı değeri silerdi;
+  gönderilmeyen alan onu korur.
+
+**Sonuç:** Artık hiçbir panel formu bu iki alanı yazmıyor. Kolonlar, zod
+şemaları ve `assertSubcategoryAllowed` yerinde; mevcut değerler korunur ve
+dergide gösterilmeye devam eder, yeni değer girilemez. Alanları tamamen
+kaldırmak (migration) ayrı bir karar olur.
+
+---
+

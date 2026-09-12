@@ -65,7 +65,6 @@ export async function createArticleAction(
         authorId: optionalText(formData, "authorId"),
         issueId: optionalText(formData, "issueId"),
         category: optionalText(formData, "category"),
-        tags: listField(formData, "tags"),
         dueDate: optionalText(formData, "dueDate"),
       },
       meta,
@@ -97,9 +96,9 @@ export async function updateArticleAction(
         bodyMarkdown: text(formData, "bodyMarkdown"),
         authorId: optionalText(formData, "authorId"),
         issueId: optionalText(formData, "issueId"),
+        // Alt köşe and tags left every panel form (D-081); omitting them keeps
+        // the stored values instead of clearing them on each save.
         category: optionalText(formData, "category"),
-        subcategory: optionalText(formData, "subcategory"),
-        tags: listField(formData, "tags"),
         dueDate: optionalText(formData, "dueDate"),
         changeNote: optionalText(formData, "changeNote"),
         changeKind: text(formData, "changeKind") === "content_change"
