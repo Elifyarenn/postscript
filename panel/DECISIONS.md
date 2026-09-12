@@ -1838,5 +1838,15 @@ olmayan kolonu seçip her makale sayfasını kırardı.
 **Veri kaybı:** Üretimde `subcategory` dolu satır yoktu. `tags` tek makalede
 doluydu ("Madde 1 - Takıntı", 12 etiket); kolon düşünce bu etiketler gider.
 
+**Durum — ÜRETİME UYGULANMADI (bilerek bekletiliyor):** Kod yayında, yerel
+pglite migrate edildi. Ürün sahibi üretim migration'ını şimdilik beklettirdi.
+Üretim defteri 23 kayıtta, `0024` bekliyor. Kolonlar orada ama kod okumuyor;
+bu zararsız.
+
+**Dikkat:** Üretimde bir sonraki `pnpm db:migrate`, hangi migration için
+çalıştırılırsa çalıştırılsın `0024`'ü de uygular ve etiketleri siler. Başka
+bir migration'ı canlıya almadan önce ürün sahibine sor. Uygulanacaksa önce
+snapshot al.
+
 ---
 
