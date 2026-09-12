@@ -126,6 +126,7 @@ pnpm dev
 | `pnpm publish-scheduled` | Zamanı gelen makaleleri yayınlar |
 | `pnpm send-reminders` | Bekleyen devir formları için hatırlatma |
 | `pnpm process-deletions` | 30 günü dolan hesap silme taleplerini işler |
+| `pnpm purge-unverified` | E-posta doğrulanmadan 7 gün geçen hesapları anonimleştirir |
 
 Migration'lar elle düzenlenmez: şema `src/db/schema.ts` içinde değiştirilir ve
 `pnpm db:generate` çalıştırılır.
@@ -357,6 +358,7 @@ Uygulama içinde zamanlayıcı yoktur; işler dışarıdan tetiklenir ve idempot
 */5 * * * *  cd /app && pnpm publish-scheduled
 0    6 * * *  cd /app && pnpm send-reminders
 0    4 * * *  cd /app && pnpm process-deletions
+0    3 * * *  cd /app && pnpm purge-unverified
 ```
 
 ---

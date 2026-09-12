@@ -19,7 +19,8 @@
     "create-admin": "tsx --tsconfig scripts/tsconfig.json scripts/create-admin.ts",
     "publish-scheduled": "tsx --tsconfig scripts/tsconfig.json scripts/publish-scheduled.ts",
     "send-reminders": "tsx --tsconfig scripts/tsconfig.json scripts/send-reminders.ts",
-    "process-deletions": "tsx --tsconfig scripts/tsconfig.json scripts/process-deletions.ts"
+    "process-deletions": "tsx --tsconfig scripts/tsconfig.json scripts/process-deletions.ts",
+    "purge-unverified": "tsx --tsconfig scripts/tsconfig.json scripts/purge-unverified.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1127.0",

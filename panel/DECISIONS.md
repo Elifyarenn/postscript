@@ -1319,6 +1319,27 @@ başvuru öncesi eksik veri sorununu baştan çözer. Alan zorunlu tutuldu çün
 isteğe bağlı bırakılsaydı akış değişmezdi; ancak yaş barajı eklenmedi, çünkü
 okuyucu kaydı reşit olmayanlara da açıktır.
 
+---
+
+## D-066 — Doğrulanmamış hesaplar 7 gün sonra otomatik silinir
+
+**Karar:** `pnpm purge-unverified` adında bir zamanlanmış iş eklendi: e-posta
+adresi hiç doğrulanmamış (yalnızca `user` rolünde olabilen) hesaplar, kayıt
+tarihinden 7 gün sonra `anonymiseUser` ile anonimleştirilir ve yumuşak silinir.
+İş idempotenttir ve her gün bir kez çalışacak şekilde önerilir; README'deki
+crontab örneğine eklendi.
+
+**Gerekçe:** Ürün sahibi "e-posta doğrulaması yapmamış kullanıcıları sil" dedi.
+Doğrulama bağlantısı 24 saat geçerli ve yeniden istenebilir olduğu için 7 gün
+yeterli bir lütuftur. Doğrulanmamış bir hesap hiçbir işlem yapamaz (D-034),
+yazar olamaz, imzalı devir kaydı tutamaz; bu yüzden anonimleştirme hukuki
+kayıtları tehlikeye atmaz. Anonimleştirme yolu, kullanıcı talepli silmeyle
+aynı mekanizmadır; fark yalnızca tetikleyicinin ve gerekçenin `audit_log`'a
+"user.anonymised" olarak düşmesidir.
+
+**Sınır:** Bu iş yalnızca halihazırda var olan doğrulanmamış hesapları temizler;
+yeni doğrulanmamış hesap üretimini D-067 önler.
+
 
 
 
