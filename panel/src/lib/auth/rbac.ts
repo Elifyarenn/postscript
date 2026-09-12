@@ -264,8 +264,9 @@ export function canPerformTransition(
     case "withdrawn":
       return canFinalizePublication(actor);
 
-    // `awaiting_rights` and `withdrawn` are not reachable by a direct call:
-    // the first is auto-entered from `accepted`, and `withdrawn` is terminal.
+    // `awaiting_rights` is the only status nobody may ask for directly: the
+    // service enters it automatically after `accepted` (§7.2), together with
+    // opening the rights form. Anything unknown lands here too and is refused.
     default:
       return false;
   }

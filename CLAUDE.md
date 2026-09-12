@@ -1,6 +1,13 @@
 # postscript — Claude Code Yönergeleri
 
-Bu dosya her oturumda okunur. `SPEC.md` ürünün tam tanımıdır; çelişki varsa `SPEC.md` kazanır. Karar verilmemiş her konu `DECISIONS.md`'ye gerekçesiyle yazılır. Soru sorma; muhafazakâr güvenli seçeneği uygula ve kaydet.
+Bu dosya her oturumda okunur. Karar verilmemiş her konu `panel/DECISIONS.md`'ye gerekçesiyle yazılır. Soru sorma; muhafazakâr güvenli seçeneği uygula ve kaydet.
+
+> **`SPEC.md` bu depoda yok** (D-077). Bu dosya uzun süre onu "ürünün tam tanımı"
+> olarak gösterdi; öyle bir dosya hiç oluşturulmadı. Ürünün fiili tanımı
+> `panel/DECISIONS.md` (D-001…) ve `panel/README.md`'dir; çelişki varsa **daha
+> yeni numaralı karar kazanır**. Kod içindeki `§` atıfları (`§8`, `§13` gibi)
+> artık var olmayan bir belgeye işaret eder; yeni kod yazarken `§` yerine karar
+> numarası (`D-0xx`) kullan.
 
 ## Proje
 
@@ -32,7 +39,7 @@ docker compose up -d  # postgres + minio
 - Bir kütüphane eklemeden önce zaten kullanılan bir çözüm var mı bak. Aynı işi yapan ikinci kütüphane yok.
 - Migration'ı elle düzenleme; şemayı değiştir, `pnpm db:generate` çalıştır.
 - Hata durumunda üç denemeden sonra durup durumu özetle; sonsuz düzeltme döngüsüne girme.
-- `SPEC.md` §15 sırasını izle. Sıra dışına çıkma.
+- Sıra `panel/DECISIONS.md`'nin sonundaki en yüksek `D-0xx` numarasından devam eder; yeni karar bir sonraki numarayı alır.
 
 ## Güvenlik kuralları (ihlal edilemez)
 
@@ -64,18 +71,18 @@ docker compose up -d  # postgres + minio
 
 - Server action'lar mutasyon için; route handler'lar yalnızca public API, webhook, OG görseli.
 - Servis katmanı `src/services/*`; server action ve route handler yalnızca doğrulama + servis çağrısı + yanıt. İş kuralı servis katmanında, tek yerde.
-- Durum makinesi `src/services/articles/transitions.ts` tek dosyada; geçiş tablosu veri olarak tanımlı, kodda if-zinciri yok.
-- Yetki kontrolü `src/lib/authz.ts`'te `requireRole(session, "editor")` gibi yardımcılarla; her yerde aynı fonksiyon.
-- Hata yanıtları tutarlı: `{ error: { code, message, fields? } }`.
+- Durum makinesi `src/lib/article-status.ts` tek dosyada; geçiş tablosu veri olarak tanımlı, kodda if-zinciri yok. Durum yazan tek yol `transitionArticle`.
+- Yetki kontrolü `src/lib/auth/rbac.ts`'te saf fonksiyonlarla (`canAccessEditorPanel`, `canPerformTransition` …); bunları `src/lib/auth/session.ts`'teki `requireRole("editor")` ve `src/lib/auth/guard.ts`'teki `guardPanel("editor")` kullanır. Her yerde aynı fonksiyon.
+- Hata yanıtları tutarlı: `{ error: { code, message, fields? } }` — tek üretici `toErrorResponse` (`src/lib/errors.ts`), route handler'lar `errorJson` çağırır. Server action'ların döndürdüğü `ActionState.error` ayrı bir iç tiptir, string kalır.
 - Dosya adları kebab-case, bileşenler PascalCase, veritabanı kolonları snake_case.
-- Türkçe kullanıcı arayüzü metinleri `src/i18n/tr.ts`'de; JSX içinde gömülü Türkçe metin yok.
+- Türkçe arayüz metinleri şu an JSX ve servislerin içinde gömülü; `src/i18n/tr.ts` yok ve kurulması planlanmıyor (D-077). Tek dilli ürün olduğu sürece metni kullanıldığı yerde tut.
 - Yorum satırı yalnızca "neden"i açıklar; "ne"yi kod açıklar.
 
 ## Test beklentileri
 
-Birim: durum makinesi, yaş hesabı (artık yıl dahil), `authz` yardımcıları, hash üretimi, öneri sıralaması.
-E2E: `SPEC.md` §13'teki senaryolar. Her senaryo bağımsız; test verisi seed'den, testler arası paylaşım yok.
+Birim: durum makinesi, yaş hesabı (artık yıl dahil), `rbac` yardımcıları, hash üretimi, hata zarfı, öneri sıralaması.
+E2E: `panel/tests/e2e/*.spec.ts`. Her senaryo bağımsız; test verisi seed'den, testler arası paylaşım yok.
 
 ## Oturum hijyeni
 
-Her ana adım bitince bağlamı temizle ve `SPEC.md`, `DECISIONS.md`, son commit mesajı ile devam et. Uzun oturumda spesifikasyondan sapma artar; bu dosya sapmayı önlemek için var.
+Her ana adım bitince bağlamı temizle ve `panel/DECISIONS.md` (sondan birkaç karar), `panel/README.md`, son commit mesajı ile devam et. Uzun oturumda spesifikasyondan sapma artar; bu dosya sapmayı önlemek için var — ama kendisi de sapabilir: bir kuralın işaret ettiği dosya yoksa kuralı değil gerçeği doğru kabul et ve `DECISIONS.md`'ye yaz.

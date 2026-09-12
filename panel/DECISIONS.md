@@ -1636,3 +1636,37 @@ her iki seçimi de ayrı ayrı doğrular.
 
 ---
 
+## D-077 — CLAUDE.md gerçeğe uyduruldu; `SPEC.md` diye bir dosya yok
+
+**Karar:** Kök `CLAUDE.md`'de koda uymayan dört madde düzeltildi. Kod
+taşınmadı; belge kodun bulunduğu yere getirildi.
+
+| Eski madde | Gerçek |
+|---|---|
+| `SPEC.md` ürünün tam tanımıdır, çelişkide o kazanır | Böyle bir dosya depoda hiç olmadı. Fiili tanım `DECISIONS.md` + `README.md`; çelişkide daha yeni numaralı karar kazanır. |
+| Durum makinesi `src/services/articles/transitions.ts` | `src/lib/article-status.ts` |
+| Yetki kontrolü `src/lib/authz.ts` | `src/lib/auth/rbac.ts` (saf fonksiyonlar) + `session.ts`'teki `requireRole` + `guard.ts`'teki `guardPanel` |
+| Türkçe metinler `src/i18n/tr.ts`'de, JSX'te gömülü metin yok | `src/i18n/` yok; 64 `.tsx` dosyasında gömülü Türkçe var |
+
+**Gerekçe:** Dosya yollarında kod belgeden daha iyi: `rbac.ts`, yanındaki
+`session.ts` ve `guard.ts` ile tek bir yetki modülü oluşturuyor;
+`src/lib/authz.ts`'e taşımak bu grubu dağıtırdı. Durum makinesi de saf ve
+veritabanından bağımsız olduğu için `lib/` altında doğru yerde.
+
+i18n maddesi bilinçli olarak kaldırıldı: ürün tek dilli, ikinci bir dil
+planlanmıyor ve 64 dosyadaki metni bir sözlüğe taşımak, karşılığında hiçbir
+davranış kazandırmadan her metni kullanıldığı yerden uzaklaştırırdı. Kural
+kâğıt üstünde kalıp sürekli ihlal edilmektense kaldırılması dürüst olan.
+
+`SPEC.md` maddesi en önemlisiydi: her oturum "çelişki varsa SPEC.md kazanır"
+diye başlıyordu ve o dosya yoktu — yani otorite olarak gösterilen belge hiç
+okunamıyordu. Koddaki `§8`, `§13` gibi atıflar da bu belgeye işaret ediyor;
+bunlar tek tek temizlenmedi (çok yerdeler ve zararsızlar) ama yeni kodda
+`D-0xx` kullanılacağı `CLAUDE.md`'ye yazıldı.
+
+Ayrıca `rbac.ts`'teki `canPerformTransition` varsayılan dalının yorumu
+düzeltildi: "`awaiting_rights` ve `withdrawn` doğrudan çağrılamaz" diyordu ama
+`withdrawn` üstteki `case` listesindeydi ve doğrudan çağrılabiliyor.
+
+---
+
