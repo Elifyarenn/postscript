@@ -1670,3 +1670,47 @@ düzeltildi: "`awaiting_rights` ve `withdrawn` doğrudan çağrılamaz" diyordu 
 
 ---
 
+## D-078 — D-074 geri alındı: upsert canlıda çalışmadı, sayaç eski haline döndü
+
+**Karar:** `consumeAttempt` D-074 öncesi haline (SELECT → karar → UPDATE) geri
+döndürüldü. Testler kalır; yalnızca paralellik iddiasını doğrulayan test
+sıralı sayımı doğrulayacak şekilde daraltıldı.
+
+**Ne oldu:** D-074 push edildikten sonra canlıda kayıt, giriş ve şifre
+sıfırlama — yani `consumeAttempt`'ten geçen her akış — "Beklenmeyen bir hata
+oluştu." vermeye başladı. `auth_attempts` tablosuna deploy'dan (13:35 UTC)
+sonra tek satır yazılmadı; son satır 13:34:46'da.
+
+**Elenen olasılıklar (hepsi canlıya karşı doğrulandı):**
+
+- Şema/migration: bu değişiklik `src/db/` veya `drizzle/`'a dokunmadı.
+- `auth_attempts_scope_identifier_unique` index'i yerinde ve upsert hedefiyle
+  eşleşiyor.
+- Üretilen SQL Neon'da geçerli: hem `EXPLAIN` hem `PREPARE` sorunsuz geçti,
+  yani ayrıştırma ve tip çıkarımı doğru.
+- Veritabanı Vercel'den erişilebilir ve yazılabilir: `/api/public/issues`
+  çalışıyor, deploy öncesi yazmalar başarılı.
+- `env()` sağlam: `sitemap.xml` `SITE_URL`'i okuyup üretiyor (mutasyon yolunda
+  `env()` çağrılır, public API'de çağrılmaz — bu ikisi böyle ayrıldı).
+- `pnpm build` yerelde temiz; paketleme hatası yok.
+
+**Yani kök neden bulunamadı.** Geriye kalan tek fark, drizzle'ın `sql`
+şablonuna ham `Date` nesnesi olarak geçirdiği parametreler ($5–$13, kolon
+değerleri gibi string'e eşlenmiyor) ile postgres.js'in bunları tel üzerinde
+nasıl gönderdiği. Bu yerel PGlite sürücüsünde farklı davranıyor olabilir; 327
+birim testi ve 23 e2e testi PGlite üzerinde geçtiği için sorun testlerden
+kaçtı.
+
+**Alınan ders:** `pnpm typecheck && pnpm lint && pnpm test` bu hatayı
+yakalayamazdı ve `pnpm build` de yakalamadı. Yerel test veritabanı PGlite,
+üretim postgres.js — sürücüye duyarlı SQL (upsert, `sql` şablonu, ham tip
+parametreleri) yazarken bu ikisi aynı şey değil. Böyle bir değişiklik bir Neon
+dalına karşı çalıştırılmadan yayınlanmamalı.
+
+**Sonuç:** D-074'ün çözdüğü yarış koşulu geri geldi — paralel istekler aynı
+sayacı okuyup aynı değeri yazabilir, yani bir tahmin salvosu saldırgana tek
+deneme maliyeti çıkarır. Bu bilinen ve kabul edilen açık bir noktadır; tekrar
+denenmeden önce gerçek Postgres'e karşı doğrulanmalıdır.
+
+---
+
