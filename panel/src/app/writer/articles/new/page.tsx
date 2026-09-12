@@ -1,5 +1,6 @@
 import { guardWriterInnerPages } from "@/lib/auth/guard";
 import { selectableWriterCategories } from "@/services/editor-categories";
+import { listWriterAreasWithQuota } from "@/services/writer-areas";
 import { readCsrfToken } from "@/lib/csrf";
 import { PanelForm } from "@/components/form";
 import { Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
@@ -10,7 +11,10 @@ export const metadata = { title: "Yeni yazı" };
 export default async function WriterNewArticlePage() {
   const { user } = await guardWriterInnerPages();
   const csrfToken = (await readCsrfToken()) ?? "";
-  const categories = await selectableWriterCategories({ ...user });
+  const [categories, areas] = await Promise.all([
+    selectableWriterCategories({ ...user }),
+    listWriterAreasWithQuota(),
+  ]);
 
   return (
     <>
@@ -23,6 +27,14 @@ export default async function WriterNewArticlePage() {
         <>
           <Field label="Başlık" htmlFor="title">
             <Input id="title" name="title" required maxLength={200} />
+          </Field>
+
+          <Field
+            label="Slug"
+            htmlFor="slug"
+            hint="Boş bırakılırsa başlıktan üretilir. Küçük harf, rakam ve tire kullanın."
+          >
+            <Input id="slug" name="slug" maxLength={120} placeholder="yazinin-adi" />
           </Field>
 
           <Field label="Özet" htmlFor="summary">
@@ -39,6 +51,21 @@ export default async function WriterNewArticlePage() {
               {categories.map((name) => (
                 <option key={name} value={name}>
                   {name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          <Field
+            label="Alt köşe"
+            htmlFor="subcategory"
+            hint="İsteğe bağlı; yazının ikincil köşesi (11 ana kategoriden)."
+          >
+            <Select id="subcategory" name="subcategory" defaultValue="">
+              <option value="">Yok</option>
+              {areas.map((area) => (
+                <option key={area.name} value={area.name}>
+                  {area.name}
                 </option>
               ))}
             </Select>

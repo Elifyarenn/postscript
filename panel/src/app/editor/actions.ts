@@ -98,6 +98,7 @@ export async function updateArticleAction(
         authorId: optionalText(formData, "authorId"),
         issueId: optionalText(formData, "issueId"),
         category: optionalText(formData, "category"),
+        subcategory: optionalText(formData, "subcategory"),
         tags: listField(formData, "tags"),
         dueDate: optionalText(formData, "dueDate"),
         changeNote: optionalText(formData, "changeNote"),

@@ -16,6 +16,7 @@ import {
   articleVersions,
   notifications,
   users,
+  writerAreas,
   type Article,
   type ArticleStatus,
 } from "@/db/schema";
@@ -32,7 +33,7 @@ import { env } from "@/lib/env";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { sendMail } from "@/lib/mail/transport";
 import { triggerRevalidate } from "@/lib/revalidate";
-import { uniqueSlug } from "@/lib/slug";
+import { slugify, uniqueSlug } from "@/lib/slug";
 import * as templates from "@emails/templates";
 import { allMediaLicensed } from "./media";
 import { getEditorAssignment, selectableWriterCategories } from "./editor-categories";
@@ -55,6 +56,7 @@ export const articleInputSchema = z.strictObject({
   authorId: z.uuid().optional().nullable(),
   issueId: z.uuid().optional().nullable(),
   category: z.string().trim().max(80).optional().nullable(),
+  subcategory: z.string().trim().max(80).optional().nullable(),
   tags: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
   dueDate: z
     .string()
@@ -71,14 +73,18 @@ export const articleInputSchema = z.strictObject({
 
 /**
  * The fields an author controls when writing their own article in the writer
- * panel (step 1 of the review chain, D-059). There is no author/issue picker:
- * the author is the caller and issue assignment is the admin's job.
+ * panel (step 1 of the review chain, D-059): the slug may be chosen by hand
+ * (otherwise it follows the title) and the "alt köşe" is an optional second
+ * category from the same 11 areas (D-069). A cover image is deliberately not
+ * part of the form for now — there is no writer-side image upload (D-069).
  */
 export const writerArticleInputSchema = z.strictObject({
   title: z.string().trim().min(3, "Başlık en az 3 karakter olmalı.").max(200),
   summary: z.string().trim().max(600).optional().nullable(),
   bodyMarkdown: z.string().max(200_000).optional(),
+  slug: z.string().trim().max(120).optional().nullable(),
   category: z.string().trim().max(80).optional().nullable(),
+  subcategory: z.string().trim().max(80).optional().nullable(),
   tags: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
 });
 
@@ -298,8 +304,8 @@ export async function createArticleAsWriter(
   }
   const input = parsed.data;
   const category = await assertAuthorCategoryAllowed(actor, input.category);
-
-  const slug = await uniqueSlug(input.title, (candidate) => slugExists(candidate));
+  const subcategory = await assertSubcategoryAllowed(category, input.subcategory);
+  const slug = await resolveSlug(input.slug, input.title);
 
   const [article] = await db
     .insert(articles)
@@ -310,6 +316,7 @@ export async function createArticleAsWriter(
       bodyMarkdown: input.bodyMarkdown ?? "",
       authorId: actor.id,
       category,
+      subcategory,
       tags: input.tags ?? [],
       status: "draft",
     })
@@ -347,6 +354,53 @@ async function assertAuthorCategoryAllowed(actor: Actor, category: string | null
 }
 
 /**
+ * The "alt köşe" is an optional second category out of the same 11 writing
+ * areas (D-069). Unlike the main category it is not tied to the author's own
+ * areas — it is a display/listing hint, so any active area name works. It must
+ * differ from the main category, or it would say nothing extra.
+ */
+async function assertSubcategoryAllowed(
+  category: string | null,
+  subcategory: string | null | undefined,
+): Promise<string | null> {
+  const value = subcategory?.trim() || null;
+  if (!value) return null;
+  if (value === category) {
+    throw badRequest("Alt köşe, ana kategoriden farklı olmalı.");
+  }
+  const rows = await db
+    .select({ name: writerAreas.name })
+    .from(writerAreas)
+    .where(and(eq(writerAreas.name, value), eq(writerAreas.isActive, true)))
+    .limit(1);
+  if (rows.length === 0) {
+    throw badRequest(`"${value}" diye aktif bir alan yok; alt köşe 11 ana kategoriden seçilir.`);
+  }
+  return value;
+}
+
+/**
+ * The slug is part of the public URL, so an author-chosen one must be exactly
+ * what `slugify` produces (ASCII, lowercase, dashes) and unique. An empty one
+ * falls back to the title, like the editor flow.
+ */
+async function resolveSlug(
+  requested: string | null | undefined,
+  title: string,
+  exceptId?: string,
+): Promise<string> {
+  const value = requested?.trim() || "";
+  if (!value) return uniqueSlug(title, (candidate) => slugExists(candidate, exceptId));
+  if (slugify(value) !== value || value.length < 3) {
+    throw badRequest("Slug yalnızca küçük harf, rakam ve tire içerebilir (örn. yazinin-adi).");
+  }
+  if (await slugExists(value, exceptId)) {
+    throw conflict("Bu slug kullanımda; farklı bir slug deneyin.");
+  }
+  return value;
+}
+
+/**
  * An author edits their own draft or an article sent back for revision. Once
  * it is in review, only the reviewers touch it. There is no change-kind
  * distinction here: a draft has no approval to protect yet (D-059).
@@ -373,11 +427,16 @@ export async function updateArticleAsWriter(
   }
   const input = parsed.data;
   const category = await assertAuthorCategoryAllowed(actor, input.category);
+  const subcategory = await assertSubcategoryAllowed(category, input.subcategory);
 
+  // An explicit slug wins; otherwise it follows the title, keeping the old
+  // one when neither changed.
   const slug =
-    input.title !== existing.title
-      ? await uniqueSlug(input.title, (candidate) => slugExists(candidate, articleId))
-      : existing.slug;
+    input.slug?.trim()
+      ? await resolveSlug(input.slug, input.title, articleId)
+      : input.title !== existing.title
+        ? await uniqueSlug(input.title, (candidate) => slugExists(candidate, articleId))
+        : existing.slug;
 
   const [updated] = await db
     .update(articles)
@@ -387,6 +446,7 @@ export async function updateArticleAsWriter(
       summary: input.summary ?? null,
       bodyMarkdown: input.bodyMarkdown ?? existing.bodyMarkdown,
       category,
+      subcategory: input.subcategory === undefined ? existing.subcategory : subcategory,
       tags: input.tags ?? existing.tags,
       updatedAt: new Date(),
     })
@@ -445,6 +505,7 @@ export async function updateArticle(
       authorId: input.authorId ?? existing.authorId,
       issueId: input.issueId === undefined ? existing.issueId : input.issueId,
       category: input.category ?? null,
+      subcategory: input.subcategory === undefined ? existing.subcategory : (input.subcategory ?? null),
       tags: input.tags ?? existing.tags,
       dueDate: input.dueDate ?? null,
       updatedAt: new Date(),

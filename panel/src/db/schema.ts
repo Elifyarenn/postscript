@@ -701,6 +701,11 @@ export const articles = pgTable(
     authorId: uuid("author_id").references(() => users.id, { onDelete: "restrict" }),
 
     category: text("category"),
+    /**
+     * Optional second category ("alt köşe") from the same 11 writing areas,
+     * purely informational: the review chain follows the main category (D-069).
+     */
+    subcategory: text("subcategory"),
     tags: text("tags")
       .array()
       .notNull()

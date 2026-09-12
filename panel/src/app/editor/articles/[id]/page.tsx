@@ -174,6 +174,14 @@ export default async function EditorArticleDetailPage({
                     <Input id="category" name="category" defaultValue={article.category ?? ""} />
                   </Field>
 
+                  <Field
+                    label="Alt köşe"
+                    htmlFor="subcategory"
+                    hint="Yazının ikincil köşesi; 11 ana kategoriden biri."
+                  >
+                    <Input id="subcategory" name="subcategory" defaultValue={article.subcategory ?? ""} />
+                  </Field>
+
                   <Field label="Teslim tarihi" htmlFor="dueDate">
                     <Input
                       id="dueDate"

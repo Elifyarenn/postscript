@@ -1389,6 +1389,37 @@ var olmasın diye iki adımlı kayıt kuruldu. Bekleyen kayıt şifre hash'i ta�
 için tüketimde ve süre aşımında kalıcı olarak silinir; doğrulama anında rol
 yine sunucu tarafından `user` atanır.
 
+---
+
+## D-069 — Yazar gönderim formu: slug ve "Alt Köşe"; kapak görseli ertelendi
+
+**Karar:** Yazar panelindeki makale formu üç istenen alanın ikisiyle genişletildi:
+
+- **Slug:** Yazar slug'ı kendisi girebilir; boş bırakılırsa başlıktan üretilir
+  (başlık değişince onu izler). Sunucuda `slugify` çıktısıyla birebir eşleşme
+  (küçük harf, rakam, tire) ve benzersizlik zorunludur — public URL'nin yazar
+  eliyle bozulması veya çakışması 400/409 ile reddedilir, sessizce sonek
+  eklenmez.
+- **"Alt Köşe" (alt kategori):** "Kategori ve Alt Köşe seçimi (11 ana kategori
+  içerisinden)" ifadesi, ana kategoriye ek olarak isteğe bağlı bir ikincil
+  köşe seçimi olarak yorumlandı. `articles.subcategory` (nullable) kolonu
+  eklendi (migration 0023); değer yalnızca aktif yazı alanlarından biri
+  olabilir ve ana kategoriden farklı olmalıdır. İnceleme zinciri yalnızca ana
+  kategoriye göre işler; alt köşe, yayında etiket/keşif amaçlı ek bilgidir
+  (public API'de `subcategory` olarak döner).
+- **Kapak görseli: ERTELENDİ.** Formda, serviste ve şemada kapak yükleme yok:
+  `cover_media_id` hiç eklenmedi, yazar tarafına görsel yükleme akışı açılmadı.
+  Ürün sahibi "şuanlık bir görsel yüklemesi olmasın" dedi.
+
+**Gerekçe:** Ürün sahibinin alan listesi "Başlık, Slug, Kapak Görseli, Özet,
+Kategori ve Alt Köşe seçimi, Zengin Metin İçeriği" idi; slug ve alt köşe bu
+listeyi karşılar. "Alt Köşe" kavramı sistemde hiçbir yerde tanımlı değildi;
+"(11 ana kategori içerisinden)" niteliği en tutarlı okumayı ikincil kategori
+olarak verir — muhafazakâr seçenek, veri modeline yeni bir kavram eklemek
+yerine mevcut alan modelinin doğal uzantısını kullanmaktır. Kapak görseli
+ürün sahibinin kararıyla kapsam dışı bırakıldı; görseller yalnızca editör
+kütüphanesi üzerinden girer (lisans seçimi zorunlu olan mevcut akış).
+
 
 
 
