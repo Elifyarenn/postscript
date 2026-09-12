@@ -58,7 +58,7 @@ test("takes an article through the review chain to publication and withdraws it"
 
   // Step 2: the category editor (of "Sanat & Edebiyat") reviews and approves
   await transitionTo(page, "İncelemede");
-  await transitionTo(page, "Kategori onayı geçti");
+  await transitionTo(page, "Ana editör onayında");
 
   await logout(page);
 
@@ -67,7 +67,7 @@ test("takes an article through the review chain to publication and withdraws it"
   await loginElevated(page, "editor", SEED.mainEditor);
   await page.goto(articleUrl);
 
-  await transitionTo(page, "Yönetici kuyruğunda");
+  await transitionTo(page, "Yayın kuyruğunda");
 
   await logout(page);
 
@@ -192,12 +192,12 @@ test("a content change revokes the approval and asks for a new one", async ({ pa
   const articleUrl = page.url();
 
   await transitionTo(page, "İncelemede");
-  await transitionTo(page, "Kategori onayı geçti");
+  await transitionTo(page, "Ana editör onayında");
 
   await logout(page);
   await loginElevated(page, "editor", SEED.mainEditor);
   await page.goto(articleUrl);
-  await transitionTo(page, "Yönetici kuyruğunda");
+  await transitionTo(page, "Yayın kuyruğunda");
 
   await logout(page);
   await loginElevated(page, "admin", SEED.admin);

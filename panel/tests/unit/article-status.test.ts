@@ -13,11 +13,11 @@ const clean = {
 };
 
 describe("allowed edges", () => {
-  it("matches the staged review chain in the specification (D-059)", () => {
+  it("matches the staged review chain in the specification (D-059, D-066)", () => {
     expect(allowedTargets("draft")).toEqual(["in_review", "archived"]);
-    expect(allowedTargets("in_review")).toEqual(["category_approved", "revision_requested", "draft"]);
-    expect(allowedTargets("category_approved")).toEqual(["admin_review", "revision_requested", "draft"]);
-    expect(allowedTargets("admin_review")).toEqual(["accepted", "revision_requested", "draft"]);
+    expect(allowedTargets("in_review")).toEqual(["pending_admin_approval", "revision_requested", "draft"]);
+    expect(allowedTargets("pending_admin_approval")).toEqual(["ready_for_publishing", "revision_requested", "draft"]);
+    expect(allowedTargets("ready_for_publishing")).toEqual(["accepted", "revision_requested", "draft"]);
     expect(allowedTargets("revision_requested")).toEqual(["in_review", "draft"]);
     expect(allowedTargets("accepted")).toEqual(["awaiting_rights", "draft"]);
     expect(allowedTargets("awaiting_rights")).toEqual(["scheduled", "revision_requested"]);

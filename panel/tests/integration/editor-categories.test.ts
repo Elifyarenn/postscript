@@ -211,7 +211,7 @@ describe("the staged review chain", () => {
     return { admin, categoryEditor, mainEditor, otherEditor, writer };
   }
 
-  it("walks draft → in_review → category_approved → admin_review → accepted", async () => {
+  it("walks draft → in_review → pending_admin_approval → ready_for_publishing → accepted", async () => {
     const { admin, categoryEditor, mainEditor, writer } = await chainScenario();
 
     const draft = await createArticleAsWriter(
@@ -225,12 +225,12 @@ describe("the staged review chain", () => {
     await transitionArticle(actorOf(writer), draft.id, "in_review", noMeta);
 
     // Stage 2 — the category editor of "Sanat & Edebiyat" approves
-    const stage2 = await transitionArticle(actorOf(categoryEditor), draft.id, "category_approved", noMeta);
-    expect(stage2.status).toBe("category_approved");
+    const stage2 = await transitionArticle(actorOf(categoryEditor), draft.id, "pending_admin_approval", noMeta);
+    expect(stage2.status).toBe("pending_admin_approval");
 
-    // Stage 3 — the main editor hands it to the admin
-    const stage3 = await transitionArticle(actorOf(mainEditor), draft.id, "admin_review", noMeta);
-    expect(stage3.status).toBe("admin_review");
+    // Stage 3 — the main editor hands it to the admin's publication queue
+    const stage3 = await transitionArticle(actorOf(mainEditor), draft.id, "ready_for_publishing", noMeta);
+    expect(stage3.status).toBe("ready_for_publishing");
 
     // Stage 4 — the admin accepts; the publication flow opens the Eser Onayı
     const stage4 = await transitionArticle(actorOf(admin), draft.id, "accepted", noMeta);
@@ -253,15 +253,15 @@ describe("the staged review chain", () => {
 
     // The "Bilim & Teknoloji" editor has no say over this article
     const denied = await captureError(
-      transitionArticle(actorOf(otherEditor), draft.id, "category_approved", noMeta),
+      transitionArticle(actorOf(otherEditor), draft.id, "pending_admin_approval", noMeta),
     );
     expect(denied.status).toBe(403);
 
-    await transitionArticle(actorOf(categoryEditor), draft.id, "category_approved", noMeta);
+    await transitionArticle(actorOf(categoryEditor), draft.id, "pending_admin_approval", noMeta);
 
     // The category editor cannot skip the main stage either
     const skipped = await captureError(
-      transitionArticle(actorOf(categoryEditor), draft.id, "admin_review", noMeta),
+      transitionArticle(actorOf(categoryEditor), draft.id, "ready_for_publishing", noMeta),
     );
     expect(skipped.status).toBe(403);
 
@@ -271,7 +271,7 @@ describe("the staged review chain", () => {
     );
     expect(finalDenied.status).toBe(403);
 
-    await transitionArticle(actorOf(mainEditor), draft.id, "admin_review", noMeta);
+    await transitionArticle(actorOf(mainEditor), draft.id, "ready_for_publishing", noMeta);
     const accepted = await transitionArticle(actorOf(admin), draft.id, "accepted", noMeta);
     expect(accepted.status).toBe("awaiting_rights");
   });

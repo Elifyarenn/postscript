@@ -1297,6 +1297,34 @@ devam eder.
 
 ---
 
+## D-068 — İnceleme zinciri durum adları ürün hiyerarşisine göre yeniden adlandırıldı
+
+**Karar:** `articles.status` enum'ındaki iki durum, ürün sahibinin "Yazı Kabul ve
+Onay Süreci" hiyerarşisine birebir uyacak şekilde yeniden adlandırıldı:
+
+- `category_approved` → **`pending_admin_approval`** ("Ana Editör Onayında":
+  kategori editörü onayladı, yazı ana editörün kuyruğunda).
+- `admin_review` → **`ready_for_publishing`** ("Yayın Kuyruğunda": ana editör
+  onayladı, yazı yönetim panelinin yayın kuyruğuna aktarıldı).
+
+Zincir artık: `draft → in_review → pending_admin_approval → ready_for_publishing
+→ accepted → awaiting_rights → scheduled → published` (+ `revision_requested`,
+`archived`, `withdrawn`). `accepted`, `awaiting_rights` ve `scheduled` aynen
+durur: imzalı hak devri ve medya lisansı şartı (CLAUDE.md güvenlik kuralları)
+bu adımları gerektirir; ürünün istediği hiyerarşi zincirin inceleme kısmıdır,
+yayın akışının iç işleyişini değiştirmez. Migration (0021) eski değer taşıyan
+satırları text aşamasında yeni adlara eşler — drizzle'ın ürettiği tip-yeniden
+kurma akışı, veri eşleme olmadan mevcut kayıtlarda patlardı; eklenen iki UPDATE
+şema sapması değil, migration'ın geçerli olması için zorunlu veri adımıdır.
+
+**Gerekçe:** Ürün sahibi "status alanları ve geçişleri tam olarak şu hiyerarşiyi
+izlemelidir: draft, in_review, revision_requested, pending_admin_approval,
+ready_for_publishing/published" dedi. D-059'un iş akışı değişmedi; yalnızca
+veritabanındaki adlar ürünün sözleşmesiyle hizalandı. Arayüz etiketleri de bu
+adları söyler.
+
+---
+
 ## D-065 — Doğum tarihi okuyucu kaydında alınıyor
 
 **Karar:** Okuyucu kayıt formuna (`/register`) zorunlu "Doğum tarihi" alanı

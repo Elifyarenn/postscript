@@ -87,15 +87,17 @@ export const issueStatusEnum = pgEnum("issue_status", [
 
 /**
  * The editorial chain is staged (D-059): a draft reaches the category editor
- * (`in_review`), their approval hands it to a main editor (`category_approved`),
- * and the main editor's approval drops it into the admin queue (`admin_review`).
- * `accepted` and everything after it belong to the admin/publication flow.
+ * (`in_review`), their approval hands it to the main editor
+ * (`pending_admin_approval`), and the main editor's approval drops it into the
+ * admin's publication queue (`ready_for_publishing`). `accepted` and everything
+ * after it belong to the admin/publication flow. The two review-stage names
+ * follow the product's hierarchy (D-068).
  */
 export const articleStatusEnum = pgEnum("article_status", [
   "draft",
   "in_review",
-  "category_approved",
-  "admin_review",
+  "pending_admin_approval",
+  "ready_for_publishing",
   "revision_requested",
   "accepted",
   "awaiting_rights",

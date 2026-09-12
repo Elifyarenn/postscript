@@ -184,8 +184,9 @@ export function canReviewCategoryStage(
 }
 
 /**
- * Whether the actor may decide the second review stage (`category_approved`):
- * a main editor or an admin. A plain category editor has no say over it.
+ * Whether the actor may decide the second review stage
+ * (`pending_admin_approval`): a main editor or an admin. A plain category
+ * editor has no say over it.
  */
 export function canReviewMainStage(actor: Actor, assignment: EditorAssignment): boolean {
   if (!canAccessEditorPanel(actor)) return false;
@@ -193,8 +194,8 @@ export function canReviewMainStage(actor: Actor, assignment: EditorAssignment): 
 }
 
 /**
- * The publication flow (`admin_review` and everything after `accepted`) is the
- * admin's job. Editors review; the admin publishes (D-059).
+ * The publication flow (`ready_for_publishing` and everything after
+ * `accepted`) is the admin's job. Editors review; the admin publishes (D-059).
  */
 export function canFinalizePublication(actor: Actor): boolean {
   return canAccessAdminPanel(actor);
@@ -233,11 +234,11 @@ export function canPerformTransition(
       return canEditDraft(actor, article);
 
     // First review stage: the category editor (or main editor/admin fallback)
-    case "category_approved":
+    case "pending_admin_approval":
       return canReviewCategoryStage(actor, assignment, article);
 
     // Second review stage: the main editor hands it to the admin
-    case "admin_review":
+    case "ready_for_publishing":
       return canReviewMainStage(actor, assignment);
 
     // Final gate: only the admin accepts an article into the publication flow
@@ -249,8 +250,8 @@ export function canPerformTransition(
     case "revision_requested":
     case "draft": {
       if (article.status === "in_review") return canReviewCategoryStage(actor, assignment, article);
-      if (article.status === "category_approved") return canReviewMainStage(actor, assignment);
-      if (article.status === "admin_review") return canFinalizePublication(actor);
+      if (article.status === "pending_admin_approval") return canReviewMainStage(actor, assignment);
+      if (article.status === "ready_for_publishing") return canFinalizePublication(actor);
       if (article.status === "revision_requested") return canManageArticles(actor);
       if (article.status === "accepted") return canFinalizePublication(actor);
       return false;

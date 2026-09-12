@@ -107,8 +107,8 @@ async function scenario() {
  */
 async function toAwaitingRights(editor: Actor, admin: Actor, articleId: string) {
   await transitionArticle(editor, articleId, "in_review", noMeta);
-  await transitionArticle(editor, articleId, "category_approved", noMeta);
-  await transitionArticle(editor, articleId, "admin_review", noMeta);
+  await transitionArticle(editor, articleId, "pending_admin_approval", noMeta);
+  await transitionArticle(editor, articleId, "ready_for_publishing", noMeta);
   return transitionArticle(admin, articleId, "accepted", noMeta);
 }
 
@@ -179,8 +179,8 @@ describe("acceptance opens the work approval", () => {
     );
 
     await transitionArticle(actorOf(editor), article.id, "in_review", noMeta);
-    await transitionArticle(actorOf(editor), article.id, "category_approved", noMeta);
-    await transitionArticle(actorOf(editor), article.id, "admin_review", noMeta);
+    await transitionArticle(actorOf(editor), article.id, "pending_admin_approval", noMeta);
+    await transitionArticle(actorOf(editor), article.id, "ready_for_publishing", noMeta);
     const error = await captureError(
       transitionArticle(actorOf(admin), article.id, "accepted", noMeta),
     );

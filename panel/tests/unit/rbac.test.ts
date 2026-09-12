@@ -213,7 +213,7 @@ describe("the staged review chain (D-059)", () => {
     // …but not someone else's draft, and not an approval
     const stranger = actor({ id: "writer-2", role: "writer", writerStatus: "active" });
     expect(canPerformTransition(stranger, noAssignment, article("draft"), "in_review")).toBe(false);
-    expect(canPerformTransition(author, noAssignment, article("draft"), "category_approved")).toBe(false);
+    expect(canPerformTransition(author, noAssignment, article("draft"), "pending_admin_approval")).toBe(false);
   });
 
   it("walks the chain exactly: category editor, then main editor, then admin", () => {
@@ -221,16 +221,16 @@ describe("the staged review chain (D-059)", () => {
     const admin = actor({ role: "admin" });
 
     // Stage 2: only the category editor (or main/admin) approves
-    expect(canPerformTransition(editor, artEditor, article("in_review"), "category_approved")).toBe(true);
-    expect(canPerformTransition(editor, noAssignment, article("in_review"), "category_approved")).toBe(false);
+    expect(canPerformTransition(editor, artEditor, article("in_review"), "pending_admin_approval")).toBe(true);
+    expect(canPerformTransition(editor, noAssignment, article("in_review"), "pending_admin_approval")).toBe(false);
 
     // Stage 3: the main editor hands it to the admin
-    expect(canPerformTransition(editor, artEditor, article("category_approved"), "admin_review")).toBe(false);
-    expect(canPerformTransition(editor, mainEditor, article("category_approved"), "admin_review")).toBe(true);
+    expect(canPerformTransition(editor, artEditor, article("pending_admin_approval"), "ready_for_publishing")).toBe(false);
+    expect(canPerformTransition(editor, mainEditor, article("pending_admin_approval"), "ready_for_publishing")).toBe(true);
 
     // Stage 4: only the admin accepts it into the publication flow
-    expect(canPerformTransition(admin, noAssignment, article("admin_review"), "accepted")).toBe(true);
-    expect(canPerformTransition(editor, mainEditor, article("admin_review"), "accepted")).toBe(false);
+    expect(canPerformTransition(admin, noAssignment, article("ready_for_publishing"), "accepted")).toBe(true);
+    expect(canPerformTransition(editor, mainEditor, article("ready_for_publishing"), "accepted")).toBe(false);
 
     // Publication is the admin's alone
     expect(canPerformTransition(editor, mainEditor, article("awaiting_rights"), "scheduled")).toBe(false);
@@ -241,9 +241,9 @@ describe("the staged review chain (D-059)", () => {
   it("lets a reviewer send an article back for revision at their own stage", () => {
     const editor = actor({ role: "editor" });
     expect(canPerformTransition(editor, artEditor, article("in_review"), "revision_requested")).toBe(true);
-    expect(canPerformTransition(editor, mainEditor, article("category_approved"), "revision_requested")).toBe(true);
-    expect(canPerformTransition(editor, artEditor, article("category_approved"), "revision_requested")).toBe(false);
-    expect(canPerformTransition(editor, mainEditor, article("admin_review"), "revision_requested")).toBe(false);
-    expect(canPerformTransition(actor({ role: "admin" }), noAssignment, article("admin_review"), "revision_requested")).toBe(true);
+    expect(canPerformTransition(editor, mainEditor, article("pending_admin_approval"), "revision_requested")).toBe(true);
+    expect(canPerformTransition(editor, artEditor, article("pending_admin_approval"), "revision_requested")).toBe(false);
+    expect(canPerformTransition(editor, mainEditor, article("ready_for_publishing"), "revision_requested")).toBe(false);
+    expect(canPerformTransition(actor({ role: "admin" }), noAssignment, article("ready_for_publishing"), "revision_requested")).toBe(true);
   });
 });

@@ -11,12 +11,13 @@ import type { ArticleStatus, GrantStatus } from "@/db/schema";
 /** Every legal edge in the graph. Anything not listed here is a 409. */
 const TRANSITIONS: Record<ArticleStatus, readonly ArticleStatus[]> = {
   draft: ["in_review", "archived"],
-  // The staged editorial chain (D-059): the writer submits, the category
-  // editor approves, the main editor approves, and the admin accepts the
-  // article into the publication flow. Each reviewer can also send it back.
-  in_review: ["category_approved", "revision_requested", "draft"],
-  category_approved: ["admin_review", "revision_requested", "draft"],
-  admin_review: ["accepted", "revision_requested", "draft"],
+  // The staged editorial chain (D-059, names per D-066): the writer submits,
+  // the category editor approves, the main editor approves, and the admin
+  // accepts the article into the publication flow. Each reviewer can also
+  // send it back.
+  in_review: ["pending_admin_approval", "revision_requested", "draft"],
+  pending_admin_approval: ["ready_for_publishing", "revision_requested", "draft"],
+  ready_for_publishing: ["accepted", "revision_requested", "draft"],
   revision_requested: ["in_review", "draft"],
   accepted: ["awaiting_rights", "draft"],
   awaiting_rights: ["scheduled", "revision_requested"],

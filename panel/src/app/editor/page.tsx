@@ -14,7 +14,7 @@ export const metadata = { title: "Editör paneli" };
  * The editor dashboard shows only the review queues the signed-in reviewer can
  * act on (D-059): a category editor sees the `in_review` articles of their own
  * areas, a main editor adds the second review stage, and an admin sees the
- * publication queues (`admin_review`, `awaiting_rights`, `scheduled`).
+ * publication queues (`ready_for_publishing`, `awaiting_rights`, `scheduled`).
  */
 export default async function EditorDashboard() {
   const { user } = await guardPanel("editor");
@@ -24,14 +24,14 @@ export default async function EditorDashboard() {
 
   const queues: { status: ArticleStatus; label: string }[] = isAdmin
     ? [
-        { status: "admin_review", label: "Yönetici kuyruğu" },
+        { status: "ready_for_publishing", label: "Yayın kuyruğu" },
         { status: "awaiting_rights", label: "Devir formu bekleniyor" },
         { status: "scheduled", label: "Yayına planlandı" },
       ]
     : assignment?.isMainEditor
       ? [
           { status: "in_review", label: "Kategori onayı bekliyor" },
-          { status: "category_approved", label: "Ana editör onayı bekliyor" },
+          { status: "pending_admin_approval", label: "Ana editör onayı bekliyor" },
           { status: "revision_requested", label: "Revizyon bekleniyor" },
         ]
       : [
