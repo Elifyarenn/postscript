@@ -38,6 +38,8 @@ docker compose up -d  # postgres + minio
 - Var olan bir dosyayı düzenlemeden önce oku. Tahminle `str_replace` yapma.
 - Bir kütüphane eklemeden önce zaten kullanılan bir çözüm var mı bak. Aynı işi yapan ikinci kütüphane yok.
 - Migration'ı elle düzenleme; şemayı değiştir, `pnpm db:generate` çalıştır.
+- Migration üretime otomatik uygulanmaz: `main`'e push yalnızca kodu yayınlar. Push etmeden önce üretimin migration durumunu kontrol et; gerekiyorsa önce snapshot alıp `pnpm db:migrate` çalıştır (D-079).
+- Sürücüye duyarlı SQL (upsert, `sql` şablonu, ham tip parametreleri) yerelde PGlite'te geçiyor diye üretimde geçmez; üretim postgres.js kullanır. Böyle bir değişikliği bir Neon dalına karşı çalıştırmadan yayınlama (D-078).
 - Hata durumunda üç denemeden sonra durup durumu özetle; sonsuz düzeltme döngüsüne girme.
 - Sıra `panel/DECISIONS.md`'nin sonundaki en yüksek `D-0xx` numarasından devam eder; yeni karar bir sonraki numarayı alır.
 

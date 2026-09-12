@@ -1714,3 +1714,48 @@ denenmeden önce gerçek Postgres'e karşı doğrulanmalıdır.
 
 ---
 
+## D-079 — Üretim şeması 3 migration geriydi; drizzle defteri de bozuktu
+
+**Ne oldu:** 12 commit `main`'e push edildi (D-066…D-069 dahil) ama
+migration'lar üretime uygulanmadı. Kod yeni şemayı bekliyordu, veritabanı eski
+şemadaydı. Üç akış birden kapandı:
+
+| Migration | Eksik olan | Kırılan |
+|---|---|---|
+| `0020_glorious_runaways` | `pending_registrations` tablosu | Kayıt olma |
+| `0021_white_ares` | `article_status`'ta yeni adlar | İnceleme zinciri (`in_review` sonrası) |
+| `0023_mean_blizzard` | `articles.subcategory` | Yazar makale formu (alt köşe) |
+
+**İkinci sorun:** `db:migrate` bunları uygulayamıyordu, çünkü
+`drizzle.__drizzle_migrations` defteri gerçekle uyuşmuyordu: **0019 fiilen
+uygulanmış ama kaydı düşülmemişti** (drizzle dışından uygulanmış). Migrator
+yalnızca en yüksek `created_at`'e bakar, o yüzden her çalışmada 0019'dan
+başlıyor ve `enum label "category_approved" already exists` ile duruyordu.
+
+**Yapılan:**
+
+1. Üretim dalından snapshot alındı (`snap-late-fog-b1cxy1ir`).
+2. 0019'un ürettiği altı şey tek tek doğrulandı (iki enum değeri,
+   `editor_categories`, `users.is_main_editor`, iki foreign key, üç index) —
+   hepsi eksiksiz. Ancak bundan sonra deftere kaydı yazıldı. Hash yöntemi
+   0018 üzerinde doğrulandı: dosyanın sha256'sı üretimdeki kayıtlı hash ile
+   birebir tuttu.
+3. `db:migrate` çalıştırıldı; 0020, 0021, 0023 uygulandı.
+4. Doğrulandı: defter 23 kayıt (journal ile birebir), 37 kullanıcı ve 1 makale
+   (`draft`) korundu, enum yeni adlarda, kayıt akışı uçtan uca test edildi
+   (`pending_registrations` satırı, argon2 hash, 24 saatlik token).
+
+**Gerekçe ve ders:** Memory'deki "deploy için `main`'e push yeterli" notu
+**kod** için doğru, migration için değil — `pnpm db:migrate` ayrı ve elle
+çalıştırılan bir adım. Push etmeden önce üretimin migration durumu kontrol
+edilmeliydi. Bu, aynı gün içindeki ikinci "gideceği ortama karşı doğrulamadım"
+hatasıydı (ilki D-078).
+
+**Açık kalan:** `0022` diye bir migration yok; journal 0021'den 0023'e
+atlıyor. Zararsız (drizzle journal'ı izler, dosya adını değil) ama neden
+oluştuğu bilinmiyor. Ayrıca `pending_registrations`'ta bir test satırı var
+(`kayit-testi-2026@example.invalid`); 24 saatte süresi dolar ve
+`purge-unverified` temizler.
+
+---
+
