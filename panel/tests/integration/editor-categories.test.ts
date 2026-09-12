@@ -10,12 +10,17 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
-import { editorCategories, users } from "@/db/schema";
+import { articles, editorCategories, users } from "@/db/schema";
 import { setEditorDuties } from "@/services/editor-categories";
 import {
+  addComment,
+  createArticle,
   createArticleAsWriter,
+  listArticleVersions,
   listArticles,
+  setPlagiarismStatus,
   transitionArticle,
+  updateArticle,
   updateArticleAsWriter,
 } from "@/services/articles";
 import { setHybridWriterRole } from "@/services/users";
@@ -433,5 +438,159 @@ describe("an author's own submissions", () => {
       noMeta,
     );
     expect(hybridArticle.authorId).toBe(hybrid.id);
+  });
+});
+/**
+ * D-071: the area scope used to hold only on the read side. A plain category
+ * editor could not open an article outside their areas, but a hand-made POST
+ * still let them rewrite it, note on it, or flag it.
+ */
+describe("a category editor's area scope on writes (D-071)", () => {
+  /** An admin, an article in "Tarih & Dünya", and an editor who holds "Sanat & Edebiyat". */
+  async function outsiderScenario() {
+    const admin = await createUser({ role: "admin" });
+    const editor = await createUser({ role: "editor" });
+
+    await setEditorDuties(
+      actorOf(admin),
+      editor.id,
+      { areaId: await areaIdByName("Sanat & Edebiyat"), areaId2: null, isMainEditor: false },
+      noMeta,
+    );
+
+    const article = await createArticle(
+      actorOf(admin),
+      { title: "Başka Alanın Yazısı", bodyMarkdown: "Gövde.", category: "Tarih & Dünya" },
+      noMeta,
+    );
+
+    return { admin: actorOf(admin), editor: actorOf(editor), article };
+  }
+
+  it("refuses an update to an article outside the editor's areas", async () => {
+    const { editor, article } = await outsiderScenario();
+
+    const error = await captureError(
+      updateArticle(editor, article.id, { title: "Ele Geçirildi" }, noMeta),
+    );
+    expect(error.status).toBe(403);
+
+    const unchanged = await db.select().from(articles).where(eq(articles.id, article.id));
+    expect(unchanged[0]!.title).toBe("Başka Alanın Yazısı");
+  });
+
+  it("refuses an editorial note and a plagiarism flag outside the editor's areas", async () => {
+    const { editor, article } = await outsiderScenario();
+
+    expect((await captureError(addComment(editor, article.id, "Not", noMeta))).status).toBe(403);
+    expect(
+      (await captureError(setPlagiarismStatus(editor, article.id, "flagged", null, noMeta))).status,
+    ).toBe(403);
+  });
+
+  it("refuses the version history outside the editor's areas", async () => {
+    const { editor, article } = await outsiderScenario();
+
+    const error = await captureError(listArticleVersions(editor, article.id));
+    expect(error.status).toBe(403);
+  });
+
+  it("refuses to move an article into a category the editor does not hold", async () => {
+    const admin = await createUser({ role: "admin" });
+    const editor = await createUser({ role: "editor" });
+    await setEditorDuties(
+      actorOf(admin),
+      editor.id,
+      { areaId: await areaIdByName("Sanat & Edebiyat"), areaId2: null, isMainEditor: false },
+      noMeta,
+    );
+
+    const own = await createArticle(
+      actorOf(admin),
+      { title: "Kendi Alanı", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
+      noMeta,
+    );
+
+    const error = await captureError(
+      updateArticle(
+        actorOf(editor),
+        own.id,
+        { title: "Kendi Alanı", category: "Tarih & Dünya" },
+        noMeta,
+      ),
+    );
+    expect(error.status).toBe(403);
+  });
+
+  it("lets the editor update an article inside their own areas", async () => {
+    const admin = await createUser({ role: "admin" });
+    const editor = await createUser({ role: "editor" });
+    await setEditorDuties(
+      actorOf(admin),
+      editor.id,
+      { areaId: await areaIdByName("Sanat & Edebiyat"), areaId2: null, isMainEditor: false },
+      noMeta,
+    );
+
+    const own = await createArticle(
+      actorOf(admin),
+      { title: "Kendi Alanı", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
+      noMeta,
+    );
+
+    const updated = await updateArticle(
+      actorOf(editor),
+      own.id,
+      { title: "Düzeltilmiş Başlık", category: "Sanat & Edebiyat" },
+      noMeta,
+    );
+    expect(updated.title).toBe("Düzeltilmiş Başlık");
+  });
+
+  it("lets a main editor act on every category", async () => {
+    const admin = await createUser({ role: "admin" });
+    const mainEditor = await createUser({ role: "editor" });
+    await setEditorDuties(
+      actorOf(admin),
+      mainEditor.id,
+      { areaId: null, areaId2: null, isMainEditor: true },
+      noMeta,
+    );
+
+    const article = await createArticle(
+      actorOf(admin),
+      { title: "Her Alan", bodyMarkdown: "Gövde.", category: "Tarih & Dünya" },
+      noMeta,
+    );
+
+    const updated = await updateArticle(
+      actorOf(mainEditor),
+      article.id,
+      { title: "Ana Editör Düzeltti", category: "Tarih & Dünya" },
+      noMeta,
+    );
+    expect(updated.title).toBe("Ana Editör Düzeltti");
+  });
+
+  it("keeps a field the form did not send instead of nulling it", async () => {
+    const admin = await createUser({ role: "admin" });
+
+    const article = await createArticle(
+      actorOf(admin),
+      {
+        title: "Alanlar Korunur",
+        bodyMarkdown: "Gövde.",
+        category: "Tarih & Dünya",
+        dueDate: "2026-12-31",
+      },
+      noMeta,
+    );
+
+    // Only the title is sent; category and dueDate used to be wiped to null
+    const updated = await updateArticle(actorOf(admin), article.id, { title: "Yeni Başlık" }, noMeta);
+
+    expect(updated.title).toBe("Yeni Başlık");
+    expect(updated.category).toBe("Tarih & Dünya");
+    expect(updated.dueDate).toBe("2026-12-31");
   });
 });

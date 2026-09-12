@@ -1463,3 +1463,30 @@ doğrulamayı unutamaz.
 
 ---
 
+## D-071 — Editörün alan kapsamı yazma işlemlerinde de geçerli
+
+**Karar:** `assertCanReadArticle` içindeki alan kontrolü
+`assertEditorCoversArticle` olarak ayrıldı ve editörün makaleye dokunduğu her
+yola uygulandı: `updateArticle`, `addComment`, `resolveComment`,
+`setPlagiarismStatus`, `listArticleVersions`, `listComments`. Kural her yerde
+aynı: admin ve ana editör her kategoriyi kapsar, düz kategori editörü yalnızca
+`editor_categories`'teki kendi alanlarını.
+
+Ek olarak `updateArticle` bir makaleyi editörün tutmadığı bir kategoriye
+taşımayı reddeder (hem eski hem yeni kategori kapsamda olmalı) — aksi halde
+editör yazıyı başkasının kuyruğuna atıp kendini dışarıda bırakabilirdi.
+
+Aynı fonksiyondaki ikinci düzeltme: gönderilmeyen alanlar artık korunuyor.
+`category` ve `dueDate` `input.x ?? null` ile yazılıyordu, yani kısmi bir
+güncelleme bunları sessizce siliyordu; yanlarındaki `issueId` ve `subcategory`
+ise `=== undefined` kontrolüyle koruyordu. Üçü de artık aynı davranıyor.
+
+**Gerekçe:** Kapsam kontrolü yalnızca okuma tarafında vardı. Düz bir kategori
+editörü alanı dışındaki bir makaleyi panelde açamıyordu ama elle hazırlanmış
+bir POST ile başlığını, gövdesini, yazarını ve kategorisini değiştirebiliyordu
+— ön yüzde gizlemek yetki değildir (CLAUDE.md). `transitionArticle` bunu zaten
+`canPerformTransition` + `getEditorAssignment` ile doğru yapıyordu; diğer yazma
+yolları aynı çizgiye getirildi.
+
+---
+

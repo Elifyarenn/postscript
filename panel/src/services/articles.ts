@@ -182,13 +182,30 @@ export async function listArticlesForWriter(actor: Actor) {
  */
 export async function assertCanReadArticle(actor: Actor, article: Article): Promise<void> {
   if (canAccessEditorPanel(actor)) {
-    if (actor.role === "admin") return;
-    const assignment = await getEditorAssignment(actor.id);
-    if (assignment.isMainEditor) return;
-    if (article.category !== null && assignment.assignedAreas.includes(article.category)) return;
-    throw forbidden("Bu makale sizin sorumlu olduğunuz alanlara düşmüyor.");
+    await assertEditorCoversArticle(actor, article);
+    return;
   }
   if (!canReadArticle(actor, article)) throw forbidden();
+}
+
+/**
+ * An editor's area scope, as a guard. An admin and a main editor cover every
+ * category; a plain category editor covers only the areas assigned to them.
+ *
+ * This is the write-side counterpart of the read gate (D-071). It used to exist
+ * only for reading, so a category editor could not open an article outside
+ * their areas but could still rewrite it with a hand-made POST, because
+ * `updateArticle` asked no more than "is this an editor at all".
+ */
+async function assertEditorCoversArticle(
+  actor: Actor,
+  article: { category: string | null },
+): Promise<void> {
+  if (actor.role === "admin") return;
+  const assignment = await getEditorAssignment(actor.id);
+  if (assignment.isMainEditor) return;
+  if (article.category !== null && assignment.assignedAreas.includes(article.category)) return;
+  throw forbidden("Bu makale sizin sorumlu olduğunuz alanlara düşmüyor.");
 }
 
 /**
@@ -485,8 +502,20 @@ export async function updateArticle(
   const input = parsed.data;
   const existing = await findArticleById(articleId);
 
+  // A plain category editor may only rewrite what falls into their own areas,
+  // exactly as on the read side (D-071)
+  await assertEditorCoversArticle(actor, existing);
+
   if (input.authorId && input.authorId !== existing.authorId) {
     await assertAuthorIsWriter(input.authorId);
+  }
+
+  // Moving an article out of the editor's own areas would hand it to someone
+  // else's queue and lock the mover out of it; only a main editor or an admin
+  // may do that (D-071).
+  const nextCategory = input.category === undefined ? existing.category : (input.category ?? null);
+  if (nextCategory !== existing.category) {
+    await assertEditorCoversArticle(actor, { category: nextCategory });
   }
 
   // The slug is part of the public URL, so it only follows the title while unpublished
@@ -495,6 +524,9 @@ export async function updateArticle(
       ? await uniqueSlug(input.title, (candidate) => slugExists(candidate, articleId))
       : existing.slug;
 
+  // A field the form did not send keeps its stored value. `category` and
+  // `dueDate` used to fall back to null instead, so a partial update silently
+  // wiped them while `issueId` and `subcategory` next to them were preserved.
   const [updated] = await db
     .update(articles)
     .set({
@@ -504,10 +536,10 @@ export async function updateArticle(
       bodyMarkdown: input.bodyMarkdown ?? existing.bodyMarkdown,
       authorId: input.authorId ?? existing.authorId,
       issueId: input.issueId === undefined ? existing.issueId : input.issueId,
-      category: input.category ?? null,
+      category: nextCategory,
       subcategory: input.subcategory === undefined ? existing.subcategory : (input.subcategory ?? null),
       tags: input.tags ?? existing.tags,
-      dueDate: input.dueDate ?? null,
+      dueDate: input.dueDate === undefined ? existing.dueDate : (input.dueDate ?? null),
       updatedAt: new Date(),
     })
     .where(eq(articles.id, articleId))
@@ -603,7 +635,8 @@ async function snapshotVersion(
 
 export async function listArticleVersions(actor: Actor, articleId: string) {
   const article = await findArticleById(articleId);
-  if (!canReadArticle(actor, article)) throw forbidden();
+  // The full gate, not the pure one: a category editor's areas count here too
+  await assertCanReadArticle(actor, article);
 
   return db
     .select()
@@ -882,6 +915,8 @@ export async function addComment(
   if (!canAccessEditorPanel(actor)) throw forbidden();
   if (body.trim().length < 2) throw badRequest("Not boş olamaz.");
 
+  await assertEditorCoversArticle(actor, await findArticleById(articleId));
+
   await db.insert(articleComments).values({ articleId, authorId: actor.id, body: body.trim() });
 
   await writeAudit({
@@ -896,7 +931,7 @@ export async function addComment(
 /** Writers see editorial notes but cannot write them (§9.1). */
 export async function listComments(actor: Actor, articleId: string) {
   const article = await findArticleById(articleId);
-  if (!canReadArticle(actor, article)) throw forbidden();
+  await assertCanReadArticle(actor, article);
 
   return db
     .select({
@@ -914,6 +949,17 @@ export async function listComments(actor: Actor, articleId: string) {
 
 export async function resolveComment(actor: Actor, commentId: string): Promise<void> {
   if (!canAccessEditorPanel(actor)) throw forbidden();
+
+  const rows = await db
+    .select({ articleId: articleComments.articleId })
+    .from(articleComments)
+    .where(eq(articleComments.id, commentId))
+    .limit(1);
+  const comment = rows[0];
+  if (!comment) throw notFound("Not bulunamadı.");
+
+  await assertEditorCoversArticle(actor, await findArticleById(comment.articleId));
+
   await db
     .update(articleComments)
     .set({ resolvedAt: new Date(), updatedAt: new Date() })
@@ -928,6 +974,8 @@ export async function setPlagiarismStatus(
   meta: RequestMeta,
 ): Promise<Article> {
   if (!canAccessEditorPanel(actor)) throw forbidden();
+
+  await assertEditorCoversArticle(actor, await findArticleById(articleId));
 
   const [updated] = await db
     .update(articles)
