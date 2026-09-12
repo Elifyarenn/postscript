@@ -18,3 +18,4 @@ coverage/
 .admin-credentials.txt
 .vercel-env.txt
 .demo-users.txt
+.e2e-dev.*.log
