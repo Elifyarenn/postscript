@@ -1815,3 +1815,28 @@ kaldırmak (migration) ayrı bir karar olur.
 
 ---
 
+## D-082 — `articles.subcategory` ve `articles.tags` veritabanından kaldırıldı
+
+**İstek (ürün sahibi):** D-081'de formlardan kalkan alt köşe ve etiketler
+veritabanından da tamamen kalksın.
+
+**Yapılan:**
+
+- Şemadan iki kolon çıkarıldı; `pnpm db:generate` → `0024_ancient_korvac`
+  (`DROP COLUMN "subcategory"`, `DROP COLUMN "tags"`).
+- Servis: iki zod şemasından alanlar ve `assertSubcategoryAllowed` silindi.
+  Şemalar `strictObject` olduğu için bu alanları gönderen bir istek artık 400
+  alır (entegrasyon testi bunu doğruluyor).
+- Public okuma modeli (`getPublicArticle`, `listRecentArticles`) artık
+  `subcategory` ve `tags` döndürmüyor. D-069'daki "public API'de `subcategory`
+  döner" sözü geçersiz. Dergi yazı sayfasındaki etiket rozetleri kalktı.
+
+**Yayın sırası (D-079):** Önce kod, sonra migration. Yeni kod bu kolonları hiç
+okumadığı için eski şemayla çalışır; tersi olursa canlıdaki eski kod var
+olmayan kolonu seçip her makale sayfasını kırardı.
+
+**Veri kaybı:** Üretimde `subcategory` dolu satır yoktu. `tags` tek makalede
+doluydu ("Madde 1 - Takıntı", 12 etiket); kolon düşünce bu etiketler gider.
+
+---
+

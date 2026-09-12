@@ -96,8 +96,6 @@ export async function updateArticleAction(
         bodyMarkdown: text(formData, "bodyMarkdown"),
         authorId: optionalText(formData, "authorId"),
         issueId: optionalText(formData, "issueId"),
-        // Alt köşe and tags left every panel form (D-081); omitting them keeps
-        // the stored values instead of clearing them on each save.
         category: optionalText(formData, "category"),
         dueDate: optionalText(formData, "dueDate"),
         changeNote: optionalText(formData, "changeNote"),

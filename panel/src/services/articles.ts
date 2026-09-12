@@ -16,7 +16,6 @@ import {
   articleVersions,
   notifications,
   users,
-  writerAreas,
   type Article,
   type ArticleStatus,
 } from "@/db/schema";
@@ -56,8 +55,6 @@ export const articleInputSchema = z.strictObject({
   authorId: z.uuid().optional().nullable(),
   issueId: z.uuid().optional().nullable(),
   category: z.string().trim().max(80).optional().nullable(),
-  subcategory: z.string().trim().max(80).optional().nullable(),
-  tags: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
   dueDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -74,9 +71,8 @@ export const articleInputSchema = z.strictObject({
 /**
  * The fields an author controls when writing their own article in the writer
  * panel (step 1 of the review chain, D-059): the slug may be chosen by hand
- * (otherwise it follows the title) and the "alt köşe" is an optional second
- * category from the same 11 areas (D-069). A cover image is deliberately not
- * part of the form for now — there is no writer-side image upload (D-069).
+ * (otherwise it follows the title). A cover image is deliberately not part of
+ * the form for now — there is no writer-side image upload (D-069).
  */
 export const writerArticleInputSchema = z.strictObject({
   title: z.string().trim().min(3, "Başlık en az 3 karakter olmalı.").max(200),
@@ -84,8 +80,6 @@ export const writerArticleInputSchema = z.strictObject({
   bodyMarkdown: z.string().max(200_000).optional(),
   slug: z.string().trim().max(120).optional().nullable(),
   category: z.string().trim().max(80).optional().nullable(),
-  subcategory: z.string().trim().max(80).optional().nullable(),
-  tags: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
 });
 
 /* ------------------------------------------------------------------ */
@@ -270,7 +264,6 @@ export async function createArticle(
       authorId: input.authorId ?? null,
       issueId: input.issueId ?? null,
       category: input.category ?? null,
-      tags: input.tags ?? [],
       dueDate: input.dueDate ?? null,
       status: "draft",
     })
@@ -321,7 +314,6 @@ export async function createArticleAsWriter(
   }
   const input = parsed.data;
   const category = await assertAuthorCategoryAllowed(actor, input.category);
-  const subcategory = await assertSubcategoryAllowed(category, input.subcategory);
   const slug = await resolveSlug(input.slug, input.title);
 
   const [article] = await db
@@ -333,8 +325,6 @@ export async function createArticleAsWriter(
       bodyMarkdown: input.bodyMarkdown ?? "",
       authorId: actor.id,
       category,
-      subcategory,
-      tags: input.tags ?? [],
       status: "draft",
     })
     .returning();
@@ -366,32 +356,6 @@ async function assertAuthorCategoryAllowed(actor: Actor, category: string | null
   const allowed = await selectableWriterCategories(actor);
   if (!allowed.includes(value)) {
     throw badRequest(`"${value}" alanı size tanımlı değil; yazılarınızın alanını seçin.`);
-  }
-  return value;
-}
-
-/**
- * The "alt köşe" is an optional second category out of the same 11 writing
- * areas (D-069). Unlike the main category it is not tied to the author's own
- * areas — it is a display/listing hint, so any active area name works. It must
- * differ from the main category, or it would say nothing extra.
- */
-async function assertSubcategoryAllowed(
-  category: string | null,
-  subcategory: string | null | undefined,
-): Promise<string | null> {
-  const value = subcategory?.trim() || null;
-  if (!value) return null;
-  if (value === category) {
-    throw badRequest("Alt köşe, ana kategoriden farklı olmalı.");
-  }
-  const rows = await db
-    .select({ name: writerAreas.name })
-    .from(writerAreas)
-    .where(and(eq(writerAreas.name, value), eq(writerAreas.isActive, true)))
-    .limit(1);
-  if (rows.length === 0) {
-    throw badRequest(`"${value}" diye aktif bir alan yok; alt köşe 11 ana kategoriden seçilir.`);
   }
   return value;
 }
@@ -444,7 +408,6 @@ export async function updateArticleAsWriter(
   }
   const input = parsed.data;
   const category = await assertAuthorCategoryAllowed(actor, input.category);
-  const subcategory = await assertSubcategoryAllowed(category, input.subcategory);
 
   // An explicit slug wins; otherwise it follows the title, keeping the old
   // one when neither changed.
@@ -463,8 +426,6 @@ export async function updateArticleAsWriter(
       summary: input.summary ?? null,
       bodyMarkdown: input.bodyMarkdown ?? existing.bodyMarkdown,
       category,
-      subcategory: input.subcategory === undefined ? existing.subcategory : subcategory,
-      tags: input.tags ?? existing.tags,
       updatedAt: new Date(),
     })
     .where(eq(articles.id, articleId))
@@ -526,7 +487,7 @@ export async function updateArticle(
 
   // A field the form did not send keeps its stored value. `category` and
   // `dueDate` used to fall back to null instead, so a partial update silently
-  // wiped them while `issueId` and `subcategory` next to them were preserved.
+  // wiped them while `issueId` next to them was preserved.
   const [updated] = await db
     .update(articles)
     .set({
@@ -537,8 +498,6 @@ export async function updateArticle(
       authorId: input.authorId ?? existing.authorId,
       issueId: input.issueId === undefined ? existing.issueId : input.issueId,
       category: nextCategory,
-      subcategory: input.subcategory === undefined ? existing.subcategory : (input.subcategory ?? null),
-      tags: input.tags ?? existing.tags,
       dueDate: input.dueDate === undefined ? existing.dueDate : (input.dueDate ?? null),
       updatedAt: new Date(),
     })

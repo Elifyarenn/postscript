@@ -51,8 +51,6 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     throw error;
   }
 
-  const tags = Array.isArray(article.tags) ? (article.tags as string[]) : [];
-
   // The public read model deliberately has no id; the comments anchor needs one
   const idRows = await db
     .select({ id: articles.id })
@@ -101,16 +99,6 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         {/* Sanitised by rehype-sanitize in renderMarkdown (D-012) */}
         <div className="prose-panel" dangerouslySetInnerHTML={{ __html: article.html }} />
       </Card>
-
-      {tags.length > 0 && (
-        <p className="mt-4 flex flex-wrap gap-2 text-xs text-muted">
-          {tags.map((tag) => (
-            <span key={tag} className="rounded-full border border-line px-2 py-0.5">
-              {tag}
-            </span>
-          ))}
-        </p>
-      )}
 
       {article.author && (
         <Card className="mt-6">

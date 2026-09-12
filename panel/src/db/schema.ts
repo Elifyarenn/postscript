@@ -700,16 +700,8 @@ export const articles = pgTable(
 
     authorId: uuid("author_id").references(() => users.id, { onDelete: "restrict" }),
 
+    // `subcategory` ("alt köşe") and `tags` were dropped in D-082
     category: text("category"),
-    /**
-     * Optional second category ("alt köşe") from the same 11 writing areas,
-     * purely informational: the review chain follows the main category (D-069).
-     */
-    subcategory: text("subcategory"),
-    tags: text("tags")
-      .array()
-      .notNull()
-      .default(sql`'{}'::text[]`),
 
     status: articleStatusEnum("status").notNull().default("draft"),
 

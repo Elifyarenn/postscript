@@ -247,10 +247,10 @@ describe("the staged review chain", () => {
     expect(approval?.status).toBe("pending");
   });
 
-  it("stores the author's slug, alt köşe and their validation (D-069)", async () => {
+  it("stores the author's slug and validates it (D-069)", async () => {
     const { writer } = await chainScenario();
 
-    // An explicit, well-formed slug and a valid alt köşe are stored as given
+    // An explicit, well-formed slug is stored as given
     const draft = await createArticleAsWriter(
       actorOf(writer),
       {
@@ -258,14 +258,12 @@ describe("the staged review chain", () => {
         slug: "sluglu-deneme",
         bodyMarkdown: "Gövde.",
         category: "Sanat & Edebiyat",
-        subcategory: "Yazar Köşesi: P.S.",
       },
       noMeta,
     );
     expect(draft.slug).toBe("sluglu-deneme");
-    expect(draft.subcategory).toBe("Yazar Köşesi: P.S.");
 
-    // A malformed slug and a bogus alt köşe are refused at the service layer
+    // A malformed slug is refused at the service layer
     const badSlug = await captureError(
       createArticleAsWriter(
         actorOf(writer),
@@ -275,24 +273,15 @@ describe("the staged review chain", () => {
     );
     expect(badSlug.status).toBe(400);
 
-    const unknownArea = await captureError(
+    // The dropped fields are no longer accepted at all (D-082)
+    const staleField = await captureError(
       createArticleAsWriter(
         actorOf(writer),
-        { title: "Bilinmeyen Köşe", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat", subcategory: "Olmaz Böyle" },
+        { title: "Eski Alan", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat", tags: ["deneme"] },
         noMeta,
       ),
     );
-    expect(unknownArea.status).toBe(400);
-
-    // The alt köşe must differ from the main category
-    const sameAsCategory = await captureError(
-      createArticleAsWriter(
-        actorOf(writer),
-        { title: "Aynı Köşe", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat", subcategory: "Sanat & Edebiyat" },
-        noMeta,
-      ),
-    );
-    expect(sameAsCategory.status).toBe(400);
+    expect(staleField.status).toBe(400);
 
     // A slug that is already taken is a 409, not a silent suffix
     const taken = await captureError(
@@ -304,8 +293,7 @@ describe("the staged review chain", () => {
     );
     expect(taken.status).toBe(409);
 
-    // The writer can clear the alt köşe on a later save; the slug follows an
-    // edited title when none is given.
+    // The slug follows an edited title when none is given
     const updated = await updateArticleAsWriter(
       actorOf(writer),
       draft.id,
@@ -313,12 +301,10 @@ describe("the staged review chain", () => {
         title: "Sluglu Deneme II",
         bodyMarkdown: "Gövde.",
         category: "Sanat & Edebiyat",
-        subcategory: "",
       },
       noMeta,
     );
     expect(updated.slug).toBe("sluglu-deneme-ii");
-    expect(updated.subcategory).toBeNull();
   });
 
   it("keeps a category editor out of another editor's areas and out of later stages", async () => {
