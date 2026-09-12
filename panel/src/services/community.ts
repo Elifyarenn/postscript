@@ -7,7 +7,7 @@
  * clean. The blacklist itself is admin-curated; removal is a soft delete.
  */
 import "server-only";
-import { and, asc, desc, eq, gt, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { db } from "@/db/client";
@@ -195,6 +195,19 @@ export type CommentListItem = {
   authorRole: Role | null;
 };
 
+/**
+ * The name a reader is shown under in the community (D-076).
+ *
+ * A writer who publishes under a pen name is credited under it here too:
+ * showing their legal name beneath their own article would give away exactly
+ * what the pen name is for. A reader with no pen name keeps the display name
+ * they chose at registration, which is what they expect to be called.
+ *
+ * The admin moderation lists deliberately keep `display_name`: identifying the
+ * account is the point of that screen.
+ */
+const communityDisplayName = sql<string>`coalesce(${users.penName}, ${users.displayName})`;
+
 /** The visible comments of one article, newest last. */
 export async function listCommentsForArticle(
   articleId: string,
@@ -205,7 +218,7 @@ export async function listCommentsForArticle(
       id: communityComments.id,
       body: communityComments.body,
       createdAt: communityComments.createdAt,
-      authorName: users.displayName,
+      authorName: communityDisplayName,
       authorRole: users.role,
     })
     .from(communityComments)
@@ -328,11 +341,11 @@ export async function listChatMessages(limit = CHAT_LIMIT): Promise<MessageListI
       authorId: communityMessages.authorId,
       body: communityMessages.body,
       createdAt: communityMessages.createdAt,
-      authorName: users.displayName,
+      authorName: communityDisplayName,
       authorRole: users.role,
       quotedMessageId: communityMessages.quotedMessageId,
       quotedBody: quoted.body,
-      quotedAuthorName: quotedAuthor.displayName,
+      quotedAuthorName: sql<string>`coalesce(${quotedAuthor.penName}, ${quotedAuthor.displayName})`,
     })
     .from(communityMessages)
     .leftJoin(users, eq(communityMessages.authorId, users.id))
@@ -356,11 +369,11 @@ export async function listChatMessagesAfter(after: Date, limit = CHAT_LIMIT): Pr
       authorId: communityMessages.authorId,
       body: communityMessages.body,
       createdAt: communityMessages.createdAt,
-      authorName: users.displayName,
+      authorName: communityDisplayName,
       authorRole: users.role,
       quotedMessageId: communityMessages.quotedMessageId,
       quotedBody: quoted.body,
-      quotedAuthorName: quotedAuthor.displayName,
+      quotedAuthorName: sql<string>`coalesce(${quotedAuthor.penName}, ${quotedAuthor.displayName})`,
     })
     .from(communityMessages)
     .leftJoin(users, eq(communityMessages.authorId, users.id))
@@ -385,11 +398,11 @@ export async function getChatMessage(messageId: string): Promise<MessageListItem
       authorId: communityMessages.authorId,
       body: communityMessages.body,
       createdAt: communityMessages.createdAt,
-      authorName: users.displayName,
+      authorName: communityDisplayName,
       authorRole: users.role,
       quotedMessageId: communityMessages.quotedMessageId,
       quotedBody: quoted.body,
-      quotedAuthorName: quotedAuthor.displayName,
+      quotedAuthorName: sql<string>`coalesce(${quotedAuthor.penName}, ${quotedAuthor.displayName})`,
     })
     .from(communityMessages)
     .leftJoin(users, eq(communityMessages.authorId, users.id))

@@ -7,10 +7,45 @@
  */
 import "server-only";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import type { PgColumn } from "drizzle-orm/pg-core";
 import { db } from "@/db/client";
-import { articles, issues, media, users } from "@/db/schema";
+import { articles, issues, media, rightsGrants, users } from "@/db/schema";
 import { gone, notFound } from "@/lib/errors";
 import { renderMarkdown } from "@/lib/markdown";
+
+/** Shown when an article has a byline we are not allowed to fill in. */
+const ANONYMOUS_BYLINE = "İsimsiz";
+
+/**
+ * Join condition for the signed rights grant of an article. The partial unique
+ * index on `rights_grants` allows one live grant per article, so this matches
+ * at most one row and no aliasing or grouping is needed.
+ */
+function signedGrantFor(articleId: PgColumn) {
+  return and(eq(rightsGrants.articleId, articleId), eq(rightsGrants.status, "signed"));
+}
+
+/**
+ * The name an article may actually be published under (D-076).
+ *
+ * A legal name is only public when the writer chose it themselves: the
+ * `byline_choice` they signed on the rights grant is the consent, and the
+ * signing flow already refuses `pen_name` from someone with no pen name. With
+ * no signed choice the pen name is the only safe answer, and where there is
+ * none either the byline stays anonymous.
+ *
+ * The old fallback was `penName ?? displayName`, which published the legal name
+ * of every writer who had not set a pen name — against the CLAUDE.md rule that
+ * the public API returns no real name, and without anyone having agreed to it.
+ */
+function publicByline(row: {
+  penName: string | null;
+  displayName: string;
+  bylineChoice: "real_name" | "pen_name" | null;
+}): string {
+  if (row.bylineChoice === "real_name") return row.displayName;
+  return row.penName ?? ANONYMOUS_BYLINE;
+}
 
 /** The only author fields that may ever be public. */
 function publicAuthor(row: {
@@ -19,10 +54,10 @@ function publicAuthor(row: {
   penNameSlug: string | null;
   bio: string | null;
   socialLinks: unknown;
+  bylineChoice: "real_name" | "pen_name" | null;
 }) {
   return {
-    // The pen name is what is published; the legal name is only a fallback label
-    name: row.penName ?? row.displayName,
+    name: publicByline(row),
     slug: row.penNameSlug,
     bio: row.bio,
     socialLinks: row.socialLinks ?? null,
@@ -69,12 +104,14 @@ export async function getPublishedIssue(number: number) {
       summary: articles.summary,
       orderInIssue: articles.orderInIssue,
       publishedAt: articles.publishedAt,
-      authorName: users.penName,
-      authorDisplayName: users.displayName,
+      penName: users.penName,
+      displayName: users.displayName,
       authorSlug: users.penNameSlug,
+      bylineChoice: rightsGrants.bylineChoice,
     })
     .from(articles)
     .leftJoin(users, eq(articles.authorId, users.id))
+    .leftJoin(rightsGrants, signedGrantFor(articles.id))
     .where(
       and(eq(articles.issueId, issue.id), eq(articles.status, "published"), isNull(articles.deletedAt)),
     )
@@ -91,7 +128,13 @@ export async function getPublishedIssue(number: number) {
       summary: row.summary,
       order: row.orderInIssue,
       publishedAt: row.publishedAt,
-      author: row.authorName ?? row.authorDisplayName,
+      author: row.displayName
+        ? publicByline({
+            penName: row.penName,
+            displayName: row.displayName,
+            bylineChoice: row.bylineChoice,
+          })
+        : null,
       authorSlug: row.authorSlug,
     })),
   };
@@ -119,10 +162,12 @@ export async function getPublicArticle(slug: string) {
       penNameSlug: users.penNameSlug,
       bio: users.bio,
       socialLinks: users.socialLinks,
+      bylineChoice: rightsGrants.bylineChoice,
     })
     .from(articles)
     .leftJoin(users, eq(articles.authorId, users.id))
     .leftJoin(issues, eq(articles.issueId, issues.id))
+    .leftJoin(rightsGrants, signedGrantFor(articles.id))
     .where(and(eq(articles.slug, slug), isNull(articles.deletedAt)))
     .limit(1);
 
@@ -148,6 +193,7 @@ export async function getPublicArticle(slug: string) {
           penNameSlug: row.penNameSlug,
           bio: row.bio,
           socialLinks: row.socialLinks,
+          bylineChoice: row.bylineChoice,
         })
       : null,
   };
@@ -184,7 +230,10 @@ export async function getPublicAuthor(penNameSlug: string) {
     )
     .orderBy(desc(articles.publishedAt));
 
-  return { ...publicAuthor(row), articles: published };
+  // This page is reached by pen-name slug, so the pen name is the byline by
+  // construction; there is no single article here whose grant could say
+  // otherwise (D-076).
+  return { ...publicAuthor({ ...row, bylineChoice: "pen_name" }), articles: published };
 }
 
 /**
@@ -194,7 +243,7 @@ export async function getPublicAuthor(penNameSlug: string) {
  * because an article can be published before its issue is.
  */
 export async function listRecentArticles(limit = 20) {
-  return db
+  const rows = await db
     .select({
       title: articles.title,
       slug: articles.slug,
@@ -203,14 +252,24 @@ export async function listRecentArticles(limit = 20) {
       subcategory: articles.subcategory,
       publishedAt: articles.publishedAt,
       issueNumber: issues.number,
-      authorName: users.penName,
-      authorDisplayName: users.displayName,
+      penName: users.penName,
+      displayName: users.displayName,
       authorSlug: users.penNameSlug,
+      bylineChoice: rightsGrants.bylineChoice,
     })
     .from(articles)
     .leftJoin(users, eq(articles.authorId, users.id))
     .leftJoin(issues, eq(articles.issueId, issues.id))
+    .leftJoin(rightsGrants, signedGrantFor(articles.id))
     .where(and(eq(articles.status, "published"), isNull(articles.deletedAt)))
     .orderBy(desc(articles.publishedAt))
     .limit(limit);
+
+  // The byline is resolved here, so `display_name` never leaves this module
+  return rows.map(({ penName, displayName, bylineChoice, ...rest }) => ({
+    ...rest,
+    authorName: displayName
+      ? publicByline({ penName, displayName, bylineChoice })
+      : null,
+  }));
 }

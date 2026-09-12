@@ -525,7 +525,7 @@ describe("public issue listing", () => {
       .where(eq(users.id, writerRow.id));
 
     await toAwaitingRights(editor, admin, article.id);
-    await approveAsWriter(writer, article.id);
+    await approveAsWriter(writer, article.id, "pen_name");
     await transitionArticle(admin, article.id, "scheduled", noMeta);
     const published = await transitionArticle(admin, article.id, "published", noMeta);
 
@@ -533,6 +533,44 @@ describe("public issue listing", () => {
     expect(payload).not.toContain(writerRow.email);
     expect(payload).not.toContain("1995-05-05");
     expect(payload).toContain("Mahlas");
+  });
+
+  /**
+   * D-076: the byline follows the `byline_choice` the writer signed, not a
+   * `penName ?? displayName` fallback that published a legal name nobody had
+   * agreed to.
+   */
+  it("publishes the legal name only when the writer signed for it", async () => {
+    const { admin, editor, writer, writerRow, article } = await scenario();
+    await db
+      .update(users)
+      .set({ penName: "Mahlas", penNameSlug: "mahlas" })
+      .where(eq(users.id, writerRow.id));
+
+    await toAwaitingRights(editor, admin, article.id);
+    await approveAsWriter(writer, article.id, "real_name");
+    await transitionArticle(admin, article.id, "scheduled", noMeta);
+    const published = await transitionArticle(admin, article.id, "published", noMeta);
+
+    const payload = await getPublicArticle(published.slug);
+    expect(payload.author?.name).toBe(writerRow.displayName);
+  });
+
+  it("stays anonymous rather than fall back to the legal name", async () => {
+    // No pen name, and a grant that says nothing about the byline
+    const { admin, editor, writer, writerRow, article } = await scenario();
+
+    await toAwaitingRights(editor, admin, article.id);
+    await approveAsWriter(writer, article.id, "real_name");
+    await transitionArticle(admin, article.id, "scheduled", noMeta);
+    const published = await transitionArticle(admin, article.id, "published", noMeta);
+
+    // Clearing the signed choice is what an older row looks like
+    await db.update(rightsGrants).set({ bylineChoice: null });
+
+    const payload = await getPublicArticle(published.slug);
+    expect(payload.author?.name).toBe("İsimsiz");
+    expect(JSON.stringify(payload)).not.toContain(writerRow.displayName);
   });
 });
 

@@ -1601,3 +1601,38 @@ tiptir ve `runAction` tarafından üretilir.
 
 ---
 
+## D-076 — Yayın adı imzalı `byline_choice`'a bağlandı; gerçek ad varsayılan değil
+
+**Karar:** Public API'de yazar adı artık imzalanmış Eser Onayındaki
+`rights_grants.byline_choice`'tan çözülür:
+
+- `real_name` → `display_name` (yazar bunu kendi imzasıyla seçti)
+- `pen_name` → `pen_name` (imza akışı mahlası olmayandan bu seçimi zaten
+  reddediyor, `rights.ts:284`)
+- imzalı seçim yoksa → `pen_name`, o da yoksa **"İsimsiz"**
+
+`getPublicArticle`, `getPublishedIssue` ve `listRecentArticles` imzalı hak
+devrini `leftJoin` ile alır; `rights_grants` üzerindeki kısmi unique index
+makale başına tek canlı devre izin verdiği için aliasing veya gruplama
+gerekmez. `getPublicAuthor` mahlas slug'ıyla bulunduğu için yapısı gereği
+`pen_name`.
+
+Topluluk tarafında da aynı mantık: yorum ve sohbet listeleri
+`coalesce(pen_name, display_name)` gösterir. Mahlasla yayın yapan bir yazarın
+kendi yazısının altında gerçek adıyla görünmesi mahlası anlamsız kılıyordu.
+Yönetici moderasyon listeleri bilerek `display_name` göstermeye devam eder —
+o ekranın amacı hesabı teşhis etmek.
+
+**Gerekçe:** Eski kod `penName ?? displayName` yazıyordu, yani mahlas
+girmemiş her yazarın gerçek adı yayına çıkıyordu. CLAUDE.md "Public API …
+gerçek ad … döndürmez" diyor; ama gerçek adı hiç göstermemek de doğru değil,
+çünkü yazar Eser Onayında bunu açıkça seçebiliyor. Rıza zaten veritabanında
+kayıtlı olduğu için doğru cevap onu okumaktı — hem kurala hem ürüne uyan tek
+seçenek bu.
+
+**Not:** Bu davranış değişikliğidir. `real_name` imzalamış, mahlası da olan bir
+yazarın yayın adı artık gerçek adıdır (eskiden mahlası basılıyordu). Testler
+her iki seçimi de ayrı ayrı doğrular.
+
+---
+

@@ -46,7 +46,7 @@ export default async function MagazinePage({
                   title={article.title}
                   slug={article.slug}
                   summary={article.summary}
-                  author={article.authorName ?? article.authorDisplayName}
+                  author={article.authorName}
                   authorSlug={article.authorSlug}
                   issueNumber={article.issueNumber}
                   publishedAt={article.publishedAt}
