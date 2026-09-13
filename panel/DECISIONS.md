@@ -2964,3 +2964,98 @@ kurtarma kodu üretmeli (D-099). SMTP ve S3/R2 hâlâ kurulu değil. KVKK
 metnindeki yer tutucular doldurulmadan yeni sürüm yayınlanmamalı (D-100).
 
 ---
+
+## D-103 — Zamanlanmış işler Vercel Cron'a bağlandı; oturum kayıtları 1 yılda silinir
+
+**Sorun:** Zamanlanmış işler yalnızca `pnpm` betikleri ve README'deki bir
+crontab örneği olarak vardı. Üretim Vercel'de ve Vercel crontab çalıştırmaz;
+depoda `vercel.json` yoktu. Canlıya alındığı 2026-09-06'dan beri şunların
+hiçbiri çalışmadı:
+
+- zamanlanmış makalelerin yayımlanması (D-010),
+- eser onayı hatırlatmaları,
+- 30 günü dolan silme taleplerinin anonimleştirilmesi,
+- 7 günlük doğrulanmamış hesapların silinmesi,
+- 1 yılı dolan trafik kayıtları, silinmiş içerik ve bildirimlerin budanması.
+
+KVKK aydınlatma metni §7 bu sürelerin uygulandığını söylüyor. Ayrıca
+"Oturum kayıtları (IP, tarayıcı bilgisi) 1 yıl" satırının kodda hiçbir
+karşılığı yoktu: `sessions` satırları yalnızca `revoked_at` alır, hiç silinmez.
+Bu, D-083 ve D-084'te açık kalan maddeydi. "Giriş denemesi kayıtları en çok
+30 gün" satırının da çağıranı yoktu; `pruneAttempts` yazılmış ama hiçbir yerden
+çağrılmıyordu.
+
+**Karar:**
+
+- `src/services/housekeeping.ts` → `runDailyHousekeeping`, `DAILY_TASKS`
+  listesini sırayla yürütür. Bir görevin hatası kaydedilir, diğerleri çalışır.
+  Gerekçe: SMTP kurulu değilken hatırlatma e-postası düşebilir. Bu, bir yıllık
+  IP kaydının silinmesini engellememeli.
+- **Yeni görev `prune_sessions`:** son kullanımı (`last_seen_at`) 365 günden
+  eski ve süresi dolmuş oturumları siler.
+  - Süre oturum açılışından değil son kullanımdan sayılır. Böylece her
+    isteğin IP'si 5651 m. 5'in istediği bir yılı en az doldurur.
+  - Süresi dolmamış bir oturum yaşı ne olursa olsun silinmez.
+- **Yeni görev `prune_auth_attempts`:** 30 günden eski giriş denemesi
+  kayıtları (KVKK §7).
+- `process-deletions` ve `purge-unverified` betiklerindeki mantık servise
+  taşındı. Betikler ve cron aynı fonksiyonu çağırır. Betikler artık silinen
+  hesapların e-posta adreslerini konsola basmıyor, yalnızca sayı yazıyor.
+- **`GET /api/cron/daily`** (`src/app/api/cron/daily/route.ts`). Kod stilindeki
+  "route handler yalnızca public API, webhook, OG" kuralında webhook sayıldı:
+  kullanıcı ve form yok, yalnızca Vercel'in paylaşılan anahtarı var.
+  - `src/lib/cron.ts` başlığı `safeEquals` ile karşılaştırır.
+  - `CRON_SECRET` tanımsızsa ya da 32 karakterden kısaysa uç kapalıdır (401).
+    Yanlış yapılandırma ucu açmaz, kapatır.
+- Yanıt yalnızca görev adlarını ve sonuçlarını içerir, hata metnini içermez;
+  Vercel yanıtları loglarda tutar. Hata olursa 500 döner, Vercel çalışmayı
+  başarısız işaretler.
+- Log satırı hatanın yalnızca ilk satırını ve `cause`'un ilk satırını yazar, en
+  çok 300 karakter. Sürücü hataları sonraki satırlarda sorgu parametrelerini
+  (jeton özeti, adres) taşıyor. Veritabanının asıl nedeni ("relation … does not
+  exist") ise `cause`'da duruyor. İlk sürüm yalnızca ilk satırı yazıyordu; yerel
+  denemede beş görev yalnızca "Failed query: …" diyerek düştü ve neden
+  görünmedi. Bu yüzden `cause` eklendi.
+- `vercel.json`: `0 3 * * *`, yani TR 06:00.
+
+**Bilinen sınır — Hobby planı:** Vercel Hobby cron'u günde bir kez çalıştırır
+ve saati ±59 dakika kaydırabilir. README'deki `*/5` zamanlanmış yayın artık
+günde bire düştü. Zamanlanmış makale en geç ertesi sabah yayımlanır. Bugün
+hiç çalışmadığı için bu bir gerileme değil. Daha sık yayın gerekirse editör
+elle yayımlar ya da plan yükseltilir. `vercel.json`'da günden sık bir ifade
+Hobby'de bütün deploy'u düşürdüğü için `tests/unit/cron.test.ts` bunu engeller.
+
+**Canlıda çalışması için (ürün sahibi):** Vercel → postscript → Settings →
+Environment Variables → `CRON_SECRET`, Production, en az 32 karakter rastgele
+değer (`.env.example`'daki komutla üretilir). Tanımlanana kadar cron her gün
+çağrılır ve 401 alır; hiçbir kayıt silinmez, hiçbir makale yayımlanmaz.
+
+**Hukuk:** Aydınlatma metni değişmedi. §7'deki süreler zaten yazılıydı; bu adım
+kodu metne uydurdu. Yeni veri, amaç veya sağlayıcı yok (Vercel Cron, zaten
+listede olan Vercel'in parçası).
+
+**Doğrulama:**
+
+- `tests/unit/cron.test.ts`:
+  - doğru anahtar geçer;
+  - tanımsız veya kısa anahtar, eksik, yanlış ya da öneksiz başlık reddedilir;
+  - `vercel.json`'daki her yol var olan bir `route.ts`'e gider;
+  - takvim günde birden sık değil.
+- `tests/integration/housekeeping.test.ts`:
+  - 366 günlük oturum silinir; 364 günlük ve etkin olan kalır;
+  - süresi dolmamış eski oturum silinmez;
+  - 31 günlük silme talebi anonimleşir, 29 günlük beklemede kalır;
+  - 8 günlük doğrulanmamış hesap silinir, 6 günlük ve doğrulanmış kalır;
+  - bir görev patlasa da sonraki çalışır ve hata metninde parametre yok;
+  - `cause`'daki veritabanı nedeni hataya eklenir, parametreler eklenmez;
+  - gerçek görev listesi boş veritabanında hatasız biter.
+- typecheck + lint temiz, 40 dosya / 458 test.
+- **Yerel deneme:** `pnpm housekeeping` ilk çalışmada beş budama görevinde düştü.
+  Neden kod değil, yerel pglite'ın migration defterinin 24'te kalmış olmasıydı:
+  `traffic_logs`, `posts`, `direct_messages`, `anon_messages`,
+  `content_reports` yoktu. Testler kendi taze veritabanını kurduğu için bunu
+  görmüyordu. Yerel `db:migrate` sonrası 12 görevin 12'si hatasız bitti.
+- **Canlı çağrı denenmedi:** `CRON_SECRET` henüz Vercel'de yok. Push sonrası
+  anahtarsız istek 401 dönmeli.
+
+---

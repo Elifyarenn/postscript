@@ -10,44 +10,16 @@
  * Expired pending registrations (D-067) are dropped in the same run: they hold
  * a password hash and a birth date, so they must not outlive their link.
  *
- * Suggested cron: once a day.
+ * Production runs this daily through /api/cron/daily (D-103); the script is for
+ * a manual run against the same service function.
  */
-import { and, isNull, lte } from "drizzle-orm";
-import { db } from "@/db/client";
-import { pendingRegistrations, users } from "@/db/schema";
-import { anonymiseUser } from "@/services/users";
+import { purgeUnverifiedAccounts } from "@/services/housekeeping";
 import { runScript } from "./_bootstrap";
 
-/** The verification link lives 24 hours; a week leaves room to ask for another. */
-const GRACE_DAYS = 7;
-
 runScript(async () => {
-  const cutoff = new Date(Date.now() - GRACE_DAYS * 86_400_000);
-
-  const stale = await db
-    .select({ id: users.id, email: users.email })
-    .from(users)
-    .where(
-      and(
-        isNull(users.emailVerifiedAt),
-        isNull(users.deletedAt),
-        lte(users.createdAt, cutoff),
-      ),
-    );
-
-  if (stale.length === 0) {
-    console.log("No unverified accounts were due.");
-  }
-
-  for (const account of stale) {
-    await anonymiseUser(account.id);
-    console.log(`  · anonymised ${account.email}`);
-  }
-
-  const expiredPending = await db
-    .delete(pendingRegistrations)
-    .where(and(isNull(pendingRegistrations.usedAt), lte(pendingRegistrations.expiresAt, new Date())))
-    .returning({ id: pendingRegistrations.id });
-
-  console.log(`Purged ${stale.length} unverified account(s) and ${expiredPending.length} expired pending registration(s).`);
+  const result = await purgeUnverifiedAccounts(new Date());
+  console.log(
+    `Purged ${result.accounts} unverified account(s) and ` +
+      `${result.pendingRegistrations} expired pending registration(s).`,
+  );
 });

@@ -41,6 +41,9 @@ const envSchema = z.object({
 
   REVALIDATE_WEBHOOK_URL: z.string().optional(),
   REVALIDATE_WEBHOOK_SECRET: z.string().optional(),
+
+  // Optional so local runs boot without it; the cron route stays closed while unset
+  CRON_SECRET: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

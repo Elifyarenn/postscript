@@ -415,14 +415,37 @@ Geri çekilmiş yazı 410, yayında olmayan her şey 404 verir.
 ## Zamanlanmış işler
 
 Uygulama içinde zamanlayıcı yoktur; işler dışarıdan tetiklenir ve idempotenttir
-(D-009, D-010). Örnek crontab:
+(D-009, D-010).
+
+**Üretim (Vercel):** `vercel.json` her gün 03:00 UTC'de (TR 06:00)
+`GET /api/cron/daily` çağırır (D-103). Uç, Vercel'in gönderdiği
+`Authorization: Bearer <CRON_SECRET>` başlığını ister; `CRON_SECRET` Vercel
+proje ortam değişkenlerinde tanımlı değilse ya da 32 karakterden kısaysa her
+isteği 401 ile reddeder. Tek çalışma `src/services/housekeeping.ts` içindeki
+`DAILY_TASKS` listesini sırayla yürütür; biri hata verse de diğerleri çalışır,
+yanıt 500 döner ve Vercel çalışmayı başarısız işaretler:
+
+| Görev | Ne yapar | Dayanak |
+|---|---|---|
+| `publish_scheduled` | Zamanı gelen makaleleri yayımlar | D-010 |
+| `approval_reminders` | Eser onayı hatırlatmaları | D-009 |
+| `process_deletions` | 30 günü dolan silme taleplerini anonimleştirir | KVKK §7 |
+| `purge_unverified` | 7 günlük doğrulanmamış hesaplar, süresi dolmuş bekleyen kayıtlar | D-066, D-067 |
+| `prune_traffic`, `prune_posts`, `prune_community`, `prune_direct_messages`, `prune_anon_messages`, `prune_reports` | 1 yılı dolan kayıtlar | 5651 m. 5, KVKK §7 |
+| `prune_auth_attempts` | 30 günden eski giriş denemesi kayıtları | KVKK §7 |
+| `prune_sessions` | Son kullanımı 1 yıldan eski, süresi dolmuş oturumlar | 5651 m. 5, KVKK §7 |
+
+Vercel Hobby planı cron'u günde bir kez çalıştırır ve saati ±59 dakika
+kaydırabilir. Zamanlanmış bir makale bu yüzden en geç ertesi sabah yayımlanır;
+daha sık yayın gerekiyorsa editör makaleyi elle yayımlar ya da plan yükseltilir.
+
+**Elle çalıştırma:** `pnpm housekeeping` aynı listeyi çalıştırır. Tek tek işler
+için `pnpm publish-scheduled`, `send-reminders`, `process-deletions`,
+`purge-unverified`, `prune-community` durur. Kendi sunucusunda çalıştıran için
+crontab karşılığı:
 
 ```cron
-*/5 * * * *  cd /app && pnpm publish-scheduled
-0    6 * * *  cd /app && pnpm send-reminders
-0    4 * * *  cd /app && pnpm process-deletions
-0    3 * * *  cd /app && pnpm purge-unverified
-30   3 * * *  cd /app && pnpm prune-community
+0 3 * * *  cd /app && pnpm housekeeping
 ```
 
 ---
