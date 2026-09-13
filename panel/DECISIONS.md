@@ -2622,3 +2622,48 @@ Upsert yok.
   söylüyor. Derleme tamamlanıyor.
 
 ---
+## D-095 — `0024` ve `0025` üretime uygulandı; step 17 yayında
+
+**İstek (ürün sahibi):** Step 17'nin (D-088, trafik kaydı) topluluk özelliğini
+beklemeden tek başına yayına alınması. Öneri gerekçesi: yayındaki kullanım
+şartları trafik kaydı tutulduğunu söylüyordu ama canlı kod tutmuyordu.
+
+**Yapılan (2026-09-13):**
+
+- D-082'nin şartı karşılandı: `0024` (etiket ve alt köşe kolonlarının silinmesi)
+  için ürün sahibinin açık onayı alındı. Silinen tek veri, "Madde 1 - Takıntı"
+  makalesinin 12 etiketiydi: hukuk, felsefe, takıntı, takip, ısrarlı takip,
+  123/a, Türk Ceza Kanunu, Hart, adalet, kontrol, madde, arayış.
+- **Yedek:** Snapshot alınamadı (ücretsiz planda tek yer var, dünkü
+  `before-migrations-0020-0021-0023` dolduruyor). Yerine üretimin kopyası olan
+  hesaplamasız branch açıldı: `backup-before-0024-0025-step17`
+  (`br-hidden-morning-b1hzlhen`). Geri dönüş bu branch'ten yapılır.
+- **Migration yalnızca `7a1c28d`'nin temiz kopyasından çalıştırıldı.** Ana çalışma
+  ağacında o sırada yazılmakta olan `0026` vardı; ağaçtan çalıştırılsaydı o da
+  üretime giderdi. Kopyada typecheck, lint, 348 test ve 25/25 e2e önce geçti.
+- Üretim defteri 23 → 25; `traffic_logs` var, `articles.tags` ve
+  `articles.subcategory` yok (Neon'dan sorgulandı).
+- Ardından yalnızca `7a1c28d` push edildi (`15fd6ad..7a1c28d`). Canlı kullanım
+  şartları sayfası step 17 metnini ("geçmiş mesajlar okunamaz") gösteriyor;
+  `/`, `/kvkk`, `/iletisim`, `/kullanim-sartlari`, `/login` 200.
+
+**Çalışma notu:** Windows'ta `neon-env run -- pnpm db:migrate` çalışmıyor
+(`spawn pnpm ENOENT`). Çalışan biçim:
+`neon-env run -- node node_modules/tsx/dist/cli.mjs --tsconfig scripts/tsconfig.json src/db/migrate.ts`.
+`neon-env`'in Neon giriş anahtarının süresi dolabiliyor; `neon auth` ile
+yenilenir.
+
+**Açık — hukuki metin hatası (ürün sahibine):** Neon API'ye göre üretim
+veritabanı **AWS eu-central-1 (Frankfurt, Almanya)** bölgesinde. KVKK aydınlatma
+metni (`data/kvkk-aydinlatma-metni.md`, Neon satırı) ve künye (`/iletisim`,
+"Barındırma") "AWS us-east-2, Ohio / Amerika Birleşik Devletleri" diyor; D-083
+de aynı yanlış varsayımla yazılmıştı. Neon Inc. ABD şirketi olduğu için yurt
+dışına aktarım bölümü geçerli kalır, ama veri konumu beyanı yanlış. Düzeltme
+ayrı bir adımda yapılacak.
+
+**Sıradaki üretim işi:** `main`'de push edilmemiş step 18–23 (D-089…D-094)
+`0026`–`0030` migration'larını taşıyor. Push'tan önce aynı sıra gerekir: yedek,
+temiz kopyada tam e2e (D-094: `08-two-factor` bu değişikliklerden sonra hiç
+koşmadı), üretim migration'ı, sonra push.
+
+---
