@@ -1072,6 +1072,46 @@ export const userBlocks = pgTable(
 );
 
 /* ------------------------------------------------------------------ */
+/* communities (D-093)                                                 */
+/* ------------------------------------------------------------------ */
+
+/** A topic group. Only an admin opens or archives one; members join and post. */
+export const communities = pgTable(
+  "communities",
+  {
+    id: id(),
+    slug: text("slug").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    /** An archived community stays readable but takes no new members or posts. */
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex("communities_slug_unique").on(t.slug)],
+);
+
+/** Membership is a toggle and follows the hard-delete rule of D-089. */
+export const communityMemberships = pgTable(
+  "community_memberships",
+  {
+    id: id(),
+    communityId: uuid("community_id")
+      .notNull()
+      .references(() => communities.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("community_memberships_pair_unique").on(t.communityId, t.userId),
+    index("community_memberships_user_idx").on(t.userId),
+  ],
+);
+
+/* ------------------------------------------------------------------ */
 /* member posts (D-090)                                                */
 /* ------------------------------------------------------------------ */
 
@@ -1086,6 +1126,8 @@ export const posts = pgTable(
     replyToId: uuid("reply_to_id").references((): AnyPgColumn => posts.id, {
       onDelete: "set null",
     }),
+    /** The community the post was shared in (D-093); null for a plain post. */
+    communityId: uuid("community_id").references(() => communities.id, { onDelete: "set null" }),
     /** The moderator who took it down; null when the author deleted it. */
     removedBy: uuid("removed_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: createdAt(),
@@ -1096,6 +1138,7 @@ export const posts = pgTable(
     index("posts_author_idx").on(t.authorId, t.createdAt),
     index("posts_reply_to_idx").on(t.replyToId, t.createdAt),
     index("posts_created_idx").on(t.createdAt),
+    index("posts_community_idx").on(t.communityId, t.createdAt),
   ],
 );
 

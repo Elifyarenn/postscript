@@ -26,6 +26,7 @@ import {
   bookmarks,
   anonMessages,
   anonMutes,
+  communityMemberships,
   conversationStates,
   directMessages,
   editorCategories,
@@ -880,6 +881,7 @@ async function anonymise(user: User): Promise<void> {
   await db
     .delete(anonMutes)
     .where(or(eq(anonMutes.recipientId, user.id), eq(anonMutes.senderId, user.id)));
+  await db.delete(communityMemberships).where(eq(communityMemberships.userId, user.id));
 
   await revokeAllSessions(user.id);
 }
@@ -974,6 +976,8 @@ export async function exportUserData(actor: Actor, targetUserId: string) {
     select 'anon_messages_received', json_build_object(
       'id', r.id, 'body', r.body, 'created_at', r.created_at, 'read_at', r.read_at
     ) from anon_messages r where r.recipient_id = ${targetUserId}
+    union all
+    select 'community_memberships', row_to_json(m) from community_memberships m where m.user_id = ${targetUserId}
   `);
 
   return {

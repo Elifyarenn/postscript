@@ -328,6 +328,12 @@ aktarımı dahil). Gönderen yine de hesabıyla ve trafik kaydıyla saklanır;
 alıcı mesajı bildirirse yönetici göndereni görür. "Göndereni sustur" kimliği
 açığa çıkarmadan o kişinin bu kutuya yazmasını kapatır.
 
+**Topluluklar (D-093, `/social/communities`):** konu gruplarını yalnızca admin
+"Topluluk yönetimi"nden açar veya arşivler. Kullanıcı adı olan üye katılır ve
+o toplulukta gönderi paylaşır. Gönderi hem topluluk sayfasında hem olağan
+akışta görünür. Üye listesi gösterilmez, yalnızca üye sayısı. Arşivlenen
+topluluk okunur ama yeni üye ve gönderi almaz.
+
 ### Kayıt ve roller
 
 Herkese açık tek kayıt **okuyucu kaydı**dır (`/register`): ad soyad,

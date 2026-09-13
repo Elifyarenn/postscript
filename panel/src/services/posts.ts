@@ -27,6 +27,7 @@ import { z } from "zod";
 import { db } from "@/db/client";
 import {
   bookmarks,
+  communities,
   follows,
   postLikes,
   postReposts,
@@ -42,6 +43,7 @@ import { maskBannedWords } from "@/lib/moderation";
 import { mergeTimeline, rankExplorePosts, rankSuggestions } from "@/lib/ranking";
 import { recordTraffic, trafficCutoff } from "@/lib/traffic";
 import { activeBannedWords, assertMayPost } from "./community";
+import { assertCanPostInCommunity } from "./communities";
 import { notify } from "./notifications";
 import {
   getProfile,
@@ -65,6 +67,7 @@ export const postSchema = z.strictObject({
     .min(1, "Gönderi boş olamaz.")
     .max(MAX_POST_LENGTH, `Gönderi en çok ${MAX_POST_LENGTH} karakter olabilir.`),
   replyToId: z.uuid().optional().nullable(),
+  communityId: z.uuid().optional().nullable(),
 });
 
 export type PostAuthor = { username: string; penName: string | null; role: Role };
@@ -76,6 +79,8 @@ export type PostView = {
   author: PostAuthor;
   /** The answered post; its author is null when that post is no longer visible. */
   replyTo: { id: string; author: PostAuthor | null } | null;
+  /** The community it was shared in (D-093). */
+  community: { slug: string; name: string } | null;
   likeCount: number;
   replyCount: number;
   repostCount: number;
@@ -130,12 +135,16 @@ async function hydrate(
       createdAt: posts.createdAt,
       authorId: posts.authorId,
       replyToId: posts.replyToId,
+      communityId: posts.communityId,
+      communitySlug: communities.slug,
+      communityName: communities.name,
       username: users.username,
       penName: users.penName,
       role: users.role,
     })
     .from(posts)
     .innerJoin(users, eq(posts.authorId, users.id))
+    .leftJoin(communities, eq(posts.communityId, communities.id))
     .where(and(inArray(posts.id, ids), isNull(posts.deletedAt), ...visibleAuthor, ...notBlocked));
 
   if (rows.length === 0) return [];
@@ -212,6 +221,10 @@ async function hydrate(
               : null,
           }
         : null,
+      community:
+        row.communitySlug && row.communityName
+          ? { slug: row.communitySlug, name: row.communityName }
+          : null,
       likeCount: likeCounts.get(row.id) ?? 0,
       replyCount: replyCounts.get(row.id) ?? 0,
       repostCount: repostCounts.get(row.id) ?? 0,
@@ -277,12 +290,15 @@ export async function createPost(
     });
   }
 
+  const communityId = parsed.data.communityId ?? null;
+  if (communityId) await assertCanPostInCommunity(me.id, communityId);
+
   const body = maskBannedWords(parsed.data.body, await activeBannedWords());
 
   return db.transaction(async (tx) => {
     const [row] = await tx
       .insert(posts)
-      .values({ authorId: me.id, body, replyToId: parent?.id ?? null })
+      .values({ authorId: me.id, body, replyToId: parent?.id ?? null, communityId })
       .returning({ id: posts.id });
 
     await recordTraffic(
@@ -636,6 +652,25 @@ export async function getPostThread(actor: Actor, postId: string) {
   );
 
   return { post, parent, replies };
+}
+
+/** A community's top-level posts, newest first. */
+export async function listCommunityPosts(
+  actor: Actor,
+  communityId: string,
+  limit = 50,
+): Promise<PostView[]> {
+  assertMayPost(actor);
+  const blocked = await blockedIdsFor(actor.id);
+
+  const rows = await db
+    .select({ postId: posts.id, at: posts.createdAt })
+    .from(posts)
+    .where(and(eq(posts.communityId, communityId), isNull(posts.replyToId), isNull(posts.deletedAt)))
+    .orderBy(desc(posts.createdAt))
+    .limit(limit);
+
+  return hydrate(actor.id, rows.map((row) => ({ ...row, repostedBy: null })), blocked);
 }
 
 export async function listBookmarkedPosts(actor: Actor): Promise<PostView[]> {

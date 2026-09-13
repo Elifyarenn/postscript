@@ -140,6 +140,10 @@ export default async function TermsPage() {
           Beğenileriniz yalnızca size görünür.
         </li>
         <li>
+          Topluluklar yöneticiler tarafından açılır ve arşivlenir. Katıldığınız bir toplulukta
+          gönderi paylaşabilirsiniz; hangi topluluklara katıldığınız diğer üyelere gösterilmez.
+        </li>
+        <li>
           Kuralların ağır veya tekrarlanan ihlali hâlinde hesabınız askıya alınabilir. Askıya alınan
           hesap giriş yapabilir ancak yorum ve mesaj yazamaz.
         </li>

@@ -153,6 +153,7 @@ export function socialNav(state: SocialNavState): NavGroup[] {
       items: [
         { href: "/social", label: "Akış" },
         { href: "/social/explore", label: "Keşfet" },
+        { href: "/social/communities", label: "Topluluklar" },
         { href: "/social/messages", label: "Mesajlar", badge: state.messages },
         { href: "/social/anon", label: "Anonim kutu", badge: state.anon },
         ...(state.username

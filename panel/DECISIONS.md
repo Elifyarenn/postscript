@@ -2535,3 +2535,50 @@ Neon dalında çalıştırılmalı.
 gelen kutusunda ve dışa aktarımında gönderenin olmadığı dahil).
 
 ---
+
+## D-093 — Topluluklar: yalnızca admin açar, üyeler katılır ve paylaşır
+
+**Bağlam:** Tasarımın kenar çubuğunda "Communities" var. Ürün sahibine "konu
+bazlı gruplar mı, kapattığımız genel sohbet mi?" diye soruldu; cevap "hepsini
+yap" oldu. Genel sohbet D-056'da bilinçli olarak kapatıldığı için geri
+getirilmedi. Muhafazakâr yorum uygulandı: konu grupları.
+
+**Karar:**
+
+- **Topluluğu yalnızca admin açar ve arşivler** ("Topluluk yönetimi" → Topluluklar).
+  Üyelerin grup açması yok: grup sahipleri, grup içi moderatörler ve onların
+  yetkileri ikinci bir moderasyon katmanı demek olurdu.
+  - Slug addan üretilir ve benzersizdir.
+  - Arşivlenen topluluk okunur ama yeni üye ve gönderi almaz.
+  - Açma ve arşivleme `audit_log`'a yazılır.
+- **Üyelik** (`community_memberships`) kullanıcı adı ister (D-089) ve D-089'daki
+  kalıcı silme istisnasına tabidir: ayrılınca satır silinir.
+- **Üye listesi hiçbir yerde gösterilmez**, yalnızca üye sayısı. Birinin hangi
+  topluluklarda olduğu (ör. bir sağlık veya inanç grubu) kendi başına hassas bir
+  bilgi olabilir.
+- **Gönderi:** `posts.community_id`. Toplulukta paylaşmak için üyelik şarttır
+  (403); arşivlenmiş toplulukta paylaşılamaz (409). Kontrol
+  `assertCanPostInCommunity` ile `createPost` içinde yapılır.
+  - Topluluk gönderisi olağan bir gönderidir: yazarın profilinde ve takipçilerin
+    akışında da görünür, üzerinde topluluk bağlantısı taşır.
+  - Engelleme, bildirim, trafik kaydı ve saklama kuralları D-090'dakiyle aynı.
+- Yanıtlar topluluk taşımaz; zincir sayfasında görünür.
+- **Seed:** demo verisinde bir topluluk ("Edebiyat Kulübü") açılır; üretimde
+  topluluğu admin açar.
+
+**Hukuk:**
+- **Aydınlatma metni:** Topluluk veri satırına katılınan topluluklar eklendi;
+  saklama ve anonimleştirme satırlarına topluluk üyeliği eklendi.
+- **Kullanım şartları:** toplulukları yöneticilerin açtığı ve üyeliklerin
+  başkalarına gösterilmediği yazıldı.
+
+**Sürücü (D-078):** `leftJoin(communities)` ve `count()` + `groupBy`, üretimde
+çalışan kalıplar. `exportUserData`'ya bir `row_to_json` satırı daha eklendi.
+Upsert yok.
+
+**Üretim:** Migration `0030`. 0026–0030 üretime uygulanmadı; push yapılmadı.
+
+**Doğrulama:** typecheck + lint temiz, 34 dosya / 428 test (5 yeni:
+`tests/integration/communities.test.ts`).
+
+---

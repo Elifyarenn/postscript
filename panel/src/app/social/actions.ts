@@ -43,6 +43,37 @@ import {
   sendAnonMessage,
   setAnonBoxEnabled,
 } from "@/services/anon-box";
+import { joinCommunity, leaveCommunity } from "@/services/communities";
+
+/* ------------------------------------------------------------------ */
+/* Communities (D-093)                                                 */
+/* ------------------------------------------------------------------ */
+
+export async function joinCommunityAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireAuth();
+    await joinCommunity({ ...user }, text(formData, "slug"));
+    revalidatePath("/social/communities", "layout");
+    return { success: "Topluluğa katıldınız." };
+  });
+}
+
+export async function leaveCommunityAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireAuth();
+    await leaveCommunity({ ...user }, text(formData, "slug"));
+    revalidatePath("/social/communities", "layout");
+    return { success: "Topluluktan ayrıldınız." };
+  });
+}
 
 /* ------------------------------------------------------------------ */
 /* Anonymous box (D-092)                                               */
@@ -181,9 +212,14 @@ export async function createPostAction(
     const meta = await requestMetadata();
 
     const replyToId = text(formData, "replyToId");
+    const communityId = text(formData, "communityId");
     await createPost(
       { ...user },
-      { body: text(formData, "body"), replyToId: replyToId === "" ? null : replyToId },
+      {
+        body: text(formData, "body"),
+        replyToId: replyToId === "" ? null : replyToId,
+        communityId: communityId === "" ? null : communityId,
+      },
       meta,
     );
 

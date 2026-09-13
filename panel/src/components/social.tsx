@@ -244,11 +244,14 @@ export function ProfileTabs({
 export function PostComposer({
   csrfToken,
   replyToId,
+  communityId,
 }: {
   csrfToken: string;
   replyToId?: string;
+  /** Shares the post in this community (D-093). */
+  communityId?: string;
 }) {
-  const id = replyToId ? `reply-${replyToId}` : "new-post";
+  const id = replyToId ? `reply-${replyToId}` : communityId ? `community-${communityId}` : "new-post";
   return (
     <PanelForm
       action={createPostAction}
@@ -256,6 +259,7 @@ export function PostComposer({
       submitLabel={replyToId ? "Yanıtla" : "Paylaş"}
     >
       {replyToId && <input type="hidden" name="replyToId" value={replyToId} />}
+      {communityId && <input type="hidden" name="communityId" value={communityId} />}
       <Field
         label={replyToId ? "Yanıtınız" : "Ne düşünüyorsunuz?"}
         htmlFor={id}
@@ -294,6 +298,14 @@ export function PostCard({ post, csrfToken }: { post: PostView; csrfToken: strin
             <Link href={`/social/posts/${post.id}`} className="text-xs text-muted hover:text-ink">
               {formatDateTime(post.createdAt)}
             </Link>
+            {post.community && (
+              <Link
+                href={`/social/communities/${post.community.slug}`}
+                className="text-xs text-accent hover:underline"
+              >
+                {post.community.name}
+              </Link>
+            )}
           </p>
 
           {post.replyTo && (

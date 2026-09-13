@@ -28,7 +28,7 @@ ortaklık adına tek başına temsile yetkilidir.
 | Yazarlık | Yazarlık başvurusu, başvuruya eklenen örnek çalışma ve başvuru notu, editör değerlendirme notları, rol değişikliği kayıtları |
 | Sözleşme | Yazar sözleşmesi ve eser onayı kayıtları; her onayın tarih-saati, IP adresi, tarayıcı bilgisi, onaylanan metnin SHA-256 özeti ve PDF kopyası |
 | İçerik | Dergiye gönderilen eserler ve sürümleri, yazı üzerindeki editör notları |
-| Topluluk | Yazılara yapılan yorumlar, topluluk sohbeti mesajları, paylaştığınız gönderiler ve yanıtlar ile bunların gönderim zamanı; beğendiğiniz ve yeniden paylaştığınız gönderiler; takip ettiğiniz ve sizi takip eden hesaplar, engellediğiniz hesaplar, kaydettiğiniz yazı ve gönderiler, size gönderilen panel içi bildirimler |
+| Topluluk | Yazılara yapılan yorumlar, topluluk sohbeti mesajları, paylaştığınız gönderiler ve yanıtlar ile bunların gönderim zamanı; beğendiğiniz ve yeniden paylaştığınız gönderiler; takip ettiğiniz ve sizi takip eden hesaplar, engellediğiniz hesaplar, katıldığınız topluluklar, kaydettiğiniz yazı ve gönderiler, size gönderilen panel içi bildirimler |
 | İçerik bildirimi | Bildirdiğiniz içeriğin türü ve o anki metni, seçtiğiniz bildirim türü, varsa açıklamanız, bildirimin sonucu; bildirilen içeriğin sahibi olduğunuzda bu bilgiler sizinle ilişkilendirilir |
 | Özel mesajlar | Gönderdiğiniz ve aldığınız özel mesajlar ve gönderim zamanları, konuşmayı en son okuduğunuz ve sildiğiniz zaman, özel mesaj tercihiniz |
 | Anonim kutu | Kutunuzun açık olup olmadığı; kutunuza bırakılan mesajlar ve okunma zamanları; susturduğunuz gönderenler; başka üyelerin kutusuna bıraktığınız anonim mesajlar ve bunların hesabınızla ilişkisi |
@@ -139,14 +139,14 @@ esas alınarak gerçekleştirilmektedir.
 | İçerik bildirimleri | Sonuçlanana kadar; sonuçlandıktan 1 yıl sonra kalıcı olarak silinir. |
 | Özel mesajlar | Hesabınız açık kaldığı sürece. "Konuşmayı sil" yalnızca sizin görünümünüzden kaldırır, karşı taraf görmeye devam eder. Hesabınız silindiğinde veya mesaj bildirim üzerine kaldırıldığında karşı taraftan da kalkar ve 1 yıl sonra kalıcı olarak silinir. |
 | Anonim mesajlar | Alıcı kutusundan silene kadar. Alıcının sildiği, bildirim üzerine kaldırılan veya taraflardan birinin hesabı silinen mesaj 1 yıl sonra kalıcı olarak silinir. Susturma kayıtları siz kaldırana veya hesabınız silinene kadar tutulur. |
-| Takip, engelleme, kaydetme, beğeni ve yeniden paylaşım kayıtları | Siz geri alana kadar. Geri aldığınızda veya hesabınız silindiğinde kalıcı olarak silinir. |
+| Takip, engelleme, kaydetme, beğeni, yeniden paylaşım ve topluluk üyeliği kayıtları | Siz geri alana kadar. Geri aldığınızda veya hesabınız silindiğinde kalıcı olarak silinir. |
 | Sözleşme ve eser onayı kayıtları | Sözleşme ilişkisi sona erdikten sonra 10 yıl — Türk Borçlar Kanunu m. 146 |
 | Panel işlem (denetim) kayıtları | 10 yıl |
 | Yayımlanmış eserler ve künyedeki ad veya mahlas | Yayın arşivinin parçası olarak süresiz |
 
 Hesabınızı sildirdiğinizde ad, e-posta, doğum tarihi, telefon, kullanıcı adı,
 biyografi ve profil görseliniz anonimleştirilir; takip, engelleme, kaydetme,
-beğeni, yeniden paylaşım ve susturma kayıtlarınız silinir. Gönderileriniz,
+beğeni, yeniden paylaşım, susturma ve topluluk üyeliği kayıtlarınız silinir. Gönderileriniz,
 gönderdiğiniz özel mesajlar ve anonim kutunuzla ilgili mesajlar topluluktan
 kalkar ve silinmiş içerik gibi 1 yıl sonra kalıcı olarak silinir. İmzalı eser onayları, sözleşme kayıtları ve
 kanunen saklanması zorunlu trafik kayıtları yukarıdaki süreler boyunca saklanmaya
