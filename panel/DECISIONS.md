@@ -2927,3 +2927,40 @@ browsing-topics'i kapatıyor, çerçeveleme hem `X-Frame-Options` hem CSP ile
 yasak, `poweredByHeader` kapalı. typecheck + lint temiz, 38 dosya / 444 test.
 
 ---
+
+## D-102 — `0026`–`0031` üretime uygulandı; step 18–29 yayında
+
+**İstek (ürün sahibi):** Son eksiklerin tamamlanıp push edilmesi.
+
+**Yapılan (2026-09-13):**
+
+- **E2e:** `af4b294`'ün (step 29) temiz kopyasında tam koşu önce yapıldı:
+  26/26 geçti, `08-two-factor` 3/3 dahil. Böylece D-094 ve D-099'da açık kalan
+  "push öncesi `08-two-factor` koşturulmalı" şartı karşılandı.
+- **Yedek:** `backup-before-0026-0031-step29` (`br-damp-cherry-b1es5q58`),
+  hesaplamasız branch, migration'dan hemen önce üretimden açıldı. Geri dönüş
+  buradan yapılır. Önceki oturumun 11:03'te açtığı
+  `backup-before-0026-0031-step28` daha eski olduğu için yeterli sayılmadı.
+- **Veri kaybı yok:** `0026`–`0031` taranmış, yalnızca tablo/kolon/indeks/FK
+  ekliyor. Tek gevşetme `0027`'deki `bookmarks.article_id DROP NOT NULL`.
+  D-082 anlamında açık onay gerektiren bir silme yok.
+- **Migration** temiz kopyadan ürün sahibi tarafından çalıştırıldı. Defter
+  25 → 31, son kaydın `created_at`'i `0031` journal kaydıyla aynı. `posts`,
+  `content_reports`, `conversations`, `anon_messages`, `communities`,
+  `totp_recovery_codes` tabloları var. Kullanıcı (71) ve makale (2) sayıları
+  korunmuş (Neon'dan sorgulandı).
+- Ardından `main` push edildi (step 18–29 ve bu kayıt).
+
+**Çalışma notu — `neon-env` 401:** `neon auth` yenilendikten sonra da
+`neon-env` reddedildi. Neden: kullanıcı ortamında süresi geçmiş bir
+`NEON_API_KEY` tanımlı. `neon-env` sırası `--api-key` → `NEON_API_KEY` →
+`credentials.json` olduğu için OAuth girişi hiç okunmuyor. Çalışan biçim
+değişkeni yalnızca o komuttan kaldırmak:
+`env -u NEON_API_KEY pnpm.cmd exec neon-env run -- node node_modules/tsx/dist/cli.mjs --tsconfig scripts/tsconfig.json src/db/migrate.ts`.
+Kalıcı çözüm (değişkeni silmek ya da yenilemek) ürün sahibinin kararı.
+
+**Kalan üretim işleri (koddan bağımsız):** Her iki admin Hesabım sayfasından
+kurtarma kodu üretmeli (D-099). SMTP ve S3/R2 hâlâ kurulu değil. KVKK
+metnindeki yer tutucular doldurulmadan yeni sürüm yayınlanmamalı (D-100).
+
+---
