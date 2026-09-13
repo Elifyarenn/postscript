@@ -7,7 +7,7 @@
  * clean. The blacklist itself is admin-curated; removal is a soft delete.
  */
 import "server-only";
-import { and, asc, desc, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { db } from "@/db/client";
@@ -26,7 +26,7 @@ import { canModerateCommunity, type Actor } from "@/lib/auth/rbac";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { isChatOpen } from "@/lib/chat-mode";
 import { maskBannedWords, normalizeBannedWord } from "@/lib/moderation";
-import { recordTraffic } from "@/lib/traffic";
+import { recordTraffic, trafficCutoff } from "@/lib/traffic";
 import { getChatMode } from "./chat-mode";
 import type { RequestMeta } from "./auth";
 
@@ -521,6 +521,28 @@ export async function listAllMessagesForAdmin(actor: Actor, limit = 200) {
     .leftJoin(users, eq(communityMessages.authorId, users.id))
     .orderBy(desc(communityMessages.createdAt))
     .limit(limit);
+}
+
+/**
+ * Removed comments and chat messages past their year. The KVKK notice has
+ * always said a removed one is kept for a year; nothing enforced the end of
+ * that year until D-090.
+ */
+export async function pruneDeletedCommunityContent(
+  now: Date = new Date(),
+): Promise<{ comments: number; messages: number }> {
+  const cutoff = trafficCutoff(now);
+
+  const comments = await db
+    .delete(communityComments)
+    .where(and(isNotNull(communityComments.deletedAt), lt(communityComments.deletedAt, cutoff)))
+    .returning({ id: communityComments.id });
+  const messages = await db
+    .delete(communityMessages)
+    .where(and(isNotNull(communityMessages.deletedAt), lt(communityMessages.deletedAt, cutoff)))
+    .returning({ id: communityMessages.id });
+
+  return { comments: comments.length, messages: messages.length };
 }
 
 /** The full blacklist, including removed entries, for the admin screen. */

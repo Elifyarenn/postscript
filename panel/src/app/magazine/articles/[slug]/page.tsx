@@ -145,6 +145,12 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                   </span>
                   {comment.authorRole && <StatusBadge status={comment.authorRole} />}
                   <span className="text-muted">{formatDateTime(comment.createdAt)}</span>
+                  <Link
+                    href={`/social/report?type=comment&id=${comment.id}`}
+                    className="ml-auto text-muted hover:text-danger"
+                  >
+                    Bildir
+                  </Link>
                 </div>
                 <p className="whitespace-pre-wrap text-sm">{comment.body}</p>
               </li>

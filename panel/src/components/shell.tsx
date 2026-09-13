@@ -147,7 +147,8 @@ export function socialNav(state: SocialNavState): NavGroup[] {
     {
       label: "Topluluk",
       items: [
-        { href: "/social", label: "Topluluk" },
+        { href: "/social", label: "Akış" },
+        { href: "/social/explore", label: "Keşfet" },
         ...(state.username
           ? [{ href: `/social/u/${state.username}`, label: "Profilim" }]
           : []),

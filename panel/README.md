@@ -127,7 +127,7 @@ pnpm dev
 | `pnpm send-reminders` | Bekleyen devir formları için hatırlatma |
 | `pnpm process-deletions` | 30 günü dolan hesap silme taleplerini işler |
 | `pnpm purge-unverified` | E-posta doğrulanmadan 7 gün geçen hesapları anonimleştirir |
-| `pnpm prune-traffic` | 1 yılı dolan 5651 trafik kayıtlarını siler (D-088) |
+| `pnpm prune-community` | 1 yılı dolan trafik kayıtlarını, silinmiş gönderi/yorum/mesajları ve kapanmış bildirimleri siler (D-088, D-090) |
 
 Migration'lar elle düzenlenmez: şema `src/db/schema.ts` içinde değiştirilir ve
 `pnpm db:generate` çalıştırılır.
@@ -291,7 +291,7 @@ mesajları ve yasaklı kelimeler yönetilir; kaldırma yumuşak silmedir
 
 Her yorum ve mesaj, aynı işlemde bir **trafik kaydı** (`traffic_logs`: hesap,
 IP, tarayıcı bilgisi, zaman) bırakır. 5651 m. 5 gereği bir yıl saklanır ve
-`pnpm prune-traffic` ile silinir (D-088).
+`pnpm prune-community` ile silinir (D-088, D-090).
 
 **Topluluk alanı (`/social`)** her rol için aynıdır (D-089). Üye önce
 `/social/settings`'ten bir **kullanıcı adı** seçer. Toplulukta ad soyad
@@ -300,6 +300,15 @@ adresindedir: takip et / takibi bırak, engelle, takipçi ve takip listeleri.
 Engelleme iki yönlüdür ve takipleri siler. **Kaydedilenler** özel okuma
 listesidir (yazı sayfasındaki "Kaydet"). **Bildirimler** takip gibi olayları
 ve editoryal bildirimleri listeler.
+
+**Gönderiler (D-090):** kullanıcı adı olan üye en çok 1000 karakterlik gönderi
+paylaşır, yanıtlar, beğenir, yeniden paylaşır ve kaydeder. **Akış** kendi
+gönderilerini ve takip ettiklerini gösterir. **Keşfet** son 30 günü kural
+tabanlı sıralar (beğeni → yeniden paylaşım → yenilik) ve üye önerir. Profilde
+Gönderiler / Yanıtlar / Beğeniler (yalnızca sahibine) / Hakkında sekmeleri
+vardır. Her gönderi, yorum ve hesap **"Bildir"** ile yöneticiye bildirilir.
+"Topluluk yönetimi"ndeki kuyruk, 24 saati geçen bildirimleri işaretler
+(5651 m. 9).
 
 ### Kayıt ve roller
 
@@ -380,7 +389,7 @@ Uygulama içinde zamanlayıcı yoktur; işler dışarıdan tetiklenir ve idempot
 0    6 * * *  cd /app && pnpm send-reminders
 0    4 * * *  cd /app && pnpm process-deletions
 0    3 * * *  cd /app && pnpm purge-unverified
-30   3 * * *  cd /app && pnpm prune-traffic
+30   3 * * *  cd /app && pnpm prune-community
 ```
 
 ---

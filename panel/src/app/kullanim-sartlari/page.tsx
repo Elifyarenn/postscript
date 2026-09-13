@@ -70,7 +70,7 @@ export default async function TermsPage() {
 
       <h2>3. Topluluk kuralları</h2>
 
-      <p>Yorumlarda ve topluluk sohbetinde şunlar yasaktır:</p>
+      <p>Yorumlarda, gönderilerde, yanıtlarda ve topluluk sohbetinde şunlar yasaktır:</p>
 
       <ul>
         <li>Hakaret, tehdit, taciz, nefret söylemi ve ayrımcılık,</li>
@@ -90,13 +90,13 @@ export default async function TermsPage() {
       <h2>4. İçeriğinizden siz sorumlusunuz</h2>
 
       <p>
-        Yazdığınız yorum ve mesajların hukuki sorumluluğu size aittir. Dergi, yer sağlayıcı olarak
+        Yazdığınız yorum, gönderi, yanıt ve mesajların hukuki sorumluluğu size aittir. Dergi, yer sağlayıcı olarak
         bu içerikleri önceden denetlemez ve denetlemekle yükümlü değildir. Yayımladığınız içeriğin
         üçüncü kişilerin haklarını ihlal etmediğini kabul etmiş sayılırsınız.
       </p>
 
       <p>
-        Yorum ve mesajlarınız, 5651 sayılı Kanun&rsquo;un 5. maddesi gereği trafik kaydıyla birlikte
+        Yorum, gönderi, yanıt ve mesajlarınız, 5651 sayılı Kanun&rsquo;un 5. maddesi gereği trafik kaydıyla birlikte
         saklanır. Trafik kaydı hesabınızı, IP adresinizi, tarayıcı bilginizi ve gönderim zamanını
         içerir ve bir yıl tutulur. Bu kayıtlar yalnızca kanunen yetkili mercilerin hukuka uygun
         talebi üzerine paylaşılır.
@@ -110,8 +110,17 @@ export default async function TermsPage() {
           uygunluğunu garanti etmez.
         </li>
         <li>
-          Yöneticiler kurallara aykırı bir yorum veya mesajı gerekçe göstermeksizin kaldırabilir.
-          Kaldırma işlemi kayıt altına alınır.
+          Yöneticiler kurallara aykırı bir yorum, gönderi veya mesajı gerekçe göstermeksizin
+          kaldırabilir. Kaldırma işlemi kayıt altına alınır.
+        </li>
+        <li>
+          Kurallara aykırı bulduğunuz bir içeriği veya hesabı &ldquo;Bildir&rdquo; bağlantısıyla
+          yöneticilere bildirebilirsiniz. Bildirimler en geç yirmi dört saat içinde incelenir;
+          sonucu size bildirilir, kimin bildirdiği içerik sahibine gösterilmez.
+        </li>
+        <li>
+          Gönderileriniz, yanıtlarınız ve yeniden paylaşımlarınız tüm üyelere görünür.
+          Beğenileriniz yalnızca size görünür.
         </li>
         <li>
           Kuralların ağır veya tekrarlanan ihlali hâlinde hesabınız askıya alınabilir. Askıya alınan

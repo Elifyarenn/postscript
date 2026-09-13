@@ -6,15 +6,24 @@
  * handle exists so the community does not see a legal name.
  */
 import Link from "next/link";
-import { cn } from "@/lib/utils";
-import { ActionButton } from "./form";
-import { StatusBadge } from "./ui";
+import { cn, formatDateTime } from "@/lib/utils";
+import { ActionButton, PanelForm } from "./form";
+import { Field, StatusBadge, Textarea } from "./ui";
 import {
   blockAction,
+  bookmarkPostAction,
+  createPostAction,
+  deletePostAction,
   followAction,
+  likePostAction,
+  removePostBookmarkAction,
+  repostAction,
   unblockAction,
   unfollowAction,
+  unlikePostAction,
+  unrepostAction,
 } from "@/app/social/actions";
+import { MAX_POST_LENGTH, type PostView } from "@/services/posts";
 import type { MemberListItem, ProfileView } from "@/services/social";
 
 const MONTH_YEAR = new Intl.DateTimeFormat("tr-TR", { month: "long", year: "numeric" });
@@ -136,6 +145,12 @@ export function ProfileHeader({
                   fields={fields}
                   confirmMessage={`@${profile.username} engellensin mi? Takipleriniz karşılıklı olarak kaldırılır.`}
                 />
+                <Link
+                  href={`/social/report?type=member&id=${profile.id}`}
+                  className="px-2 text-xs text-muted hover:text-danger"
+                >
+                  Bildir
+                </Link>
               </>
             )}
           </div>
@@ -166,6 +181,193 @@ export function ProfileHeader({
         </p>
       </div>
     </section>
+  );
+}
+
+const PROFILE_TABS = [
+  ["posts", "Gönderiler"],
+  ["replies", "Yanıtlar"],
+  ["favorites", "Beğeniler"],
+  ["about", "Hakkında"],
+] as const;
+
+export type ProfileTabKey = (typeof PROFILE_TABS)[number][0];
+
+export function parseProfileTab(value: string | undefined): ProfileTabKey {
+  return PROFILE_TABS.some(([key]) => key === value) ? (value as ProfileTabKey) : "posts";
+}
+
+export function ProfileTabs({
+  username,
+  active,
+  isSelf,
+}: {
+  username: string;
+  active: ProfileTabKey;
+  isSelf: boolean;
+}) {
+  return (
+    <nav className="mt-4 flex flex-wrap gap-1 border-b border-line" aria-label="Profil sekmeleri">
+      {PROFILE_TABS.filter(([key]) => key !== "favorites" || isSelf).map(([key, label]) => (
+        <Link
+          key={key}
+          href={`/social/u/${username}?tab=${key}`}
+          aria-current={key === active ? "page" : undefined}
+          className={cn(
+            "-mb-px border-b-2 px-3 py-2 text-sm",
+            key === active
+              ? "border-accent font-medium text-accent"
+              : "border-transparent text-muted hover:text-ink",
+          )}
+        >
+          {label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+export function PostComposer({
+  csrfToken,
+  replyToId,
+}: {
+  csrfToken: string;
+  replyToId?: string;
+}) {
+  const id = replyToId ? `reply-${replyToId}` : "new-post";
+  return (
+    <PanelForm
+      action={createPostAction}
+      csrfToken={csrfToken}
+      submitLabel={replyToId ? "Yanıtla" : "Paylaş"}
+    >
+      {replyToId && <input type="hidden" name="replyToId" value={replyToId} />}
+      <Field
+        label={replyToId ? "Yanıtınız" : "Ne düşünüyorsunuz?"}
+        htmlFor={id}
+        hint={`En çok ${MAX_POST_LENGTH} karakter. Tüm üyelere görünür; topluluk kuralları geçerlidir.`}
+      >
+        <Textarea
+          id={id}
+          name="body"
+          required
+          maxLength={MAX_POST_LENGTH}
+          rows={3}
+          className="min-h-20 font-sans"
+        />
+      </Field>
+    </PanelForm>
+  );
+}
+
+export function PostCard({ post, csrfToken }: { post: PostView; csrfToken: string }) {
+  const fields = { postId: post.id };
+
+  return (
+    <article className="border-b border-line py-4 last:border-b-0">
+      {post.repostedBy && (
+        <p className="mb-1 pl-12 text-xs text-muted">
+          <MemberLink member={post.repostedBy} /> yeniden paylaştı
+        </p>
+      )}
+
+      <div className="flex gap-3">
+        <Avatar username={post.author.username} size="sm" />
+        <div className="min-w-0 flex-1">
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+            <MemberLink member={post.author} />
+            {post.author.role !== "user" && <StatusBadge status={post.author.role} />}
+            <Link href={`/social/posts/${post.id}`} className="text-xs text-muted hover:text-ink">
+              {formatDateTime(post.createdAt)}
+            </Link>
+          </p>
+
+          {post.replyTo && (
+            <p className="text-xs text-muted">
+              Yanıt:{" "}
+              {post.replyTo.author ? (
+                <Link href={`/social/posts/${post.replyTo.id}`} className="hover:text-ink">
+                  @{post.replyTo.author.username}
+                </Link>
+              ) : (
+                "artık görünmeyen bir gönderi"
+              )}
+            </p>
+          )}
+
+          {/* Plain text on purpose: a post is never rendered as HTML or Markdown */}
+          <p className="mt-1 text-sm break-words whitespace-pre-wrap">{post.body}</p>
+
+          <div className="mt-2 flex flex-wrap items-center gap-1">
+            <Link
+              href={`/social/posts/${post.id}`}
+              className="rounded-md px-2.5 py-1 text-xs text-muted hover:bg-paper hover:text-ink"
+            >
+              Yanıtla ({post.replyCount})
+            </Link>
+            <ActionButton
+              action={post.viewerLiked ? unlikePostAction : likePostAction}
+              csrfToken={csrfToken}
+              label={`${post.viewerLiked ? "Beğenildi" : "Beğen"} (${post.likeCount})`}
+              variant="ghost"
+              fields={fields}
+            />
+            <ActionButton
+              action={post.viewerReposted ? unrepostAction : repostAction}
+              csrfToken={csrfToken}
+              label={`${post.viewerReposted ? "Yeniden paylaşıldı" : "Yeniden paylaş"} (${post.repostCount})`}
+              variant="ghost"
+              fields={fields}
+            />
+            <ActionButton
+              action={post.viewerBookmarked ? removePostBookmarkAction : bookmarkPostAction}
+              csrfToken={csrfToken}
+              label={post.viewerBookmarked ? "Kaydedildi" : "Kaydet"}
+              variant="ghost"
+              fields={fields}
+            />
+            {post.isOwn ? (
+              <ActionButton
+                action={deletePostAction}
+                csrfToken={csrfToken}
+                label="Sil"
+                variant="ghost"
+                fields={fields}
+                confirmMessage="Gönderi silinsin mi?"
+              />
+            ) : (
+              <Link
+                href={`/social/report?type=post&id=${post.id}`}
+                className="rounded-md px-2.5 py-1 text-xs text-muted hover:bg-paper hover:text-danger"
+              >
+                Bildir
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+export function PostList({
+  posts,
+  csrfToken,
+  empty,
+}: {
+  posts: PostView[];
+  csrfToken: string;
+  empty: string;
+}) {
+  if (posts.length === 0) {
+    return <p className="py-6 text-center text-sm text-muted">{empty}</p>;
+  }
+  return (
+    <div>
+      {posts.map((post) => (
+        <PostCard key={`${post.id}:${post.repostedBy?.username ?? ""}`} post={post} csrfToken={csrfToken} />
+      ))}
+    </div>
   );
 }
 

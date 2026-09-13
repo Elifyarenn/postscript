@@ -2258,3 +2258,110 @@ snapshot gerektirir (D-079, D-082). Push yapılmadı.
 `tests/unit/username.test.ts`, `tests/integration/social-graph.test.ts`).
 
 ---
+
+## D-090 — Üye gönderileri, yanıt/beğeni/yeniden paylaşım, Keşfet ve içerik bildirimi
+
+**Bağlam:** D-089'daki topluluk tasarımının ikinci adımı. Profil tasarımında
+Posts / Replies / Favorites / About sekmeleri, beğeni, yorum, yeniden paylaşım
+ve kaydetme sayaçları var. Kenar çubuğunda Explore var. Ürün sahibine açık
+soru soruldu: "Posts sekmesi okuyucunun kendi gönderileri mi?" Cevap "hepsini
+yap" oldu. Tasarımdaki gönderiler kişisel kısa yazılar olduğu için muhafazakâr
+yorum uygulandı: üyeler kısa metin gönderisi paylaşır. Bu, "yazar tarafından
+makale gönderimi yok" kuralını değiştirmez; gönderi dergi yazısı değildir ve
+yayın akışına girmez.
+
+**Karar:**
+
+- **Gönderi (`posts`).** Kullanıcı adı zorunlu, en çok 1000 karakter, düz metin
+  (HTML/Markdown olarak işlenmez). Yasaklı kelimeler yazılırken maskelenir.
+  Trafik kaydı aynı transaction'da yazılır (D-088). Dakikada en çok 5 gönderi
+  (429). Yanıt, `reply_to_id` ile aynı tablodadır; yanıtlanan gönderinin
+  sahibine bildirim gider.
+- **Görsel yok.** Tasarımdaki gönderi görselleri yapılmadı: üretimde nesne
+  depolama yok; ayrıca üye yüklemesi lisans, yasa dışı içerik ve kaldırma yükü
+  getirir. Depolama kurulduğunda ayrı bir kararla eklenir.
+- **Beğeni, yeniden paylaşım, kaydetme.** Beğeni ve yeniden paylaşım
+  `post_likes` / `post_reposts`; ikisi de D-089'daki kalıcı silme istisnasına
+  tabi. Kaydetme `bookmarks.post_id` (yazı ya da gönderi, ikisinden tam biri:
+  `check`). İki kez basmak hata değil. Sahibine bildirim gider (kendi
+  gönderisinde gitmez).
+- **Beğeniler yalnızca profil sahibine görünür.** Tasarımda "Favorites" sekmesi
+  herkese açık görünüyor. Birinin neyi beğendiğinin listesi, kendisinin
+  yayımlamayı seçtiğinden fazlasını anlatır; muhafazakâr olan gizli tutmaktır.
+  Başkası için sekme görünmez, servis 403 döner.
+- **Engelleme gönderilere de uzanır.** Engelli iki taraf birbirinin gönderisini
+  hiçbir listede görmez; yanıtlayamaz, beğenemez, paylaşamaz. Gizli ve
+  engellenmiş gönderi aynı 404'ü döner. Yasaklı veya silinmiş hesabın
+  gönderileri listelerden düşer.
+- **Akış (`/social`):** kendi gönderileri + takip edilenlerin yanıt olmayan
+  gönderileri + takip edilenlerin yeniden paylaşımları. Bir gönderi en son
+  etkinliği anında bir kez görünür. **Keşfet (`/social/explore`):** son 30
+  günün yanıt olmayan gönderileri; beğeni → yeniden paylaşım → yenilik
+  sırasıyla. "Tanıyor olabilirsiniz": takip edilenlerin takip ettikleri (kaç
+  kişinin takip ettiğine göre), yetmezse en çok takip edilenler. Sıralamalar
+  `src/lib/ranking.ts`'te saf fonksiyon (CLAUDE.md: ML yok).
+- **Zincir (`/social/posts/[id]`):** yanıtlanan gönderi, gönderi, yanıt formu,
+  yanıtlar (eskiden yeniye).
+- **İçerik bildirimi (`content_reports`).** Gönderi, yorum ve hesap
+  bildirilebilir (`/social/report`). Enum özel mesaj ve anonim mesajı şimdiden
+  içerir; sonraki adımlarda migration'da `ALTER TYPE` gerekmesin. Bildirim o
+  anki metnin kopyasını (`snapshot`) tutar. Aynı üyenin açık bildirimi
+  tekrarlanmaz. Kendi içeriğini bildirmek 400. Her bildirim tüm adminlere
+  bildirim düşürür.
+  - **Moderasyon kuyruğu** "Topluluk yönetimi"nin başında, açık bildirimler en
+    eski üstte. 5651 m. 9'daki 24 saat dolanlar kırmızı işaretlidir
+    (`isReportOverdue`).
+  - **Kararlar:** "İçeriği kaldır" gönderi veya yorumu yumuşak siler
+    (`removed_by`). "Kurallara aykırı değil" yalnızca kapatır. Karar, aynı
+    içerikle ilgili tüm açık bildirimleri kapatır ve bildirenlere sonucu
+    bildirir; kimin karar verdiği ve kimin bildirdiği karşı tarafa gösterilmez.
+  - Hesap bildirimi "kaldırılamaz" (400); gerekiyorsa hesap mevcut kullanıcı
+    sayfasından askıya alınır.
+- **Admin ayrıca** son gönderileri listeleyip doğrudan kaldırabilir
+  (`removePostAsModerator`, `audit_log`'a yazılır). Yeni action'lar
+  `src/app/admin/community/actions.ts`'te.
+- **Saklama süresinin sonu artık kodda.** Aydınlatma metni D-083'ten beri
+  "kaldırılan yorum ve mesaj 1 yıl saklanır" diyordu ama o yılın sonunu hiçbir
+  şey uygulamıyordu; kaldırılan içerik süresiz kalıyordu. `pnpm prune-traffic`
+  (D-088) `pnpm prune-community` oldu ve dördünü siler:
+  - 1 yılı dolan trafik kayıtları
+  - silineli/kaldırılalı 1 yıl olan gönderiler, yorumlar ve sohbet mesajları
+  - sonuçlanalı 1 yıl olan bildirimler
+
+  Açık bildirimler hiç silinmez.
+- **Hesap silme:** beğeni ve yeniden paylaşımlar silinir. Gönderiler yumuşak
+  silinir, yani topluluktan kalkar ve bir yıl sonra budanır. `exportUserData`
+  gönderileri, beğenileri, paylaşımları ve üyenin açtığı bildirimleri de
+  döndürür.
+
+**Hukuk:**
+- **Aydınlatma metni:**
+  - Topluluk veri satırına gönderi, yanıt, beğeni ve yeniden paylaşım eklendi.
+  - Yeni "İçerik bildirimi" veri satırı eklendi.
+  - Trafik kaydı satırı gönderileri de kapsıyor.
+  - Yeni amaç: bildirimlerin incelenmesi ve 5651 kaldırma yükümlülüğü,
+    (ç) + (f).
+  - Saklama süreleri: silinen içerik 1 yıl, sonuçlanan bildirim 1 yıl.
+    Beğeni ve paylaşım "geri alınca silinir".
+  - Anonimleştirme cümlesi güncellendi.
+- **Kullanım şartları:** kurallar gönderi ve yanıtları da kapsıyor. "Bildir"
+  yolu, 24 saat ve bildirenin gizliliği yazıldı. Görünürlük maddesi eklendi:
+  gönderiler herkese, beğeniler yalnızca size.
+- **Hukukçu görüşü gerekiyor:** site içi "Bildir" düğmesinin 5651 m. 9
+  anlamında bir kaldırma "başvurusu" sayılıp sayılmadığı belirsiz. Muhafazakâr
+  olan uygulandı: her bildirim 24 saat kuralıyla izleniyor, künyedeki resmi
+  başvuru yolu da korunuyor ve form ona bağlantı veriyor.
+
+**Sürücü (D-078):** Sayaçlar `count()` + `groupBy` + `inArray` (D-087'de
+üretimde çalışan kalıp). `notInArray`, `alias`, `check(num_nonnulls(...))`
+ve `exportUserData`'ya eklenen dört `row_to_json` satırı yeni. Upsert yok.
+Yayından önce Neon dalında çalıştırılmalı.
+
+**Üretim:** Migration `0027`. f1 oturumu 0024–0025'i üretime uyguladı ve adım
+17'yi push etti. 0026–0027 uygulanmadı; push yapılmadı.
+
+**Doğrulama:** typecheck + lint temiz, 29 dosya / 390 test. 24 yeni:
+`tests/integration/posts.test.ts` ve `tests/unit/ranking.test.ts` (akış
+birleştirme, Keşfet sıralaması, öneri sıralaması, 24 saat sınırı).
+
+---

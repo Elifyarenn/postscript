@@ -47,6 +47,10 @@ const FIELD_LABELS: Record<string, string> = {
   kvkkConsent: "KVKK onayı",
   acknowledged: "Onay kutusu",
   username: "Kullanıcı adı",
+  body: "Metin",
+  category: "Bildirim türü",
+  decision: "Karar",
+  note: "Not",
 };
 
 function FieldErrors({ fieldErrors }: { fieldErrors: Record<string, string[]> }) {

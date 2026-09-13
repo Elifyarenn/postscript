@@ -9,6 +9,7 @@
  */
 import {
   boolean,
+  check,
   date,
   index,
   integer,
@@ -1063,7 +1064,72 @@ export const userBlocks = pgTable(
   ],
 );
 
-/** A reader's private reading list. */
+/* ------------------------------------------------------------------ */
+/* member posts (D-090)                                                */
+/* ------------------------------------------------------------------ */
+
+/** A member's short post; a reply points at the post it answers. */
+export const posts = pgTable(
+  "posts",
+  {
+    id: id(),
+    authorId: uuid("author_id").references(() => users.id, { onDelete: "set null" }),
+    /** Stored with banned words already masked (D-040). */
+    body: text("body").notNull(),
+    replyToId: uuid("reply_to_id").references((): AnyPgColumn => posts.id, {
+      onDelete: "set null",
+    }),
+    /** The moderator who took it down; null when the author deleted it. */
+    removedBy: uuid("removed_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    deletedAt: deletedAt(),
+  },
+  (t) => [
+    index("posts_author_idx").on(t.authorId, t.createdAt),
+    index("posts_reply_to_idx").on(t.replyToId, t.createdAt),
+    index("posts_created_idx").on(t.createdAt),
+  ],
+);
+
+/** Likes and reposts are toggles and follow the hard-delete rule of D-089. */
+export const postLikes = pgTable(
+  "post_likes",
+  {
+    id: id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("post_likes_pair_unique").on(t.userId, t.postId),
+    index("post_likes_post_idx").on(t.postId),
+  ],
+);
+
+export const postReposts = pgTable(
+  "post_reposts",
+  {
+    id: id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("post_reposts_pair_unique").on(t.userId, t.postId),
+    index("post_reposts_post_idx").on(t.postId),
+  ],
+);
+
+/** A reader's private reading list: an article or a post, never both. */
 export const bookmarks = pgTable(
   "bookmarks",
   {
@@ -1071,12 +1137,70 @@ export const bookmarks = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    articleId: uuid("article_id")
-      .notNull()
-      .references(() => articles.id, { onDelete: "cascade" }),
+    articleId: uuid("article_id").references(() => articles.id, { onDelete: "cascade" }),
+    postId: uuid("post_id").references(() => posts.id, { onDelete: "cascade" }),
     createdAt: createdAt(),
   },
-  (t) => [uniqueIndex("bookmarks_user_article_unique").on(t.userId, t.articleId)],
+  (t) => [
+    uniqueIndex("bookmarks_user_article_unique").on(t.userId, t.articleId),
+    uniqueIndex("bookmarks_user_post_unique").on(t.userId, t.postId),
+    check("bookmarks_one_target", sql`num_nonnulls(${t.articleId}, ${t.postId}) = 1`),
+  ],
+);
+
+/* ------------------------------------------------------------------ */
+/* content reports (D-090)                                             */
+/* ------------------------------------------------------------------ */
+
+/** Every kind of user content a member can report, including later modules. */
+export const reportTargetEnum = pgEnum("report_target", [
+  "post",
+  "comment",
+  "direct_message",
+  "anon_message",
+  "member",
+]);
+
+export const reportCategoryEnum = pgEnum("report_category", [
+  "harassment",
+  "hate",
+  "personal_data",
+  "copyright",
+  "spam",
+  "illegal",
+  "impersonation",
+  "other",
+]);
+
+export const reportStatusEnum = pgEnum("report_status", ["open", "removed", "dismissed"]);
+
+/**
+ * A member's report about a piece of content (5651 m. 9 notice path). The
+ * snapshot keeps the text as it was reported, so the moderator judges what the
+ * reporter saw even if the author deletes or the content is private.
+ */
+export const contentReports = pgTable(
+  "content_reports",
+  {
+    id: id(),
+    reporterId: uuid("reporter_id").references(() => users.id, { onDelete: "set null" }),
+    targetType: reportTargetEnum("target_type").notNull(),
+    targetId: uuid("target_id").notNull(),
+    targetUserId: uuid("target_user_id").references(() => users.id, { onDelete: "set null" }),
+    category: reportCategoryEnum("category").notNull(),
+    reason: text("reason"),
+    snapshot: text("snapshot").notNull(),
+    status: reportStatusEnum("status").notNull().default("open"),
+    resolvedBy: uuid("resolved_by").references(() => users.id, { onDelete: "set null" }),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    resolutionNote: text("resolution_note"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("content_reports_status_idx").on(t.status, t.createdAt),
+    index("content_reports_target_idx").on(t.targetType, t.targetId),
+  ],
 );
 
 /* ------------------------------------------------------------------ */
@@ -1131,3 +1255,8 @@ export type EditorStatus = (typeof editorStatusEnum.enumValues)[number];
 export type GrantStatus = (typeof grantStatusEnum.enumValues)[number];
 export type WriterApplicationStatus = (typeof writerApplicationStatusEnum.enumValues)[number];
 export type LicenseType = (typeof licenseTypeEnum.enumValues)[number];
+export type Post = typeof posts.$inferSelect;
+export type ContentReport = typeof contentReports.$inferSelect;
+export type ReportTarget = (typeof reportTargetEnum.enumValues)[number];
+export type ReportCategory = (typeof reportCategoryEnum.enumValues)[number];
+export type ReportStatus = (typeof reportStatusEnum.enumValues)[number];

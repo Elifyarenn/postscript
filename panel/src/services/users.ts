@@ -26,6 +26,9 @@ import {
   bookmarks,
   editorCategories,
   follows,
+  postLikes,
+  postReposts,
+  posts,
   userBlocks,
   users,
   writerApplications,
@@ -841,6 +844,16 @@ async function anonymise(user: User): Promise<void> {
     .delete(userBlocks)
     .where(or(eq(userBlocks.blockerId, user.id), eq(userBlocks.blockedId, user.id)));
   await db.delete(bookmarks).where(eq(bookmarks.userId, user.id));
+  await db.delete(postLikes).where(eq(postLikes.userId, user.id));
+  await db.delete(postReposts).where(eq(postReposts.userId, user.id));
+
+  // Posts leave the community with the account and are pruned a year later,
+  // like any deleted post (D-090)
+  const now = new Date();
+  await db
+    .update(posts)
+    .set({ deletedAt: now, updatedAt: now })
+    .where(and(eq(posts.authorId, user.id), isNull(posts.deletedAt)));
 
   await revokeAllSessions(user.id);
 }
@@ -913,6 +926,14 @@ export async function exportUserData(actor: Actor, targetUserId: string) {
     select 'user_blocks', row_to_json(b) from user_blocks b where b.blocker_id = ${targetUserId}
     union all
     select 'bookmarks', row_to_json(k) from bookmarks k where k.user_id = ${targetUserId}
+    union all
+    select 'posts', row_to_json(p) from posts p where p.author_id = ${targetUserId}
+    union all
+    select 'post_likes', row_to_json(l) from post_likes l where l.user_id = ${targetUserId}
+    union all
+    select 'post_reposts', row_to_json(s) from post_reposts s where s.user_id = ${targetUserId}
+    union all
+    select 'content_reports', row_to_json(c) from content_reports c where c.reporter_id = ${targetUserId}
   `);
 
   return {
