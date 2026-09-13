@@ -87,7 +87,7 @@ export function HomePage() {
           <a href="#about">HAKKINDA</a>
           <a href="#latest">SAYILAR</a>
           <a href="#community">TOPLULUK</a>
-          <a href="#contact">İLETİŞİM</a>
+          <a href="/iletisim">İLETİŞİM</a>
           <button className="search-btn" aria-label="Ara" title="Ara">
             🔍
           </button>
@@ -160,12 +160,12 @@ export function HomePage() {
           postscript<span className="logo-pipe">|</span>
         </div>
 
-        <nav className="footer-links" aria-label="Yardım bağlantıları">
-          <a href="#contact">yardım</a>
-          <a href="#contact">sss</a>
-          <a href="#contact">kullanım şartları</a>
-          <a href="#contact">gizlilik</a>
-          <a href="#contact">iletişim</a>
+        {/* 5651 s. 3 wants these reachable from the front page, so they are real
+            links rather than anchors back into this footer (D-084) */}
+        <nav className="footer-links" aria-label="Yasal bağlantılar">
+          <a href="/kullanim-sartlari">kullanım şartları</a>
+          <a href="/kvkk">gizlilik</a>
+          <a href="/iletisim">künye ve iletişim</a>
         </nav>
 
         <div className="footer-social">

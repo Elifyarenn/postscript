@@ -1921,3 +1921,69 @@ doldurulacak.
 sayfasından yayınlanmadıkça canlıda hiçbir şey değişmez.
 
 ---
+## D-084 — 5651 künyesi, kullanım şartları ve yasal sayfa iskeleti
+
+**İstek (ürün sahibi):** 5651 incelemesinde çıkan eksikler uygulansın, okuyucu
+kullanım şartları yazılsın, `CLAUDE.md`'ye bundan sonra ilgili kanunlara göre
+hareket edileceği yazılsın.
+
+**Sorun:** Footer'daki "iletişim", "gizlilik", "kullanım şartları" bağlantılarının
+üçü de `#contact`'a, yani kendi footer'ına gidiyordu. Ana menüdeki "İLETİŞİM" de
+öyle. Sitede derginin kim olduğu, adresi veya e-postası hiçbir yerde yazmıyordu —
+5651 m. 3'ün açık ihlali. Kaldırma başvurusu için de bir kanal yoktu; yani m. 9
+süreleri bize karşı işliyordu ama başvurunun ulaşacağı bir adres yoktu.
+
+**Yapılan:**
+
+- `/iletisim` — künye. Tanıtıcı bilgiler, hangi sıfatla sorumlu olduğumuz
+  (içerik sağlayıcı + yer sağlayıcı), içerik kaldırma ve itiraz başvurusu usulü
+  (24 saat taahhüdü), barındırma bilgisi.
+- `/kullanim-sartlari` — okuyucu şartları. Hesap, topluluk kuralları, içerikten
+  sorumluluk, moderasyon, FSEK durumu, hesabın sona ermesi, yetkili mahkeme.
+- `src/lib/legal.ts` — `buildImprint`. Saf fonksiyon, veritabanına dokunmaz;
+  eksik alanları `missing` içinde döndürür.
+- `src/components/legal.tsx` — üç yasal sayfanın paylaştığı kabuk, aralarında
+  çapraz bağlantı. `/kvkk` de buna taşındı.
+- Footer ve ana menü gerçek adreslere bağlandı; panel footer'ına da aynı üç
+  bağlantı eklendi.
+- `tests/unit/legal.test.ts` — 6 test.
+
+**Neden `site_settings`, neden ikinci bir kopya değil:** Bilgiler zaten yazar
+sözleşmesi şablonu için orada tutuluyordu (`publisher_partner_1/2`,
+`publisher_address`, `publisher_email`, `public_domain`, `jurisdiction_city`).
+Künye aynı olguları istiyor; ikinci kopya kaçınılmaz olarak sözleşmeden ayrışırdı.
+
+**Neden veritabanı sürümlemesi yok:** KVKK metni `kvkk_versions`'ta çünkü
+kullanıcının hangi sürümü gördüğü kanıt değeri taşıyor. Künye ve kullanım
+şartlarında böyle bir kanıt ihtiyacı yok; React sayfası olarak tutmak metni
+git'te sürümler ve migration gerektirmez.
+
+**Eksik alan davranışı:** `site_settings` boşsa sayfa uyarı gösterir ve boş
+satırı "— belirtilmedi —" diye işaretler. Gerçek görünen ama içi boş bir künye
+basmaktan iyidir; künye ancak doğru olduğunda künyedir.
+
+**Doğrulama:** `pnpm typecheck && pnpm lint && pnpm test` → 24 dosya, 333 test
+geçti. `next build` üç rotayı da dinamik (ƒ) olarak üretti. Dev sunucusunda
+oturumsuz istekle üçü de 200 döndü.
+
+**Açık kalan — ürün sahibine:**
+
+1. Üretimdeki `publisher_address` açık adres olmalı. Yerel seed'de "Konak,
+   İzmir" yazıyor; ilçe adı 5651 m. 3 anlamında adres değildir.
+2. `publisher_email` gerçekten okunan bir kutu olmalı; 24 saatlik cevap süresi
+   oraya bakılmasına bağlı.
+3. Vercel/Neon standart sözleşmesi (D-083) hâlâ bekliyor.
+4. `sessions` için 1 yıllık temizlik işi hâlâ yazılmadı.
+
+**Sonraki adımlar:** Çizer sözleşmesi ve editör gizlilik taahhüdü
+`agreement_versions`'a `kind` kolonu gerektiriyor — tablo tek doküman
+destekliyor (`version` ve `isCurrent` üzerinde tekil indeks). O migration
+üretildiğinde D-082'deki `0024` de canlıya uygulanacağı için ürün sahibine
+sorulmadan yayınlanmaz.
+
+**`CLAUDE.md`:** "Hukuki uyum (ihlal edilemez)" bölümü eklendi. Tabi olunan dört
+kanun, her birinin fiili karşılığı ve altı çalışma kuralı. En önemlisi: kişisel
+veri toplayan bir değişiklik aynı adımda aydınlatma metnini de günceller —
+D-083'te metnin koddan geri kalması tam olarak bu kuralın yokluğundan oldu.
+
+---

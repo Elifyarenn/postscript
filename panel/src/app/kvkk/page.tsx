@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { kvkkVersions } from "@/db/schema";
 import { renderMarkdown } from "@/lib/markdown";
 import { formatDate } from "@/lib/utils";
+import { LegalPage } from "@/components/legal";
 
 export const metadata = { title: "KVKK Aydınlatma Metni" };
 
@@ -13,6 +13,9 @@ export const dynamic = "force-dynamic";
 /**
  * The notice the registration form links to. Versions are kept, and the current
  * one is whichever row carries `is_current` (§11).
+ *
+ * The registration link opens this page in a new tab, so it needs no way back;
+ * the shared footer nav carries the other two statutory pages (D-084).
  */
 export default async function KvkkPage() {
   const rows = await db
@@ -24,45 +27,29 @@ export default async function KvkkPage() {
 
   const current = rows[0];
 
+  if (!current) {
+    return (
+      <LegalPage title="KVKK Aydınlatma Metni" current="/kvkk">
+        <p>
+          Aydınlatma metni henüz yayınlanmadı. Yöneticiler bu metni yönetim panelindeki
+          &ldquo;Sistem&rdquo; sayfasından yayınlar.
+        </p>
+      </LegalPage>
+    );
+  }
+
   return (
-    <main className="mx-auto max-w-3xl px-4 py-12">
-      <Link href="/register" className="text-sm text-muted hover:text-ink">
-        ← Kayıt sayfasına dön
-      </Link>
-
-      {current ? (
+    <LegalPage
+      title={current.title}
+      current="/kvkk"
+      subtitle={
         <>
-          <h1 className="mt-6 font-serif text-2xl">{current.title}</h1>
-          <p className="mt-1 text-xs text-muted">
-            Sürüm {current.version} · {formatDate(current.publishedAt)} · sha256:{" "}
-            <code className="break-all">{current.bodyHash}</code>
-          </p>
-
-          <div
-            className="prose-panel mt-8 text-sm"
-            dangerouslySetInnerHTML={{ __html: await renderMarkdown(current.bodyMarkdown) }}
-          />
+          Sürüm {current.version} · {formatDate(current.publishedAt)} · sha256:{" "}
+          <code className="break-all">{current.bodyHash}</code>
         </>
-      ) : (
-        <>
-          <h1 className="mt-6 font-serif text-2xl">KVKK Aydınlatma Metni</h1>
-          <p className="mt-4 text-sm text-muted">
-            Aydınlatma metni henüz yayınlanmadı. Yöneticiler bu metni yönetim panelindeki
-            &ldquo;Sistem&rdquo; sayfasından yayınlar.
-          </p>
-        </>
-      )}
-
-      <p className="mt-12 text-center text-xs text-muted">
-        <a
-          href="https://www.elifyarencekic.com/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hover:text-ink"
-        >
-          Designed by Elif Yaren Çekiç & Tuanna Demir
-        </a>
-      </p>
-    </main>
+      }
+    >
+      <div dangerouslySetInnerHTML={{ __html: await renderMarkdown(current.bodyMarkdown) }} />
+    </LegalPage>
   );
 }

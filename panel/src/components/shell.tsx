@@ -194,6 +194,21 @@ export async function PanelShell({
         </main>
 
         <footer className="border-t border-line px-6 py-4 text-center text-xs text-muted">
+          {/* The statutory pages stay reachable from inside the panel too (D-084) */}
+          <nav
+            className="mb-2 flex flex-wrap justify-center gap-x-4 gap-y-1"
+            aria-label="Yasal sayfalar"
+          >
+            <Link href="/iletisim" className="hover:text-ink">
+              Künye ve iletişim
+            </Link>
+            <Link href="/kullanim-sartlari" className="hover:text-ink">
+              Kullanım şartları
+            </Link>
+            <Link href="/kvkk" className="hover:text-ink">
+              KVKK aydınlatma metni
+            </Link>
+          </nav>
           <a
             href="https://www.elifyarencekic.com/"
             target="_blank"

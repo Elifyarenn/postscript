@@ -58,6 +58,46 @@ docker compose up -d  # postgres + minio
 - Public API kullanıcı e-postası, gerçek ad, doğum tarihi döndürmez.
 - `withdrawn` makale public'te 410, yayında olmayan her şey 404.
 
+## Hukuki uyum (ihlal edilemez)
+
+Bu bir e-dergi; ürünün tanımı kadar tabi olduğu mevzuat da bağlayıcıdır. Bundan
+sonra her özellik, ilgili kanunlara göre tasarlanır — uyum sonradan eklenen bir
+katman değil, işin parçasıdır (D-084).
+
+**Tabi olduğumuz mevzuat:**
+
+- **5651 sayılı Kanun.** Yayımlanan yazılar bakımından *içerik sağlayıcı*,
+  okuyucu yorumları ve topluluk sohbeti bakımından *yer sağlayıcı*yız. Tanıtıcı
+  bilgiler `/iletisim` künyesinde ve ana sayfadan doğrudan erişilebilir olmak
+  zorunda (m. 3). Kaldırma başvurusu en geç 24 saatte cevaplanır (m. 9, 9/A).
+  Trafik bilgisi 1 yıl saklanır (m. 5).
+- **6698 sayılı KVKK.** Aydınlatma metni `data/kvkk-aydinlatma-metni.md`'de;
+  metin kodun *fiilen* işlediğini anlatır. Yeni bir kişisel veri alanı, yeni bir
+  amaç, yeni bir yurt dışı hizmet sağlayıcısı veya değişen bir saklama süresi →
+  aynı adımda metin de güncellenir. Yurt dışına aktarım m. 9 standart sözleşmeye
+  bağlıdır.
+- **5846 sayılı FSEK.** Yazarla ilişki `contracts/yazar-sozlesmesi-ve-ruhsat-taahhudu.md`
+  üzerinden kurulur: basit ruhsat, mali haklar yazarda. Eser onayı olmadan
+  yayın yok.
+- **5187 sayılı Basın Kanunu.** "İnternet haber sitesi" sayılıp sayılmadığımız
+  belirsiz (7418 s. K. ile gelen künye ve 2 yıllık içerik saklama yükümlülüğü).
+  Hukukçu görüşü alınana kadar `article_versions` sürüm geçmişi silinmez.
+
+**Kurallar:**
+
+- Kişisel veri toplayan, saklayan veya aktaran bir değişiklik yapıyorsan aynı
+  adımda aydınlatma metnini de güncelle. Metin koddan geri kalırsa yanlış beyan
+  olur; eskiden bir kez oldu (D-083).
+- Yasal metin yazarken şablon kullanma, kodu oku. Metindeki her veri kalemi,
+  süre ve çerez adı koddaki bir karşılığa dayanmalı.
+- Künye, kullanım şartları ve KVKK sayfaları herkese açıktır; oturum arkasına
+  alınmaz. Bilgileri `site_settings`'ten gelir, ikinci bir kopya tutulmaz.
+- Bir kullanıcı içeriği özelliği eklerken (yorum, mesaj, yükleme) trafik kaydını
+  ve kaldırma yolunu birlikte tasarla.
+- Hukuki sonuç doğuran bir konuda emin değilsen kodu tahmine göre yazma;
+  `DECISIONS.md`'ye "hukukçu görüşü gerekiyor" diye yaz ve muhafazakâr olanı
+  uygula.
+
 ## Yapılmayacaklar
 
 - Ödeme, IBAN, fatura, vergi
