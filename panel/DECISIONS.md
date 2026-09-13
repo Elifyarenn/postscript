@@ -1987,3 +1987,30 @@ veri toplayan bir değişiklik aynı adımda aydınlatma metnini de günceller �
 D-083'te metnin koddan geri kalması tam olarak bu kuralın yokluğundan oldu.
 
 ---
+## D-085 — Künyedeki eksik alan uyarısı yalnızca admin'e görünür
+
+**İstek (ürün sahibi):** "publisher_address için şu an açık adres
+verebileceğim bir ofis vs yok."
+
+**Sorun:** D-084'te künye, eksik alanları herkese "Künye bilgileri eksik" diye
+uyarıyor ve boş satırı "— belirtilmedi —" diye basıyordu. Adres kısa vadede
+doldurulamayacağına göre bu uyarı kalıcı hâle gelirdi: okuyucuya bozuk, denetime
+ise eksikliğin ilanı gibi görünür.
+
+**Karar:** Uyarı ve boş satırlar yalnızca `role === "admin"` için gösterilir.
+Okuyucu, dolu olan satırları görür; eksik satır hiç basılmaz. Bilgi gizlenmiyor —
+olmayan bilgi yokmuş gibi davranılmıyor, sadece eksiklik duyurulmuyor.
+
+**Gerekçe:** Boş bir alan, onu doldurabilecek kişinin işidir. Okuyucunun bundan
+çıkaracağı bir eylem yok.
+
+**Uyum durumu — açıkça kayda geçiyor:** Bu bir çözüm değil, görünürlük
+düzenlemesi. 5651 m. 3 gerçek kişi içerik sağlayıcıdan ikametgâh veya işyeri
+adresi ister; künyede adres olmadığı sürece eksiklik sürüyor. Ev adresi
+yayımlamak istenmediği için bilinçli olarak bekletiliyor. Adres bulunduğunda
+`site_settings`'e girilir, sayfa kendiliğinden düzelir; kod değişikliği
+gerekmez.
+
+**Doğrulama:** typecheck + lint temiz, 24 dosya / 333 test geçti.
+
+---

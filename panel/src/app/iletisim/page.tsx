@@ -1,4 +1,5 @@
 import { getSiteSettings } from "@/services/site-settings";
+import { getAuthContext } from "@/lib/auth/session";
 import { buildImprint, imprintFields } from "@/lib/legal";
 import { LegalPage } from "@/components/legal";
 import { Alert } from "@/components/ui";
@@ -16,9 +17,19 @@ export const dynamic = "force-dynamic";
  * heading, so the homepage nav and footer both link here.
  */
 export default async function ContactPage() {
-  const imprint = buildImprint(await getSiteSettings());
-  const fields = imprintFields(imprint);
+  const [settings, context] = await Promise.all([getSiteSettings(), getAuthContext()]);
+  const imprint = buildImprint(settings);
   const email = imprint.email;
+
+  // A blank line is a job for whoever can fix it. Telling every reader that the
+  // notice is incomplete only advertises the gap, so the warning is admin-only
+  // and the public page simply shows the lines that are filled in (D-085).
+  const isAdmin = context?.user.role === "admin";
+
+  // An admin sees the blanks so they know what is left to fill; a reader sees
+  // only the lines that carry a fact.
+  const allFields = imprintFields(imprint);
+  const fields = isAdmin ? allFields : allFields.filter((field) => field.value !== null);
 
   return (
     <LegalPage title="Künye ve İletişim" current="/iletisim">
@@ -28,7 +39,7 @@ export default async function ContactPage() {
         yayımlanmıştır.
       </p>
 
-      {imprint.missing.length > 0 ? (
+      {isAdmin && imprint.missing.length > 0 ? (
         <Alert tone="warning" title="Künye bilgileri eksik">
           Şu alanlar henüz doldurulmadı: {imprint.missing.join(", ")}. Yöneticiler bu bilgileri
           yönetim panelindeki &ldquo;Sistem&rdquo; sayfasından girer.
