@@ -43,6 +43,7 @@ import { renderDocumentPdf } from "@/lib/pdf";
 import { renderAgreementForWriter, getCurrentAgreement, stripMarkdown } from "./agreements";
 import { storeGeneratedPdf } from "./media";
 import { checkWriterEligibility, findUserById } from "./users";
+import { mailAdmins } from "./staff-mail";
 import type { RequestMeta } from "./auth";
 import * as templates from "@emails/templates";
 
@@ -313,6 +314,11 @@ export async function editorDecideApplication(
       displayName: applicant.displayName,
     });
     await sendMail({ to: applicant.email, subject: message.subject, text: message.text });
+
+    // The next move is the admin's, and they may not be looking at the panel (D-098)
+    await mailAdmins(
+      templates.adminApplicationAwaiting({ url: `${env().APP_URL}/admin/applications` }),
+    );
   } else {
     const message = templates.applicationRejected({
       displayName: applicant.displayName,

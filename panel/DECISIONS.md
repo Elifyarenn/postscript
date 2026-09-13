@@ -2725,3 +2725,47 @@ kendi kuyruğunu sayar, gecikme 24 saatten eskileri ayırır, editör 403 alır.
 typecheck + lint temiz, 35 dosya / 430 test.
 
 ---
+
+## D-098 — Yeni içerik bildirimi ve yönetim onayına düşen başvuru adminlere e-postayla bildirilir
+
+**İstek (ürün sahibi):** Panele girmediği zamanlarda bekleyen işlerden haberdar
+olmak.
+
+**Karar:**
+- `reportContent` yeni bir bildirimi kaydettikten sonra her aktif admine e-posta
+  gönderir. Aktif: rolü admin, yasaklı değil, silinmemiş, e-postası doğrulanmış.
+  Tekrarlanan bildirim (aynı üye, aynı içerik, hâlâ açık) e-posta göndermez.
+- `editorDecideApplication` bir başvuruyu onayladığında (`editor_approved`)
+  adminlere e-posta gider. Ret e-posta göndermez; sıradaki adım admin'in değil.
+- **Panel içi bildirim kalıyor.** D-090'daki `moderation.report` bildirimi
+  aynen yazılmaya devam ediyor. İki kanal bilerek birlikte çalışıyor: panel
+  içi bildirim kaydı tutar, e-posta panele girmeyen admine ulaşır.
+- **E-postada yalnızca türler var.** Şikâyet e-postasında bildirilen içeriğin
+  türü (gönderi, yorum, özel mesaj, anonim mesaj, hesap) ve bildirim türü
+  yazar. İçeriğin metni (`snapshot`), bildirimin açıklaması, bildiren ve
+  bildirilen hesap yazmaz. Başvuru e-postasında başvuranın adı ve adresi yok.
+  Gerekçe: D-091 ve D-092, özel ve anonim mesajın göndereninin yalnızca
+  `/admin/community` ekranında görünmesini şart koşuyor. E-posta kutusu o
+  sınırın dışında: telefonda bildirim önizlemesinde, e-posta sağlayıcısında,
+  yedeklerde durur.
+- E-posta, transaction commit edildikten sonra gönderilir. Geri alınan bir
+  bildirim kimseye e-posta attırmaz.
+- `src/services/staff-mail.ts` → `mailAdmins` hiçbir zaman hata fırlatmaz.
+  Bildirim kaydedildikten sonra çalışır. Admin listesi okunamasa bile üyenin
+  ekranı hata göstermemeli. `sendMail` zaten teslim hatasını yalnızca loglar.
+- **Canlıda SMTP henüz kurulu değil.** Kod hazır, ama `SMTP_*` ortam
+  değişkenleri girilene kadar e-postalar teslim edilmez; hata yalnızca loga
+  düşer.
+
+**Hukuk:** Aydınlatma metnine (§2, özel mesaj paragrafının ardı) e-postanın
+neyi içerdiği ve neyi içermediği yazıldı. Yeni bir veri kalemi yok: alıcı
+adminin kendi e-posta adresi. E-posta sağlayıcısı satırı (§6.2) zaten
+"bildirim e-postalarının gönderimi"ni kapsıyor.
+
+**Doğrulama:** `tests/integration/admin-mail.test.ts` — iki aktif admine gider,
+yasaklı admine gitmez; metin, açıklama, kullanıcı adı, biyografi ve bildirenin
+adı/adresi e-postada yok; tekrar bildirim e-posta göndermez; editör onayı
+admine gider, başvuranın adı ve adresi yok; ret admine gitmez.
+typecheck + lint temiz, 36 dosya / 433 test.
+
+---

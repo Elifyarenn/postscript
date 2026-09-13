@@ -23,12 +23,20 @@ import {
 } from "@/db/schema";
 import { writeAudit, type Executor } from "@/lib/audit";
 import { canModerateCommunity, type Actor } from "@/lib/auth/rbac";
+import { env } from "@/lib/env";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
-import { isReportOverdue, REPORT_CATEGORIES } from "@/lib/reports";
+import {
+  isReportOverdue,
+  REPORT_CATEGORIES,
+  REPORT_CATEGORY_LABELS,
+  REPORT_TARGET_LABELS,
+} from "@/lib/reports";
 import { trafficCutoff } from "@/lib/traffic";
 import { assertMayPost } from "./community";
 import { notify } from "./notifications";
+import { mailAdmins } from "./staff-mail";
 import type { RequestMeta } from "./auth";
+import * as templates from "@emails/templates";
 
 export const MAX_REPORT_REASON = 1000;
 
@@ -157,7 +165,7 @@ export async function reportContent(
     .limit(1);
   if (existing[0]) return { id: existing[0].id, duplicate: true };
 
-  return db.transaction(async (tx) => {
+  const created = await db.transaction(async (tx) => {
     const [row] = await tx
       .insert(contentReports)
       .values({
@@ -201,6 +209,18 @@ export async function reportContent(
 
     return { id: row!.id, duplicate: false };
   });
+
+  // Only after the commit, so a rolled back report mails nobody. The mail
+  // names the kinds alone; the text and both accounts stay in the panel (D-098)
+  await mailAdmins(
+    templates.adminReportReceived({
+      target: REPORT_TARGET_LABELS[input.targetType],
+      category: REPORT_CATEGORY_LABELS[input.category],
+      url: `${env().APP_URL}/admin/community`,
+    }),
+  );
+
+  return created;
 }
 
 /* ------------------------------------------------------------------ */

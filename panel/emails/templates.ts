@@ -217,6 +217,43 @@ export function articleStatusChanged(input: {
   };
 }
 
+/**
+ * Tells an admin a content report is waiting (D-098). Only the kinds are
+ * named: the reported text, the reporter and the reported account stay in the
+ * panel, because a mailbox is outside the boundary D-091 and D-092 draw.
+ */
+export function adminReportReceived(input: {
+  target: string;
+  category: string;
+  url: string;
+}): Template {
+  return {
+    subject: "postscript · Yeni içerik bildirimi: 24 saat içinde sonuçlandırılmalı",
+    text:
+      "Merhaba,\n\n" +
+      "Topluluktan yeni bir içerik bildirimi geldi.\n\n" +
+      `Bildirilen: ${input.target}\n` +
+      `Bildirim türü: ${input.category}\n\n` +
+      "5651 sayılı Kanun gereği en geç 24 saat içinde sonuçlandırılmalıdır. " +
+      "İçerik ve hesaplar yalnızca panelde görünür:\n" +
+      `${input.url}` +
+      signature,
+  };
+}
+
+/** Tells an admin an application passed the editor and needs their decision (D-098). */
+export function adminApplicationAwaiting(input: { url: string }): Template {
+  return {
+    subject: "postscript · Yönetim onayı bekleyen yazar başvurusu",
+    text:
+      "Merhaba,\n\n" +
+      "Bir yazar başvurusu editör onayından geçti ve yönetim kararını bekliyor. " +
+      "Başvuru sahibinin bilgileri yalnızca panelde görünür:\n" +
+      `${input.url}` +
+      signature,
+  };
+}
+
 export function mandatoryAnnouncement(input: {
   displayName: string;
   title: string;
