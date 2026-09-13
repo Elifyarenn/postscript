@@ -24,11 +24,11 @@ ortaklık adına tek başına temsile yetkilidir.
 | İletişim | E-posta adresi, telefon numarası (yalnızca yazar kaydında) |
 | Hesap güvenliği | Şifrenin geri döndürülemez özeti, iki adımlı doğrulama (TOTP) gizli anahtarı, e-posta doğrulama ve şifre sıfırlama bağlantı kayıtları, giriş denemesi kayıtları |
 | İşlem güvenliği | IP adresi, tarayıcı bilgisi (user-agent), oturum açma ve son görülme zamanları |
-| Profil | Kısa biyografi, profil görseli, sosyal medya bağlantıları, yazı alanı |
+| Profil | Topluluk kullanıcı adı, kısa biyografi, profil görseli, sosyal medya bağlantıları, yazı alanı |
 | Yazarlık | Yazarlık başvurusu, başvuruya eklenen örnek çalışma ve başvuru notu, editör değerlendirme notları, rol değişikliği kayıtları |
 | Sözleşme | Yazar sözleşmesi ve eser onayı kayıtları; her onayın tarih-saati, IP adresi, tarayıcı bilgisi, onaylanan metnin SHA-256 özeti ve PDF kopyası |
 | İçerik | Dergiye gönderilen eserler ve sürümleri, yazı üzerindeki editör notları |
-| Topluluk | Yazılara yapılan yorumlar, topluluk sohbeti mesajları ve bunların gönderim zamanı |
+| Topluluk | Yazılara yapılan yorumlar, topluluk sohbeti mesajları ve bunların gönderim zamanı; takip ettiğiniz ve sizi takip eden hesaplar, engellediğiniz hesaplar, kaydettiğiniz yazılar, size gönderilen panel içi bildirimler |
 | Trafik kaydı | Her yorum ve mesaj için: gönderen hesap, IP adresi, tarayıcı bilgisi (user-agent), işlem türü ve zamanı |
 | Moderasyon | Yasaklama durumu ve gerekçesi, kaldırılan içerik kayıtları |
 | Denetim | Panelde yapılan işlemlerin kaydı: kimin, ne zaman, hangi işlemi, hangi IP adresinden yaptığı |
@@ -48,6 +48,7 @@ saklanmaz**.
 | Yazar sözleşmesinin ve eser bazlı kullanım ruhsatlarının kurulması ve ispatı | (c) Sözleşmenin ifası, (e) Bir hakkın tesisi, kullanılması ve korunması |
 | Yazar profilinin ve eserin dergide yayımlanması, künyede ad veya mahlas belirtilmesi | (c) Sözleşmenin ifası |
 | Yorum ve topluluk sohbeti işlevlerinin sunulması | (c) Sözleşmenin ifası |
+| Topluluk profilinin gösterilmesi; takip, engelleme, yazı kaydetme ve bildirim işlevlerinin sunulması | (c) Sözleşmenin ifası |
 | Yorum, mesaj ve oturumlara ilişkin trafik kayıtlarının tutulması | (ç) Veri sorumlusunun hukuki yükümlülüğü — 5651 sayılı Kanun m. 5 |
 | Hesap güvenliğinin sağlanması, yetkisiz erişimin ve kötüye kullanımın önlenmesi, iki adımlı doğrulama | (ç) KVKK m. 12 kapsamındaki güvenlik yükümlülüğü, (f) Meşru menfaat |
 | İçerik moderasyonu, hesap yasaklama, kural ihlallerinin takibi | (f) Meşru menfaat |
@@ -63,7 +64,8 @@ sistemlerle verilen bir karar bulunmamaktadır.
 Kişisel verileriniz tamamen elektronik ortamda toplanır:
 
 - **Doğrudan sizden:** Kayıt formu, yazarlık başvuru formu, profil ekranı,
-  sözleşme ve eser onayı ekranları, yorum ve sohbet alanları.
+  sözleşme ve eser onayı ekranları, yorum ve sohbet alanları, topluluk
+  ayarları ve topluluk ekranlarındaki takip, engelleme ve kaydetme düğmeleri.
 - **Kullanım sırasında otomatik olarak:** Oturum çerezi aracılığıyla tutulan
   oturum kaydı ile sunucu tarafında oluşan IP adresi, tarayıcı bilgisi ve işlem
   zamanı kayıtları.
@@ -116,12 +118,14 @@ esas alınarak gerçekleştirilmektedir.
 | Oturum kayıtları (IP, tarayıcı bilgisi) | 1 yıl — 5651 sayılı Kanun m. 5 |
 | Yorum ve mesajlara ilişkin trafik kayıtları | 1 yıl — 5651 sayılı Kanun m. 5 |
 | Yorum ve mesaj içerikleri | Yayında kaldığı sürece; kaldırılsa dahi kayıt olarak 1 yıl |
+| Takip, engelleme ve kaydetme kayıtları | Siz geri alana kadar. Geri aldığınızda veya hesabınız silindiğinde kalıcı olarak silinir. |
 | Sözleşme ve eser onayı kayıtları | Sözleşme ilişkisi sona erdikten sonra 10 yıl — Türk Borçlar Kanunu m. 146 |
 | Panel işlem (denetim) kayıtları | 10 yıl |
 | Yayımlanmış eserler ve künyedeki ad veya mahlas | Yayın arşivinin parçası olarak süresiz |
 
-Hesabınızı sildirdiğinizde ad, e-posta, doğum tarihi, telefon, biyografi ve
-profil görseliniz anonimleştirilir. İmzalı eser onayları, sözleşme kayıtları ve
+Hesabınızı sildirdiğinizde ad, e-posta, doğum tarihi, telefon, kullanıcı adı,
+biyografi ve profil görseliniz anonimleştirilir; takip, engelleme ve kaydetme
+kayıtlarınız silinir. İmzalı eser onayları, sözleşme kayıtları ve
 kanunen saklanması zorunlu trafik kayıtları yukarıdaki süreler boyunca saklanmaya
 devam eder; bunlar derginin eserleri yayımlama hakkının ve yasal
 yükümlülüklerinin dayanağıdır.

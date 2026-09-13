@@ -130,7 +130,7 @@ async function mask(text: string): Promise<string> {
  * account could keep posting — the kind of gap that only closes for good when
  * the rule sits in the service the way CLAUDE.md asks.
  */
-function assertMayPost(actor: Actor): void {
+export function assertMayPost(actor: Actor): void {
   if (actor.isBanned) throw forbidden("Hesabınız askıya alınmış.");
   if (actor.emailVerifiedAt === null) {
     throw forbidden("Önce e-posta adresinizi doğrulamanız gerekiyor.");
@@ -222,10 +222,13 @@ export type CommentListItem = {
  * what the pen name is for. A reader with no pen name keeps the display name
  * they chose at registration, which is what they expect to be called.
  *
+ * A member who picked a community handle is shown under it before the display
+ * name (D-089): the handle exists so the community need not see a legal name.
+ *
  * The admin moderation lists deliberately keep `display_name`: identifying the
  * account is the point of that screen.
  */
-const communityDisplayName = sql<string>`coalesce(${users.penName}, ${users.displayName})`;
+const communityDisplayName = sql<string>`coalesce(${users.penName}, '@' || ${users.username}, ${users.displayName})`;
 
 /** The visible comments of one article, newest last. */
 export async function listCommentsForArticle(
@@ -381,7 +384,7 @@ export async function listChatMessages(limit = CHAT_LIMIT): Promise<MessageListI
       authorRole: users.role,
       quotedMessageId: communityMessages.quotedMessageId,
       quotedBody: quoted.body,
-      quotedAuthorName: sql<string>`coalesce(${quotedAuthor.penName}, ${quotedAuthor.displayName})`,
+      quotedAuthorName: sql<string>`coalesce(${quotedAuthor.penName}, '@' || ${quotedAuthor.username}, ${quotedAuthor.displayName})`,
     })
     .from(communityMessages)
     .leftJoin(users, eq(communityMessages.authorId, users.id))
@@ -409,7 +412,7 @@ export async function listChatMessagesAfter(after: Date, limit = CHAT_LIMIT): Pr
       authorRole: users.role,
       quotedMessageId: communityMessages.quotedMessageId,
       quotedBody: quoted.body,
-      quotedAuthorName: sql<string>`coalesce(${quotedAuthor.penName}, ${quotedAuthor.displayName})`,
+      quotedAuthorName: sql<string>`coalesce(${quotedAuthor.penName}, '@' || ${quotedAuthor.username}, ${quotedAuthor.displayName})`,
     })
     .from(communityMessages)
     .leftJoin(users, eq(communityMessages.authorId, users.id))
@@ -438,7 +441,7 @@ export async function getChatMessage(messageId: string): Promise<MessageListItem
       authorRole: users.role,
       quotedMessageId: communityMessages.quotedMessageId,
       quotedBody: quoted.body,
-      quotedAuthorName: sql<string>`coalesce(${quotedAuthor.penName}, ${quotedAuthor.displayName})`,
+      quotedAuthorName: sql<string>`coalesce(${quotedAuthor.penName}, '@' || ${quotedAuthor.username}, ${quotedAuthor.displayName})`,
     })
     .from(communityMessages)
     .leftJoin(users, eq(communityMessages.authorId, users.id))

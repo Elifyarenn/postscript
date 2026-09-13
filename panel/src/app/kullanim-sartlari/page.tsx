@@ -54,6 +54,15 @@ export default async function TermsPage() {
         </li>
         <li>Bir kişi birden fazla hesap açamaz.</li>
         <li>
+          Toplulukta ad soyadınız yerine seçtiğiniz kullanıcı adı görünür. Dergiyi, yöneticileri
+          veya başka bir kişiyi çağrıştıran kullanıcı adları kullanılamaz; bu kurala aykırı kullanıcı
+          adları yöneticiler tarafından değiştirilebilir.
+        </li>
+        <li>
+          Bir üyeyi engellediğinizde o üye sizi takip edemez ve profilinizi göremez; aranızdaki
+          takipler kaldırılır.
+        </li>
+        <li>
           On sekiz yaşını doldurmamış kişiler okuyucu olabilir, ancak yazar olamaz; yazarlık için
           yaş şartı aranır.
         </li>

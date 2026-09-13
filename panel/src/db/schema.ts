@@ -187,6 +187,11 @@ export const users = pgTable(
     /** Pen name (mahlas). This is what the public site shows when it is set. */
     penName: text("pen_name"),
     penNameSlug: text("pen_name_slug"),
+    /**
+     * The community handle (D-089): lowercase, stored normalised. Null until
+     * the member opts into the social layer; nothing social works without it.
+     */
+    username: text("username"),
     bio: text("bio"),
     avatarMediaId: uuid("avatar_media_id"),
     socialLinks: jsonb("social_links").$type<SocialLinks>(),
@@ -257,6 +262,9 @@ export const users = pgTable(
     uniqueIndex("users_pen_name_slug_unique")
       .on(t.penNameSlug)
       .where(sql`${t.deletedAt} is null and ${t.penNameSlug} is not null`),
+    uniqueIndex("users_username_unique")
+      .on(t.username)
+      .where(sql`${t.deletedAt} is null and ${t.username} is not null`),
     index("users_role_idx").on(t.role),
   ],
 );
@@ -1005,6 +1013,70 @@ export const trafficLogs = pgTable(
     index("traffic_logs_created_idx").on(t.createdAt),
     index("traffic_logs_entity_idx").on(t.entityType, t.entityId),
   ],
+);
+
+/* ------------------------------------------------------------------ */
+/* social graph (D-089)                                                */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Follows, blocks and bookmarks break the soft-delete convention on purpose:
+ * they carry no content, and keeping a retracted follow or a lifted block
+ * would store a piece of someone's social graph they took back (KVKK data
+ * minimisation). Undoing one deletes the row.
+ */
+
+export const follows = pgTable(
+  "follows",
+  {
+    id: id(),
+    followerId: uuid("follower_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    followeeId: uuid("followee_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("follows_pair_unique").on(t.followerId, t.followeeId),
+    index("follows_followee_idx").on(t.followeeId),
+  ],
+);
+
+/** A block works both ways: neither side can follow, message or reach the other. */
+export const userBlocks = pgTable(
+  "user_blocks",
+  {
+    id: id(),
+    blockerId: uuid("blocker_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    blockedId: uuid("blocked_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("user_blocks_pair_unique").on(t.blockerId, t.blockedId),
+    index("user_blocks_blocked_idx").on(t.blockedId),
+  ],
+);
+
+/** A reader's private reading list. */
+export const bookmarks = pgTable(
+  "bookmarks",
+  {
+    id: id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    articleId: uuid("article_id")
+      .notNull()
+      .references(() => articles.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("bookmarks_user_article_unique").on(t.userId, t.articleId)],
 );
 
 /* ------------------------------------------------------------------ */

@@ -25,6 +25,8 @@ export type NavItem = {
   href: string;
   label: string;
   disabled?: boolean;
+  /** An unread count shown beside the label; hidden when zero. */
+  badge?: number;
   /** Sub-links listed under this item; each is highlighted only on its own page. */
   children?: NavItem[];
 };
@@ -67,6 +69,7 @@ export const ADMIN_NAV: NavGroup[] = [
       { href: "/admin/announcements", label: "Duyurular" },
       { href: "/admin/community", label: "Topluluk yönetimi" },
       { href: "/magazine", label: "Dergi" },
+      { href: "/social", label: "Topluluk" },
     ],
   },
   {
@@ -109,6 +112,13 @@ export const EDITOR_NAV: NavGroup[] = [
       { href: "/editor/media", label: "Medya kütüphanesi" },
     ],
   },
+  {
+    label: "Okuma",
+    items: [
+      { href: "/magazine", label: "Dergi" },
+      { href: "/social", label: "Topluluk" },
+    ],
+  },
 ];
 
 export const READER_NAV: NavGroup[] = [
@@ -116,10 +126,45 @@ export const READER_NAV: NavGroup[] = [
     items: [
       { href: "/magazine", label: "Dergi" },
       { href: "/magazine/issues", label: "Sayılar" },
+      { href: "/social", label: "Topluluk" },
       { href: "/account", label: "Hesabım" },
     ],
   },
 ];
+
+export type SocialNavState = {
+  /** Null until the member picks a handle; the profile link needs one. */
+  username: string | null;
+  notifications?: number;
+};
+
+/**
+ * The community sidebar (D-089). Every role sees the same one: in the
+ * community a writer or an admin is a member like any other.
+ */
+export function socialNav(state: SocialNavState): NavGroup[] {
+  return [
+    {
+      label: "Topluluk",
+      items: [
+        { href: "/social", label: "Topluluk" },
+        ...(state.username
+          ? [{ href: `/social/u/${state.username}`, label: "Profilim" }]
+          : []),
+        { href: "/social/notifications", label: "Bildirimler", badge: state.notifications },
+        { href: "/social/bookmarks", label: "Kaydedilenler" },
+        { href: "/social/settings", label: "Topluluk ayarları" },
+      ],
+    },
+    {
+      label: "Okuma",
+      items: [
+        { href: "/magazine", label: "Dergi" },
+        { href: "/account", label: "Hesabım" },
+      ],
+    },
+  ];
+}
 
 /** `locked` only greys the links out; each page checks the rule itself. */
 export function writerNav(locked: boolean): NavGroup[] {
@@ -134,6 +179,7 @@ export function writerNav(locked: boolean): NavGroup[] {
         { href: "/writer/articles", label: "Yazılarım", disabled: locked },
         { href: "/writer/profile", label: "Profil ve güvenlik" },
         { href: "/magazine", label: "Dergi" },
+        { href: "/social", label: "Topluluk" },
       ],
     },
   ];

@@ -2179,3 +2179,82 @@ onayı ve snapshot gerekir (D-079). Push yapılmadı.
 `community.test.ts` → trafik kaydı yorum, mesaj ve bir yıllık silme sınırı).
 
 ---
+
+## D-089 — Topluluk kimliği: kullanıcı adı, profil, takip, engelleme, kaydetme, bildirimler
+
+**İstek (ürün sahibi):** Topluluk/sosyal bölüm iki tasarımla tarif edildi
+(mesajlar ekranı ve profil sayfası; kenar çubuğunda Anon Box, Messages,
+Notifications, Bookmarks, Communities, Explore, Settings). "Anon box onaylı
+kullanıcılar ile olsun, hepsini yap." Tamamı D-089…D-093 olarak adım adım
+yapılıyor; bu adım kimlik ve sosyal grafik.
+
+**Karar:**
+
+- **Topluluk alanı `/social`.** Kendi layout'u var, oturum ister ama rol
+  istemez (dergi gibi). Her rol aynı kenar çubuğunu görür (`socialNav`):
+  toplulukta yazar da admin de bir üyedir. Dergi, yazar, editör ve admin
+  menülerine "Topluluk" bağlantısı eklendi. `NavItem.badge` okunmamış sayıyı
+  gösterir.
+- **Kullanıcı adı (`users.username`).** Sosyal katman isteğe bağlıdır: kullanıcı
+  adı seçmeyen üye takip edemez ve takip edilemez (`requireMember` → 409).
+  Kural `src/lib/username.ts`'te saf fonksiyon: 3–20 karakter, `a-z0-9_`, küçük
+  harfe normalize, baştaki `@` atılır. Dergiyi veya ekibi çağrıştıran adlar
+  (`admin`, `postscript`, `editor`, `anonim`… ve `admin_…` biçimleri) yasak.
+  Canlı hesaplarda benzersiz (kısmi unique index). Değişikliği `audit_log`'a
+  yazılır: moderasyon bir hesabı sonradan bu adla arar.
+- **Profilde gerçek ad yok.** Profil, takipçi listesi ve üye listeleri
+  `penName ?? username` gösterir; `display_name` (kayıttaki "Ad Soyad")
+  topluluk ekranlarına hiç gitmez. Yorumlardaki ad da artık
+  `coalesce(pen_name, '@' || username, display_name)`: kullanıcı adı olan
+  üyenin yorumunda gerçek adı görünmez (D-076'nın devamı). Kullanıcı adı
+  olmayan eski hesaplarda yorum davranışı değişmedi.
+- **Profil görünürlüğü:** yalnızca oturum açmış üyeler. Görünen: kullanıcı adı,
+  mahlas, biyografi, rol rozeti, katılım ayı, takip sayıları. Yasaklı veya
+  silinmiş hesabın profili 404. Profil görseli yüklemesi yok: üretimde nesne
+  depolama yok (bkz. `production-deployment`), yerine baş harf dairesi.
+  Kapak alanı düz renk.
+- **Takip.** İki kez basmak hata değil. Takip edilen kişiye bildirim gider.
+  Kendini takip 400.
+- **Engelleme iki yönlüdür.** Engellenen, engelleyeni takip edemez (403) ve
+  profilini göremez. Engellendiği ona söylenmez: profil 404 döner. Engel
+  aradaki takipleri iki yönde de siler. Engellenen hesaplar
+  `/social/settings`'te listelenir ve kaldırılabilir. Sonraki adımlar
+  (mesaj, anon kutusu, yanıt) aynı `isBlockedEitherWay`'i kullanır.
+- **Kaydetme (bookmarks).** Özel okuma listesi, kullanıcı adı istemez. Yalnızca
+  yayındaki yazı kaydedilir. Yayından kalkan yazı listeden düşer.
+  Yazı sayfasında "Kaydet" düğmesi, listesi `/social/bookmarks`.
+- **Bildirimler.** `notifications` tablosu editoryal akışta zaten yazılıyordu
+  ama hiçbir ekran göstermiyordu. `/social/notifications` ilk okuyucusu oldu,
+  "tümünü okundu işaretle" var. Bildirim içerik taşımaz, yalnızca bağlantı
+  taşır; yalnızca site içi (`/` ile başlayan) bağlantılar tıklanabilir.
+- **Kalıcı silme istisnası.** `follows`, `user_blocks`, `bookmarks` yumuşak
+  silme kuralının dışında: geri alınınca satır silinir. İçerik taşımazlar;
+  geri alınmış bir takibi saklamak, kişinin geri çektiği sosyal grafik
+  bilgisini tutmak olur (KVKK veri minimizasyonu). Aynı gerekçeyle takip ve
+  engeller `audit_log`'a yazılmaz: o kayıt 10 yıl yaşar ve silinemez.
+- **Hesap silme:** `anonymise` kullanıcı adını boşaltır, takip/engel/kaydetme
+  satırlarını siler. Yumuşak silme FK cascade'ini tetiklemediği için bu açıkça
+  yapılır. Boşalan kullanıcı adı yeniden alınabilir. `exportUserData` bu
+  satırları ve kullanıcı adını da döndürür.
+
+**Hukuk:**
+- **Aydınlatma metni:** Profil satırına kullanıcı adı eklendi. Topluluk satırına
+  takip, engel, kaydetme ve bildirim eklendi. Yeni amaç satırı (c) sözleşmenin
+  ifası. Saklama: "siz geri alana kadar, geri alınca veya hesap silinince
+  kalıcı silinir". Anonimleştirme cümlesi güncellendi.
+- **Kullanım şartları:** kullanıcı adı kuralı ve engellemenin etkisi eklendi.
+- Takip ve kaydetme kullanıcı içeriği değildir; trafik kaydı (D-088) yazılmaz.
+
+**Sürücü (D-078):** `exportUserData`'daki ham `sql` birleşimine üç `select
+row_to_json` satırı eklendi (mevcut kalıbın aynısı). Yorum adındaki `coalesce`
+şablonuna `'@' || username` eklendi. İkisi de sürücüye duyarlı sayılır:
+yayından önce Neon dalında çalıştırılmalı. Upsert yok; "iki kez takip"
+select-then-insert ile ele alınıyor, yarış durumunda unique index korur.
+
+**Üretim:** Migration `0026`. `0024`/`0025` ile birlikte ürün sahibi onayı ve
+snapshot gerektirir (D-079, D-082). Push yapılmadı.
+
+**Doğrulama:** typecheck + lint temiz, 27 dosya / 366 test (18 yeni:
+`tests/unit/username.test.ts`, `tests/integration/social-graph.test.ts`).
+
+---

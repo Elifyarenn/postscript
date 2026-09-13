@@ -8,7 +8,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
-import { ArrowRight, LayoutDashboard, Megaphone, Menu, Scale, Users, X } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  LayoutDashboard,
+  Megaphone,
+  Menu,
+  MessageCircle,
+  Scale,
+  Users,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logoutAction } from "@/app/(auth)/actions";
 import type { NavGroup, NavItem } from "./shell";
@@ -20,6 +30,8 @@ const GROUP_ICONS: Record<string, ReactNode> = {
   "İçerik & Topluluk": <Megaphone className="size-3.5" />,
   "Yasal & Sistem": <Scale className="size-3.5" />,
   "Hızlı Geçiş": <ArrowRight className="size-3.5" />,
+  Topluluk: <MessageCircle className="size-3.5" />,
+  Okuma: <BookOpen className="size-3.5" />,
 };
 
 function NavLink({
@@ -76,6 +88,11 @@ function NavLink({
         />
       )}
       {item.label}
+      {item.badge ? (
+        <span className="ml-auto rounded-full bg-paper px-1.5 text-[11px] leading-5 font-semibold text-accent">
+          {item.badge > 99 ? "99+" : item.badge}
+        </span>
+      ) : null}
     </Link>
   );
 }

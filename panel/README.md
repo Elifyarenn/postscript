@@ -293,6 +293,14 @@ Her yorum ve mesaj, aynı işlemde bir **trafik kaydı** (`traffic_logs`: hesap,
 IP, tarayıcı bilgisi, zaman) bırakır. 5651 m. 5 gereği bir yıl saklanır ve
 `pnpm prune-traffic` ile silinir (D-088).
 
+**Topluluk alanı (`/social`)** her rol için aynıdır (D-089). Üye önce
+`/social/settings`'ten bir **kullanıcı adı** seçer. Toplulukta ad soyad
+görünmez; mahlas ya da `@kullanıcıadı` görünür. Profil `/social/u/<ad>`
+adresindedir: takip et / takibi bırak, engelle, takipçi ve takip listeleri.
+Engelleme iki yönlüdür ve takipleri siler. **Kaydedilenler** özel okuma
+listesidir (yazı sayfasındaki "Kaydet"). **Bildirimler** takip gibi olayları
+ve editoryal bildirimleri listeler.
+
 ### Kayıt ve roller
 
 Herkese açık tek kayıt **okuyucu kaydı**dır (`/register`): ad soyad,

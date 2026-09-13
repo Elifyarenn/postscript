@@ -6,8 +6,10 @@ import { articles } from "@/db/schema";
 import { requireSession } from "@/lib/auth/guard";
 import { getPublicArticle } from "@/services/public";
 import { listCommentsForArticle } from "@/services/community";
+import { isArticleBookmarked } from "@/services/social";
 import { AuthorLinks } from "@/components/magazine";
-import { PanelForm } from "@/components/form";
+import { ActionButton, PanelForm } from "@/components/form";
+import { bookmarkArticleAction, removeBookmarkAction } from "@/app/social/actions";
 import {
   Alert,
   Card,
@@ -32,7 +34,7 @@ export const metadata = { title: "Yazı" };
  * answer in words.
  */
 export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
-  await requireSession();
+  const { user } = await requireSession();
   const csrfToken = (await readCsrfToken()) ?? "";
   const { slug } = await params;
 
@@ -58,7 +60,9 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     .where(and(eq(articles.slug, slug), isNull(articles.deletedAt)))
     .limit(1);
   const articleId = idRows[0]?.id ?? "";
-  const comments = articleId ? await listCommentsForArticle(articleId) : [];
+  const [comments, bookmarked] = articleId
+    ? await Promise.all([listCommentsForArticle(articleId), isArticleBookmarked({ ...user }, articleId)])
+    : [[], false];
 
   return (
     <>
@@ -94,6 +98,17 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           </>
         )}
       </p>
+
+      {articleId && (
+        <div className="mb-6">
+          <ActionButton
+            action={bookmarked ? removeBookmarkAction : bookmarkArticleAction}
+            csrfToken={csrfToken}
+            label={bookmarked ? "Kaydedildi · kaldır" : "Kaydet"}
+            fields={{ articleId, slug }}
+          />
+        </div>
+      )}
 
       <Card>
         {/* Sanitised by rehype-sanitize in renderMarkdown (D-012) */}

@@ -46,6 +46,7 @@ const FIELD_LABELS: Record<string, string> = {
   licenseType: "Lisans türü",
   kvkkConsent: "KVKK onayı",
   acknowledged: "Onay kutusu",
+  username: "Kullanıcı adı",
 };
 
 function FieldErrors({ fieldErrors }: { fieldErrors: Record<string, string[]> }) {

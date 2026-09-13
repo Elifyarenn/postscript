@@ -23,7 +23,10 @@ import { z } from "zod";
 import { db } from "@/db/client";
 import {
   articles,
+  bookmarks,
   editorCategories,
+  follows,
+  userBlocks,
   users,
   writerApplications,
   writerAreas,
@@ -819,6 +822,7 @@ async function anonymise(user: User): Promise<void> {
       email: `deleted+${user.id}@invalid.local`,
       displayName: "Silinmiş kullanıcı",
       penName: user.penName, // the pen name stays on published work
+      username: null,
       bio: null,
       socialLinks: null,
       birthDate: null,
@@ -829,6 +833,14 @@ async function anonymise(user: User): Promise<void> {
       updatedAt: new Date(),
     })
     .where(eq(users.id, user.id));
+
+  // The social graph has no legal reason to outlive the account (D-089); the
+  // soft delete above does not fire the foreign keys' cascade, so it goes here
+  await db.delete(follows).where(or(eq(follows.followerId, user.id), eq(follows.followeeId, user.id)));
+  await db
+    .delete(userBlocks)
+    .where(or(eq(userBlocks.blockerId, user.id), eq(userBlocks.blockedId, user.id)));
+  await db.delete(bookmarks).where(eq(bookmarks.userId, user.id));
 
   await revokeAllSessions(user.id);
 }
@@ -894,6 +906,13 @@ export async function exportUserData(actor: Actor, targetUserId: string) {
     select 'articles', row_to_json(x) from articles x where x.author_id = ${targetUserId}
     union all
     select 'role_changes', row_to_json(r) from role_changes r where r.user_id = ${targetUserId}
+    union all
+    select 'follows', row_to_json(f) from follows f
+     where f.follower_id = ${targetUserId} or f.followee_id = ${targetUserId}
+    union all
+    select 'user_blocks', row_to_json(b) from user_blocks b where b.blocker_id = ${targetUserId}
+    union all
+    select 'bookmarks', row_to_json(k) from bookmarks k where k.user_id = ${targetUserId}
   `);
 
   return {
@@ -903,6 +922,7 @@ export async function exportUserData(actor: Actor, targetUserId: string) {
       email: user.email,
       displayName: user.displayName,
       penName: user.penName,
+      username: user.username,
       bio: user.bio,
       birthDate: user.birthDate,
       role: user.role,
