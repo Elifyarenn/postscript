@@ -119,8 +119,9 @@ export default async function ContactPage() {
       <h2>Barındırma</h2>
 
       <p>
-        Site Vercel Inc. altyapısında yayımlanmakta, veritabanı Neon Inc. tarafından Amerika
-        Birleşik Devletleri&rsquo;nde (AWS us-east-2) işletilmektedir. Bu, derginin yer sağlayıcı
+        {/* Region read from the Neon API, not assumed (D-100) */}
+        Site Vercel Inc. altyapısında yayımlanmakta, veritabanı ABD merkezli Neon Inc. tarafından
+        Almanya&rsquo;da (AWS eu-central-1, Frankfurt) işletilmektedir. Bu, derginin yer sağlayıcı
         sıfatını ve yukarıdaki başvuru usulünü değiştirmez.
       </p>
     </LegalPage>

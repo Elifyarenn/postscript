@@ -2854,3 +2854,36 @@ Seçiciler kontrol edildi, çakışma beklenmiyor:
 Push öncesi `08-two-factor.spec.ts` yine de koşturulmalı.
 
 ---
+## D-100 — Veritabanı konumu düzeltildi: Frankfurt, Ohio değil
+
+**Sorun:** D-083'te yazılan KVKK aydınlatma metni ve D-084'teki künye
+(`/iletisim`, "Barındırma"), veritabanının "AWS us-east-2, Ohio / Amerika Birleşik
+Devletleri"nde olduğunu söylüyordu. Bu bilgi koddan ya da Neon'dan okunmamış, bir
+yayın notundan varsayılmıştı. Neon API'ye göre `dawn-meadow-10300581` projesi ve
+`production` branch'inin tek compute'u (`ep-frosty-truth-b1j84um8`)
+**aws-eu-central-1 (Frankfurt, Almanya)** bölgesinde (D-095'te tespit edildi).
+Künye step 13'ten beri canlıda bu yanlış bilgiyi gösteriyordu. Canlı `/kvkk` hâlâ
+eski sürüm 1'i gösteriyor ve o sürümde bölge bilgisi hiç yok.
+
+**Karar:**
+
+- Aydınlatma metni §6.2, Neon satırı: "Neon Inc. (ABD merkezli; sunucu: AWS
+  eu-central-1, Frankfurt) — Almanya".
+- Künye: "veritabanı ABD merkezli Neon Inc. tarafından Almanya'da (AWS
+  eu-central-1, Frankfurt) işletilmektedir".
+- Yurt dışına aktarım bölümü değişmedi. Almanya da yurt dışı; sağlayıcı ABD
+  şirketi. m. 9 standart sözleşme dayanağı aynen geçerli.
+
+**Vercel satırı değişmedi, ama doğrulanmadı:** Depoda bölge ayarı yok (ne
+`vercel.json` ne `preferredRegion`). Vercel bu durumda varsayılan ABD bölgesini
+kullanır. "Amerika Birleşik Devletleri" bu varsayılana dayanıyor; Vercel
+panelinden fonksiyon bölgesi okunmadı.
+
+**Yayına alma:** Künye kodla birlikte canlıya çıkar. Aydınlatma metni dosyadan
+otomatik yüklenmez: admin, Sistem sayfasına metni yapıştırıp yeni sürüm olarak
+yayınlar. Metinde hâlâ `[NESNE DEPOLAMA SAĞLAYICISI]`, `[E-POSTA SAĞLAYICISI]` ve
+`[ÜLKE]` yer tutucuları var; bunlar doldurulmadan metin yayınlanmamalı (D-083).
+
+**Doğrulama:** typecheck + lint temiz, 37 dosya / 440 test geçti.
+
+---

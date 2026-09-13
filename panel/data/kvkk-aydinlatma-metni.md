@@ -122,7 +122,7 @@ sağlayıcıların yurt dışındaki sistemlerinde tutulmaktadır:
 | Hizmet sağlayıcı | Aldığımız hizmet | Ülke | Aktarılan veriler |
 |---|---|---|---|
 | Vercel Inc. | Uygulamanın barındırılması | Amerika Birleşik Devletleri | Bölüm 2'deki veriler, işlem sırasında |
-| Neon Inc. (AWS us-east-2, Ohio) | Veritabanı | Amerika Birleşik Devletleri | Bölüm 2'deki tüm veriler |
+| Neon Inc. (ABD merkezli; sunucu: AWS eu-central-1, Frankfurt) | Veritabanı | Almanya | Bölüm 2'deki tüm veriler |
 | [NESNE DEPOLAMA SAĞLAYICISI] | Görsel, PDF ve belge depolama | [ÜLKE] | Profil görseli, örnek çalışma dosyaları, sözleşme PDF'leri |
 | [E-POSTA SAĞLAYICISI] | Doğrulama ve bildirim e-postalarının gönderimi | [ÜLKE] | E-posta adresi, görünen ad, e-posta içeriği |
 
