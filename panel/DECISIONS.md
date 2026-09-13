@@ -2667,3 +2667,28 @@ temiz kopyada tam e2e (D-094: `08-two-factor` bu değişikliklerden sonra hiç
 koşmadı), üretim migration'ı, sonra push.
 
 ---
+
+## D-096 — Panel başlığında "Ana sayfa" düğmesi
+
+**İstek (ürün sahibi):** "Paneldeyken ana sayfa butonu olsun, ana sayfaya gitmek
+için."
+
+**Karar:**
+- `PanelShell` başlığında "Geri" düğmesinin hemen yanına "Ana sayfa" bağlantısı
+  eklendi. Derginin ön sayfasına (`/`) gider.
+- Aynı görünüm (`House` simgesi, "Geri" ile aynı sınıflar) kullanıldı; iki
+  düğme yan yana tek bir grup gibi durur.
+- `PanelShell` her panelde ortak olduğu için düğme admin, editör, yazar, dergi,
+  hesap ve topluluk ekranlarının hepsinde görünür.
+- **Neden ayrı bir düğme:** kenar çubuğundaki "postscript" yazısı zaten `/`'a
+  gidiyordu. Logo çoğu kişiye düğme gibi görünmüyor; mobilde de menü
+  kapalıyken görünmüyor.
+- Düğme sunucu bileşeni içinde düz bir `Link`; istemci JavaScript'i gerekmez.
+  "Geri" ise tarayıcı geçmişini kullandığı için istemci bileşeni olarak kaldı.
+
+**Hukuk:** Yeni veri, çerez veya işleme amacı yok; aydınlatma metni değişmedi.
+
+**Doğrulama:** typecheck + lint temiz, 34 dosya / 428 test. "Ana sayfa" adlı
+başka bir bağlantı veya e2e seçici yok (arandı).
+
+---

@@ -15,6 +15,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "./ui";
 import { PanelSidebar } from "./sidebar";
+import { House } from "lucide-react";
 import { BackButton } from "./back-button";
 import { PanelModeSwitch } from "./panel-switch";
 import { readCsrfToken } from "@/lib/csrf";
@@ -232,6 +233,15 @@ export async function PanelShell({
               {area}
             </span>
             <BackButton />
+            {/* The sidebar wordmark also leads home, but few people read a logo as a button */}
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs text-muted transition-colors hover:bg-paper hover:text-ink"
+              title="Derginin ana sayfasına git"
+            >
+              <House className="size-3.5" />
+              Ana sayfa
+            </Link>
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2.5 text-sm">
