@@ -114,7 +114,7 @@ export async function submitLogin(
  * the URL check cannot race the server action.
  */
 export async function completeTwoFactorIfAsked(page: Page): Promise<void> {
-  await page.waitForURL(/(\/login\/2fa|\/admin|\/editor|\/writer|\/magazine)/);
+  await page.waitForURL((url) => url.pathname !== "/login");
   if (!page.url().includes("/login/2fa")) return;
   await page.getByLabel("Doğrulama kodu").fill(totpCode());
   await page.getByRole("button", { name: "Doğrula" }).click();
@@ -125,9 +125,21 @@ export async function logout(page: Page): Promise<void> {
   await page.waitForURL("**/login");
 }
 
+/** Every login lands on the magazine front page (D-086). */
+export async function waitForHome(page: Page): Promise<void> {
+  await page.waitForURL((url) => url.pathname === "/");
+}
+
+/** Opens a panel the way a person does: the PANEL button in the front page header. */
+export async function openPanelFromHome(page: Page, path: string): Promise<void> {
+  await page.getByRole("link", { name: "PANEL", exact: true }).click();
+  await page.waitForURL(`**${path}**`);
+}
+
 /**
- * Logs in to a panel account and waits for its home. Kept as its own helper so
- * the specs read the same way they did when panel logins had a second step.
+ * Logs in to a panel account and opens its panel from the front page. Kept as
+ * its own helper so the specs read the same way they did when panel logins had
+ * a second step.
  */
 export async function loginElevated(
   page: Page,
@@ -136,7 +148,8 @@ export async function loginElevated(
 ): Promise<void> {
   await submitLogin(page, credentials);
   await completeTwoFactorIfAsked(page);
-  await page.waitForURL(name === "admin" ? "**/admin" : "**/editor");
+  await waitForHome(page);
+  await openPanelFromHome(page, name === "admin" ? "/admin" : "/editor");
 }
 
 /** Logs in as an editor and waits for the editor home; used for both editors. */

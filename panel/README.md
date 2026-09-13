@@ -166,9 +166,12 @@ Roller sıralıdır: her rol bir öncekinin yetkilerini kapsar.
 | `admin` | Her şey. Rol değişikliği yalnızca admin yapar. |
 
 Giriş tek kapıdır: herkes aynı formdan girer, panel yoktur diye ayrı bir adres
-yoktur. Girişten sonra kök adres (`/`) hesabın rolüne göre yönlendirir:
-admin → `/admin`, editör → `/editor`, yazar → `/writer`, okuyucu →
-`/magazine`. Okuyucunun gördüğü tek şey dergi ve hesap sayfasıdır (D-035).
+yoktur. Girişten sonra herkes derginin ana sayfasına (`/`) döner; sağ üstte
+"GİRİŞ YAP / HEMEN KATIL" yerine "PROFİL" (`/account`) ve paneli olan hesap
+için "PANEL" görünür: admin → `/admin`, editör → `/editor`, yazar →
+`/writer`. Okuyucunun paneli yoktur; dergiyi `/magazine`'de okur (D-035,
+D-086). İki adımlı doğrulaması kurulmamış editör ve admin, girişte doğrudan
+kurulum ekranına gider (D-048).
 
 Değişmez kurallar:
 

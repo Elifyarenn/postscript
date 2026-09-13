@@ -8,7 +8,7 @@
  * cannot sign in at all.
  */
 import { expect, test } from "@playwright/test";
-import { linkFrom, registerReader, submitLogin, waitForMail } from "./helpers";
+import { linkFrom, registerReader, submitLogin, waitForHome, waitForMail } from "./helpers";
 
 const NEW_READER = {
   email: "yeni.okur@example.com",
@@ -42,7 +42,12 @@ test("registers as a reader, verifies the address, and stays a reader", async ({
 
   // Signing in works now
   await submitLogin(page, { email: NEW_READER.email, password: NEW_READER.password });
-  await page.waitForURL("**/magazine**");
+  await waitForHome(page);
+
+  // A reader has a profile but no panel, so the header offers PROFİL alone
+  await expect(page.getByRole("link", { name: "PROFİL", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "PANEL", exact: true })).toHaveCount(0);
+  await page.goto("/magazine");
 
   // The account is a plain reader, not a writer
   await expect(page.getByText("Kullanıcı")).toBeVisible();

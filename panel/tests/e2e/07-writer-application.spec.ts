@@ -11,7 +11,7 @@
  *  - the applicant signs the contract and the account becomes a writer
  */
 import { expect, test } from "@playwright/test";
-import { loginElevated, logout, SEED, submitLogin, waitForMail } from "./helpers";
+import { loginElevated, logout, SEED, submitLogin, waitForHome, waitForMail } from "./helpers";
 
 test.describe.configure({ mode: "serial" });
 
@@ -24,8 +24,8 @@ const SAMPLE = {
 test("a reader applies, gets reviewed twice, and becomes a writer by signing", async ({ page }) => {
   // 1. The reader submits the application from the account page
   await submitLogin(page, SEED.applicant);
-  await page.waitForURL("**/magazine");
-  await page.getByRole("link", { name: "Hesabım" }).click();
+  await waitForHome(page);
+  await page.getByRole("link", { name: "PROFİL", exact: true }).click();
   await page.waitForURL("**/account");
 
   await expect(page.getByRole("heading", { name: "Yazar olma başvurusu" })).toBeVisible();
@@ -67,8 +67,8 @@ test("a reader applies, gets reviewed twice, and becomes a writer by signing", a
 
   // 4. The applicant signs the contract
   await submitLogin(page, SEED.applicant);
-  await page.waitForURL("**/magazine");
-  await page.getByRole("link", { name: "Hesabım" }).click();
+  await waitForHome(page);
+  await page.getByRole("link", { name: "PROFİL", exact: true }).click();
   await expect(page.getByText("Sözleşmeniz hazır")).toBeVisible();
   await page.getByRole("link", { name: "Sözleşmeyi oku ve imzala" }).click();
   await page.waitForURL("**/writer-application/contract**");

@@ -8,7 +8,15 @@
  */
 import { expect, test } from "@playwright/test";
 import { generateSync } from "otplib";
-import { loginElevated, logout, SEED, submitLogin, totpCode } from "./helpers";
+import {
+  loginElevated,
+  logout,
+  openPanelFromHome,
+  SEED,
+  submitLogin,
+  totpCode,
+  waitForHome,
+} from "./helpers";
 
 /**
  * The account page shows a fresh secret when 2FA is off. The test reads it
@@ -111,6 +119,7 @@ test("an admin who turns 2FA off is locked out of the panel until it is on again
   await page.waitForURL("**/login/2fa");
   await page.getByLabel("Doğrulama kodu").fill(codeFor(pending));
   await page.getByRole("button", { name: "Doğrula" }).click();
-  await page.waitForURL("**/admin");
+  await waitForHome(page);
+  await openPanelFromHome(page, "/admin");
   await expect(page).toHaveURL(/\/admin/);
 });

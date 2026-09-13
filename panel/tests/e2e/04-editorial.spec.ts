@@ -8,7 +8,14 @@
  * article answers 410 from the public API.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { loginElevated, logout, SEED, submitLogin } from "./helpers";
+import {
+  loginElevated,
+  logout,
+  openPanelFromHome,
+  SEED,
+  submitLogin,
+  waitForHome,
+} from "./helpers";
 
 test.describe.configure({ mode: "serial" });
 
@@ -97,7 +104,8 @@ test("takes an article through the review chain to publication and withdraws it"
   /* ---------- the writer approves the work ---------- */
 
   await submitLogin(page, SEED.writer);
-  await page.waitForURL("**/writer**");
+  await waitForHome(page);
+  await openPanelFromHome(page, "/writer");
 
   await page.goto("/writer/approvals");
 
@@ -144,7 +152,8 @@ test("takes an article through the review chain to publication and withdraws it"
   // is the other ordinary account
   await logout(page);
   await submitLogin(page, SEED.minor);
-  await page.waitForURL("**/magazine**");
+  await waitForHome(page);
+  await page.goto("/magazine");
 
   await page.getByRole("link", { name: ARTICLE_TITLE }).first().click();
   await page.waitForURL(`**/magazine/articles/${slug}`);
@@ -208,7 +217,8 @@ test("a content change revokes the approval and asks for a new one", async ({ pa
 
   await logout(page);
   await submitLogin(page, SEED.writer);
-  await page.waitForURL("**/writer**");
+  await waitForHome(page);
+  await openPanelFromHome(page, "/writer");
 
   await page.goto("/writer/approvals");
   await page.getByRole("checkbox").check();
@@ -250,7 +260,8 @@ test("a content change revokes the approval and asks for a new one", async ({ pa
   // And the writer is asked again, for the new text
   await logout(page);
   await submitLogin(page, SEED.writer);
-  await page.waitForURL("**/writer**");
+  await waitForHome(page);
+  await openPanelFromHome(page, "/writer");
 
   await page.goto("/writer/approvals");
   // The heading belongs to the pending row; the revoked one sits in the history

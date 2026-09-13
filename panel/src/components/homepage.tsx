@@ -30,8 +30,15 @@ const REVEAL_SELECTOR = [
   ".ps-home .footer-social",
 ].join(", ");
 
-/** The public homepage, shown to anonymous visitors at the site root. */
-export function HomePage() {
+/** Just what the header needs from a session; nothing personal crosses over. */
+export type HomeAccount = {
+  displayName: string;
+  /** Null for an account without a panel, i.e. a plain reader. */
+  panelHref: string | null;
+};
+
+/** The magazine front page at the site root, signed in or not (D-086). */
+export function HomePage({ account }: { account: HomeAccount | null }) {
   useEffect(() => {
     const revealables = Array.from(document.querySelectorAll(REVEAL_SELECTOR));
     revealables.forEach((element) => element.classList.add("reveal"));
@@ -65,12 +72,28 @@ export function HomePage() {
             <a href="#hero">HOŞ GELDİN</a>
           </nav>
           <div className="topbar-actions">
-            <a className="btn btn-ghost" href="/login">
-              GİRİŞ YAP
-            </a>
-            <a className="btn btn-solid" href="/register">
-              HEMEN KATIL
-            </a>
+            {account ? (
+              <>
+                <a className="btn btn-ghost" href="/account" title={account.displayName}>
+                  PROFİL
+                </a>
+                {/* Only a link: the panel layouts still decide who gets in */}
+                {account.panelHref && (
+                  <a className="btn btn-solid" href={account.panelHref}>
+                    PANEL
+                  </a>
+                )}
+              </>
+            ) : (
+              <>
+                <a className="btn btn-ghost" href="/login">
+                  GİRİŞ YAP
+                </a>
+                <a className="btn btn-solid" href="/register">
+                  HEMEN KATIL
+                </a>
+              </>
+            )}
           </div>
         </div>
 

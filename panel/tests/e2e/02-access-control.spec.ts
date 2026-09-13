@@ -6,13 +6,13 @@
  * actually locked.
  */
 import { expect, test } from "@playwright/test";
-import { SEED, submitLogin } from "./helpers";
+import { SEED, submitLogin, waitForHome } from "./helpers";
 
 test.describe.configure({ mode: "serial" });
 
 test.beforeEach(async ({ page }) => {
   await submitLogin(page, SEED.reader);
-  await page.waitForURL("**/magazine**");
+  await waitForHome(page);
 });
 
 for (const area of ["/writer", "/editor", "/admin"]) {

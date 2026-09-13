@@ -36,6 +36,7 @@ import { assertCsrfFromForm } from "@/lib/csrf";
 import { runAction, text, checkbox, type ActionState } from "@/lib/action";
 import { clearAttempts } from "@/lib/rate-limit";
 import { isProduction } from "@/lib/env";
+import { hasRole } from "@/lib/auth/rbac";
 import type { Role } from "@/db/schema";
 
 /** Where a signed-in user belongs, by role. */
@@ -131,10 +132,15 @@ export async function loginAction(_state: ActionState, formData: FormData): Prom
       userAgent: meta.userAgent,
     });
 
+    // Everyone lands on the front page and opens the panel from its header
+    // (D-086). Reaching this line means there is no second factor yet, and
+    // staff still meet the setup screen first, as D-048 promises.
     destination =
       outcome.user.emailVerifiedAt === null
         ? "/verify-email/pending"
-        : homeFor(outcome.user.role);
+        : hasRole(outcome.user.role, "editor")
+          ? "/account?twoFactor=1"
+          : "/";
   });
 
   if (destination) redirect(destination);
@@ -189,7 +195,7 @@ export async function loginTwoFactorAction(
     cookieStore.delete(TWO_FACTOR_COOKIE);
 
     const context = await getAuthContext();
-    destination = context ? homeFor(context.user.role) : "/login";
+    destination = context ? "/" : "/login";
   });
 
   if (destination) redirect(destination);

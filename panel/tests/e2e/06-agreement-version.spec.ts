@@ -6,7 +6,14 @@
 import { expect, test } from "@playwright/test";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { loginElevated, logout, SEED, submitLogin } from "./helpers";
+import {
+  loginElevated,
+  logout,
+  openPanelFromHome,
+  SEED,
+  submitLogin,
+  waitForHome,
+} from "./helpers";
 
 const TEMPLATE = path.join(
   process.cwd(),
@@ -55,7 +62,8 @@ test("a new version becomes current without locking writers", async ({ page }) =
   /* ---------- the writer is NOT locked by the new version ---------- */
 
   await submitLogin(page, SEED.writer);
-  await page.waitForURL("**/writer**");
+  await waitForHome(page);
+  await openPanelFromHome(page, "/writer");
   await expect(page.getByText("Yazar sayfalarınız kilitli")).toHaveCount(0);
   await page.goto("/writer/articles");
   await expect(page).toHaveURL(/\/writer\/articles$/);

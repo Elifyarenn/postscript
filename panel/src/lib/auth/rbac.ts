@@ -64,6 +64,18 @@ export function canAccessAdminPanel(actor: Actor): boolean {
 }
 
 /**
+ * Where the PANEL button on the front page leads (D-086). Built on the same
+ * checks the panel guards run, so the button never points at a door that would
+ * answer 403; a plain reader, a banned or an unverified account gets none.
+ */
+export function panelPathFor(actor: Actor): string | null {
+  if (canAccessAdminPanel(actor)) return "/admin";
+  if (canAccessEditorPanel(actor)) return "/editor";
+  if (canAccessWriterPanel(actor)) return "/writer";
+  return null;
+}
+
+/**
  * Contract and approval PDFs are for the writer they belong to and for an
  * admin. An editor never sees them (§11 of the contract specification).
  */

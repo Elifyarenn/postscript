@@ -2014,3 +2014,51 @@ gerekmez.
 **Doğrulama:** typecheck + lint temiz, 24 dosya / 333 test geçti.
 
 ---
+## D-086 — Giriş yapan herkes derginin ana sayfasına döner; panel başlıktan açılır
+
+**İstek (ürün sahibi):** "Sayfaya giriş yapıldığında sadece panel gözüküyor.
+Giriş yapıldıktan sonra ana dergi sayfası gözüksün ve sağ üstteki profil/panel
+kısmından panele/kullanıcı profiline giriş yapılsın."
+
+**Sorun:** D-035'e göre kök adres (`/`) oturumu olan her hesabı rolüne göre
+panele (`/admin`, `/editor`, `/writer`) ya da okuma alanına (`/magazine`)
+yönlendiriyordu. Giriş yapan biri derginin ön yüzünü bir daha göremiyordu.
+
+**Karar:**
+
+- `/` artık kimseyi yönlendirmez; oturum olsun olmasın ana sayfayı gösterir.
+- Ana sayfanın sağ üstünde, oturum varsa "GİRİŞ YAP / HEMEN KATIL" yerine
+  "PROFİL" (`/account`) ve paneli olan hesap için "PANEL" görünür.
+- PANEL'in hedefi `panelPathFor` (`src/lib/auth/rbac.ts`): admin → `/admin`,
+  editör → `/editor`, yazar → `/writer`. Okuyucunun paneli olmadığı için butonu
+  da yoktur. Fonksiyon panel guard'larının kullandığı `canAccess*Panel`
+  kontrollerine dayanır: dondurulmuş editöre `/writer` gösterilir, yasaklı ya
+  da doğrulanmamış hesaba hiçbir panel gösterilmez — buton 403 veren bir kapıyı
+  işaret etmez.
+- Şifre ve 2FA girişi `/`'a döner.
+- **İstisna:** İki adımlı doğrulaması kurulmamış editör ve admin girişte hâlâ
+  doğrudan `/account?twoFactor=1`'e gider. D-048 "ilk girişte kurulum ekranı
+  açılır" diyor; bunu PANEL'e basılana kadar ertelemek o sözü gevşetirdi.
+- E-posta doğrulama ve e-posta değişikliği yönlendirmeleri değişmedi
+  (`homeFor`); karşılama bandı `/magazine`'de basılıyor.
+
+**Güvenlik:** Buton yalnızca bağlantıdır; panel layout'ları `guardPanel`'i
+çalıştırmaya devam eder. Ana sayfa bir client bileşeni olduğu için ona oturum
+kullanıcısı değil yalnızca `displayName` ve panel yolu geçer — e-posta, doğum
+tarihi, kimlik tarayıcıya gönderilmez.
+
+**Hukuki uyum:** Yeni kişisel veri, amaç veya saklama yok; aydınlatma metni
+değişmedi. Görünen ad zaten hesap sayfasında kullanıcının kendisine gösteriliyor.
+
+**D-035 ile ilişki:** D-035'in "kök adres rolüne göre yönlendirir" kısmının
+yerini alır. Tek giriş kapısı ve `/magazine` okuma alanı aynen geçerli.
+
+**Testler:** `panelPathFor` için birim testi eklendi. E2E'de giriş sonrası
+beklenen adres `/` oldu; paneller başlıktaki PANEL bağlantısıyla açılıyor
+(`waitForHome`, `openPanelFromHome`), okuyucu için PANEL'in görünmediği
+doğrulanıyor.
+
+**Doğrulama:** typecheck + lint temiz, 24 dosya / 337 birim testi, 24/24 e2e
+geçti.
+
+---

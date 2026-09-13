@@ -6,7 +6,14 @@
  *    writer panel right away (no agreement lock, D-050)
  */
 import { expect, test } from "@playwright/test";
-import { loginElevated, logout, SEED, submitLogin } from "./helpers";
+import {
+  loginElevated,
+  logout,
+  openPanelFromHome,
+  SEED,
+  submitLogin,
+  waitForHome,
+} from "./helpers";
 
 test.describe.configure({ mode: "serial" });
 
@@ -61,7 +68,8 @@ test("promotes an eligible reader, who can use the panel right away", async ({ p
   // The promoted account reaches the writer panel, already active — there is
   // no contract lock to clear (D-050)
   await submitLogin(page, SEED.reader);
-  await page.waitForURL("**/writer**");
+  await waitForHome(page);
+  await openPanelFromHome(page, "/writer");
   await expect(page.getByRole("heading", { name: "Merhaba, Kerem Okur" })).toBeVisible();
   await expect(page.getByText("Yazar sayfalarınız kilitli")).toHaveCount(0);
 

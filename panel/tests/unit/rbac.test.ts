@@ -20,6 +20,7 @@ import {
   hasRole,
   isActiveWriter,
   isHybrid,
+  panelPathFor,
   type Actor,
   type EditorAssignment,
 } from "@/lib/auth/rbac";
@@ -36,6 +37,27 @@ function actor(overrides: Partial<Actor> = {}): Actor {
     ...overrides,
   };
 }
+
+describe("panelPathFor", () => {
+  it("points each role at its own panel", () => {
+    expect(panelPathFor(actor({ role: "admin" }))).toBe("/admin");
+    expect(panelPathFor(actor({ role: "editor", editorStatus: "active" }))).toBe("/editor");
+    expect(panelPathFor(actor({ role: "writer", writerStatus: "active" }))).toBe("/writer");
+  });
+
+  it("gives a plain reader no panel", () => {
+    expect(panelPathFor(actor())).toBeNull();
+  });
+
+  it("sends a frozen editor to the writer panel the role still opens", () => {
+    expect(panelPathFor(actor({ role: "editor", editorStatus: "suspended" }))).toBe("/writer");
+  });
+
+  it("offers nothing to a banned or unverified account", () => {
+    expect(panelPathFor(actor({ role: "admin", isBanned: true }))).toBeNull();
+    expect(panelPathFor(actor({ role: "writer", emailVerifiedAt: null }))).toBeNull();
+  });
+});
 
 describe("role ordering", () => {
   it("treats roles as inclusive ranks", () => {
