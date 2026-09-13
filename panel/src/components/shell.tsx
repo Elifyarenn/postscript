@@ -138,6 +138,8 @@ export type SocialNavState = {
   notifications?: number;
   /** Conversations with unread messages. */
   messages?: number;
+  /** Unread messages in the anonymous box. */
+  anon?: number;
 };
 
 /**
@@ -152,6 +154,7 @@ export function socialNav(state: SocialNavState): NavGroup[] {
         { href: "/social", label: "Akış" },
         { href: "/social/explore", label: "Keşfet" },
         { href: "/social/messages", label: "Mesajlar", badge: state.messages },
+        { href: "/social/anon", label: "Anonim kutu", badge: state.anon },
         ...(state.username
           ? [{ href: `/social/u/${state.username}`, label: "Profilim" }]
           : []),

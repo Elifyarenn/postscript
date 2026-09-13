@@ -73,6 +73,7 @@ async function findReachableMember(rawUsername: string) {
       bio: users.bio,
       role: users.role,
       createdAt: users.createdAt,
+      anonBoxEnabled: users.anonBoxEnabled,
     })
     .from(users)
     .where(and(eq(users.username, username), isNull(users.deletedAt), eq(users.isBanned, false)))
@@ -129,13 +130,17 @@ export const usernameSchema = z.strictObject({
 
 export async function getMemberSettings(
   actor: Actor,
-): Promise<{ username: string | null; dmPolicy: DmPolicy }> {
+): Promise<{ username: string | null; dmPolicy: DmPolicy; anonBoxEnabled: boolean }> {
   const rows = await db
-    .select({ username: users.username, dmPolicy: users.dmPolicy })
+    .select({ username: users.username, dmPolicy: users.dmPolicy, anonBoxEnabled: users.anonBoxEnabled })
     .from(users)
     .where(eq(users.id, actor.id))
     .limit(1);
-  return { username: rows[0]?.username ?? null, dmPolicy: rows[0]?.dmPolicy ?? "following" };
+  return {
+    username: rows[0]?.username ?? null,
+    dmPolicy: rows[0]?.dmPolicy ?? "following",
+    anonBoxEnabled: rows[0]?.anonBoxEnabled ?? false,
+  };
 }
 
 /** Picks or changes the handle. Returns the stored, normalised form. */
@@ -192,6 +197,8 @@ export async function setUsername(
 
 export type ProfileView = Member & {
   bio: string | null;
+  /** Whether the profile shows the "anonymous message" link (D-092). */
+  anonBoxEnabled: boolean;
   joinedAt: Date;
   followerCount: number;
   followingCount: number;
@@ -228,6 +235,7 @@ export async function getProfile(viewer: Actor, rawUsername: string): Promise<Pr
     penName: target.penName,
     role: target.role,
     bio: target.bio,
+    anonBoxEnabled: target.anonBoxEnabled,
     joinedAt: target.createdAt,
     followerCount: followers?.value ?? 0,
     followingCount: following?.value ?? 0,

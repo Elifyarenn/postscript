@@ -95,6 +95,15 @@ export default async function TermsPage() {
         geçerlidir.
       </p>
 
+      <p>
+        <strong>Anonim kutu.</strong> Kutusunu açan üyeye, e-postası doğrulanmış ve 18 yaşını
+        doldurmuş üyeler adlarını göstermeden mesaj bırakabilir. Bu gizlilik yalnızca alıcıya
+        karşıdır: anonim mesaj hesabınızla ve trafik kaydıyla saklanır, bildirilirse yöneticiler
+        göndereni görür ve kanunen yetkili mercilere bildirilebilir. Anonim kutu taciz, tehdit veya
+        kimliğini gizleyerek kural ihlali için kullanılamaz; bu kullanım hesabın askıya alınmasına
+        yol açabilir.
+      </p>
+
       <h2>4. İçeriğinizden siz sorumlusunuz</h2>
 
       <p>

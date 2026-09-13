@@ -319,6 +319,15 @@ yenilenir (`router.refresh`). "Konuşmayı sil" yalnızca silenin görünümünd
 kaldırır. Okundu bilgisi yoktur. Yöneticiler özel mesajları listeleyemez;
 yalnızca taraflardan birinin bildirdiği mesajın metnini görür.
 
+**Anonim kutu (D-092, `/social/anon`):** üye kutusunu ayarlardan açar
+(varsayılan kapalı). Profilinde "Anonim mesaj" bağlantısı çıkar. E-postası
+doğrulanmış, kullanıcı adı olan ve 18 yaşını doldurmuş üyeler en çok 500
+karakterlik mesaj bırakır; sınır alıcı başına günde 3, toplamda günde 20.
+Alıcı göndereni hiçbir yoldan görmez (gelen kutusu, susturma ve veri dışa
+aktarımı dahil). Gönderen yine de hesabıyla ve trafik kaydıyla saklanır;
+alıcı mesajı bildirirse yönetici göndereni görür. "Göndereni sustur" kimliği
+açığa çıkarmadan o kişinin bu kutuya yazmasını kapatır.
+
 ### Kayıt ve roller
 
 Herkese açık tek kayıt **okuyucu kaydı**dır (`/register`): ad soyad,

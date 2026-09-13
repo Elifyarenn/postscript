@@ -3,6 +3,7 @@ import { requireSession } from "@/lib/auth/guard";
 import { PanelShell, socialNav } from "@/components/shell";
 import { unreadNotificationCount } from "@/services/notifications";
 import { unreadConversationCount } from "@/services/direct-messages";
+import { unreadAnonCount } from "@/services/anon-box";
 import { getMemberSettings } from "@/services/social";
 
 /**
@@ -11,10 +12,11 @@ import { getMemberSettings } from "@/services/social";
  */
 export default async function SocialLayout({ children }: { children: ReactNode }) {
   const { user } = await requireSession();
-  const [settings, unread, unreadConversations] = await Promise.all([
+  const [settings, unread, unreadConversations, unreadAnon] = await Promise.all([
     getMemberSettings({ ...user }),
     unreadNotificationCount({ ...user }),
     unreadConversationCount({ ...user }),
+    unreadAnonCount({ ...user }),
   ]);
 
   return (
@@ -25,6 +27,7 @@ export default async function SocialLayout({ children }: { children: ReactNode }
         username: settings.username,
         notifications: unread,
         messages: unreadConversations,
+        anon: unreadAnon,
       })}
     >
       {children}

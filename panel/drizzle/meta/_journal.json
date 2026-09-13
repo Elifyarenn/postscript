@@ -197,6 +197,13 @@
       "when": 1789292861722,
       "tag": "0028_flat_bucky",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1789293528620,
+      "tag": "0029_wise_the_executioner",
+      "breakpoints": true
     }
   ]
 }

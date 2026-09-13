@@ -151,6 +151,14 @@ export function ProfileHeader({
                 >
                   Mesaj
                 </Link>
+                {profile.anonBoxEnabled && (
+                  <Link
+                    href={`/social/anon/${profile.username}`}
+                    className="rounded-md border border-line px-3 py-1 text-xs hover:bg-paper"
+                  >
+                    Anonim mesaj
+                  </Link>
+                )}
                 <Link
                   href={`/social/report?type=member&id=${profile.id}`}
                   className="px-2 text-xs text-muted hover:text-danger"

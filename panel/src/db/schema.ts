@@ -198,6 +198,8 @@ export const users = pgTable(
     username: text("username"),
     /** Defaults to the people the member follows: nobody is reachable by strangers unasked. */
     dmPolicy: dmPolicyEnum("dm_policy").notNull().default("following"),
+    /** The anonymous box is opt-in (D-092): closed until the member opens it. */
+    anonBoxEnabled: boolean("anon_box_enabled").notNull().default(false),
     bio: text("bio"),
     avatarMediaId: uuid("avatar_media_id"),
     socialLinks: jsonb("social_links").$type<SocialLinks>(),
@@ -1274,6 +1276,58 @@ export const directMessages = pgTable(
     deletedAt: deletedAt(),
   },
   (t) => [index("direct_messages_conversation_idx").on(t.conversationId, t.createdAt)],
+);
+
+/* ------------------------------------------------------------------ */
+/* anonymous box (D-092)                                               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A message the recipient receives without the sender's name. Anonymous to the
+ * recipient only: the sender is stored, because the magazine must be able to
+ * answer for it as a hosting provider (5651 m. 5).
+ */
+export const anonMessages = pgTable(
+  "anon_messages",
+  {
+    id: id(),
+    recipientId: uuid("recipient_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    senderId: uuid("sender_id").references(() => users.id, { onDelete: "set null" }),
+    /** Stored with banned words already masked (D-040). */
+    body: text("body").notNull(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    /** The recipient deleted it from their box. */
+    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    removedBy: uuid("removed_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    deletedAt: deletedAt(),
+  },
+  (t) => [
+    index("anon_messages_recipient_idx").on(t.recipientId, t.createdAt),
+    index("anon_messages_sender_idx").on(t.senderId, t.createdAt),
+  ],
+);
+
+/**
+ * A sender the recipient silenced without learning who it is. Not a block: a
+ * block shows on the blocked person's profile and would give the name away.
+ */
+export const anonMutes = pgTable(
+  "anon_mutes",
+  {
+    id: id(),
+    recipientId: uuid("recipient_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    senderId: uuid("sender_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("anon_mutes_pair_unique").on(t.recipientId, t.senderId)],
 );
 
 /* ------------------------------------------------------------------ */

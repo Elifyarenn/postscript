@@ -8,7 +8,14 @@ import { ActionButton, PanelForm } from "@/components/form";
 import { Alert, Card, EmptyState, Field, Input, PageHeader, Select } from "@/components/ui";
 import { MemberLink } from "@/components/social";
 import { DM_POLICIES, DM_POLICY_LABELS } from "@/lib/direct-messages";
-import { setDirectMessagePolicyAction, setUsernameAction, unblockAction } from "../actions";
+import { countAnonMutes } from "@/services/anon-box";
+import {
+  clearAnonMutesAction,
+  setAnonBoxAction,
+  setDirectMessagePolicyAction,
+  setUsernameAction,
+  unblockAction,
+} from "../actions";
 
 export const metadata = { title: "Topluluk ayarları" };
 
@@ -16,9 +23,10 @@ export default async function SocialSettingsPage() {
   const { user } = await requireSession();
   const csrfToken = (await readCsrfToken()) ?? "";
 
-  const [settings, blocked] = await Promise.all([
+  const [settings, blocked, mutes] = await Promise.all([
     getMemberSettings({ ...user }),
     listBlockedMembers({ ...user }),
+    countAnonMutes({ ...user }),
   ]);
 
   return (
@@ -67,6 +75,45 @@ export default async function SocialSettingsPage() {
               </Link>{" "}
               sayfasından düzenleyebilirsiniz.
             </p>
+          )}
+        </Card>
+
+        <Card>
+          <h2 className="mb-3 font-serif text-lg">Anonim kutu</h2>
+          <p className="mb-4 text-sm text-muted">
+            Kutunuzu açarsanız profilinizde &ldquo;Anonim mesaj&rdquo; bağlantısı görünür ve e-postası
+            doğrulanmış, 18 yaşını doldurmuş üyeler size adlarını göstermeden mesaj bırakabilir.
+            Gönderenleri siz göremezsiniz; ancak gönderen dergi karşısında anonim değildir ve
+            bildirdiğiniz bir mesajın göndereni yöneticilere görünür. Kutunuz kapalıyken yeni mesaj
+            gelmez.
+          </p>
+          {settings.username ? (
+            <>
+              <PanelForm action={setAnonBoxAction} csrfToken={csrfToken} submitLabel="Kaydet">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="anonBoxEnabled"
+                    defaultChecked={settings.anonBoxEnabled}
+                    className="size-4 accent-accent"
+                  />
+                  Anonim kutum açık olsun
+                </label>
+              </PanelForm>
+              <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-4 text-sm">
+                <span className="text-muted">Susturulan gönderen: {mutes}</span>
+                {mutes > 0 && (
+                  <ActionButton
+                    action={clearAnonMutesAction}
+                    csrfToken={csrfToken}
+                    label="Tüm susturmaları kaldır"
+                    confirmMessage="Susturduğunuz gönderenler size yeniden anonim mesaj gönderebilecek. Devam edilsin mi?"
+                  />
+                )}
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted">Anonim kutu için önce bir kullanıcı adı seçin.</p>
           )}
         </Card>
 

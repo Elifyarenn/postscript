@@ -2451,3 +2451,87 @@ döner, yenilenince geçer. Yayından önce Neon dalında çalıştırılmalı.
 `tests/unit/direct-messages.test.ts`, `tests/integration/direct-messages.test.ts`).
 
 ---
+
+## D-092 — Anonim kutu: yalnızca doğrulanmış yetişkin üyeler, alıcıya karşı anonim
+
+**İstek (ürün sahibi):** "Anon box onaylı kullanıcılar ile olsun." İlk analizde
+anonim kutu en riskli parça olarak işaretlenmiş, en sona bırakılmış ve hukukçu
+görüşü önerilmişti. "Onaylı kullanıcı", kodda karşılığı olan en sıkı anlamıyla
+yorumlandı: e-postası doğrulanmış, yasaklı olmayan ve kullanıcı adı seçmiş hesap
+(`requireMember`).
+
+**Karar:**
+
+- **Kutu isteğe bağlıdır** (`users.anon_box_enabled`, varsayılan kapalı). Açık
+  kutunun profilde "Anonim mesaj" bağlantısı olur.
+- **Kim yazabilir** (`anonMessageProblem`, `src/lib/anon-box.ts`):
+  - doğrulanmış üye, kullanıcı adı olan, 18 yaşını doldurmuş gönderen
+  - 18 yaşını doldurmuş alıcı, kutusu açık olmalı
+  - aralarında engel yok, alıcı göndereni susturmamış olmalı
+  - alıcı başına günde en çok 3, toplamda günde en çok 20 mesaj; en çok 500
+    karakter, düz metin, yasaklı kelime maskesi
+
+  Gönderene alıcıyla ilgili her ret (kutu kapalı, engel, susturma, reşit
+  olmayan alıcı) **aynı cümleyle** söylenir; hangisi olduğu anlaşılmaz.
+  Göndereni engellemiş alıcının kutusu 404 döner (D-089 ile aynı).
+- **Anonimlik yalnızca alıcıya karşıdır.** `sender_id` saklanır ve trafik
+  kaydına göndereni yazılır. Formun **üstünde**, yazmadan önce görünen uyarı
+  var: "Alıcı adınızı görmez, ama anonim değilsiniz."
+- **Alıcı göndereni hiçbir yoldan öğrenmez.**
+  - Gelen kutusu tipi (`AnonInboxItem`) göndereni hiç taşımaz; test anahtar
+    listesini sabitliyor.
+  - **"Göndereni sustur"** bir engel değildir. Engel, engellenenin profilinde
+    "Bu hesabı engellediniz" olarak görünür, takipleri siler ve mesajlaşmada
+    hata verir; bunların her biri kimliği açığa çıkarırdı. Onun yerine
+    `anon_mutes` tablosu var: yalnızca o gönderenin bu kutuya yazmasını kapatır
+    ve bıraktıklarını kutudan kaldırır. Ayarlarda yalnızca susturma **sayısı**
+    ve "tümünü kaldır" var; tek tek susturmalar ayırt edilemez.
+  - **KVKK veri dışa aktarımı:** alıcıya gelen mesajlar göndereni olmadan
+    döner (`json_build_object`, `row_to_json` değil).
+- **Mevcut bir sızıntı da kapatıldı.** `exportUserData`, D-090'dan beri
+  `content_reports`'u `row_to_json` ile döndürüyordu. Bu, bildirenin dışa
+  aktarımına bildirilen hesabın kimliğini (`target_user_id`), karar vereni ve
+  moderatör notunu koyuyordu. Anonim mesaj bildiriminde bu, alıcıya göndereni
+  verirdi. Artık yalnızca bildirenin kendi bildirdiği alanlar dönüyor.
+- **Moderasyon:** yalnızca alıcı bir anonim mesajı bildirebilir (başkasına 404).
+  Bildirimde içerik sahibi olarak gönderen kaydedilir; bu, bir yöneticinin
+  göndereni öğrendiği tek andır. "Kaldır" mesajı yumuşak siler (`removed_by`).
+- **Saklama ve hesap silme:** alıcının kutudan sildiği (`hidden_at`), bildirim
+  üzerine kaldırılan veya taraflardan birinin hesabı silinen mesaj bir yıl
+  sonra `pnpm prune-community` ile kalıcı silinir. Hesap silmede iki yöndeki
+  mesajlar yumuşak silinir, susturmalar silinir, kutu kapanır.
+- **Bildirim satırı yazılmaz**, yalnızca kenar çubuğu rozeti var: bildirim
+  kutusunda bir satır daha, içerik taşımasa da zamanlamasıyla bir iz bırakırdı.
+- **Yapılmayanlar:** anonim mesaja herkese açık yanıt ("soru-cevap" profili).
+  Tasarımda yok; alıcının yanlışlıkla göndereni ele veren bir yanıt
+  yayımlaması riski var.
+
+**Hukuk:**
+- **Aydınlatma metni:**
+  - Yeni "Anonim kutu" veri satırı; trafik kaydı satırına anonim mesaj eklendi.
+  - Yeni amaç: (c) + (ç) 5651 m. 5 + (f).
+  - Saklama satırı eklendi.
+  - Anonimliğin yalnızca alıcıya karşı olduğu, bildirimde yöneticinin göndereni
+    gördüğü, yetkili mercilere paylaşılabileceği ve dışa aktarımda göndereni
+    göstermediği açıkça yazıldı.
+  - Anonimleştirme cümlesi güncellendi.
+- **Kullanım şartları:** "Anonim kutu" paragrafı eklendi. Anonimliğin sınırı ve
+  kötüye kullanımın askıya almaya yol açabileceği yazıldı.
+- **Hukukçu görüşü gerekiyor:**
+  1. Anonim içerikte yer sağlayıcı sorumluluğu. Muhafazakâr kurgu uygulandı:
+     gönderen saklanıyor ve belirlenebiliyor.
+  2. "Alıcıya karşı anonim, dergiye karşı değil" beyanının KVKK m. 10
+     aydınlatması için yeterliliği.
+  3. 18 yaş sınırının beyana dayanması (D-091'deki gibi).
+
+**Sürücü (D-078):** `exportUserData`'da `json_build_object` yeni.
+`or(lt(deleted_at), lt(hidden_at))` ile budama yeni. Upsert yok. Yayından önce
+Neon dalında çalıştırılmalı.
+
+**Üretim:** Migration `0029`. 0026–0029 üretime uygulanmadı; push yapılmadı.
+
+**Doğrulama:** typecheck + lint temiz, 33 dosya / 423 test (15 yeni:
+`tests/unit/anon-box.test.ts`, `tests/integration/anon-box.test.ts`; alıcının
+gelen kutusunda ve dışa aktarımında gönderenin olmadığı dahil).
+
+---

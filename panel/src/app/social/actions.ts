@@ -8,7 +8,7 @@
 import { revalidatePath } from "next/cache";
 import { requestMetadata, requireAuth } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
-import { runAction, text, type ActionState } from "@/lib/action";
+import { checkbox, runAction, text, type ActionState } from "@/lib/action";
 import { normalizeUsername } from "@/lib/username";
 import {
   blockMember,
@@ -36,6 +36,86 @@ import {
   sendDirectMessage,
   setDirectMessagePolicy,
 } from "@/services/direct-messages";
+import {
+  clearAnonMutes,
+  hideAnonMessage,
+  muteAnonSender,
+  sendAnonMessage,
+  setAnonBoxEnabled,
+} from "@/services/anon-box";
+
+/* ------------------------------------------------------------------ */
+/* Anonymous box (D-092)                                               */
+/* ------------------------------------------------------------------ */
+
+export async function sendAnonMessageAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireAuth();
+    const meta = await requestMetadata();
+
+    await sendAnonMessage(
+      { ...user },
+      { username: text(formData, "username"), body: text(formData, "body") },
+      meta,
+    );
+
+    revalidatePath(`/social/anon/${normalizeUsername(text(formData, "username"))}`);
+    return { success: "Mesajınız anonim olarak iletildi." };
+  });
+}
+
+export async function setAnonBoxAction(_state: ActionState, formData: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireAuth();
+    const enabled = await setAnonBoxEnabled({ ...user }, { enabled: checkbox(formData, "anonBoxEnabled") });
+    revalidatePath("/social", "layout");
+    return { success: enabled ? "Anonim kutunuz açıldı." : "Anonim kutunuz kapatıldı." };
+  });
+}
+
+export async function hideAnonMessageAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireAuth();
+    await hideAnonMessage({ ...user }, text(formData, "messageId"));
+    revalidatePath("/social", "layout");
+    return { success: "Mesaj silindi." };
+  });
+}
+
+export async function muteAnonSenderAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireAuth();
+    await muteAnonSender({ ...user }, text(formData, "messageId"));
+    revalidatePath("/social", "layout");
+    return { success: "Gönderen susturuldu." };
+  });
+}
+
+export async function clearAnonMutesAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireAuth();
+    const lifted = await clearAnonMutes({ ...user });
+    revalidatePath("/social/settings");
+    return { success: `${lifted} susturma kaldırıldı.` };
+  });
+}
 
 /* ------------------------------------------------------------------ */
 /* Private messages (D-091)                                            */

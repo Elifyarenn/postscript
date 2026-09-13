@@ -24,6 +24,8 @@ import { db } from "@/db/client";
 import {
   articles,
   bookmarks,
+  anonMessages,
+  anonMutes,
   conversationStates,
   directMessages,
   editorCategories,
@@ -828,6 +830,7 @@ async function anonymise(user: User): Promise<void> {
       displayName: "Silinmiş kullanıcı",
       penName: user.penName, // the pen name stays on published work
       username: null,
+      anonBoxEnabled: false,
       bio: null,
       socialLinks: null,
       birthDate: null,
@@ -863,6 +866,20 @@ async function anonymise(user: User): Promise<void> {
     .set({ deletedAt: now, updatedAt: now })
     .where(and(eq(directMessages.senderId, user.id), isNull(directMessages.deletedAt)));
   await db.delete(conversationStates).where(eq(conversationStates.userId, user.id));
+
+  // The anonymous box goes both ways: what they received and what they sent (D-092)
+  await db
+    .update(anonMessages)
+    .set({ deletedAt: now, updatedAt: now })
+    .where(
+      and(
+        or(eq(anonMessages.senderId, user.id), eq(anonMessages.recipientId, user.id)),
+        isNull(anonMessages.deletedAt),
+      ),
+    );
+  await db
+    .delete(anonMutes)
+    .where(or(eq(anonMutes.recipientId, user.id), eq(anonMutes.senderId, user.id)));
 
   await revokeAllSessions(user.id);
 }
@@ -942,9 +959,21 @@ export async function exportUserData(actor: Actor, targetUserId: string) {
     union all
     select 'post_reposts', row_to_json(s) from post_reposts s where s.user_id = ${targetUserId}
     union all
-    select 'content_reports', row_to_json(c) from content_reports c where c.reporter_id = ${targetUserId}
+    select 'content_reports', json_build_object(
+      'id', c.id, 'target_type', c.target_type, 'target_id', c.target_id,
+      'category', c.category, 'reason', c.reason, 'snapshot', c.snapshot,
+      'status', c.status, 'created_at', c.created_at, 'resolved_at', c.resolved_at
+    ) from content_reports c where c.reporter_id = ${targetUserId}
     union all
     select 'direct_messages', row_to_json(d) from direct_messages d where d.sender_id = ${targetUserId}
+    union all
+    select 'anon_messages_sent', json_build_object(
+      'id', s.id, 'recipient_id', s.recipient_id, 'body', s.body, 'created_at', s.created_at
+    ) from anon_messages s where s.sender_id = ${targetUserId}
+    union all
+    select 'anon_messages_received', json_build_object(
+      'id', r.id, 'body', r.body, 'created_at', r.created_at, 'read_at', r.read_at
+    ) from anon_messages r where r.recipient_id = ${targetUserId}
   `);
 
   return {

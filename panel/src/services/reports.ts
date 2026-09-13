@@ -12,6 +12,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { db } from "@/db/client";
 import {
+  anonMessages,
   communityComments,
   contentReports,
   conversations,
@@ -32,7 +33,13 @@ import type { RequestMeta } from "./auth";
 export const MAX_REPORT_REASON = 1000;
 
 /** What can be reported today; later modules add their own kinds. */
-export const REPORTABLE_TARGETS = ["post", "comment", "direct_message", "member"] as const;
+export const REPORTABLE_TARGETS = [
+  "post",
+  "comment",
+  "direct_message",
+  "anon_message",
+  "member",
+] as const;
 
 export const reportSchema = z.strictObject({
   targetType: z.enum(REPORTABLE_TARGETS),
@@ -50,6 +57,23 @@ async function resolveTarget(
   reporterId: string,
 ): Promise<ResolvedTarget> {
   switch (type) {
+    case "anon_message": {
+      // Only the recipient can report it. The sender is recorded as the owner,
+      // which is the one moment a moderator learns who wrote it (D-092)
+      const rows = await db
+        .select({ ownerId: anonMessages.senderId, snapshot: anonMessages.body })
+        .from(anonMessages)
+        .where(
+          and(
+            eq(anonMessages.id, id),
+            eq(anonMessages.recipientId, reporterId),
+            isNull(anonMessages.deletedAt),
+          ),
+        )
+        .limit(1);
+      if (!rows[0]) throw notFound("Mesaj bulunamadı.");
+      return rows[0];
+    }
     case "direct_message": {
       // Only one of the two members can report a private message; to anyone
       // else it does not exist (D-091)
@@ -254,6 +278,12 @@ async function removeTarget(
         .update(directMessages)
         .set({ deletedAt: now, removedBy: moderatorId, updatedAt: now })
         .where(and(eq(directMessages.id, id), isNull(directMessages.deletedAt)));
+      return;
+    case "anon_message":
+      await executor
+        .update(anonMessages)
+        .set({ deletedAt: now, removedBy: moderatorId, updatedAt: now })
+        .where(and(eq(anonMessages.id, id), isNull(anonMessages.deletedAt)));
       return;
     default:
       throw badRequest(
