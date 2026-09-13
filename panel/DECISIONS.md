@@ -2692,3 +2692,36 @@ için."
 başka bir bağlantı veya e2e seçici yok (arandı).
 
 ---
+
+## D-097 — Yönetim genel bakışında "Bekleyen işler" kartı
+
+**İstek (ürün sahibi):** Bilgisayara erişemediği zamanlarda kullanıcıları ve
+yazarları telefondan kontrol edebilmek.
+
+**Karar:**
+- `/admin` sayfasının en üstüne "Bekleyen işler" kartı eklendi. Üç sayaç var,
+  her biri kendi sayfasına gider:
+  - Açık içerik bildirimleri → `/admin/community`
+  - Yönetim onayı bekleyen yazar başvuruları (`editor_approved`) →
+    `/admin/applications`
+  - Yayın kuyruğundaki yazılar (`ready_for_publishing`, silinmemiş) →
+    `/editor/articles?status=ready_for_publishing`
+- 24 saati geçen açık bildirim varsa kartın başında kırmızı uyarı çıkar. Sınır
+  `isReportOverdue` ile aynı: oluşturulmasından 24 saatten fazla geçmişse gecikmiş.
+- Sayılar `src/services/admin-overview.ts` → `pendingAdminWork` içinde
+  hesaplanır. Fonksiyon `canAccessAdminPanel` kontrolü yapar. Sayfa yalnızca
+  sonucu gösterir.
+- **Neden sayım sorgusu:** Kuyruk sayfalarının liste fonksiyonları
+  (`listReports`, `listApplicationsByStatus`, `listArticles`) satırları
+  birleştirmeli çeker ve limitlidir. Telefonda her açılışta yalnızca sayıya
+  ihtiyaç var. Filtreler o fonksiyonlarla aynı durum değerlerini kullanır.
+- `awaiting_rights` ve `scheduled` sayılmadı: ilki yazarın imzasını, ikincisi
+  zamanlayıcıyı bekler; admin'in yapacağı bir şey yok.
+
+**Hukuk:** Yeni veri, çerez veya işleme amacı yok; aydınlatma metni değişmedi.
+
+**Doğrulama:** `tests/integration/admin-overview.test.ts` — her sayaç yalnızca
+kendi kuyruğunu sayar, gecikme 24 saatten eskileri ayırır, editör 403 alır.
+typecheck + lint temiz, 35 dosya / 430 test.
+
+---

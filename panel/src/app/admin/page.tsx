@@ -4,21 +4,38 @@ import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import { guardPanel } from "@/lib/auth/guard";
 import { acceptanceReport } from "@/services/agreements";
-import { Card, EmptyState, PageHeader } from "@/components/ui";
+import { pendingAdminWork } from "@/services/admin-overview";
+import { Alert, Card, EmptyState, PageHeader } from "@/components/ui";
 
 export const metadata = { title: "Yönetim" };
 
 export default async function AdminDashboard() {
   const { user } = await guardPanel("admin");
 
-  const [byRole, agreement] = await Promise.all([
+  const [byRole, agreement, pending] = await Promise.all([
     db
       .select({ role: users.role, total: count() })
       .from(users)
       .where(isNull(users.deletedAt))
       .groupBy(users.role),
     acceptanceReport({ ...user }),
+    pendingAdminWork({ ...user }),
   ]);
+
+  const queues = [
+    { label: "Açık içerik bildirimi", total: pending.openReports, href: "/admin/community" },
+    {
+      label: "Yönetim onayı bekleyen yazar başvurusu",
+      total: pending.applicationsAwaitingAdmin,
+      href: "/admin/applications",
+    },
+    {
+      label: "Yayın kuyruğunda onay bekleyen yazı",
+      total: pending.articlesAwaitingAdmin,
+      href: "/editor/articles?status=ready_for_publishing",
+    },
+  ];
+  const nothingPending = queues.every((queue) => queue.total === 0);
 
   // Readers who could be promoted today, if the contract settings are in place
   const promotable = await db
@@ -42,6 +59,50 @@ export default async function AdminDashboard() {
       <PageHeader title="Yönetim" description="Kullanıcılar, sözleşme durumu ve bekleyen işler." />
 
       <div className="space-y-6">
+        {/* First on the page: admins mostly check in from a phone (D-097) */}
+        <Card>
+          <h2 className="mb-3 font-serif text-lg">Bekleyen işler</h2>
+
+          {pending.overdueReports > 0 && (
+            <div className="mb-4">
+              <Alert tone="danger" title="24 saati geçen içerik bildirimi var">
+                {pending.overdueReports} bildirim 5651 sayılı Kanun&apos;un öngördüğü 24
+                saatlik cevap süresini aştı.{" "}
+                <Link href="/admin/community" className="underline">
+                  Hemen inceleyin
+                </Link>
+                .
+              </Alert>
+            </div>
+          )}
+
+          {nothingPending ? (
+            <EmptyState>Şu anda sizi bekleyen bir iş yok.</EmptyState>
+          ) : (
+            <ul className="divide-y divide-line text-sm">
+              {queues.map((queue) => (
+                <li key={queue.href}>
+                  <Link
+                    href={queue.href}
+                    className="flex items-center justify-between gap-3 py-2.5 hover:text-accent"
+                  >
+                    <span>{queue.label}</span>
+                    <span
+                      className={
+                        queue.total > 0
+                          ? "rounded-full bg-accent px-2 text-xs leading-6 font-semibold text-paper"
+                          : "text-xs text-muted"
+                      }
+                    >
+                      {queue.total}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {(
             [
