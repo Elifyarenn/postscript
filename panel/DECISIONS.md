@@ -2127,3 +2127,55 @@ uzun olabilir.
 değiştirdiği için ondan önce koşacak şekilde adlandırıldı.
 
 ---
+
+## D-088 — Yorum ve mesajlara 5651 trafik kaydı; kullanım şartları koda uyduruldu
+
+**Sorun:** KVKK aydınlatma metni ve kullanım şartları, yorum ve mesajların
+"5651 m. 5 gereği trafik kaydıyla" bir yıl saklandığını söylüyordu. Kodda böyle
+bir kayıt yoktu: `community_comments` ve `community_messages` ne IP ne oturum
+tutuyordu. IP yalnızca `sessions`'ta vardı ve bir yorumun hangi oturumdan
+yazıldığı bilinmiyordu. Metin, kodun yapmadığı bir şeyi beyan ediyordu (D-083'teki
+hatanın aynısı). Topluluk özellikleri genişletilmeden önce kapatıldı: ürün sahibi
+topluluk tasarımının tamamını istedi (bkz. D-089 ve sonrası), yeni kullanıcı
+içeriği bu borcun üstüne kurulmamalıydı.
+
+**Karar:**
+
+- Yeni tablo `traffic_logs`: hesap, işlem, varlık türü + kimliği, IP,
+  user-agent, zaman. `audit_log`'dan ayrı tutuldu: denetim kaydı 10 yıl yaşar ve
+  tetikleyici silmeyi yasaklar; trafik kaydının yasal ömrü 1 yıldır ve sonra
+  silinmesi gerekir. `user_id` hesap anonimleştirilince bile kaydın kalması için
+  `on delete set null`.
+- `src/lib/traffic.ts` → `recordTraffic(entry, executor)`. Kullanıcı içeriği
+  yazan her servis içeriği ve trafik kaydını **aynı transaction'da** yazar;
+  içerik kaydı olmadan var olamaz. Şimdilik çağıranlar `addCommunityComment` ve
+  `addChatMessage`; bundan sonra eklenen her kullanıcı içeriği de çağırır.
+- `pnpm prune-traffic` 365 günü dolan kayıtları siler (önerilen cron: günlük).
+  Tablodan silen tek yol bu betik.
+- **Kullanım şartları:** "sohbet kapalıyken geçmiş mesajlar okunabilir" cümlesi
+  D-056 ile çelişiyordu (sayfa 404), düzeltildi. "Editörler ve yöneticiler
+  kaldırabilir" yazıyordu; `canModerateCommunity` yalnızca admin'e izin verir,
+  metin "yöneticiler" oldu. Trafik kaydının içeriği ve süresi şartlara yazıldı.
+- **Aydınlatma metni:** kişisel veri tablosuna "Trafik kaydı" satırı eklendi
+  (hesap, IP, user-agent, işlem türü, zaman). Saklama süresi satırı zaten 1 yıl
+  diyordu. Metin `kvkk_versions`'tan okunur: canlıda yeni sürümün admin
+  tarafından yayınlanması gerekir.
+
+**Hukukçu görüşü gerekiyor:** 5651 kapsamındaki trafik bilgisi uygulamada
+kaynak port numarasını da kapsayabilir (CGNAT arkasındaki kullanıcıyı ayırmak
+için). Vercel isteğe kaynak portunu iletmiyor; kod yalnızca IP'yi
+`x-forwarded-for`'dan okuyabiliyor. Port şartı kesinleşirse barındırma
+katmanında çözülmesi gerekir. O zamana kadar muhafazakâr olan uygulandı:
+alınabilen her şey (IP, user-agent, zaman, hesap) kaydediliyor.
+
+**Sürücü (D-078):** Sorgular düz `insert` / `delete ... where created_at <` /
+`transaction`; upsert ve ham `sql` şablonu yok.
+
+**Üretim:** Migration `0025` eklendi. Üretimde `0024` hâlâ bekletiliyor
+(D-082); `0025` onunla birlikte çıkar, bu yüzden push öncesi ürün sahibinin
+onayı ve snapshot gerekir (D-079). Push yapılmadı.
+
+**Doğrulama:** typecheck + lint temiz, 25 dosya / 348 test (3 yeni:
+`community.test.ts` → trafik kaydı yorum, mesaj ve bir yıllık silme sınırı).
+
+---

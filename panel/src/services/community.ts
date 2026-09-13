@@ -26,6 +26,7 @@ import { canModerateCommunity, type Actor } from "@/lib/auth/rbac";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { isChatOpen } from "@/lib/chat-mode";
 import { maskBannedWords, normalizeBannedWord } from "@/lib/moderation";
+import { recordTraffic } from "@/lib/traffic";
 import { getChatMode } from "./chat-mode";
 import type { RequestMeta } from "./auth";
 
@@ -170,21 +171,39 @@ export async function addCommunityComment(
 
   const body = await mask(parsed.data.body);
 
-  const [row] = await db
-    .insert(communityComments)
-    .values({ articleId: parsed.data.articleId, authorId: actor.id, body })
-    .returning();
+  // The comment and its 5651 traffic record land together or not at all (D-088)
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .insert(communityComments)
+      .values({ articleId: parsed.data.articleId, authorId: actor.id, body })
+      .returning();
 
-  await writeAudit({
-    actorId: actor.id,
-    action: "community.comment_added",
-    entityType: "community_comments",
-    entityId: row!.id,
-    after: { articleId: parsed.data.articleId },
-    ip: meta.ip,
+    await recordTraffic(
+      {
+        userId: actor.id,
+        action: "community.comment_added",
+        entityType: "community_comments",
+        entityId: row!.id,
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+      },
+      tx,
+    );
+
+    await writeAudit(
+      {
+        actorId: actor.id,
+        action: "community.comment_added",
+        entityType: "community_comments",
+        entityId: row!.id,
+        after: { articleId: parsed.data.articleId },
+        ip: meta.ip,
+      },
+      tx,
+    );
+
+    return row!;
   });
-
-  return row!;
 }
 
 export type CommentListItem = {
@@ -297,25 +316,42 @@ export async function addChatMessage(
 
   const body = await mask(parsed.data.body);
 
-  const [row] = await db
-    .insert(communityMessages)
-    .values({
-      authorId: actor.id,
-      body,
-      quotedMessageId: parsed.data.quotedMessageId ?? null,
-    })
-    .returning();
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .insert(communityMessages)
+      .values({
+        authorId: actor.id,
+        body,
+        quotedMessageId: parsed.data.quotedMessageId ?? null,
+      })
+      .returning();
 
-  await writeAudit({
-    actorId: actor.id,
-    action: "community.message_added",
-    entityType: "community_messages",
-    entityId: row!.id,
-    after: { quotedMessageId: row!.quotedMessageId },
-    ip: meta.ip,
+    await recordTraffic(
+      {
+        userId: actor.id,
+        action: "community.message_added",
+        entityType: "community_messages",
+        entityId: row!.id,
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+      },
+      tx,
+    );
+
+    await writeAudit(
+      {
+        actorId: actor.id,
+        action: "community.message_added",
+        entityType: "community_messages",
+        entityId: row!.id,
+        after: { quotedMessageId: row!.quotedMessageId },
+        ip: meta.ip,
+      },
+      tx,
+    );
+
+    return row!;
   });
-
-  return row!;
 }
 
 export type MessageListItem = {

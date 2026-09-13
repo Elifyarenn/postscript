@@ -72,9 +72,10 @@ export default async function TermsPage() {
         <li>Başka bir kişi veya kurum adına konuşuyormuş gibi davranmak.</li>
       </ul>
 
+      {/* Matches D-056: the closed chat is not readable either */}
       <p>
-        Topluluk sohbeti yöneticiler tarafından geçici olarak kapatılabilir; kapalıyken geçmiş
-        mesajlar okunabilir, yeni mesaj gönderilemez.
+        Topluluk sohbeti yöneticiler tarafından kapatılabilir. Kapalıyken sohbet sayfası
+        görüntülenmez, geçmiş mesajlar okunamaz ve yeni mesaj gönderilemez.
       </p>
 
       <h2>4. İçeriğinizden siz sorumlusunuz</h2>
@@ -87,8 +88,9 @@ export default async function TermsPage() {
 
       <p>
         Yorum ve mesajlarınız, 5651 sayılı Kanun&rsquo;un 5. maddesi gereği trafik kaydıyla birlikte
-        saklanır. Bu kayıtlar yalnızca kanunen yetkili mercilerin hukuka uygun talebi üzerine
-        paylaşılır.
+        saklanır. Trafik kaydı hesabınızı, IP adresinizi, tarayıcı bilginizi ve gönderim zamanını
+        içerir ve bir yıl tutulur. Bu kayıtlar yalnızca kanunen yetkili mercilerin hukuka uygun
+        talebi üzerine paylaşılır.
       </p>
 
       <h2>5. Moderasyon</h2>
@@ -99,8 +101,8 @@ export default async function TermsPage() {
           uygunluğunu garanti etmez.
         </li>
         <li>
-          Editörler ve yöneticiler kurallara aykırı bir yorum veya mesajı gerekçe göstermeksizin
-          kaldırabilir. Kaldırma işlemi kayıt altına alınır.
+          Yöneticiler kurallara aykırı bir yorum veya mesajı gerekçe göstermeksizin kaldırabilir.
+          Kaldırma işlemi kayıt altına alınır.
         </li>
         <li>
           Kuralların ağır veya tekrarlanan ihlali hâlinde hesabınız askıya alınabilir. Askıya alınan

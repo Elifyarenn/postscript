@@ -169,6 +169,13 @@
       "when": 1789251364035,
       "tag": "0024_ancient_korvac",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1789290435688,
+      "tag": "0025_lively_radioactive_man",
+      "breakpoints": true
     }
   ]
 }

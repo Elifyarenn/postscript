@@ -29,6 +29,7 @@ ortaklık adına tek başına temsile yetkilidir.
 | Sözleşme | Yazar sözleşmesi ve eser onayı kayıtları; her onayın tarih-saati, IP adresi, tarayıcı bilgisi, onaylanan metnin SHA-256 özeti ve PDF kopyası |
 | İçerik | Dergiye gönderilen eserler ve sürümleri, yazı üzerindeki editör notları |
 | Topluluk | Yazılara yapılan yorumlar, topluluk sohbeti mesajları ve bunların gönderim zamanı |
+| Trafik kaydı | Her yorum ve mesaj için: gönderen hesap, IP adresi, tarayıcı bilgisi (user-agent), işlem türü ve zamanı |
 | Moderasyon | Yasaklama durumu ve gerekçesi, kaldırılan içerik kayıtları |
 | Denetim | Panelde yapılan işlemlerin kaydı: kimin, ne zaman, hangi işlemi, hangi IP adresinden yaptığı |
 

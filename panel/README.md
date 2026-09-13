@@ -127,6 +127,7 @@ pnpm dev
 | `pnpm send-reminders` | Bekleyen devir formları için hatırlatma |
 | `pnpm process-deletions` | 30 günü dolan hesap silme taleplerini işler |
 | `pnpm purge-unverified` | E-posta doğrulanmadan 7 gün geçen hesapları anonimleştirir |
+| `pnpm prune-traffic` | 1 yılı dolan 5651 trafik kayıtlarını siler (D-088) |
 
 Migration'lar elle düzenlenmez: şema `src/db/schema.ts` içinde değiştirilir ve
 `pnpm db:generate` çalıştırılır.
@@ -288,6 +289,10 @@ Yönetici panelindeki **"Topluluk yönetimi"** sekmesinde tüm yorumlar, sohbet
 mesajları ve yasaklı kelimeler yönetilir; kaldırma yumuşak silmedir
 (kayıt geçmişte kalır).
 
+Her yorum ve mesaj, aynı işlemde bir **trafik kaydı** (`traffic_logs`: hesap,
+IP, tarayıcı bilgisi, zaman) bırakır. 5651 m. 5 gereği bir yıl saklanır ve
+`pnpm prune-traffic` ile silinir (D-088).
+
 ### Kayıt ve roller
 
 Herkese açık tek kayıt **okuyucu kaydı**dır (`/register`): ad soyad,
@@ -367,6 +372,7 @@ Uygulama içinde zamanlayıcı yoktur; işler dışarıdan tetiklenir ve idempot
 0    6 * * *  cd /app && pnpm send-reminders
 0    4 * * *  cd /app && pnpm process-deletions
 0    3 * * *  cd /app && pnpm purge-unverified
+30   3 * * *  cd /app && pnpm prune-traffic
 ```
 
 ---

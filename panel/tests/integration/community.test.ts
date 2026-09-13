@@ -5,7 +5,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
-import { articles, communityMessages } from "@/db/schema";
+import { articles, communityMessages, trafficLogs } from "@/db/schema";
+import { pruneTrafficLogs } from "@/lib/traffic";
 import {
   addBannedWord,
   addChatMessage,
@@ -314,6 +315,53 @@ describe("self-referential chat integrity", () => {
     expect(replyItem.quotedBody).toBeNull(); // quoted row no longer visible
   });
 });
+/** D-088: every piece of user content leaves a 5651 traffic record. */
+describe("traffic records (D-088)", () => {
+  it("records who posted a comment, from where and when", async () => {
+    const article = await publishedArticle();
+    const reader = await createUser();
+
+    const comment = await addCommunityComment(
+      actorOf(reader),
+      { articleId: article.id, body: "kayıtlı yorum" },
+      noMeta,
+    );
+
+    const rows = await db.select().from(trafficLogs).where(eq(trafficLogs.entityId, comment.id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.userId).toBe(reader.id);
+    expect(rows[0]!.entityType).toBe("community_comments");
+    expect(rows[0]!.ip).toBe(noMeta.ip);
+    expect(rows[0]!.userAgent).toBe(noMeta.userAgent);
+  });
+
+  it("records a chat message too", async () => {
+    await enableChat();
+    const reader = await createUser();
+    const msg = await addChatMessage(actorOf(reader), { body: "kayıtlı mesaj" }, noMeta);
+
+    const rows = await db.select().from(trafficLogs).where(eq(trafficLogs.entityId, msg.id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.action).toBe("community.message_added");
+  });
+
+  it("prunes only the records older than one year", async () => {
+    const reader = await createUser();
+    const now = new Date("2026-09-13T12:00:00Z");
+    const base = { userId: reader.id, action: "test", entityType: "test", ip: null, userAgent: null };
+
+    await db.insert(trafficLogs).values([
+      { ...base, entityId: null, createdAt: new Date("2025-09-01T00:00:00Z") },
+      { ...base, entityId: null, createdAt: new Date("2025-09-20T00:00:00Z") },
+    ]);
+
+    expect(await pruneTrafficLogs(now)).toBe(1);
+    const left = await db.select().from(trafficLogs);
+    expect(left).toHaveLength(1);
+    expect(left[0]!.createdAt.toISOString()).toBe("2025-09-20T00:00:00.000Z");
+  });
+});
+
 /**
  * D-072: the chat endpoint used `getAuthContext`, which only proves a session
  * exists. The service asked nothing at all, so a banned account kept posting.

@@ -981,6 +981,32 @@ export const communityMessages = pgTable(
   (t) => [index("community_messages_created_idx").on(t.createdAt)],
 );
 
+/**
+ * The 5651 m. 5 traffic record of every piece of user content (D-088).
+ *
+ * Kept apart from `audit_log` on purpose: the audit trail lives for ten years
+ * and a trigger forbids deleting from it, while a traffic record has a
+ * statutory one-year life and is pruned once that year is over.
+ */
+export const trafficLogs = pgTable(
+  "traffic_logs",
+  {
+    id: id(),
+    // The record must outlive an anonymised account, so the link only loosens
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    action: text("action").notNull(),
+    entityType: text("entity_type").notNull(),
+    entityId: uuid("entity_id"),
+    ip: text("ip"),
+    userAgent: text("user_agent"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("traffic_logs_created_idx").on(t.createdAt),
+    index("traffic_logs_entity_idx").on(t.entityType, t.entityId),
+  ],
+);
+
 /* ------------------------------------------------------------------ */
 /* audit_log (append only, D-015)                                      */
 /* ------------------------------------------------------------------ */
