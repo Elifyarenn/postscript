@@ -3264,3 +3264,73 @@ Preview) duruyor. Canlıda seed çalıştırılmıyor ve iki admin sabit. Deği�
 gereksiz bir gizli değer; kaldırılması ürün sahibine önerildi, dokunulmadı.
 
 ---
+
+## D-106 — Admin, yazının süreç geçmişini yazı sayfasında görür
+
+**İstek (ürün sahibi):** "Admin yazının notlarının hepsini görebilsin, yazıların
+adımları sadece editörde ve yazarda kalmasın."
+
+**Tespit:**
+
+- **Notlar:** admin bütün notları zaten görüyordu. Admin menüsündeki "Makaleler
+  & yayın kuyruğu" `/editor/articles/[id]`'ye gider. `assertCanReadArticle`
+  admini her kategoride geçirir; sayfa editöryal notları (çözülenler dahil),
+  intihal notunu ve Eser Onayı ret gerekçesini gösteriyor. Bu konuda değişiklik
+  gerekmedi.
+- **Adımlar:** hiçbir ekranda yoktu, ne editörde ne yazarda.
+  - Kim, ne zaman, hangi durumdan hangisine ve hangi notla geçirdi bilgisi
+    yalnızca `audit_log`'da duruyordu (`article.status_changed`, `before`/`after`).
+  - Revizyon gerekçesi yazara e-postayla gidiyor, sonra hiçbir sayfada
+    görünmüyordu.
+  - "Sürüm geçmişi" yalnızca metin sürümlerini gösteriyor, adımları değil.
+
+**Karar:**
+
+- **Yazı sayfasına "Süreç geçmişi" kartı eklendi**, yalnızca admin görür. Her
+  satırda tarih, kim, adım (durumlarda "önceki → yeni") ve not var.
+- **Kaynak** mevcut `audit_log`; yeni tablo ya da kolon yok.
+  - `src/services/article-history.ts` → `listArticleHistory` şu kayıtları okur:
+    yazıya ait `articles` kayıtları ve o yazının Eser Onaylarına ait
+    `rights_grants` kayıtları (Eser Onayı olayları yazıya değil onaya karşı
+    loglanıyor).
+  - Sıra oluşturulma zamanına göre, eskiden yeniye.
+- **Satırın anlamı saf fonksiyonda:** `src/lib/article-history.ts` →
+  `describeStep`, durum makinesi gibi veritabanından bağımsız. Tanımadığı yeni
+  bir işlem kaybolmaz, ham adıyla görünür.
+- **Neden yalnızca admin:** denetim kaydını bugün yalnızca admin okuyor
+  (`/admin/audit`, `canAccessAdminPanel`). Editöre veya yazara açmak ayrı bir
+  karar olurdu. İstek de admin içindi. Yetki kontrolü serviste; sayfadaki
+  `isAdmin` yalnızca gereksiz sorguyu atlıyor.
+- **IP adresi sonuca konmaz.** Denetim kaydında var, bu ekranın ihtiyacı yok.
+- Ayrı bir `/admin/articles` sayfası açılmadı. Admin yazıları zaten bu sayfadan
+  yönetiyor; aynı yazının iki detay sayfası birbirinden sapardı.
+- Geçmiş en fazla 500 adım. Bu bir sayfa boyutu değil, koruma sınırı.
+
+**Hukuk:** Yeni kişisel veri, amaç veya aktarım yok. Gösterilen bilgi (işlemi
+yapanın görünen adı, zaman, not) aydınlatma metni §2'deki "Denetim" satırında
+zaten sayılı ve admin'in erişimi `/admin/audit`'te zaten var. Metin değişmedi.
+
+**Doğrulama:**
+
+- `tests/unit/article-history.test.ts`:
+  - durum geçişi önceki/yeni durum ve notla okunur, boş not yok sayılır;
+  - intihal sonucu ve notu;
+  - Eser Onayı imzası (yayın adıyla) ve ret gerekçesi;
+  - işlemi yapan yoksa "Sistem";
+  - bilinmeyen işlem ham adıyla görünür.
+- `tests/integration/article-history.test.ts`:
+  - bir yazının bütün adımları sırayla gelir: kayıt, beş durum geçişi, not
+    ekleme, Eser Onayı açılışı ve imzası;
+  - kategori onayındaki not ve işlemi yapanların adları doğru;
+  - IP adresi sonuçta yok;
+  - başka yazının adımları karışmaz;
+  - ana editöre ve yazara 403;
+  - olmayan yazıya 404.
+- typecheck + lint temiz, 43 dosya / 478 test.
+- **E2e koşturulmadı:** `04-editorial` admin olarak bu sayfayı kullanıyor.
+  Seçicileri kontrol edildi, çakışma beklenmiyor:
+  - "Eser Onayı:" metni (iki nokta dahil) kartta geçmiyor;
+  - durum rozeti `header span` ile okunuyor ve kart `header` içermiyor;
+  - geçişler düğme adıyla seçiliyor, tablo metni düğme değil.
+
+---

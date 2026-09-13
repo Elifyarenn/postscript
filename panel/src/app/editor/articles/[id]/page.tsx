@@ -12,6 +12,7 @@ import {
 } from "@/services/articles";
 import { listIssues } from "@/services/issues";
 import { findLiveApproval } from "@/services/rights";
+import { listArticleHistory } from "@/services/article-history";
 import { allMediaLicensed } from "@/services/media";
 import { readCsrfToken } from "@/lib/csrf";
 import { renderMarkdown } from "@/lib/markdown";
@@ -24,6 +25,7 @@ import {
   Input,
   PageHeader,
   Select,
+  STATUS_LABELS,
   StatusBadge,
   Table,
   Td,
@@ -60,7 +62,7 @@ export default async function EditorArticleDetailPage({
 
   // The media card is gone from this page (D-080), but the licence check stays:
   // media attached earlier still blocks publishing until it is licensed.
-  const [grant, versions, comments, issues, writers, licensed] =
+  const [grant, versions, comments, issues, writers, licensed, history] =
     await Promise.all([
       findLiveApproval(article.id),
       listArticleVersions(actor, article.id),
@@ -74,6 +76,7 @@ export default async function EditorArticleDetailPage({
         .where(and(inArray(users.role, ["writer", "editor", "admin"]), isNull(users.deletedAt)))
         .orderBy(users.displayName),
       allMediaLicensed(article.id),
+      isAdmin ? listArticleHistory(actor, article.id) : Promise.resolve([]),
     ]);
 
   const preview = await renderMarkdown(article.bodyMarkdown);
@@ -290,6 +293,49 @@ export default async function EditorArticleDetailPage({
               </>
           </PanelForm>
         </Card>
+
+        {/* Only the admin: the steps come from the audit log, which is theirs (D-106) */}
+        {isAdmin && (
+          <Card>
+            <h2 className="mb-1 font-serif text-lg">Süreç geçmişi</h2>
+            <p className="mb-4 text-xs text-muted">
+              Yazının geçtiği her adım: kim yaptı, ne zaman, hangi notla.
+            </p>
+
+            {history.length === 0 ? (
+              <EmptyState>Kayıtlı adım yok.</EmptyState>
+            ) : (
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>Tarih</Th>
+                    <Th>Kim</Th>
+                    <Th>Adım</Th>
+                    <Th>Not</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map((step) => (
+                    <tr key={step.id}>
+                      <Td className="text-xs whitespace-nowrap">{formatDateTime(step.at)}</Td>
+                      <Td className="text-xs">{step.actor}</Td>
+                      <Td className="text-xs">
+                        {step.label}
+                        {step.toStatus && (
+                          <span className="block text-muted">
+                            {STATUS_LABELS[step.fromStatus ?? ""] ?? step.fromStatus ?? "—"} →{" "}
+                            {STATUS_LABELS[step.toStatus] ?? step.toStatus}
+                          </span>
+                        )}
+                      </Td>
+                      <Td className="text-xs whitespace-pre-wrap">{step.note ?? "—"}</Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </Card>
+        )}
 
         <Card>
           <h2 className="mb-4 font-serif text-lg">Sürüm geçmişi</h2>
