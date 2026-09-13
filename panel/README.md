@@ -310,6 +310,15 @@ vardır. Her gönderi, yorum ve hesap **"Bildir"** ile yöneticiye bildirilir.
 "Topluluk yönetimi"ndeki kuyruk, 24 saati geçen bildirimleri işaretler
 (5651 m. 9).
 
+**Özel mesajlar (D-091, `/social/messages`):** iki üye arasında birebir
+konuşmadır ve yalnızca 18 yaşını doldurmuş üyeler arasında açıktır. Alıcının
+tercihi belirleyicidir: tüm üyeler / yalnızca takip ettikleri (varsayılan) /
+kimse. Alıcı daha önce yazmışsa yanıt verilebilir, ama tercihi "kimse" ise
+verilemez. Engel iki yönde de yazışmayı kapatır. Açık konuşma 5 saniyede bir
+yenilenir (`router.refresh`). "Konuşmayı sil" yalnızca silenin görünümünden
+kaldırır. Okundu bilgisi yoktur. Yöneticiler özel mesajları listeleyemez;
+yalnızca taraflardan birinin bildirdiği mesajın metnini görür.
+
 ### Kayıt ve roller
 
 Herkese açık tek kayıt **okuyucu kaydı**dır (`/register`): ad soyad,

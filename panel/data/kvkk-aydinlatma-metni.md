@@ -30,9 +30,16 @@ ortaklık adına tek başına temsile yetkilidir.
 | İçerik | Dergiye gönderilen eserler ve sürümleri, yazı üzerindeki editör notları |
 | Topluluk | Yazılara yapılan yorumlar, topluluk sohbeti mesajları, paylaştığınız gönderiler ve yanıtlar ile bunların gönderim zamanı; beğendiğiniz ve yeniden paylaştığınız gönderiler; takip ettiğiniz ve sizi takip eden hesaplar, engellediğiniz hesaplar, kaydettiğiniz yazı ve gönderiler, size gönderilen panel içi bildirimler |
 | İçerik bildirimi | Bildirdiğiniz içeriğin türü ve o anki metni, seçtiğiniz bildirim türü, varsa açıklamanız, bildirimin sonucu; bildirilen içeriğin sahibi olduğunuzda bu bilgiler sizinle ilişkilendirilir |
-| Trafik kaydı | Her yorum, mesaj, gönderi ve yanıt için: gönderen hesap, IP adresi, tarayıcı bilgisi (user-agent), işlem türü ve zamanı |
+| Özel mesajlar | Gönderdiğiniz ve aldığınız özel mesajlar ve gönderim zamanları, konuşmayı en son okuduğunuz ve sildiğiniz zaman, özel mesaj tercihiniz |
+| Trafik kaydı | Her yorum, sohbet mesajı, özel mesaj, gönderi ve yanıt için: gönderen hesap, IP adresi, tarayıcı bilgisi (user-agent), işlem türü ve zamanı |
 | Moderasyon | Yasaklama durumu ve gerekçesi, kaldırılan içerik kayıtları |
 | Denetim | Panelde yapılan işlemlerin kaydı: kimin, ne zaman, hangi işlemi, hangi IP adresinden yaptığı |
+
+Özel mesajlarınızı yalnızca siz ve yazıştığınız üye görür; yöneticiler özel
+mesajları listeleyemez ve okuyamaz. Taraflardan biri bir mesajı bildirirse
+yalnızca o mesajın metni incelemeye gönderilir. Doğum tarihiniz, özel
+mesajlaşmanın 18 yaşını doldurmuş üyelerle sınırlı olduğunu denetlemek için de
+kullanılır; karşı tarafa gösterilmez.
 
 Özel nitelikli kişisel veri (sağlık, din, biyometrik veri ve benzeri)
 toplamıyoruz. Kimlik belgesi fotokopisi veya görüntüsü **talep edilmez ve
@@ -46,6 +53,7 @@ saklanmaz**.
 | E-posta adresinin doğrulanması, şifre sıfırlama, e-posta adresi değişikliği | (c) Sözleşmenin ifası |
 | Yazarlık başvurusunun alınması ve değerlendirilmesi | (c) Sözleşmenin kurulması |
 | Yazarlık için aranan 18 yaş şartının denetlenmesi | (c) Sözleşmenin kurulması, (e) Bir hakkın tesisi ve korunması |
+| Özel mesajlaşma işlevinin sunulması ve bu işlevin 18 yaşını doldurmuş üyelerle sınırlandırılması | (c) Sözleşmenin ifası, (f) Meşru menfaat |
 | Yazar sözleşmesinin ve eser bazlı kullanım ruhsatlarının kurulması ve ispatı | (c) Sözleşmenin ifası, (e) Bir hakkın tesisi, kullanılması ve korunması |
 | Yazar profilinin ve eserin dergide yayımlanması, künyede ad veya mahlas belirtilmesi | (c) Sözleşmenin ifası |
 | Yorum ve topluluk sohbeti işlevlerinin sunulması | (c) Sözleşmenin ifası |
@@ -121,6 +129,7 @@ esas alınarak gerçekleştirilmektedir.
 | Yorum, mesaj, gönderi ve yanıtlara ilişkin trafik kayıtları | 1 yıl — 5651 sayılı Kanun m. 5 |
 | Yorum, sohbet mesajı, gönderi ve yanıt içerikleri | Siz silene veya yönetici kaldırana kadar yayında kalır. Silinen veya kaldırılan içerik 1 yıl daha saklanır, sonra kalıcı olarak silinir. |
 | İçerik bildirimleri | Sonuçlanana kadar; sonuçlandıktan 1 yıl sonra kalıcı olarak silinir. |
+| Özel mesajlar | Hesabınız açık kaldığı sürece. "Konuşmayı sil" yalnızca sizin görünümünüzden kaldırır, karşı taraf görmeye devam eder. Hesabınız silindiğinde veya mesaj bildirim üzerine kaldırıldığında karşı taraftan da kalkar ve 1 yıl sonra kalıcı olarak silinir. |
 | Takip, engelleme, kaydetme, beğeni ve yeniden paylaşım kayıtları | Siz geri alana kadar. Geri aldığınızda veya hesabınız silindiğinde kalıcı olarak silinir. |
 | Sözleşme ve eser onayı kayıtları | Sözleşme ilişkisi sona erdikten sonra 10 yıl — Türk Borçlar Kanunu m. 146 |
 | Panel işlem (denetim) kayıtları | 10 yıl |
@@ -128,8 +137,9 @@ esas alınarak gerçekleştirilmektedir.
 
 Hesabınızı sildirdiğinizde ad, e-posta, doğum tarihi, telefon, kullanıcı adı,
 biyografi ve profil görseliniz anonimleştirilir; takip, engelleme, kaydetme,
-beğeni ve yeniden paylaşım kayıtlarınız silinir. Gönderileriniz topluluktan
-kalkar ve silinmiş içerik gibi 1 yıl sonra kalıcı olarak silinir. İmzalı eser onayları, sözleşme kayıtları ve
+beğeni ve yeniden paylaşım kayıtlarınız silinir. Gönderileriniz ve
+gönderdiğiniz özel mesajlar topluluktan kalkar ve silinmiş içerik gibi 1 yıl
+sonra kalıcı olarak silinir. İmzalı eser onayları, sözleşme kayıtları ve
 kanunen saklanması zorunlu trafik kayıtları yukarıdaki süreler boyunca saklanmaya
 devam eder; bunlar derginin eserleri yayımlama hakkının ve yasal
 yükümlülüklerinin dayanağıdır.

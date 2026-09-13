@@ -31,6 +31,9 @@ import { sql } from "drizzle-orm";
 /** Roles are ordered: every role includes the powers of the one before it. */
 export const roleEnum = pgEnum("role", ["user", "writer", "editor", "admin"]);
 
+/** Who may start a private conversation with a member (D-091). */
+export const dmPolicyEnum = pgEnum("dm_policy", ["everyone", "following", "nobody"]);
+
 export const writerStatusEnum = pgEnum("writer_status", [
   "pending_agreement",
   "active",
@@ -193,6 +196,8 @@ export const users = pgTable(
      * the member opts into the social layer; nothing social works without it.
      */
     username: text("username"),
+    /** Defaults to the people the member follows: nobody is reachable by strangers unasked. */
+    dmPolicy: dmPolicyEnum("dm_policy").notNull().default("following"),
     bio: text("bio"),
     avatarMediaId: uuid("avatar_media_id"),
     socialLinks: jsonb("social_links").$type<SocialLinks>(),
@@ -1204,6 +1209,74 @@ export const contentReports = pgTable(
 );
 
 /* ------------------------------------------------------------------ */
+/* private messages (D-091)                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A private conversation between exactly two members. The pair is stored in
+ * order (`member_a_id` < `member_b_id`), so it has one row whoever wrote first.
+ */
+export const conversations = pgTable(
+  "conversations",
+  {
+    id: id(),
+    memberAId: uuid("member_a_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    memberBId: uuid("member_b_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("conversations_pair_unique").on(t.memberAId, t.memberBId),
+    index("conversations_member_b_idx").on(t.memberBId),
+    check("conversations_ordered_pair", sql`${t.memberAId} < ${t.memberBId}`),
+  ],
+);
+
+/** Each member's own view of a conversation: what they read and what they cleared. */
+export const conversationStates = pgTable(
+  "conversation_states",
+  {
+    id: id(),
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    lastReadAt: timestamp("last_read_at", { withTimezone: true }),
+    /** "Delete conversation" hides everything before this moment, for this member only. */
+    clearedAt: timestamp("cleared_at", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex("conversation_states_pair_unique").on(t.conversationId, t.userId)],
+);
+
+export const directMessages = pgTable(
+  "direct_messages",
+  {
+    id: id(),
+    conversationId: uuid("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    senderId: uuid("sender_id").references(() => users.id, { onDelete: "set null" }),
+    /** Stored with banned words already masked (D-040). */
+    body: text("body").notNull(),
+    /** The moderator who removed it after a report; null when gone with the account. */
+    removedBy: uuid("removed_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    deletedAt: deletedAt(),
+  },
+  (t) => [index("direct_messages_conversation_idx").on(t.conversationId, t.createdAt)],
+);
+
+/* ------------------------------------------------------------------ */
 /* audit_log (append only, D-015)                                      */
 /* ------------------------------------------------------------------ */
 
@@ -1260,3 +1333,4 @@ export type ContentReport = typeof contentReports.$inferSelect;
 export type ReportTarget = (typeof reportTargetEnum.enumValues)[number];
 export type ReportCategory = (typeof reportCategoryEnum.enumValues)[number];
 export type ReportStatus = (typeof reportStatusEnum.enumValues)[number];
+export type DmPolicy = (typeof dmPolicyEnum.enumValues)[number];

@@ -7,13 +7,15 @@
  * Deciding one report decides every open report about the same content.
  */
 import "server-only";
-import { and, asc, desc, eq, isNull, lt, ne, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, lt, ne, or, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { db } from "@/db/client";
 import {
   communityComments,
   contentReports,
+  conversations,
+  directMessages,
   posts,
   users,
   type ReportTarget,
@@ -30,7 +32,7 @@ import type { RequestMeta } from "./auth";
 export const MAX_REPORT_REASON = 1000;
 
 /** What can be reported today; later modules add their own kinds. */
-export const REPORTABLE_TARGETS = ["post", "comment", "member"] as const;
+export const REPORTABLE_TARGETS = ["post", "comment", "direct_message", "member"] as const;
 
 export const reportSchema = z.strictObject({
   targetType: z.enum(REPORTABLE_TARGETS),
@@ -42,8 +44,30 @@ export const reportSchema = z.strictObject({
 type ResolvedTarget = { ownerId: string | null; snapshot: string };
 
 /** What a report points at, as it stands now. Content already gone cannot be reported. */
-async function resolveTarget(type: ReportTarget, id: string): Promise<ResolvedTarget> {
+async function resolveTarget(
+  type: ReportTarget,
+  id: string,
+  reporterId: string,
+): Promise<ResolvedTarget> {
   switch (type) {
+    case "direct_message": {
+      // Only one of the two members can report a private message; to anyone
+      // else it does not exist (D-091)
+      const rows = await db
+        .select({ ownerId: directMessages.senderId, snapshot: directMessages.body })
+        .from(directMessages)
+        .innerJoin(conversations, eq(directMessages.conversationId, conversations.id))
+        .where(
+          and(
+            eq(directMessages.id, id),
+            isNull(directMessages.deletedAt),
+            or(eq(conversations.memberAId, reporterId), eq(conversations.memberBId, reporterId)),
+          ),
+        )
+        .limit(1);
+      if (!rows[0]) throw notFound("Mesaj bulunamadı.");
+      return rows[0];
+    }
     case "post": {
       const rows = await db
         .select({ ownerId: posts.authorId, snapshot: posts.body })
@@ -91,7 +115,7 @@ export async function reportContent(
   }
   const input = parsed.data;
 
-  const target = await resolveTarget(input.targetType, input.targetId);
+  const target = await resolveTarget(input.targetType, input.targetId, actor.id);
   if (target.ownerId === actor.id) throw badRequest("Kendi içeriğinizi bildiremezsiniz.");
 
   // Reporting the same thing twice adds nothing to a queue that is still open
@@ -224,6 +248,12 @@ async function removeTarget(
         .update(communityComments)
         .set({ deletedAt: now, updatedAt: now })
         .where(and(eq(communityComments.id, id), isNull(communityComments.deletedAt)));
+      return;
+    case "direct_message":
+      await executor
+        .update(directMessages)
+        .set({ deletedAt: now, removedBy: moderatorId, updatedAt: now })
+        .where(and(eq(directMessages.id, id), isNull(directMessages.deletedAt)));
       return;
     default:
       throw badRequest(

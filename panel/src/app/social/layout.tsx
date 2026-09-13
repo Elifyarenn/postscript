@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { requireSession } from "@/lib/auth/guard";
 import { PanelShell, socialNav } from "@/components/shell";
 import { unreadNotificationCount } from "@/services/notifications";
+import { unreadConversationCount } from "@/services/direct-messages";
 import { getMemberSettings } from "@/services/social";
 
 /**
@@ -10,16 +11,21 @@ import { getMemberSettings } from "@/services/social";
  */
 export default async function SocialLayout({ children }: { children: ReactNode }) {
   const { user } = await requireSession();
-  const [settings, unread] = await Promise.all([
+  const [settings, unread, unreadConversations] = await Promise.all([
     getMemberSettings({ ...user }),
     unreadNotificationCount({ ...user }),
+    unreadConversationCount({ ...user }),
   ]);
 
   return (
     <PanelShell
       user={user}
       area="topluluk"
-      groups={socialNav({ username: settings.username, notifications: unread })}
+      groups={socialNav({
+        username: settings.username,
+        notifications: unread,
+        messages: unreadConversations,
+      })}
     >
       {children}
     </PanelShell>

@@ -136,6 +136,8 @@ export type SocialNavState = {
   /** Null until the member picks a handle; the profile link needs one. */
   username: string | null;
   notifications?: number;
+  /** Conversations with unread messages. */
+  messages?: number;
 };
 
 /**
@@ -149,6 +151,7 @@ export function socialNav(state: SocialNavState): NavGroup[] {
       items: [
         { href: "/social", label: "Akış" },
         { href: "/social/explore", label: "Keşfet" },
+        { href: "/social/messages", label: "Mesajlar", badge: state.messages },
         ...(state.username
           ? [{ href: `/social/u/${state.username}`, label: "Profilim" }]
           : []),

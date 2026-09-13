@@ -31,6 +31,61 @@ import {
   unrepostPost,
 } from "@/services/posts";
 import { reportContent } from "@/services/reports";
+import {
+  clearConversation,
+  sendDirectMessage,
+  setDirectMessagePolicy,
+} from "@/services/direct-messages";
+
+/* ------------------------------------------------------------------ */
+/* Private messages (D-091)                                            */
+/* ------------------------------------------------------------------ */
+
+export async function sendDirectMessageAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireAuth();
+    const meta = await requestMetadata();
+
+    await sendDirectMessage(
+      { ...user },
+      { username: text(formData, "username"), body: text(formData, "body") },
+      meta,
+    );
+
+    revalidatePath("/social/messages", "layout");
+    return { success: "Gönderildi." };
+  });
+}
+
+export async function clearConversationAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireAuth();
+    await clearConversation({ ...user }, text(formData, "username"));
+    revalidatePath("/social", "layout");
+    return { success: "Konuşma sizin için silindi." };
+  });
+}
+
+export async function setDirectMessagePolicyAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireAuth();
+    await setDirectMessagePolicy({ ...user }, { dmPolicy: text(formData, "dmPolicy") });
+    revalidatePath("/social", "layout");
+    return { success: "Özel mesaj tercihiniz kaydedildi." };
+  });
+}
 
 /* ------------------------------------------------------------------ */
 /* Posts (D-090)                                                       */
@@ -187,6 +242,7 @@ export async function blockAction(_state: ActionState, formData: FormData): Prom
     await blockMember({ ...user }, text(formData, "username"));
     revalidateProfile(formData);
     revalidatePath("/social/settings");
+    revalidatePath("/social/messages", "layout");
     return { success: "Hesap engellendi." };
   });
 }
@@ -198,6 +254,7 @@ export async function unblockAction(_state: ActionState, formData: FormData): Pr
     await unblockMember({ ...user }, text(formData, "username"));
     revalidateProfile(formData);
     revalidatePath("/social/settings");
+    revalidatePath("/social/messages", "layout");
     return { success: "Engel kaldırıldı." };
   });
 }

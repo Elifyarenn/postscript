@@ -5,9 +5,10 @@ import { USERNAME_MAX, USERNAME_MIN } from "@/lib/username";
 import { formatDate } from "@/lib/utils";
 import { getMemberSettings, listBlockedMembers } from "@/services/social";
 import { ActionButton, PanelForm } from "@/components/form";
-import { Alert, Card, EmptyState, Field, Input, PageHeader } from "@/components/ui";
+import { Alert, Card, EmptyState, Field, Input, PageHeader, Select } from "@/components/ui";
 import { MemberLink } from "@/components/social";
-import { setUsernameAction, unblockAction } from "../actions";
+import { DM_POLICIES, DM_POLICY_LABELS } from "@/lib/direct-messages";
+import { setDirectMessagePolicyAction, setUsernameAction, unblockAction } from "../actions";
 
 export const metadata = { title: "Topluluk ayarları" };
 
@@ -67,6 +68,26 @@ export default async function SocialSettingsPage() {
               sayfasından düzenleyebilirsiniz.
             </p>
           )}
+        </Card>
+
+        <Card>
+          <h2 className="mb-3 font-serif text-lg">Özel mesajlar</h2>
+          <p className="mb-4 text-sm text-muted">
+            Özel mesajlaşma yalnızca 18 yaşını doldurmuş üyeler arasında açıktır. Daha önce yazdığınız
+            bir üye, tercihiniz &ldquo;Kimse&rdquo; değilse size yanıt verebilir. Engellediğiniz
+            hesaplar size hiçbir durumda yazamaz. Özel mesajlarınızı yöneticiler okuyamaz.
+          </p>
+          <PanelForm action={setDirectMessagePolicyAction} csrfToken={csrfToken} submitLabel="Kaydet">
+            <Field label="Bana kimler özel mesaj gönderebilir?" htmlFor="dmPolicy">
+              <Select id="dmPolicy" name="dmPolicy" defaultValue={settings.dmPolicy}>
+                {DM_POLICIES.map((policy) => (
+                  <option key={policy} value={policy}>
+                    {DM_POLICY_LABELS[policy]}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </PanelForm>
         </Card>
 
         <Card>

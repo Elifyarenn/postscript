@@ -14,7 +14,15 @@ import "server-only";
 import { and, count, desc, eq, isNull, ne, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { articles, bookmarks, follows, userBlocks, users, type Role } from "@/db/schema";
+import {
+  articles,
+  bookmarks,
+  follows,
+  userBlocks,
+  users,
+  type DmPolicy,
+  type Role,
+} from "@/db/schema";
 import { writeAudit, type Executor } from "@/lib/audit";
 import type { Actor } from "@/lib/auth/rbac";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
@@ -93,7 +101,7 @@ export async function isBlockedEitherWay(
   return rows.length > 0;
 }
 
-async function hasBlocked(blockerId: string, blockedId: string): Promise<boolean> {
+export async function hasBlocked(blockerId: string, blockedId: string): Promise<boolean> {
   const rows = await db
     .select({ id: userBlocks.id })
     .from(userBlocks)
@@ -102,7 +110,7 @@ async function hasBlocked(blockerId: string, blockedId: string): Promise<boolean
   return rows.length > 0;
 }
 
-async function isFollowing(followerId: string, followeeId: string): Promise<boolean> {
+export async function isFollowing(followerId: string, followeeId: string): Promise<boolean> {
   const rows = await db
     .select({ id: follows.id })
     .from(follows)
@@ -119,13 +127,15 @@ export const usernameSchema = z.strictObject({
   username: z.string().max(40, "Kullanıcı adı çok uzun."),
 });
 
-export async function getMemberSettings(actor: Actor): Promise<{ username: string | null }> {
+export async function getMemberSettings(
+  actor: Actor,
+): Promise<{ username: string | null; dmPolicy: DmPolicy }> {
   const rows = await db
-    .select({ username: users.username })
+    .select({ username: users.username, dmPolicy: users.dmPolicy })
     .from(users)
     .where(eq(users.id, actor.id))
     .limit(1);
-  return { username: rows[0]?.username ?? null };
+  return { username: rows[0]?.username ?? null, dmPolicy: rows[0]?.dmPolicy ?? "following" };
 }
 
 /** Picks or changes the handle. Returns the stored, normalised form. */

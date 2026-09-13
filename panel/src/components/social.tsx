@@ -146,6 +146,12 @@ export function ProfileHeader({
                   confirmMessage={`@${profile.username} engellensin mi? Takipleriniz karşılıklı olarak kaldırılır.`}
                 />
                 <Link
+                  href={`/social/messages/${profile.username}`}
+                  className="rounded-md border border-line px-3 py-1 text-xs hover:bg-paper"
+                >
+                  Mesaj
+                </Link>
+                <Link
                   href={`/social/report?type=member&id=${profile.id}`}
                   className="px-2 text-xs text-muted hover:text-danger"
                 >

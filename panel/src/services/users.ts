@@ -24,6 +24,8 @@ import { db } from "@/db/client";
 import {
   articles,
   bookmarks,
+  conversationStates,
+  directMessages,
   editorCategories,
   follows,
   postLikes,
@@ -855,6 +857,13 @@ async function anonymise(user: User): Promise<void> {
     .set({ deletedAt: now, updatedAt: now })
     .where(and(eq(posts.authorId, user.id), isNull(posts.deletedAt)));
 
+  // Private messages leave the other member's view too, then age out (D-091)
+  await db
+    .update(directMessages)
+    .set({ deletedAt: now, updatedAt: now })
+    .where(and(eq(directMessages.senderId, user.id), isNull(directMessages.deletedAt)));
+  await db.delete(conversationStates).where(eq(conversationStates.userId, user.id));
+
   await revokeAllSessions(user.id);
 }
 
@@ -934,6 +943,8 @@ export async function exportUserData(actor: Actor, targetUserId: string) {
     select 'post_reposts', row_to_json(s) from post_reposts s where s.user_id = ${targetUserId}
     union all
     select 'content_reports', row_to_json(c) from content_reports c where c.reporter_id = ${targetUserId}
+    union all
+    select 'direct_messages', row_to_json(d) from direct_messages d where d.sender_id = ${targetUserId}
   `);
 
   return {

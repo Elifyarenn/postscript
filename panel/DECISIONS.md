@@ -2365,3 +2365,89 @@ Yayından önce Neon dalında çalıştırılmalı.
 birleştirme, Keşfet sıralaması, öneri sıralaması, 24 saat sınırı).
 
 ---
+
+## D-091 — Özel mesajlar: yalnızca yetişkinler, alıcının tercihi, yönetici okuyamaz
+
+**Bağlam:** Topluluk tasarımının mesajlar ekranı (sol konuşma listesi, ortada
+sohbet, sağda profil + Block / Report / Delete Conversation). İlk analizde
+"önce hukukçu görüşü" önerildi; ürün sahibi "hepsini yap" dedi. CLAUDE.md
+gereği muhafazakâr olan uygulandı ve hukuki soru aşağıya yazıldı.
+
+**Karar:**
+
+- **Veri modeli:** `conversations` (sıralı çift, `member_a_id < member_b_id`
+  check'i ve unique index; kim önce yazarsa yazsın tek satır),
+  `conversation_states` (üye başına son okuma ve "konuşmayı sil" anı),
+  `direct_messages` (1000'lik gönderiden ayrı, en çok 2000 karakter, düz
+  metin, yasaklı kelime maskesi, trafik kaydı).
+- **Kim yazabilir** (`src/lib/direct-messages.ts` → `directMessageProblem`, saf fonksiyon; sıra önemli):
+  1. Engel iki yönde de kapatır.
+  2. Gönderen de alıcı da 18 yaşını doldurmuş olmalı. Doğum tarihi yoksa
+     yetişkin sayılmaz. Alıcı reşit değilse gönderene sebep söylenmez.
+  3. Alıcının tercihi `users.dm_policy`: `everyone` / `following`
+     (varsayılan) / `nobody`. `nobody` gerçekten kimse demektir, yanıtı da
+     kapatır.
+  4. Alıcı konuşmada daha önce yazdıysa yanıt serbesttir.
+  5. `following`'de alıcı göndereni takip etmelidir.
+
+  Varsayılanın `following` olması, hiç kimsenin tanımadığı birinden istemediği
+  mesajı almaması içindir. Kullanıcı adı zorunlu. Dakikada en çok 20 mesaj
+  (429). Engelleyen, engellediği kişi için yoktur: konuşma sayfası 404.
+- **Yönetici okuyamaz.** Admin için özel mesaj listesi veya ekranı yok, olmayacak.
+  Moderasyonun tek yolu D-090'daki bildirim: yalnızca konuşmanın bir üyesi bir
+  mesajı bildirebilir (başkasına mesaj "yok", 404). Moderatör yalnızca o tek
+  mesajın metin kopyasını görür. "Kaldır" kararı mesajı iki taraftan da siler
+  (`removed_by`).
+- **Okundu bilgisi yok.** Tasarımda çift tik var, yapılmadı: birinin bir mesajı
+  ne zaman okuduğu, gönderenin değil onun bilgisidir. `last_read_at` yalnızca
+  okuyanın kendi okunmamış sayacı için tutulur ve karşı tarafa gösterilmez.
+- **"Konuşmayı sil"** yalnızca silenin görünümünü temizler (`cleared_at`).
+  Karşı taraf görmeye devam eder. Yeni mesaj gelince konuşma yeniden görünür.
+- **Canlılık:** WebSocket yok (barındırma sunmuyor). Açık konuşma
+  `AutoRefresh` ile 5 saniyede bir `router.refresh()` yapar; Next 16 dokümanı
+  bunun istemci durumunu (yarım yazılmış mesaj) koruduğunu belirtiyor. Gizli
+  sekme yenilenmez. Kenar çubuğunda okunmamış konuşma sayısı rozeti var.
+- **Yapılmayanlar:**
+  - **Dosya/görsel ekleme ve "Shared Media / Files" paneli:** nesne depolama
+    yok; özel alanda yüklenen dosyanın denetimi moderasyonsuz olurdu.
+  - **Sesli arama:** WebRTC gerektirir, kapsam dışı.
+  - **Emoji seçici:** klavye emojisi zaten çalışıyor.
+- **Hesap silme:** gönderdiği mesajlar yumuşak silinir; karşı taraftan da
+  kalkar ve bir yıl sonra `pnpm prune-community` ile kalıcı silinir. Konuşma
+  durumu satırları silinir. `exportUserData` gönderilen mesajları döndürür.
+- Profil başlığına "Mesaj" bağlantısı, topluluk ayarlarına özel mesaj tercihi
+  eklendi.
+
+**Hukuk:**
+- **Aydınlatma metni:**
+  - Yeni "Özel mesajlar" veri satırı; trafik kaydı satırına özel mesaj eklendi.
+  - Yeni amaç: özel mesajlaşma ve 18 yaş sınırı, (c) + (f).
+  - Saklama satırı: konuşmayı silmenin etkisi, hesap silme, bildirim sonrası
+    kaldırma.
+  - Yöneticilerin okuyamadığı ve doğum tarihinin yaş denetimi için
+    kullanıldığı açıkça yazıldı.
+- **Kullanım şartları:** 18 yaş, tercih, engel, yönetici okuyamaz ve bildirim
+  yolu eklendi.
+- **Hukukçu görüşü gerekiyor:**
+  1. Özel mesajlar haberleşmenin gizliliği kapsamındadır (Anayasa m. 22,
+     TCK m. 132). Bir tarafın bildirdiği tek mesajın moderatöre gösterilmesi,
+     o tarafın kendi aldığı mesajı paylaşması olarak kurgulandı; bu kurgunun
+     yeterliliği sorulmalı.
+  2. Özel mesajlar için 5651 m. 5 trafik kaydı tutmak zorunlu mu, yoksa
+     ölçüsüz mü? Muhafazakâr olan (tutmak) uygulandı; saklama 1 yılla sınırlı.
+  3. 18 yaş sınırı beyana (kayıttaki doğum tarihi) dayanıyor.
+
+**Sürücü (D-078):** Yeni kalıplar:
+- `check` ile uuid karşılaştırması (`member_a_id < member_b_id`)
+- `or(isNull, ne)`
+- konuşma başına iki küçük sorgu (liste 50 konuşmayla sınırlı)
+
+Upsert yok. İlk mesajların eşzamanlı yarışı unique index'e çarparsa istek 500
+döner, yenilenince geçer. Yayından önce Neon dalında çalıştırılmalı.
+
+**Üretim:** Migration `0028`. 0026–0028 üretime uygulanmadı; push yapılmadı.
+
+**Doğrulama:** typecheck + lint temiz, 31 dosya / 408 test (18 yeni:
+`tests/unit/direct-messages.test.ts`, `tests/integration/direct-messages.test.ts`).
+
+---
