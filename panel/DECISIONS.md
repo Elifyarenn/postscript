@@ -2887,3 +2887,43 @@ yayınlar. Metinde hâlâ `[NESNE DEPOLAMA SAĞLAYICISI]`, `[E-POSTA SAĞLAYICIS
 **Doğrulama:** typecheck + lint temiz, 37 dosya / 440 test geçti.
 
 ---
+
+## D-101 — `Permissions-Policy` başlığı eklendi
+
+**Sorun:** Yayın notundaki eksik listesi güvenlik başlıklarını ve e-posta
+değiştirme ekranını "henüz yok" diye gösteriyordu. Kod okundu:
+`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, CSP,
+`X-Permitted-Cross-Domain-Policies` ve `poweredByHeader: false` zaten
+`next.config.ts`'te; e-posta değiştirme de var (`/verify-email/change`).
+Gerçekten eksik olan tek şey `Permissions-Policy` idi.
+
+**Karar:**
+- Her yanıta `Permissions-Policy` eklenir. Kapatılanlar: accelerometer,
+  autoplay, bluetooth, browsing-topics, camera, display-capture, geolocation,
+  gyroscope, hid, magnetometer, microphone, midi, payment, serial, usb.
+- Gerekçe: `src` içinde hiçbir tarayıcı yeteneği API'si (`navigator.clipboard`,
+  `geolocation`, `mediaDevices` …) ve `iframe` yok. Kapatmak bugün hiçbir ekranı
+  bozmaz; CSP'yi aşan bir betiğin okuyucudan bu izinleri istemesini engeller.
+  `browsing-topics` reklam hedeflemesi için ilgi alanı çıkarımıdır; kâr amacı
+  gütmeyen, reklamsız bir dergide okuyucunun okuduğu yazıların tarayıcıya konu
+  olarak işlenmesine gerek yok.
+- `interest-cohort` (FLoC) listede yok: tarayıcılar tanımıyor ve konsola uyarı
+  basıyor.
+- `fullscreen` listede yok: varsayılanı zaten yalnızca aynı köken.
+- `X-Permitted-Cross-Domain-Policies` satırındaki yorum yanlıştı ("sitenin
+  gömülmesini engeller"); başlık Flash/PDF okuyucuların çapraz alan politika
+  dosyasıyla ilgili. Yorum düzeltildi, değer aynı.
+- `Strict-Transport-Security` eklenmedi: Vercel alan adlarına HSTS'yi kendisi
+  koyuyor (2026-09-13'te `https://www.postscriptmag.com/` yanıtında
+  `Strict-Transport-Security: max-age=63072000` görüldü). Uygulamadan ikinci bir değer göndermek, `preload` gibi geri alınması
+  zor bir kararı sessizce alma riski taşır.
+
+**Hukuk:** Yeni bir kişisel veri, amaç veya çerez yok; aydınlatma metni
+değişmedi.
+
+**Doğrulama:** `tests/unit/security-headers.test.ts` — altı başlığın tümü
+`/:path*` kuralında, `Permissions-Policy` kamera/mikrofon/konum/ödeme/
+browsing-topics'i kapatıyor, çerçeveleme hem `X-Frame-Options` hem CSP ile
+yasak, `poweredByHeader` kapalı. typecheck + lint temiz, 38 dosya / 444 test.
+
+---

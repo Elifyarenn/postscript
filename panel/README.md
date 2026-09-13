@@ -365,8 +365,12 @@ kimin beklemede olduğunu listeler (D-042).
 ### Güvenlik başlıkları
 
 `next.config.ts` her yanıta `X-Content-Type-Options`, `X-Frame-Options`,
-`Referrer-Policy`, `Content-Security-Policy` ve `X-Permitted-Cross-Domain-Policies`
-ekler ve `X-Powered-By` üstbilgisini kapatır (`poweredByHeader: false`).
+`Referrer-Policy`, `Content-Security-Policy`, `X-Permitted-Cross-Domain-Policies`
+ve `Permissions-Policy` ekler ve `X-Powered-By` üstbilgisini kapatır
+(`poweredByHeader: false`). `Permissions-Policy` kamera, mikrofon, konum, ödeme,
+USB/Bluetooth gibi yetenekleri ve `browsing-topics`'i tümüyle kapatır; bir sayfa
+bunlardan birine ihtiyaç duyarsa listeden yalnızca o çıkarılır (D-101).
+`tests/unit/security-headers.test.ts` başlıkların silinmediğini denetler.
 
 ---
 

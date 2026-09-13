@@ -28,8 +28,30 @@ const securityHeaders = [
       "form-action 'self'",
     ].join("; "),
   },
-  // Disallow the site to be embedded; belt and braces on top of X-Frame-Options
+  // Stop Flash/PDF readers from loading a cross-domain policy file from this origin
   { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
+  // No page uses a device or browser capability and nothing is embedded (D-101),
+  // so an injected script cannot ask the reader for camera, location and the like
+  {
+    key: "Permissions-Policy",
+    value: [
+      "accelerometer=()",
+      "autoplay=()",
+      "bluetooth=()",
+      "browsing-topics=()",
+      "camera=()",
+      "display-capture=()",
+      "geolocation=()",
+      "gyroscope=()",
+      "hid=()",
+      "magnetometer=()",
+      "microphone=()",
+      "midi=()",
+      "payment=()",
+      "serial=()",
+      "usb=()",
+    ].join(", "),
+  },
 ];
 
 const nextConfig: NextConfig = {
