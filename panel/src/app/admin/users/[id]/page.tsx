@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { desc, eq } from "drizzle-orm";
@@ -5,7 +6,8 @@ import { db } from "@/db/client";
 import { roleChanges, users, type User } from "@/db/schema";
 import { guardPanel } from "@/lib/auth/guard";
 import { isAppError } from "@/lib/errors";
-import { checkPromotionReadiness, findUserById } from "@/services/users";
+import { checkPromotionReadiness, findUserById, getUserOverview } from "@/services/users";
+import { calculateAge } from "@/lib/age";
 import { renderAgreementForWriter } from "@/services/agreements";
 import { listAllWriterAreasWithQuota } from "@/services/writer-areas";
 import { listEditorAreasWithHolders, listEditorCategories } from "@/services/editor-categories";
@@ -56,7 +58,7 @@ export default async function AdminUserDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await guardPanel("admin");
+  const { user } = await guardPanel("admin");
   const { id } = await params;
   const csrfToken = (await readCsrfToken()) ?? "";
 
@@ -80,6 +82,74 @@ export default async function AdminUserDetailPage({
     target.role === "editor" ? await listEditorAreasWithHolders() : [];
   const areaIdBySlot = new Map(editorDuties.map((duty) => [duty.slot, duty.areaId]));
   const hybrid = target.role === "editor" && target.writerStatus !== null;
+
+  const overview = await getUserOverview({ ...user }, id);
+  const age = target.birthDate ? calculateAge(target.birthDate) : null;
+
+  // The info card shows what this kind of account actually carries (D-087):
+  // consent and the application for a reader, areas and output for a writer,
+  // duties for an editor, the second factor for staff
+  const details: { label: string; value: ReactNode }[] = [
+    { label: "E-posta", value: target.email },
+    {
+      label: "E-posta doğrulama",
+      value: target.emailVerifiedAt ? formatDateTime(target.emailVerifiedAt) : "Doğrulanmadı",
+    },
+    { label: "Telefon", value: target.phone ?? "—" },
+    {
+      label: "Doğum tarihi",
+      value: target.birthDate
+        ? `${formatDate(target.birthDate)}${age !== null ? ` (${age} yaş)` : ""}`
+        : "—",
+    },
+    ...(target.role === "user"
+      ? [
+          {
+            label: "KVKK onayı",
+            value: target.kvkkConsentAt
+              ? `v${target.kvkkConsentVersion ?? "?"} · ${formatDateTime(target.kvkkConsentAt)}`
+              : "—",
+          },
+          {
+            label: "Yazar başvurusu",
+            value: overview.applicationStatus ? (
+              <StatusBadge status={overview.applicationStatus} />
+            ) : (
+              "Yok"
+            ),
+          },
+        ]
+      : []),
+    ...(target.role === "writer" || hybrid
+      ? [
+          { label: "Mahlas", value: target.penName ?? "—" },
+          { label: "Alan", value: target.writerArea ?? "—" },
+          { label: "2. alan", value: target.writerArea2 ?? "—" },
+          {
+            label: "Yazılar",
+            value: `${overview.articleCount} (${overview.publishedCount} yayında)`,
+          },
+        ]
+      : []),
+    ...(target.role === "editor"
+      ? [
+          {
+            label: "Sorumlu alanlar",
+            value: overview.editorAreas.length > 0 ? overview.editorAreas.join(" · ") : "—",
+          },
+          { label: "Ana editör", value: target.isMainEditor ? "Evet" : "Hayır" },
+        ]
+      : []),
+    ...(target.role === "editor" || target.role === "admin"
+      ? [
+          {
+            label: "İki adımlı doğrulama",
+            value: target.totpEnabledAt ? "Açık" : "Kapalı — kurulana kadar panele giremez",
+          },
+        ]
+      : []),
+    { label: "Kayıt", value: formatDateTime(target.createdAt) },
+  ];
 
   // §9: the admin may look at the filled contract before promoting. This
   // preview is never stored; it exists only to be read.
@@ -135,30 +205,12 @@ export default async function AdminUserDetailPage({
         <Card>
           <h2 className="mb-4 font-serif text-lg">Kayıt bilgileri</h2>
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
-            <div>
-              <dt className="text-muted">E-posta</dt>
-              <dd className="text-ink">{target.email}</dd>
-            </div>
-            <div>
-              <dt className="text-muted">Telefon</dt>
-              <dd className="text-ink">{target.phone ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted">Doğum tarihi</dt>
-              <dd className="text-ink">{target.birthDate ? formatDate(target.birthDate) : "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted">Alan</dt>
-              <dd className="text-ink">{target.writerArea ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted">2. alan</dt>
-              <dd className="text-ink">{target.writerArea2 ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted">Kayıt</dt>
-              <dd className="text-ink">{formatDateTime(target.createdAt)}</dd>
-            </div>
+            {details.map((detail) => (
+              <div key={detail.label}>
+                <dt className="text-muted">{detail.label}</dt>
+                <dd className="text-ink">{detail.value}</dd>
+              </div>
+            ))}
           </dl>
         </Card>
 

@@ -2062,3 +2062,68 @@ doğrulanıyor.
 geçti.
 
 ---
+## D-087 — Admin kullanıcı listesi hesap türüne göre ayrıldı; çizer listesi şimdilik boş
+
+**İstek (ürün sahibi):** "Admin panelinde kullanıcılar kısmında navda alt
+kategoride hepsi/yazarlar/editörler/çizerler/kullanıcılar şeklinde olsun ve
+kullanıcı paneli görünümü hepsinin özelliklerine barındırdığı bilgilere göre
+yapılsın." Çizerler için: "Çizerleri henüz eklemedim, onu henüz çizer yok diye
+ekleyebilirsin."
+
+**Karar:**
+
+- Kenar çubuğunda "Kullanıcılar"ın altında beş alt bağlantı var: Hepsi
+  (`/admin/users`), Yazarlar (`/admin/users/writers`), Editörler
+  (`/admin/users/editors`), Çizerler (`/admin/users/illustrators`), Kullanıcılar
+  (`/admin/users/readers`). Adlar ve yollar tek yerde tanımlı:
+  `src/lib/user-segments.ts`. `NavItem`'a `children` eklendi. Alt bağlantı
+  yalnızca kendi sayfasında vurgulanır; üst öğe yalnızca bölümü işaretler.
+- **Kim hangi listede** (servis: `listUsers`'ın `segment` filtresi):
+  - Yazarlar: `writer` rolü ve hibrit "Editor & Yazar" hesaplar. Hibrit iki
+    görevi de taşıdığı için iki listede de görünür (D-060).
+  - Editörler: `editor` rolü.
+  - Kullanıcılar: `user` rolü.
+  - Admin yalnızca Hepsi'de görünür. Rol filtresi de yalnızca Hepsi'de kaldı.
+    Genel bakıştaki sayı kartları ilgili listeye gider; Yönetici kartı
+    `?role=admin` ile Hepsi'ye.
+- **Sütunlar hesap türüne göre:**
+  - Hepsi: değişmedi.
+  - Yazarlar: yazar durumu, alanlar, yazı sayısı (silinmemiş) ve yayındaki
+    yazı sayısı.
+  - Editörler: editör durumu, sorumlu alanlar (slot sırasıyla), ana editör,
+    2FA açık/kapalı.
+  - Kullanıcılar: e-posta doğrulama, yaş (18 altı işaretli), KVKK onay sürümü
+    ve tarihi, son yazar başvurusunun durumu.
+
+  Sütun seçimi liste başına localStorage'da tutulur. Hepsi eski anahtarı
+  (`admin:users:columns`) korur, önceden yapılmış seçim kaybolmaz.
+- **Detay sayfası:** "Kayıt bilgileri" kartı hesabın rolüne göre dolar.
+  Okuyucuda KVKK onayı ve başvuru durumu; yazar ve hibritte mahlas, alanlar ve
+  yazılar; editörde sorumlu alanlar ve ana editör; editör ve admin'de iki adımlı
+  doğrulama. Terfi, rol/durum ve hesap işlemleri kartları değişmedi.
+- **Çizerler:** `role` enum'unda çizer yok. Rol eklemek bir migration (D-082'de
+  bekletilen `0024` ile birlikte canlıya çıkar), çizer sözleşmesi
+  (`agreement_versions.kind`, D-084) ve aydınlatma metni güncellemesi ister.
+  Ürün sahibi rolü henüz eklemediğini söyledi. Bu yüzden sayfa "Henüz çizer
+  yok." der; servis sorgu atmadan boş liste döner. Rol tanımlandığında
+  `segmentCondition` ve sütun listesi doldurulur.
+
+**Veri ve hukuk:** Yeni kişisel veri toplanmıyor, yeni bir işleme amacı yok.
+Admin, detay sayfasında zaten gördüğü alanları artık listede de görüyor.
+Aydınlatma metni değişmedi. TOTP sırrı sorgulanmıyor; tarayıcıya yalnızca
+açık/kapalı bilgisi gidiyor.
+
+**Sürücü (D-078):** Yeni sorgular `count()` + `groupBy` + `inArray` +
+`innerJoin` kullanıyor; ham `sql` şablonu ya da upsert yok. Aynı
+`count()`/`groupBy` kalıbı admin genel bakışında zaten üretimde çalışıyor.
+
+**Bilinen fark:** Genel bakıştaki "Yazar" sayısı yalnızca `role = writer`
+hesapları sayar. Yazarlar listesi hibritleri de içerdiği için liste bu sayıdan
+uzun olabilir.
+
+**Doğrulama:** typecheck + lint temiz, 25 dosya / 345 birim ve entegrasyon testi
+(8 yeni: `tests/integration/user-segments.test.ts`), 25/25 e2e geçti. Yeni e2e
+(`07c-admin-user-segments.spec.ts`), 08-two-factor admin'in TOTP sırrını
+değiştirdiği için ondan önce koşacak şekilde adlandırıldı.
+
+---

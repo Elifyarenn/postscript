@@ -19,8 +19,15 @@ import { BackButton } from "./back-button";
 import { PanelModeSwitch } from "./panel-switch";
 import { readCsrfToken } from "@/lib/csrf";
 import type { SessionUser } from "@/lib/auth/session";
+import { USER_SEGMENTS, USER_SEGMENT_META } from "@/lib/user-segments";
 
-export type NavItem = { href: string; label: string; disabled?: boolean };
+export type NavItem = {
+  href: string;
+  label: string;
+  disabled?: boolean;
+  /** Sub-links listed under this item; each is highlighted only on its own page. */
+  children?: NavItem[];
+};
 
 export type NavGroup = {
   /** Uppercase, gray section heading; omitted for single-section menus. */
@@ -41,7 +48,15 @@ export const ADMIN_NAV: NavGroup[] = [
   {
     label: "Yönetim & Kullanıcılar",
     items: [
-      { href: "/admin/users", label: "Kullanıcılar" },
+      {
+        href: "/admin/users",
+        label: "Kullanıcılar",
+        // One sub-link per kind of account (D-087)
+        children: USER_SEGMENTS.map((segment) => ({
+          href: USER_SEGMENT_META[segment].href,
+          label: USER_SEGMENT_META[segment].navLabel,
+        })),
+      },
       { href: "/admin/categories", label: "Yazı alanları" },
       { href: "/admin/applications", label: "Yazar başvuruları" },
     ],

@@ -11,7 +11,7 @@ import { useState, type ReactNode } from "react";
 import { ArrowRight, LayoutDashboard, Megaphone, Menu, Scale, Users, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logoutAction } from "@/app/(auth)/actions";
-import type { NavGroup } from "./shell";
+import type { NavGroup, NavItem } from "./shell";
 import type { SessionUser } from "@/lib/auth/session";
 
 const GROUP_ICONS: Record<string, ReactNode> = {
@@ -26,10 +26,13 @@ function NavLink({
   item,
   pathname,
   onNavigate,
+  sub = false,
 }: {
-  item: { href: string; label: string; disabled?: boolean };
+  item: NavItem;
   pathname: string;
   onNavigate?: () => void;
+  /** A sub-link under a parent item (D-087). */
+  sub?: boolean;
 }) {
   if (item.disabled) {
     return (
@@ -43,22 +46,30 @@ function NavLink({
   }
 
   // A section root ("/admin") matches only itself; deeper pages match their
-  // own branch so /admin/users/… highlights "Kullanıcılar"
+  // own branch so /admin/users/… highlights "Kullanıcılar". A sub-link matches
+  // only its own page, or "Hepsi" would light up on every other users list.
   const isRoot = item.href.split("/").length === 2;
-  const active = pathname === item.href || (!isRoot && pathname.startsWith(`${item.href}/`));
+  const active =
+    pathname === item.href || (!sub && !isRoot && pathname.startsWith(`${item.href}/`));
+  // A parent with sub-links only marks the section; the sub-link carries the highlight
+  const highlighted = active && !item.children;
 
   return (
     <Link
       href={item.href}
       onClick={onNavigate}
+      aria-current={highlighted ? "page" : undefined}
       className={cn(
-        "relative flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors",
-        active
+        "relative flex items-center gap-2.5 rounded-md px-3 transition-colors",
+        sub ? "py-1.5 text-[13px]" : "py-2 text-sm",
+        highlighted
           ? "bg-white/12 font-medium text-white"
-          : "text-paper/85 hover:bg-white/10 hover:text-white",
+          : active
+            ? "font-medium text-white hover:bg-white/10"
+            : "text-paper/85 hover:bg-white/10 hover:text-white",
       )}
     >
-      {active && (
+      {highlighted && (
         <span
           aria-hidden
           className="absolute top-1/2 left-0 h-5 w-0.5 -translate-y-1/2 rounded-full bg-paper"
@@ -92,7 +103,22 @@ function NavContent({
           )}
           <div className="space-y-0.5">
             {group.items.map((item) => (
-              <NavLink key={item.href} item={item} pathname={pathname} onNavigate={onNavigate} />
+              <div key={item.href}>
+                <NavLink item={item} pathname={pathname} onNavigate={onNavigate} />
+                {item.children && (
+                  <div className="mt-0.5 mb-1 ml-5 space-y-0.5 border-l border-white/15 pl-2">
+                    {item.children.map((child) => (
+                      <NavLink
+                        key={child.href}
+                        item={child}
+                        pathname={pathname}
+                        onNavigate={onNavigate}
+                        sub
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </div>

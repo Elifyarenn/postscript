@@ -5,11 +5,34 @@
  * server, and no role ever changes without a `role_changes` row.
  */
 import "server-only";
-import { and, desc, eq, ilike, isNull, or, sql, type SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { users, type Role, type User } from "@/db/schema";
-import { isAdult, MINIMUM_WRITER_AGE, parseIsoDate } from "@/lib/age";
+import {
+  articles,
+  editorCategories,
+  users,
+  writerApplications,
+  writerAreas,
+  type Role,
+  type User,
+  type WriterApplicationStatus,
+} from "@/db/schema";
+import { calculateAge, isAdult, MINIMUM_WRITER_AGE, parseIsoDate } from "@/lib/age";
+import type { UserListRow, UserSegment } from "@/lib/user-segments";
 import { normalisePhone } from "@/lib/phone";
 import { recordRoleChange, writeAudit } from "@/lib/audit";
 import { canManageUsers, type Actor } from "@/lib/auth/rbac";
@@ -98,14 +121,125 @@ export async function findUserById(userId: string): Promise<User> {
 export type UserListFilters = {
   query?: string;
   role?: Role;
+  /** Which admin list is asking (D-087): narrows the rows and picks the extra figures. */
+  segment?: UserSegment;
   limit?: number;
   offset?: number;
 };
 
-export async function listUsers(actor: Actor, filters: UserListFilters = {}) {
+/**
+ * Who belongs to each admin list. A hybrid "Editor & Yazar" holds both duties,
+ * so it is listed under writers and editors alike (D-060).
+ */
+function segmentCondition(segment: UserSegment): SQL | undefined {
+  switch (segment) {
+    case "writers":
+      return or(
+        eq(users.role, "writer"),
+        and(eq(users.role, "editor"), isNotNull(users.writerStatus)),
+      );
+    case "editors":
+      return eq(users.role, "editor");
+    case "readers":
+      return eq(users.role, "user");
+    default:
+      return undefined;
+  }
+}
+
+type ArticleCounts = { total: number; published: number };
+
+/** Articles per author; a soft-deleted article is no longer the writer's output. */
+async function articleCountsFor(userIds: string[]): Promise<Map<string, ArticleCounts>> {
+  const counts = new Map<string, ArticleCounts>();
+  if (userIds.length === 0) return counts;
+
+  const rows = await db
+    .select({ authorId: articles.authorId, status: articles.status, total: count() })
+    .from(articles)
+    .where(and(inArray(articles.authorId, userIds), isNull(articles.deletedAt)))
+    .groupBy(articles.authorId, articles.status);
+
+  for (const row of rows) {
+    if (!row.authorId) continue;
+    const entry = counts.get(row.authorId) ?? { total: 0, published: 0 };
+    entry.total += row.total;
+    if (row.status === "published") entry.published += row.total;
+    counts.set(row.authorId, entry);
+  }
+  return counts;
+}
+
+/** The area names each editor holds, "1. alan" first. */
+async function editorAreaNamesFor(userIds: string[]): Promise<Map<string, string[]>> {
+  const names = new Map<string, string[]>();
+  if (userIds.length === 0) return names;
+
+  const rows = await db
+    .select({ editorId: editorCategories.editorId, name: writerAreas.name })
+    .from(editorCategories)
+    .innerJoin(writerAreas, eq(editorCategories.areaId, writerAreas.id))
+    .where(inArray(editorCategories.editorId, userIds))
+    .orderBy(asc(editorCategories.slot));
+
+  for (const row of rows) {
+    names.set(row.editorId, [...(names.get(row.editorId) ?? []), row.name]);
+  }
+  return names;
+}
+
+/** Each user's most recent writer application; the older ones are history. */
+async function latestApplicationStatusFor(
+  userIds: string[],
+): Promise<Map<string, WriterApplicationStatus>> {
+  const latest = new Map<string, WriterApplicationStatus>();
+  if (userIds.length === 0) return latest;
+
+  const rows = await db
+    .select({ userId: writerApplications.userId, status: writerApplications.status })
+    .from(writerApplications)
+    .where(inArray(writerApplications.userId, userIds))
+    .orderBy(desc(writerApplications.submittedAt));
+
+  // Newest first, so the first row seen for a user is the one that counts
+  for (const row of rows) {
+    if (!latest.has(row.userId)) latest.set(row.userId, row.status);
+  }
+  return latest;
+}
+
+/** The role-specific figures on the admin user detail page (D-087). */
+export async function getUserOverview(actor: Actor, userId: string) {
   if (!canManageUsers(actor)) throw forbidden();
 
+  const [articleCounts, editorAreas, applications] = await Promise.all([
+    articleCountsFor([userId]),
+    editorAreaNamesFor([userId]),
+    latestApplicationStatusFor([userId]),
+  ]);
+
+  return {
+    articleCount: articleCounts.get(userId)?.total ?? 0,
+    publishedCount: articleCounts.get(userId)?.published ?? 0,
+    editorAreas: editorAreas.get(userId) ?? [],
+    applicationStatus: applications.get(userId) ?? null,
+  };
+}
+
+export async function listUsers(
+  actor: Actor,
+  filters: UserListFilters = {},
+): Promise<UserListRow[]> {
+  if (!canManageUsers(actor)) throw forbidden();
+
+  const segment = filters.segment ?? "all";
+  // There is no illustrator role yet (D-087): the list is empty by definition,
+  // not because a query happened to find nobody
+  if (segment === "illustrators") return [];
+
   const conditions: SQL[] = [isNull(users.deletedAt)];
+  const bySegment = segmentCondition(segment);
+  if (bySegment) conditions.push(bySegment);
   if (filters.role) conditions.push(eq(users.role, filters.role));
   if (filters.query) {
     const pattern = `%${filters.query.trim()}%`;
@@ -117,7 +251,7 @@ export async function listUsers(actor: Actor, filters: UserListFilters = {}) {
     if (match) conditions.push(match);
   }
 
-  return db
+  const rows = await db
     .select({
       id: users.id,
       email: users.email,
@@ -132,12 +266,38 @@ export async function listUsers(actor: Actor, filters: UserListFilters = {}) {
       writerArea: users.writerArea,
       writerArea2: users.writerArea2,
       createdAt: users.createdAt,
+      isMainEditor: users.isMainEditor,
+      totpEnabledAt: users.totpEnabledAt,
+      kvkkConsentAt: users.kvkkConsentAt,
+      kvkkConsentVersion: users.kvkkConsentVersion,
     })
     .from(users)
     .where(and(...conditions))
     .orderBy(desc(users.createdAt))
     .limit(filters.limit ?? 50)
     .offset(filters.offset ?? 0);
+
+  // Only the list that shows a figure pays for its query
+  const ids = rows.map((row) => row.id);
+  const [articleCounts, editorAreas, applications] = await Promise.all([
+    articleCountsFor(segment === "writers" ? ids : []),
+    editorAreaNamesFor(segment === "editors" ? ids : []),
+    latestApplicationStatusFor(segment === "readers" ? ids : []),
+  ]);
+
+  return rows.map(({ totpEnabledAt, ...row }) => {
+    const age = row.birthDate ? calculateAge(row.birthDate) : null;
+    return {
+      ...row,
+      totpEnabled: totpEnabledAt !== null,
+      age,
+      underAge: age !== null && age < MINIMUM_WRITER_AGE,
+      articleCount: articleCounts.get(row.id)?.total ?? 0,
+      publishedCount: articleCounts.get(row.id)?.published ?? 0,
+      editorAreas: editorAreas.get(row.id) ?? [],
+      applicationStatus: applications.get(row.id) ?? null,
+    };
+  });
 }
 
 /* ------------------------------------------------------------------ */

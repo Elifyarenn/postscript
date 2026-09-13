@@ -45,15 +45,17 @@ export default async function AdminDashboard() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {(
             [
-              ["user", "Kullanıcı"],
-              ["writer", "Yazar"],
-              ["editor", "Editör"],
-              ["admin", "Yönetici"],
+              // Each count opens its own list (D-087); admins have none, so
+              // the general list filtered by role stays their door
+              ["user", "Kullanıcı", "/admin/users/readers"],
+              ["writer", "Yazar", "/admin/users/writers"],
+              ["editor", "Editör", "/admin/users/editors"],
+              ["admin", "Yönetici", "/admin/users?role=admin"],
             ] as const
-          ).map(([role, label]) => (
+          ).map(([role, label, href]) => (
             <Link
               key={role}
-              href={`/admin/users?role=${role}`}
+              href={href}
               className="rounded-lg border border-line bg-surface p-4 hover:border-accent"
             >
               <p className="font-serif text-3xl">{counts[role] ?? 0}</p>
