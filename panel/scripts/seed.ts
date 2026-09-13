@@ -21,6 +21,7 @@ import {
   agreementVersions,
   articles,
   bannedWords,
+  communities,
   editorCategories,
   issues,
   kvkkVersions,
@@ -307,6 +308,26 @@ async function main(): Promise<void> {
     }
   }
   console.log(`  · ${bannedSource.length} banned words ensured`);
+
+  // One open community, so the community screens and the e2e run have
+  // somewhere to join (D-093). Demo data only: in production an admin opens them.
+  console.log("Seeding communities ...");
+  if (demoEnabled) {
+    const existingCommunity = await db.select({ id: communities.id }).from(communities).limit(1);
+    if (existingCommunity.length === 0) {
+      await db.insert(communities).values({
+        slug: "edebiyat-kulubu",
+        name: "Edebiyat Kulübü",
+        description: "Okuduklarımız ve yazdıklarımız.",
+        createdBy: adminId,
+      });
+      console.log("  · created Edebiyat Kulübü");
+    } else {
+      console.log("  · already present");
+    }
+  } else {
+    console.log("  · skipped (SEED_DEMO_USERS is not set)");
+  }
 
   console.log("Seeding the writer contract ...");
   const agreements = await db.select({ id: agreementVersions.id }).from(agreementVersions).limit(1);  if (agreements.length === 0) {

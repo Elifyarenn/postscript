@@ -2582,3 +2582,43 @@ Upsert yok.
 `tests/integration/communities.test.ts`).
 
 ---
+
+## D-094 — Topluluk alanı için uçtan uca senaryo; demo topluluğu seed'de
+
+**Karar:**
+
+- `tests/e2e/07d-social.spec.ts` topluluk alanını iki seed hesabıyla baştan sona
+  yürütür:
+  - Okur kullanıcı adı seçer, anonim kutusunu açar, özel mesaj tercihini
+    "tüm üyeler" yapar.
+  - Okur gönderi paylaşır, "Edebiyat Kulübü"ne katılır ve orada paylaşır.
+  - Yazar kullanıcı adı seçer, okuru takip eder, gönderisini beğenir, özel
+    mesaj ve anonim mesaj gönderir.
+  - Okur anonim mesajı **yazarın adı ya da mahlası olmadan** görür. Özel mesajı
+    konuşma listesinden açar. Takip ve beğeni bildirimlerini görür.
+- **Yalnızca okur ve yazar hesaplarını kullanır**, ikinci faktör istemez.
+  `08-two-factor` admin'in TOTP sırrını değiştirdiği için adı 08'den önce
+  koşacak şekilde seçildi (07c ile aynı gerekçe).
+- `scripts/seed.ts` demo verisinde (`SEED_DEMO_USERS=1`) bir topluluk açar:
+  "Edebiyat Kulübü" (`edebiyat-kulubu`). Üretim seed'i topluluk açmaz.
+
+**Doğrulama:**
+- typecheck + lint temiz.
+- **Tam e2e koşusu bellek yetersizliğinden iki kez yarıda kesildi.**
+  - İlk koşuda 01–07c'deki 22 senaryonun **hepsi geçti**. Koşu 07d'ye gelince
+    sistem süreci durdurdu.
+  - `07d-social.spec.ts` tek başına yeniden koşturuldu: **geçti** (9,3 sn).
+  - `08-two-factor.spec.ts` tek başına denendi; seed aşamasında, testlere
+    gelmeden bellek yüzünden durduruldu.
+- Makinede ~7,5 GB bellek var ve başka oturumlar açıktı; üretim derlemesi bu
+  koşulda güvenilir çalışmadı. CLAUDE.md'deki "sonsuz düzeltme döngüsüne
+  girme" kuralı gereği üçüncü deneme yapılmadı.
+- **08, D-088…D-094 değişikliklerinden sonra koşturulmadı.** O senaryo
+  admin'in 2FA akışını sınar. Bu adımlar o akışa dokunmadı, yalnızca admin
+  menüsüne "Topluluk" bağlantısı eklendi. Yine de push öncesi bellek boşken
+  `pnpm test:e2e` tam olarak yeniden koşturulmalı.
+- Derleme logundaki "Ecmascript file had an error" uyarısı bu adımlardan değil:
+  `src/instrumentation.ts`'in Edge çalışma ortamında `node:path` kullandığını
+  söylüyor. Derleme tamamlanıyor.
+
+---
