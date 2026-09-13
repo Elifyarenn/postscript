@@ -125,8 +125,8 @@ sağlayıcıların yurt dışındaki sistemlerinde tutulmaktadır:
 |---|---|---|---|
 | Vercel Inc. | Uygulamanın barındırılması | Amerika Birleşik Devletleri | Bölüm 2'deki veriler, işlem sırasında |
 | Neon Inc. (ABD merkezli; sunucu: AWS eu-central-1, Frankfurt) | Veritabanı | Almanya | Bölüm 2'deki tüm veriler |
-| Neon Inc. (ABD merkezli; sunucu: AWS eu-central-1, Frankfurt) | Görsel, PDF ve belge depolama | Almanya | Profil görseli, örnek çalışma dosyaları, sözleşme PDF'leri |
-| [E-POSTA SAĞLAYICISI] | Doğrulama ve bildirim e-postalarının gönderimi | [ÜLKE] | E-posta adresi, görünen ad, e-posta içeriği |
+| Cloudflare, Inc. (ABD merkezli; R2 nesne depolama) | Görsel, PDF ve belge depolama | [ÜLKE] | Profil görseli, örnek çalışma dosyaları, sözleşme PDF'leri |
+| Resend, Inc. (ABD merkezli; gönderim sunucusu: AWS ap-northeast-1, Tokyo) | Doğrulama ve bildirim e-postalarının gönderimi | Japonya | E-posta adresi, görünen ad, e-posta içeriği |
 
 Bu aktarımlar KVKK'nın 9. maddesinin üçüncü fıkrası uyarınca, taraflar arasında
 imzalanan ve Kişisel Verileri Koruma Kurumu'na bildirilen **standart sözleşme**

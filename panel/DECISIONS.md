@@ -3200,3 +3200,67 @@ Metin yine de koddan geride kalmıştı ve bu adımda düzeltildi:
 - typecheck + lint temiz, 41 dosya / 467 test.
 
 ---
+
+## D-105 — Düzeltme: canlıda depolama Cloudflare R2, e-posta Resend; ikisi de 7 Eylül'den beri kurulu
+
+**Sorun:** D-098, D-102 ve D-104 canlıda SMTP ve nesne depolamanın kurulu
+olmadığını söylüyordu. D-104 bu varsayımla bir sağlayıcı seçti (Neon Object
+Storage), üretimde bucket açtı ve aydınlatma metnine "Neon Inc., Almanya"
+depolama satırını yazdı. Varsayım kodu ya da Vercel'i okuyarak değil, yayın
+notundaki bir "eksikler" listesinden alınmıştı. D-100'deki hatanın aynısı.
+
+**Kanıt (2026-09-14):**
+
+- **Canlı veri:** `media` tablosunda 2026-09-07 tarihli iki kayıt var: bir
+  başvuru örneği ve bir sözleşme PDF'i (`agreement_acceptances`'a bağlı).
+  `storeGeneratedPdf` önce depolamaya yazar, sonra satırı ekler. Yazma
+  başarısız olsaydı satır olmazdı.
+- **Yerel diskte yok:** aynı anahtarlar ne ana ağacın `.storage`'ında ne diğer
+  worktree'lerde. Kayıtlar yerelden oluşmadı.
+- **Vercel → postscript → Environment Variables** (ürün sahibinin girişli
+  tarayıcısından, izniyle; yalnızca gizli olmayan değerler açıldı):
+  - `S3_ENDPOINT` = `https://<hesap>.r2.cloudflarestorage.com` → Cloudflare R2.
+    `.eu.` alt alanı yok, yani bucket AB yargı bölgesinde değil.
+  - `SMTP_HOST` = `smtp.resend.com` → Resend.
+  - `MAIL_FROM` = `postscript <noreply@postscriptmag.com>`.
+  - `S3_*` ve `SMTP_*` değişkenlerinin hepsi 7 Eylül'de eklenmiş, Production
+    ve Preview.
+- **DNS:** `send.postscriptmag.com` MX kaydı
+  `feedback-smtp.ap-northeast-1.amazonses.com`, SPF `include:amazonses.com`,
+  `resend._domainkey` var. Resend bu alan adı için AWS SES Tokyo bölgesinden
+  gönderiyor. D-104'teki "MX Cloudflare Email Routing, yalnızca gelen posta"
+  tespiti ana alan adı için doğruydu; gönderimin `send.` alt alanından
+  yapıldığı gözden kaçmıştı.
+
+**Karar:**
+
+- **Aydınlatma metni §6.2:**
+  - Depolama satırı: "Cloudflare, Inc. (ABD merkezli; R2 nesne depolama)".
+    Ülke `[ÜLKE]` olarak bırakıldı: R2 bucket'ının konum ipucu Vercel'den
+    okunamıyor, yalnızca Cloudflare panelinden görülür. Tahminle yazılmadı.
+  - E-posta satırı: "Resend, Inc. (ABD merkezli; gönderim sunucusu:
+    AWS ap-northeast-1, Tokyo)", Japonya.
+- **D-104'ün "nesne depolama: Neon" kararı geri alındı.**
+  - Kodda değişiklik yok; kod sağlayıcıdan bağımsız.
+  - Üretim branch'inde açılan boş `postscript-media` bucket'ı kullanılmıyor.
+    Silinmesi ürün sahibinin onayını bekliyor (geri alınamaz işlem).
+  - D-104'teki "canlıda çalışması için" adımları uygulanmamalı.
+- **D-104'ün diğer kararları geçerli:** KVKK sürüm bandı, "okudum ve anladım",
+  ortak adları ve e-posta.
+- Yayın notu (Claude hafızası) düzeltildi; eksik sanılan bir altyapı için önce
+  Vercel ortam değişkenlerine bakılacak.
+
+**Hukukçu görüşü / teyit gerekiyor:**
+
+- Resend'in hesap, log ve bounce verisini gönderim bölgesi dışında (ABD)
+  tutup tutmadığı doğrulanmadı. Metin yalnızca görülen gönderim bölgesini
+  yazıyor. Resend'in veri işleme sözleşmesinden teyit edilmeli.
+- Cloudflare ve Resend ile m. 9 standart sözleşmesi imzalanmış olmalı. D-083
+  bunu yalnızca Vercel ve Neon için şart koşmuştu; iki sağlayıcı daha var.
+- Metin hâlâ yayınlanmamalı: `[AÇIK ADRES]` ve R2 `[ÜLKE]` boş.
+
+**Ayrıca:** Vercel ortam değişkenlerinde `SEED_ADMIN_PASSWORD` (Production ve
+Preview) duruyor. Canlıda seed çalıştırılmıyor ve iki admin sabit. Değişken
+gereksiz bir gizli değer; kaldırılması ürün sahibine önerildi, dokunulmadı.
+
+---
