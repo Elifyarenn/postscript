@@ -254,6 +254,23 @@ export function adminApplicationAwaiting(input: { url: string }): Template {
   };
 }
 
+/**
+ * Tells the owner a recovery code was spent at login (D-099). If it was not
+ * them, this mail is how they find out before the codes run out.
+ */
+export function recoveryCodeUsed(input: { displayName: string; remaining: number }): Template {
+  return {
+    subject: "postscript · Kurtarma kodu kullanıldı",
+    text:
+      `Merhaba ${input.displayName},\n\n` +
+      "Hesabınıza iki adımlı doğrulama kurtarma koduyla giriş yapıldı. " +
+      `Kullanılmamış ${input.remaining} kurtarma kodunuz kaldı.\n\n` +
+      "Bu girişi siz yapmadıysanız hemen şifrenizi değiştirin, Hesabım sayfasından " +
+      "diğer oturumları kapatın ve yeni kurtarma kodları oluşturun." +
+      signature,
+  };
+}
+
 export function mandatoryAnnouncement(input: {
   displayName: string;
   title: string;

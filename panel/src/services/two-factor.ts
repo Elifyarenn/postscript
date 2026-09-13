@@ -1,30 +1,33 @@
 /**
- * TOTP second factor (DECISIONS.md D-048).
+ * TOTP second factor (DECISIONS.md D-048) and its recovery codes (D-099).
  *
  * The secret is generated on the server and shown to the user once so it can
  * be put into an authenticator app; it is stored (AES-GCM encrypted with the
  * session pepper) only after a valid code proves the app received it. Login is
  * a two step dance: the password half runs first, then a single-use challenge
- * ticket is exchanged for the six digit code.
+ * ticket is exchanged for the six digit code — or for one recovery code.
  *
  * Mandatory for editor and admin (CLAUDE.md security rules); the gate lives
  * in requireRole / guardPanel, and every browser session for such a user only
  * exists after the code passed.
  */
 import "server-only";
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { randomInt } from "node:crypto";
+import { and, count, eq, gt, isNull } from "drizzle-orm";
 import { generateSecret, generateURI, verifySync } from "otplib";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { loginChallenges, users } from "@/db/schema";
+import { loginChallenges, totpRecoveryCodes, users, type User } from "@/db/schema";
 import { decryptSecret, encryptSecret, hashToken, randomToken } from "@/lib/crypto";
 import { env } from "@/lib/env";
 import { badRequest, conflict, forbidden, notFound, rateLimited } from "@/lib/errors";
+import { sendMail } from "@/lib/mail/transport";
 import { verifyPassword } from "@/lib/password";
 import { consumeAttempt } from "@/lib/rate-limit";
 import { writeAudit } from "@/lib/audit";
 import { revokeAllSessions } from "@/lib/auth/session";
 import type { RequestMeta } from "./auth";
+import * as templates from "@emails/templates";
 
 export const TOTP_ISSUER = "Postscript";
 /** How long the post-password challenge ticket stays valid. */
@@ -52,6 +55,134 @@ export function verifyTotpCode(secret: string, code: string): boolean {
   } catch {
     return false;
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Recovery codes (D-099)                                              */
+/* ------------------------------------------------------------------ */
+
+export const RECOVERY_CODE_COUNT = 10;
+
+// No 0/o, 1/i/l: the code is copied off paper onto a phone keyboard
+const RECOVERY_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
+const RECOVERY_CODE_LENGTH = 10;
+
+/** `xxxxx-xxxxx`, about 50 bits; brute force is capped by the login_2fa limit. */
+function generateRecoveryCode(): string {
+  let raw = "";
+  for (let index = 0; index < RECOVERY_CODE_LENGTH; index += 1) {
+    raw += RECOVERY_ALPHABET[randomInt(RECOVERY_ALPHABET.length)];
+  }
+  return `${raw.slice(0, 5)}-${raw.slice(5)}`;
+}
+
+/** Capitals, spaces and the dash are how people retype a code, not part of it. */
+function normalizeRecoveryCode(typed: string): string {
+  return typed.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function hashRecoveryCode(code: string): string {
+  return hashToken(normalizeRecoveryCode(code), env().SESSION_SECRET);
+}
+
+/** Spends one unused code. The `used_at is null` condition makes a race lose. */
+async function consumeRecoveryCode(userId: string, typed: string): Promise<boolean> {
+  if (normalizeRecoveryCode(typed).length !== RECOVERY_CODE_LENGTH) return false;
+
+  const used = await db
+    .update(totpRecoveryCodes)
+    .set({ usedAt: new Date(), updatedAt: new Date() })
+    .where(
+      and(
+        eq(totpRecoveryCodes.userId, userId),
+        eq(totpRecoveryCodes.codeHash, hashRecoveryCode(typed)),
+        isNull(totpRecoveryCodes.usedAt),
+      ),
+    )
+    .returning({ id: totpRecoveryCodes.id });
+
+  return used.length > 0;
+}
+
+export async function countRecoveryCodesLeft(userId: string): Promise<number> {
+  const rows = await db
+    .select({ total: count() })
+    .from(totpRecoveryCodes)
+    .where(and(eq(totpRecoveryCodes.userId, userId), isNull(totpRecoveryCodes.usedAt)));
+  return rows[0]?.total ?? 0;
+}
+
+type Factor = "totp" | "recovery_code";
+
+/**
+ * The proof D-033 asks for before a factor is reset or a login completes: the
+ * current authenticator code, or one recovery code. A six digit input is only
+ * ever tried as TOTP, so a mistyped app code cannot burn a recovery code.
+ */
+async function proveSecondFactor(user: User, code: string): Promise<Factor | null> {
+  if (user.totpEnabledAt === null || !user.totpSecret) return null;
+
+  if (/^\d{6}$/.test(code)) {
+    const secret = decryptSecret(user.totpSecret, env().SESSION_SECRET);
+    return verifyTotpCode(secret, code) ? "totp" : null;
+  }
+
+  return (await consumeRecoveryCode(user.id, code)) ? "recovery_code" : null;
+}
+
+const factorProofSchema = z.strictObject({
+  password: z.string().min(1),
+  code: z.string().min(1, "Doğrulama kodunu veya bir kurtarma kodunu girin.").max(32),
+});
+
+/**
+ * Replaces the user's recovery codes with a fresh set and returns the raw
+ * codes, which exist nowhere else. Needs the password and a second factor,
+ * like turning 2FA off: a stolen session alone must not mint a way back in.
+ */
+export async function regenerateRecoveryCodes(
+  input: { userId: string; password: string; code: string },
+  meta: RequestMeta,
+): Promise<string[]> {
+  const parsed = factorProofSchema.safeParse({ password: input.password, code: input.code });
+  if (!parsed.success) {
+    throw badRequest("Kurtarma kodu bilgileri geçersiz.", z.flattenError(parsed.error).fieldErrors);
+  }
+
+  const user = await loadUser(input.userId);
+  if (user.totpEnabledAt === null || !user.totpSecret) {
+    throw badRequest("Kurtarma kodu oluşturmak için önce iki adımlı doğrulamayı açın.");
+  }
+
+  if (!(await verifyPassword(user.passwordHash, parsed.data.password))) {
+    throw forbidden("Mevcut şifreniz doğrulanamadı.");
+  }
+
+  const factor = await proveSecondFactor(user, parsed.data.code);
+  if (!factor) {
+    throw badRequest("Kod doğrulanamadı.", { code: ["Uygulamadaki kodu veya bir kurtarma kodunu girin."] });
+  }
+
+  const codes = new Set<string>();
+  while (codes.size < RECOVERY_CODE_COUNT) codes.add(generateRecoveryCode());
+
+  await db.transaction(async (tx) => {
+    await tx.delete(totpRecoveryCodes).where(eq(totpRecoveryCodes.userId, user.id));
+    await tx
+      .insert(totpRecoveryCodes)
+      .values([...codes].map((code) => ({ userId: user.id, codeHash: hashRecoveryCode(code) })));
+  });
+
+  await writeAudit({
+    actorId: user.id,
+    action: "user.recovery_codes_generated",
+    entityType: "users",
+    entityId: user.id,
+    after: { factor, count: codes.size },
+    ip: meta.ip,
+  });
+
+  return [...codes];
 }
 
 /* ------------------------------------------------------------------ */
@@ -111,14 +242,15 @@ export async function enableTotp(
   });
 }
 
-/** Turns 2FA off. The current password and a code are both required. */
+/**
+ * Turns 2FA off. The current password and a second factor are both required;
+ * a recovery code counts, which is how a lost phone is replaced (D-099).
+ */
 export async function disableTotp(
   input: { userId: string; password: string; code: string },
   meta: RequestMeta,
 ): Promise<void> {
-  const parsed = z
-    .strictObject({ password: z.string().min(1), code: codeSchema })
-    .safeParse({ password: input.password, code: input.code });
+  const parsed = factorProofSchema.safeParse({ password: input.password, code: input.code });
   if (!parsed.success) {
     throw badRequest("İki adımlı doğrulama ayarları geçersiz.", z.flattenError(parsed.error).fieldErrors);
   }
@@ -132,21 +264,26 @@ export async function disableTotp(
     throw forbidden("Mevcut şifreniz doğrulanamadı.");
   }
 
-  const secret = decryptSecret(user.totpSecret, env().SESSION_SECRET);
-  if (!verifyTotpCode(secret, parsed.data.code)) {
+  const factor = await proveSecondFactor(user, parsed.data.code);
+  if (!factor) {
     throw badRequest("Kod doğrulanamadı.", { code: ["Kod doğrulanamadı. Uygulamadaki kodu girin."] });
   }
 
-  await db
-    .update(users)
-    .set({ totpSecret: null, totpEnabledAt: null, updatedAt: new Date() })
-    .where(eq(users.id, user.id));
+  // Codes belong to the secret they were issued beside; a new setup gets new ones
+  await db.transaction(async (tx) => {
+    await tx
+      .update(users)
+      .set({ totpSecret: null, totpEnabledAt: null, updatedAt: new Date() })
+      .where(eq(users.id, user.id));
+    await tx.delete(totpRecoveryCodes).where(eq(totpRecoveryCodes.userId, user.id));
+  });
 
   await writeAudit({
     actorId: user.id,
     action: "user.totp_disabled",
     entityType: "users",
     entityId: user.id,
+    after: { factor },
     ip: meta.ip,
   });
 }
@@ -216,12 +353,34 @@ export async function consumeLoginChallenge(rawToken: string): Promise<boolean> 
   return consumed.length > 0;
 }
 
-/** True when the code matches the user's stored secret. */
-export async function verifyLoginCode(userId: string, code: string): Promise<boolean> {
+/**
+ * True when the code is the user's current TOTP or one of their unused
+ * recovery codes. A recovery code is spent here, recorded, and the owner is
+ * told by mail: if it was not them, they learn it before the next login.
+ */
+export async function verifyLoginCode(
+  userId: string,
+  code: string,
+  meta?: RequestMeta,
+): Promise<boolean> {
   const user = await loadUser(userId);
-  if (user.totpEnabledAt === null || !user.totpSecret) return false;
-  const secret = decryptSecret(user.totpSecret, env().SESSION_SECRET);
-  return verifyTotpCode(secret, code);
+  const factor = await proveSecondFactor(user, code);
+
+  if (factor === "recovery_code") {
+    const remaining = await countRecoveryCodesLeft(user.id);
+    await writeAudit({
+      actorId: user.id,
+      action: "user.recovery_code_used",
+      entityType: "users",
+      entityId: user.id,
+      after: { purpose: "login", remaining },
+      ip: meta?.ip ?? null,
+    });
+    const message = templates.recoveryCodeUsed({ displayName: user.displayName, remaining });
+    await sendMail({ to: user.email, subject: message.subject, text: message.text });
+  }
+
+  return factor !== null;
 }
 
 /**

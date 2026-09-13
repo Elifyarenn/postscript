@@ -441,6 +441,29 @@ export const loginChallenges = pgTable(
   ],
 );
 
+/**
+ * One-time recovery codes for the second factor (D-099): the way back in when
+ * the phone with the authenticator app is lost. Only the peppered hash is
+ * stored; the raw codes are shown once, when a set is generated.
+ */
+export const totpRecoveryCodes = pgTable(
+  "totp_recovery_codes",
+  {
+    id: id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    codeHash: text("code_hash").notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("totp_recovery_codes_user_code_unique").on(t.userId, t.codeHash),
+    index("totp_recovery_codes_user_idx").on(t.userId),
+  ],
+);
+
 /* ------------------------------------------------------------------ */
 /* writer_areas (managed by the admin panel, D-055)                    */
 /* ------------------------------------------------------------------ */

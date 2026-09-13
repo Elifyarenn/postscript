@@ -48,6 +48,33 @@ export default async function TwoFactorLoginPage() {
         </Field>
       </PanelForm>
 
+      {/* The way back in when the phone with the app is gone (D-099) */}
+      <details className="mt-5 rounded-md border border-line p-4 text-sm">
+        <summary className="cursor-pointer font-medium">Telefonunuza erişemiyor musunuz?</summary>
+        <p className="mt-2 mb-4 text-muted">
+          Hesabım sayfasından oluşturup sakladığınız kurtarma kodlarından birini girin. Her kod
+          yalnızca bir kez kullanılabilir.
+        </p>
+        <PanelForm
+          action={loginTwoFactorAction}
+          csrfToken={csrfToken}
+          submitLabel="Kurtarma koduyla giriş yap"
+          submitVariant="secondary"
+        >
+          <Field label="Kurtarma kodu" htmlFor="recoveryCode">
+            <Input
+              id="recoveryCode"
+              name="code"
+              type="text"
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              required
+            />
+          </Field>
+        </PanelForm>
+      </details>
+
       <div className="mt-5 text-sm">
         <Link href="/login" className="text-muted hover:text-ink">
           Geri dön ve yeniden giriş yap

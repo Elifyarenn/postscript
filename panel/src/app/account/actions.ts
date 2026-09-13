@@ -22,7 +22,7 @@ import {
   revokeSession,
 } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
-import { disableTotp, enableTotp } from "@/services/two-factor";
+import { disableTotp, enableTotp, regenerateRecoveryCodes } from "@/services/two-factor";
 import { runAction, optionalText, text, type ActionState } from "@/lib/action";
 import { badRequest } from "@/lib/errors";
 
@@ -262,6 +262,33 @@ export async function disableTwoFactorAction(
 
     revalidatePath("/account");
     return { success: "İki adımlı doğrulama kapatıldı." };
+  });
+}
+
+/**
+ * A fresh set of recovery codes (D-099). The codes travel back once in the
+ * action state; they are not stored anywhere the page could render again.
+ */
+export async function regenerateRecoveryCodesAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireAuth();
+    const meta = await requestMetadata();
+
+    const codes = await regenerateRecoveryCodes(
+      {
+        userId: user.id,
+        password: text(formData, "currentPassword"),
+        code: text(formData, "code"),
+      },
+      meta,
+    );
+
+    revalidatePath("/account");
+    return { success: "Yeni kurtarma kodları oluşturuldu.", codes };
   });
 }
 

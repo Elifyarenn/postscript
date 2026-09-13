@@ -177,8 +177,10 @@ export async function loginTwoFactorAction(
 
     await checkLoginCodeLimit(userId);
 
+    // The same field takes the app's code or a recovery code (D-099); both
+    // count against the login_2fa limit checked just above
     const code = text(formData, "code");
-    if (!(await verifyLoginCode(userId, code))) {
+    if (!(await verifyLoginCode(userId, code, meta))) {
       throw badRequest("Kod doğrulanamadı.", { code: ["Kod doğrulanamadı."] });
     }
 

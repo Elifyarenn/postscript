@@ -19,7 +19,7 @@ import {
 import { formatDate } from "@/lib/utils";
 import { checkWriterEligibility } from "@/services/users";
 import { cooldownInfo, latestApplication } from "@/services/writer-applications";
-import { generateTotpSecret, otpauthUri } from "@/services/two-factor";
+import { countRecoveryCodesLeft, generateTotpSecret, otpauthUri } from "@/services/two-factor";
 import QRCode from "qrcode";
 import { cancelDeletionAction, requestDeletionAction } from "./actions";
 
@@ -136,6 +136,9 @@ export default async function AccountPage({
         <TwoFactorCard
           csrfToken={csrfToken}
           enabled={profile.totpEnabledAt !== null}
+          recoveryCodesLeft={
+            profile.totpEnabledAt === null ? 0 : await countRecoveryCodesLeft(profile.id)
+          }
           pendingSecret={pendingSecret}
           pendingUri={pendingUri}
           pendingQrUrl={pendingQrUrl}

@@ -22,7 +22,7 @@ ortaklık adına tek başına temsile yetkilidir.
 |---|---|
 | Kimlik | Ad soyad (görünen ad), mahlas, doğum tarihi |
 | İletişim | E-posta adresi, telefon numarası (yalnızca yazar kaydında) |
-| Hesap güvenliği | Şifrenin geri döndürülemez özeti, iki adımlı doğrulama (TOTP) gizli anahtarı, e-posta doğrulama ve şifre sıfırlama bağlantı kayıtları, giriş denemesi kayıtları |
+| Hesap güvenliği | Şifrenin geri döndürülemez özeti, iki adımlı doğrulama (TOTP) gizli anahtarı, iki adımlı doğrulama kurtarma kodlarının geri döndürülemez özetleri ve kullanılma zamanları, e-posta doğrulama ve şifre sıfırlama bağlantı kayıtları, giriş denemesi kayıtları |
 | İşlem güvenliği | IP adresi, tarayıcı bilgisi (user-agent), oturum açma ve son görülme zamanları |
 | Profil | Topluluk kullanıcı adı, kısa biyografi, profil görseli, sosyal medya bağlantıları, yazı alanı |
 | Yazarlık | Yazarlık başvurusu, başvuruya eklenen örnek çalışma ve başvuru notu, editör değerlendirme notları, rol değişikliği kayıtları |
@@ -138,6 +138,7 @@ esas alınarak gerçekleştirilmektedir.
 | Tamamlanmamış (e-postası doğrulanmamış) kayıtlar | 7 gün |
 | E-posta doğrulama bağlantıları | 24 saat |
 | Şifre sıfırlama bağlantıları | 30 dakika |
+| İki adımlı doğrulama kurtarma kodlarının özetleri | Yeni kodlar oluşturana, iki adımlı doğrulamayı kapatana veya hesabınız silinene kadar. Kullanılan kod, bu anlardan birine kadar kullanılmış olarak işaretli kalır. |
 | Giriş denemesi kayıtları | En çok 30 gün |
 | Oturum kayıtları (IP, tarayıcı bilgisi) | 1 yıl — 5651 sayılı Kanun m. 5 |
 | Yorum, mesaj, gönderi ve yanıtlara ilişkin trafik kayıtları | 1 yıl — 5651 sayılı Kanun m. 5 |

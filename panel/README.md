@@ -72,6 +72,11 @@ SEED_DEMO_USERS=1 pnpm seed
 > oturumlar iptal edilir ve yeniden girişte kimlik doğrulayıcı kodu istenir.
 > E2E koşusu `SEED_TOTP_SECRET` ile 2FA'lı personel hesapları üretir; yerel
 > geliştirmede 2FA, ilk girişte kurulur.
+>
+> Telefon kaybına karşı Hesabım sayfasından 10 tek kullanımlık **kurtarma kodu**
+> oluşturulur (D-099). Kurtarma kodu girişte, 2FA'yı kapatırken ve yeni kod
+> üretirken uygulama kodunun yerine geçer. Yeni set eskisini geçersiz kılar;
+> girişte kullanılan her kod hesap sahibine e-postayla bildirilir.
 
 Yardımcı adresler: Mailpit gelen kutusu `http://localhost:8025`, MinIO konsolu
 `http://localhost:9001`.
@@ -185,8 +190,8 @@ Değişmez kurallar:
 5. `writer_status = active` olmadan yazar panelinde yalnızca duyurular ve
    sözleşme sayfası açıktır.
 6. İlk admin yalnızca seed veya CLI ile oluşturulur.
-7. İki adımlı doğrulama şu anda yok; §5.2'nin zorunlu kıldığı bu kontrol yayın
-   öncesi geri eklenecek (D-033).
+7. Editör ve yönetici için iki adımlı doğrulama zorunludur (D-048). Telefon
+   kaybında tek kullanımlık kurtarma kodları kullanılır (D-099).
 8. Kayıt iki adımlıdır (D-067): form verisi `pending_registrations`'a yazılır ve
    e-posta doğrulaması tamamlanmadan `users` kaydı oluşmaz — hesap, bağlantı
    tıklandığında doğrulanmış olarak doğar. İki adımlı akıştan önce oluşmuş

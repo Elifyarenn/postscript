@@ -34,6 +34,7 @@ import {
   postLikes,
   postReposts,
   posts,
+  totpRecoveryCodes,
   userBlocks,
   users,
   writerApplications,
@@ -882,6 +883,9 @@ async function anonymise(user: User): Promise<void> {
     .delete(anonMutes)
     .where(or(eq(anonMutes.recipientId, user.id), eq(anonMutes.senderId, user.id)));
   await db.delete(communityMemberships).where(eq(communityMemberships.userId, user.id));
+
+  // A way back into an account that no longer exists has no reason to stay (D-099)
+  await db.delete(totpRecoveryCodes).where(eq(totpRecoveryCodes.userId, user.id));
 
   await revokeAllSessions(user.id);
 }

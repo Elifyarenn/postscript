@@ -24,6 +24,7 @@ import {
   changePasswordAction,
   disableTwoFactorAction,
   enableTwoFactorAction,
+  regenerateRecoveryCodesAction,
   requestEmailChangeAction,
   revokeOtherSessionsAction,
   revokeSessionAction,
@@ -32,6 +33,7 @@ import {
   updateProfileAction,
 } from "@/app/account/actions";
 import { PasswordField } from "./password-field";
+import { RecoveryCodesForm } from "./recovery-codes-form";
 import type { SessionUser } from "@/lib/auth/session";
 import type { SocialLinks } from "@/db/schema";
 
@@ -508,12 +510,15 @@ export type SessionRow = {
 export function TwoFactorCard({
   csrfToken,
   enabled,
+  recoveryCodesLeft,
   pendingSecret,
   pendingUri,
   pendingQrUrl,
 }: {
   csrfToken: string;
   enabled: boolean;
+  /** Unused recovery codes; only meaningful while 2FA is on (D-099). */
+  recoveryCodesLeft: number;
   /** A fresh secret to scan; only generated when 2FA is off. */
   pendingSecret: string;
   pendingUri: string;
@@ -528,6 +533,19 @@ export function TwoFactorCard({
           <Alert tone="success" title="Açık">
             Girişinizde kimlik doğrulayıcı kodunuz da istenir.
           </Alert>
+        </div>
+
+        <div className="mb-6 border-b border-line pb-6">
+          <h3 className="mb-1 font-medium">Kurtarma kodları</h3>
+          <p className="mb-4 text-sm text-muted">
+            Telefonunuzu kaybederseniz girişte uygulama kodu yerine bir kurtarma kodu
+            kullanabilirsiniz. Yeni kodlar oluşturmak eskilerini geçersiz kılar.
+          </p>
+          <RecoveryCodesForm
+            action={regenerateRecoveryCodesAction}
+            csrfToken={csrfToken}
+            codesLeft={recoveryCodesLeft}
+          />
         </div>
 
         <PanelForm
@@ -546,15 +564,20 @@ export function TwoFactorCard({
                 required
               />
             </Field>
-            <Field label="Doğrulama kodu" htmlFor="totpCode">
+            {/* A recovery code is accepted too: that is how a lost phone is replaced */}
+            <Field
+              label="Doğrulama kodu"
+              htmlFor="totpCode"
+              hint="Telefonunuz yanınızda değilse bir kurtarma kodu da girebilirsiniz."
+            >
               <Input
                 id="totpCode"
                 name="code"
                 type="text"
-                inputMode="numeric"
                 autoComplete="one-time-code"
-                pattern="[0-9]{6}"
-                maxLength={6}
+                autoCapitalize="none"
+                spellCheck={false}
+                maxLength={32}
                 required
               />
             </Field>

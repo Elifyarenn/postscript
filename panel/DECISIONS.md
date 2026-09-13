@@ -2769,3 +2769,88 @@ admine gider, başvuranın adı ve adresi yok; ret admine gitmez.
 typecheck + lint temiz, 36 dosya / 433 test.
 
 ---
+
+## D-099 — İki adımlı doğrulamaya kurtarma kodları geri eklendi
+
+**İstek (ürün sahibi):** Bilgisayar ve telefon erişimi olmadığında panele
+girememe riskinin kaldırılması.
+
+**Sorun:** D-048'de 2FA yeniden kurulurken kurtarma kodu eklenmedi (D-033'te
+2FA'nın tamamıyla birlikte kaldırılmıştı, bilinçli bir "kod olmasın" kararı
+yok). Kurulu faktörü kapatmak da uygulamadaki kodu istiyor. Kimlik doğrulayıcı
+uygulamanın olduğu telefon kaybolursa hesap kilitlenir. Canlıda yalnızca iki
+admin var ve birbirlerinin 2FA'sını sıfırlayacak bir yol yok.
+
+**Karar:**
+- Yeni tablo `totp_recovery_codes` (migration `0031`): `user_id`, `code_hash`,
+  `used_at`. `users` silinirse satırlar da silinir (cascade).
+- **Üretim:** Hesabım → İki adımlı doğrulama kartı → "Kurtarma kodları".
+  10 kod, `xxxxx-xxxxx` biçiminde. Karışan karakterler (0/o, 1/i/l) alfabede
+  yok. Yaklaşık 50 bit.
+  - Kodlar yalnızca action yanıtında bir kez gösterilir (`ActionState.codes`).
+    Sunucuda yalnızca `hashToken(kod, SESSION_SECRET)` özeti durur.
+  - Yeni set eskisini tamamen siler.
+  - 2FA açılırken kod verilmez: açılış tüm oturumları kapatıyor, kodlar
+    gösterilemeden oturum düşerdi. Açıkken ve hiç kod yokken kart uyarı gösterir.
+- **Üretmek için** şifre ve ikinci faktör (uygulama kodu veya kurtarma kodu)
+  gerekir. Gerekçe: D-033'ün şartı. Çalınmış bir oturum tek başına yeni bir
+  giriş yolu üretememeli.
+- **Kullanım yerleri:**
+  - Girişte `/login/2fa` → "Telefonunuza erişemiyor musunuz?" bölümü. Aynı
+    `loginTwoFactorAction`'a gider, `login_2fa` hız sınırını paylaşır (5 deneme
+    / 15 dk).
+  - 2FA'yı kapatırken (şifre + kurtarma kodu). Telefon kaybında yol: kurtarma
+    koduyla gir → başka bir kurtarma koduyla 2FA'yı kapat → yeni telefonla
+    yeniden kur. Editör ve admin kapatınca zaten kurulum ekranına yönlenir
+    (D-048).
+  - Yeni set üretirken.
+- **Altı haneli girdi yalnızca TOTP olarak denenir.** Yanlış yazılmış bir
+  uygulama kodu bir kurtarma kodunu yakamaz.
+- Kod tüketimi `used_at is null` koşullu tek UPDATE ile yapılır; iki eşzamanlı
+  istekten yalnızca biri kazanır.
+- **Girişte kurtarma kodu kullanılınca** denetim kaydı
+  (`user.recovery_code_used`, kalan sayı; kodun kendisi yazılmaz) ve hesap
+  sahibine e-posta ("Kurtarma kodu kullanıldı").
+- 2FA kapatılınca kodlar silinir; yeni kurulum yeni kod ister. Hesap
+  anonimleştirilince kodlar silinir (soft delete cascade'i tetiklemediği için
+  `anonymise` içinde).
+- D-006'daki argon2id yerine peppered SHA-256: kodlar rastgele ve yüksek
+  entropili, oturum/e-posta jetonlarıyla aynı yöntem yeterli. Veritabanı dökümü
+  pepper olmadan işe yaramaz. Girişte deneme sayısı hız sınırıyla kısıtlı.
+
+**Hukuk:** Aydınlatma metni güncellendi. §2 "Hesap güvenliği" satırına
+kurtarma kodu özetleri ve kullanılma zamanları, §7 saklama tablosuna süre
+eklendi. Amaç ve hukuki sebep aynı: güvenlik (KVKK m. 12). Yeni bir yurt dışı
+aktarım yok.
+
+**Üretim:** `0031` canlıya uygulanmadan push edilmemeli (D-079). `0026`–`0030`
+de hâlâ bekliyor (D-095). Her iki adminin, push ve migration'dan sonra Hesabım
+sayfasından kod üretip telefondan ayrı bir yerde saklaması gerekiyor.
+
+**Doğrulama:** `tests/integration/recovery-codes.test.ts`:
+- 10 farklı kod üretilir, yalnızca 64 karakterlik özet saklanır.
+- Yeni set eskisini geçersiz kılar.
+- Şifre veya faktör yanlışsa, ya da 2FA kapalıysa üretim reddedilir.
+- Büyük harf ve boşlukla yazılan kod bir kez geçer, ikinci kez geçmez.
+- Sahibine e-posta gider; denetim kaydında kodun kendisi yok.
+- Yanlış altı haneli kod kurtarma kodu harcamaz.
+- Başka hesabın kodu geçmez.
+- Kurtarma koduyla 2FA kapatılır ve kodlar silinir.
+
+Mevcut `two-factor.test.ts` değişmeden geçiyor. typecheck + lint temiz, 37
+dosya / 440 test.
+
+**e2e koşturulmadı.** `postscript-f1` oturumu aynı anda canlıya alma öncesi tam
+e2e koşusu yapıyordu ve bu makinede bellek daha önce yetmemişti (D-094).
+`08-two-factor` bu adımla değişen ekranlara dokunuyor:
+- 2FA kartındaki kapatma alanı artık altı haneyle sınırlı değil.
+- Kartın içine ikinci bir form girdi.
+- Giriş sayfasına ikinci bir form girdi.
+
+Seçiciler kontrol edildi, çakışma beklenmiyor:
+- Kurtarma formunun etiketleri "Doğrulama kodu" metnini içermiyor.
+- Düğme adları `/doğrulama/i` ve "Doğrula" ile eşleşmiyor.
+
+Push öncesi `08-two-factor.spec.ts` yine de koşturulmalı.
+
+---
