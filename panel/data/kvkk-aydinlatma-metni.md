@@ -5,11 +5,11 @@ Bu aydınlatma metni, 6698 sayılı Kişisel Verilerin Korunması Kanunu'nun ("K
 Esaslar Hakkında Tebliğ uyarınca hazırlanmıştır.
 
 **Veri sorumlusu:** Postscript Dergisi adı altında faaliyet gösteren adi
-ortaklık — ortaklar: [ORTAK 1 AD SOYAD], [ORTAK 2 AD SOYAD]
+ortaklık — ortaklar: Elif Yaren Çekiç, Tuanna Demir
 
 **Tebligat adresi:** [AÇIK ADRES]
 
-**E-posta:** [DERGİ E-POSTA ADRESİ]
+**E-posta:** iletisim@postscriptmag.com
 
 **İnternet adresi:** https://www.postscriptmag.com
 
@@ -26,6 +26,7 @@ ortaklık adına tek başına temsile yetkilidir.
 | İşlem güvenliği | IP adresi, tarayıcı bilgisi (user-agent), oturum açma ve son görülme zamanları |
 | Profil | Topluluk kullanıcı adı, kısa biyografi, profil görseli, sosyal medya bağlantıları, yazı alanı |
 | Yazarlık | Yazarlık başvurusu, başvuruya eklenen örnek çalışma ve başvuru notu, editör değerlendirme notları, rol değişikliği kayıtları |
+| Bilgilendirme | Aydınlatma metninin hangi sürümünü ne zaman okuduğunuzu belirttiğiniz (kayıt sırasında ve sonraki sürümlerde); önceki kayıt panel işlem kayıtlarında saklanır |
 | Sözleşme | Yazar sözleşmesi ve eser onayı kayıtları; her onayın tarih-saati, IP adresi, tarayıcı bilgisi, onaylanan metnin SHA-256 özeti ve PDF kopyası |
 | İçerik | Dergiye gönderilen eserler ve sürümleri, yazı üzerindeki editör notları |
 | Topluluk | Yazılara yapılan yorumlar, topluluk sohbeti mesajları, paylaştığınız gönderiler ve yanıtlar ile bunların gönderim zamanı; beğendiğiniz ve yeniden paylaştığınız gönderiler; takip ettiğiniz ve sizi takip eden hesaplar, engellediğiniz hesaplar, katıldığınız topluluklar, kaydettiğiniz yazı ve gönderiler, size gönderilen panel içi bildirimler |
@@ -78,6 +79,7 @@ saklanmaz**.
 | İçerik moderasyonu, hesap yasaklama, kural ihlallerinin takibi | (f) Meşru menfaat |
 | Yetkili kamu kurum ve kuruluşlarının hukuka uygun taleplerinin karşılanması | (a) Kanunlarda açıkça öngörülmesi, (ç) Hukuki yükümlülük |
 | Panel içi bildirim ve duyuruların iletilmesi | (c) Sözleşmenin ifası |
+| Aydınlatma metninin yeni sürümlerinin duyurulması ve hangi sürümün ne zaman okunduğunun kaydedilmesi | (ç) Veri sorumlusunun hukuki yükümlülüğü — KVKK m. 10 |
 
 Pazarlama, reklam veya profilleme amacıyla kişisel veri işlemiyoruz. Hakkınızda
 hukuki sonuç doğuran veya sizi önemli ölçüde etkileyen, münhasıran otomatik
@@ -123,7 +125,7 @@ sağlayıcıların yurt dışındaki sistemlerinde tutulmaktadır:
 |---|---|---|---|
 | Vercel Inc. | Uygulamanın barındırılması | Amerika Birleşik Devletleri | Bölüm 2'deki veriler, işlem sırasında |
 | Neon Inc. (ABD merkezli; sunucu: AWS eu-central-1, Frankfurt) | Veritabanı | Almanya | Bölüm 2'deki tüm veriler |
-| [NESNE DEPOLAMA SAĞLAYICISI] | Görsel, PDF ve belge depolama | [ÜLKE] | Profil görseli, örnek çalışma dosyaları, sözleşme PDF'leri |
+| Neon Inc. (ABD merkezli; sunucu: AWS eu-central-1, Frankfurt) | Görsel, PDF ve belge depolama | Almanya | Profil görseli, örnek çalışma dosyaları, sözleşme PDF'leri |
 | [E-POSTA SAĞLAYICISI] | Doğrulama ve bildirim e-postalarının gönderimi | [ÜLKE] | E-posta adresi, görünen ad, e-posta içeriği |
 
 Bu aktarımlar KVKK'nın 9. maddesinin üçüncü fıkrası uyarınca, taraflar arasında
@@ -188,7 +190,7 @@ Veri Sorumlusuna Başvuru Usul ve Esasları Hakkında Tebliğ uyarınca
 başvurularınızı şu yollardan biriyle iletebilirsiniz:
 
 - Yazılı olarak, ıslak imzalı dilekçe ile: [AÇIK ADRES]
-- Sistemimizde kayıtlı e-posta adresinizden: [DERGİ E-POSTA ADRESİ]
+- Sistemimizde kayıtlı e-posta adresinizden: iletisim@postscriptmag.com
 - Güvenli elektronik imza veya mobil imza ile imzalanmış e-posta olarak.
 
 Başvurunuzda ad soyadınız, Türkiye Cumhuriyeti vatandaşı iseniz kimlik
@@ -204,6 +206,8 @@ Kurulu'na şikâyette bulunabilirsiniz.
 
 ## 10. Metnin güncellenmesi
 
-Bu metin sürümlenir. Esaslı bir değişiklik yapıldığında yeni sürüm panelde ve
-e-posta yoluyla size bildirilir. Yürürlükteki sürümün numarası, yayın tarihi ve
+Bu metin sürümlenir. Her yeni sürüm, okuduğunuzu belirtene kadar panelin üst
+kısmında gösterilir; bu bir bilgilendirmedir, sizden onay istenmez ve panelin
+kullanımını engellemez. Esaslı bir değişiklik ayrıca panel bildirimi ve e-posta
+yoluyla size bildirilir. Yürürlükteki sürümün numarası, yayın tarihi ve
 metin özeti bu sayfanın başında gösterilir; geçmiş sürümler saklanır.

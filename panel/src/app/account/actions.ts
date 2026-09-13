@@ -23,6 +23,7 @@ import {
 } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
 import { disableTotp, enableTotp, regenerateRecoveryCodes } from "@/services/two-factor";
+import { acknowledgeKvkkNotice } from "@/services/kvkk";
 import { runAction, optionalText, text, type ActionState } from "@/lib/action";
 import { badRequest } from "@/lib/errors";
 
@@ -289,6 +290,24 @@ export async function regenerateRecoveryCodesAction(
 
     revalidatePath("/account");
     return { success: "Yeni kurtarma kodları oluşturuldu.", codes };
+  });
+}
+
+/** The member read the updated KVKK notice (D-104); hides the panel banner. */
+export async function acknowledgeKvkkNoticeAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireAuth();
+    const meta = await requestMetadata();
+
+    await acknowledgeKvkkNotice({ ...user }, text(formData, "version"), meta);
+
+    // The banner lives in the shared panel frame, so every area has to render again
+    revalidatePath("/", "layout");
+    return { success: "Teşekkürler, kaydedildi." };
   });
 }
 

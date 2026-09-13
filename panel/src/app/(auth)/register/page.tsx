@@ -62,7 +62,7 @@ export default async function RegisterPage() {
               <Link href="/kvkk" target="_blank" className="text-accent underline">
                 Kişisel Verilerin Korunması Kanunu
               </Link>{" "}
-              kapsamındaki aydınlatma metnini okudum ve onaylıyorum.
+              kapsamındaki aydınlatma metnini okudum ve anladım.
             </span>
           </label>
         </>

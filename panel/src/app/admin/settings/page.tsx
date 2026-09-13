@@ -122,6 +122,20 @@ export default async function AdminSettingsPage() {
             <Field label="Metin (markdown)" htmlFor="kvkkBody">
               <Textarea id="kvkkBody" name="bodyMarkdown" rows={12} required />
             </Field>
+            <label className="flex cursor-pointer items-start gap-2 text-sm">
+              {/* Checked by default: the notice's §10 promises members hear about material changes */}
+              <input
+                type="checkbox"
+                name="notifyMembers"
+                defaultChecked
+                className="mt-0.5 size-4 rounded border-line"
+              />
+              <span>
+                Esaslı değişiklik: üyelere panel bildirimi ve e-posta gönder. Yazım düzeltmesi gibi
+                küçük değişikliklerde işareti kaldırın; yeni sürüm yine de panelde her üyeye bir kez
+                gösterilir.
+              </span>
+            </label>
           </PanelForm>
 
           <div className="mt-6">

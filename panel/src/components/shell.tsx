@@ -20,6 +20,9 @@ import { BackButton } from "./back-button";
 import { PanelModeSwitch } from "./panel-switch";
 import { readCsrfToken } from "@/lib/csrf";
 import type { SessionUser } from "@/lib/auth/session";
+import { currentKvkk, needsKvkkNotice } from "@/services/kvkk";
+import { acknowledgeKvkkNoticeAction } from "@/app/account/actions";
+import { PanelForm } from "./form";
 import { USER_SEGMENTS, USER_SEGMENT_META } from "@/lib/user-segments";
 
 export type NavItem = {
@@ -222,6 +225,10 @@ export async function PanelShell({
   // double-submit token (D-072). Read here rather than at every call site.
   const csrfToken = (await readCsrfToken()) ?? "";
 
+  // The notice's §10 promises members are told about a new version (D-104)
+  const kvkk = await currentKvkk();
+  const kvkkNotice = needsKvkkNotice(user.kvkkConsentVersion, kvkk) ? kvkk : null;
+
   return (
     <div className="min-h-screen lg:flex">
       <PanelSidebar user={user} area={area} groups={groups} csrfToken={csrfToken} />
@@ -265,6 +272,27 @@ export async function PanelShell({
             )}
           </div>
         </header>
+
+        {kvkkNotice && (
+          <div role="status" className="border-b border-line bg-surface px-6 py-3 text-sm">
+            <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3">
+              <p>
+                KVKK aydınlatma metni güncellendi (sürüm {kvkkNotice.version}).{" "}
+                <Link href="/kvkk" target="_blank" className="text-accent underline">
+                  Yeni metni okuyun
+                </Link>
+              </p>
+              <PanelForm
+                action={acknowledgeKvkkNoticeAction}
+                csrfToken={csrfToken}
+                submitLabel="Okudum"
+                submitVariant="secondary"
+              >
+                <input type="hidden" name="version" value={kvkkNotice.version} />
+              </PanelForm>
+            </div>
+          </div>
+        )}
 
         <main className="flex-1 px-6 py-8">
           <div className={cn("mx-auto", user.role === "admin" ? "max-w-6xl" : "max-w-5xl")}>

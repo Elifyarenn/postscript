@@ -3059,3 +3059,144 @@ listede olan Vercel'in parçası).
   anahtarsız istek 401 dönmeli.
 
 ---
+
+## D-104 — Yeni KVKK sürümü üyelere gösterilir; nesne depolama Neon; metnin kimlik alanları dolduruldu
+
+**İstek (ürün sahibi):** Kurtarma kodları dışında kalan eksiklerin tamamlanması.
+
+**Sorun:** D-083'ten üç madde açık kalmıştı:
+
+1. Aydınlatma metni §10 "esaslı bir değişiklikte yeni sürüm panelde ve e-posta
+   yoluyla bildirilir" diyor. Kodda karşılığı yoktu: `kvkk_consent_version`
+   kayıtta yazılıyor ama hiçbir yerde karşılaştırılmıyordu.
+2. Kayıt kutusu "okudum ve **onaylıyorum**" diyordu. Aydınlatma onaylanmaz,
+   bilgilendirir; işlemenin dayanağı açık rıza değil.
+3. Metinde `[ORTAK 1 AD SOYAD]`, `[DERGİ E-POSTA ADRESİ]` ve
+   `[NESNE DEPOLAMA SAĞLAYICISI]` yer tutucuları duruyordu.
+
+**Karar — yeni sürüm bildirimi:**
+
+- `src/services/kvkk.ts` tek yer.
+  - `publishKvkkVersion` admin action'daki iş kuralını devraldı; action
+    yalnızca doğrulama + servis çağrısı (kod stili).
+  - Yayın artık denetim kaydına yazılıyor (`kvkk.version_published`); eskiden
+    yazılmıyordu.
+  - Girdi zod ile doğrulanır.
+- **Bant:** `PanelShell`, üyenin okuduğu sürüm (`kvkk_consent_version`) güncel
+  sürümden eskiyse ya da boşsa her panel sayfasının üstünde bir bant gösterir:
+  metne bağlantı ve "Okudum" düğmesi.
+  - Bant hiçbir sayfayı kilitlemez; aydınlatma onay istemez (D-083).
+  - Gösterim her yeni sürümde olur, esaslı olsun olmasın.
+- **Bildirim + e-posta:** yalnızca admin yayın formunda "Esaslı değişiklik"
+  kutusunu işaretlerse gider. Kutu varsayılan olarak işaretli; §10'un vaadi bu.
+  - Yazım düzeltmesi herkese e-posta attırmasın diye kaldırılabilir.
+  - Alıcılar: silinmemiş ve e-postası doğrulanmış her üye, yasaklılar dahil.
+    Yasaklı üye de veri sahibi.
+  - Commit'ten sonra gönderilir, hiç hata fırlatmaz (D-098'deki `mailAdmins`
+    ile aynı gerekçe).
+- **"Okudum":** `acknowledgeKvkkNotice`.
+  - `kvkk_consent_version` ve `kvkk_consent_at` güncellenir. Önceki değerler
+    önce denetim kaydına yazılır (`user.kvkk_notice_read`, `before`/`after`).
+    Kayıttaki ilk onayın tarihi böylece kaybolmaz; `audit_log` yalnızca eklenir.
+  - Bant açıkken daha yeni bir sürüm yayınlandıysa eski sürüm için gelen istek
+    409 alır. Yeni metni okumamış biri onu okumuş sayılmaz.
+  - Çift tıklama ikinci denetim kaydı yazmaz.
+- **Migration yok:** mevcut kolonlar yeterli.
+- **Mevcut duyuru sistemi neden kullanılmadı:** `announcements` hedef kitlesi
+  veritabanında enum (`writers`, `editors`, `all_staff`); okuyucu yok.
+  Eklemek bir enum migration'ı demek. Ayrıca zorunlu duyuru yazar panelini
+  kilitliyor. Aydınlatma metni ise sürümlü ayrı bir hukuki belge ve kimseyi
+  kilitlememeli. İki mekanizma farklı iş yapıyor, "aynı işi yapan ikinci
+  çözüm" değil.
+- **Canlıda ilk gün:** Neon'dan sorgulandı (2026-09-13). Silinmemiş 40 üyeden
+  11'i sürüm 1'i okumuş. 29 yazar hesabının sürümü boş: kayıt formundan değil
+  yönetimden açılmışlar ve metin onlara hiç gösterilmemiş. Deploy sonrası
+  bu 29 kişi bandı bir kez görür; bu doğru davranış.
+
+**Karar — kayıt kutusu:** "okudum ve anladım". E2e seçicisi `name="kvkkConsent"`
+olduğu için testler etkilenmez.
+
+**Karar — nesne depolama: Neon Object Storage.**
+
+- Üretim branch'inde `postscript-media` bucket'ı açıldı (`private`). Kod zaten
+  imzalı URL kullanıyor.
+- **Gerekçe:**
+  - Neon Inc. aydınlatma metninde veritabanı sağlayıcısı olarak zaten var ve
+    m. 9 standart sözleşmesinin kapsamında. Yeni bir yurt dışı sağlayıcı
+    eklenmiyor.
+  - Veri Frankfurt'ta, veritabanıyla aynı bölgede kalıyor.
+  - Beta süresince ücretsiz, proje başına 5 GB.
+  - Mevcut S3 bağdaştırıcısı (`forcePathStyle`, SigV4, imzalı GET) kod
+    değişmeden uyumlu.
+- **Risk:** hizmet beta. Belgelenmiş sınırlar:
+  - yoğun kullanımda `503 SlowDown`;
+  - kimlik bilgisinde `expires_at` uygulanmıyor, bu yüzden iptal elle yapılır.
+- Sözleşme PDF'lerinin kaybı kanıt kaybı değil: gösterilen sözleşme metni
+  imzalı haliyle veritabanında da tutuluyor (`schema.ts`, "The contract exactly
+  as it was shown").
+- **Kimlik bilgisi Claude tarafından üretilmedi.** `neon credentials create`
+  gizli anahtarı yalnızca bir kez, çıktıya basıyor; transkripte düşerdi.
+
+**Canlıda çalışması için (ürün sahibi):**
+
+1. Neon Console → `production` branch → Credentials → Create credential,
+   `storage:read` + `storage:write`.
+2. Vercel → Environment Variables (Production):
+   - `S3_ENDPOINT=https://br-young-recipe-b1pi7jjp.storage.c-5.eu-central-1.aws.neon.tech`
+   - `S3_REGION=eu-central-1`
+   - `S3_BUCKET=postscript-media`
+   - `S3_FORCE_PATH_STYLE=true`
+   - `S3_ACCESS_KEY_ID` = credential'ın `token_id`'si
+   - `S3_SECRET_ACCESS_KEY` = `s3_secret_access_key`
+3. Redeploy.
+
+**Karar — metin:**
+
+- Ortak adları (Elif Yaren Çekiç, Tuanna Demir) ve e-posta
+  (`iletisim@postscriptmag.com`) canlı `site_settings`'ten okunarak yazıldı.
+  Künye aynı değerleri gösteriyor.
+- Depolama satırı: Neon Inc., Almanya.
+- **Hâlâ boş:**
+  - `[AÇIK ADRES]`: `site_settings.publisher_address` yalnızca "Konak, İzmir";
+    tebligata elverişli açık adres değil. Tahminle yazılmadı.
+  - `[E-POSTA SAĞLAYICISI]` / `[ÜLKE]`: SMTP sağlayıcısı seçilmedi.
+    `postscriptmag.com`'un MX kaydı Cloudflare Email Routing; yalnızca gelen
+    postayı yönlendirir, gönderim yapmaz.
+- Bu ikisi dolmadan ve S3 ortam değişkenleri girilmeden metin yeni sürüm olarak
+  yayınlanmamalı. Depolama satırı ancak o zaman fiilen doğru olur.
+- **Hukukçu görüşü gerekiyor:** künye 5651 m. 3 kapsamında "Konak, İzmir"
+  gösteriyor. Tebligata esas adres olarak yeterli olup olmadığı belirsiz.
+
+**Hukuk:** Yeni kolon yok. "Okudum" kaydı, kayıtta zaten tutulan
+`kvkk_consent_at`/`kvkk_consent_version` kolonlarını kullanıyor. Önceki değer
+denetim kaydına gidiyor; o da §7'deki "Panel işlem (denetim) kayıtları" satırında.
+
+Metin yine de koddan geride kalmıştı ve bu adımda düzeltildi:
+
+- **§2:** kayıttan beri tutulan "hangi sürümü ne zaman okudu" bilgisi hiç
+  sayılmamıştı. Yeni satır: "Bilgilendirme". Saklama süresi §7'deki "Hesap
+  verileri" satırıyla aynı.
+- **§3:** bu kaydın amacı ve hukuki sebebi de yoktu. Yeni satır: yeni
+  sürümlerin duyurulması ve okuma kaydı; dayanağı (ç) hukuki yükümlülük,
+  KVKK m. 10 (aydınlatmanın yapıldığını ispat).
+- **§10:** artık bandı anlatıyor: onay istemediği ve paneli kilitlemediği
+  yazıyor. Bildirim ve e-postanın yalnızca esaslı değişikliğe gittiği de
+  yazıyor.
+
+**Doğrulama:**
+
+- `tests/integration/kvkk.test.ts`:
+  - editör yayınlayamaz;
+  - kısa metin reddedilir;
+  - sürümler 1, 2 diye artar ve tek güncel kalır;
+  - esaslı olmayan değişiklik bildirim ve e-posta üretmez;
+  - esaslı değişiklik yalnızca doğrulanmış ve silinmemiş üyelere bildirim ve
+    e-posta gönderir;
+  - bant yalnızca okunan sürüm gerideyken görünür;
+  - "okudum" sürümü günceller ve eski sürüm denetim kaydına gider;
+  - eski sürüm için "okudum" reddedilir;
+  - çift gönderim tek kayıt yazar;
+  - geçersiz sürüm girdisi reddedilir.
+- typecheck + lint temiz, 41 dosya / 467 test.
+
+---

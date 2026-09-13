@@ -271,6 +271,27 @@ export function recoveryCodeUsed(input: { displayName: string; remaining: number
   };
 }
 
+/**
+ * A material change to the KVKK notice (D-104, notice §10). It informs; the
+ * notice never asks for consent, so the mail does not ask for anything either.
+ */
+export function kvkkNewVersion(input: {
+  displayName: string;
+  version: number;
+  url: string;
+}): Template {
+  return {
+    subject: `postscript · KVKK aydınlatma metni güncellendi (sürüm ${input.version})`,
+    text:
+      `Merhaba ${input.displayName},\n\n` +
+      "Kişisel verilerinizin nasıl işlendiğini anlatan aydınlatma metnimizin " +
+      `${input.version}. sürümü yayınlandı. Yeni metni buradan okuyabilirsiniz:\n` +
+      `${input.url}\n\n` +
+      "Bu bir bilgilendirmedir; sizden onay istenmiyor." +
+      signature,
+  };
+}
+
 export function mandatoryAnnouncement(input: {
   displayName: string;
   title: string;

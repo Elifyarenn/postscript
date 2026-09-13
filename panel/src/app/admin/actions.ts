@@ -38,12 +38,9 @@ import {
 import { setEditorDuties } from "@/services/editor-categories";
 import { setHybridWriterRole } from "@/services/users";
 import { saveSiteSettings, SITE_SETTING_KEYS } from "@/services/site-settings";
+import { publishKvkkVersion } from "@/services/kvkk";
 import { requestMetadata, requireRole, revokeAllSessions } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
-import { db } from "@/db/client";
-import { kvkkVersions } from "@/db/schema";
-import { sha256Hex } from "@/lib/crypto";
-import { and, eq, ne, desc } from "drizzle-orm";
 import {
   checkbox,
   numberField,
@@ -470,7 +467,7 @@ export async function saveSiteSettingsAction(
   });
 }
 
-/** Publishes a new KVKK notice version; the previous one stops being current. */
+/** Publishes a new KVKK notice version; the previous one stops being current (D-104). */
 export async function publishKvkkVersionAction(
   _state: ActionState,
   formData: FormData,
@@ -478,39 +475,26 @@ export async function publishKvkkVersionAction(
   return runAction(async () => {
     await assertCsrfFromForm(formData);
     const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
 
-    const bodyMarkdown = text(formData, "bodyMarkdown");
-    if (bodyMarkdown.length < 50) throw badRequest("Aydınlatma metni çok kısa.");
-
-    const latest = await db
-      .select({ version: kvkkVersions.version })
-      .from(kvkkVersions)
-      .orderBy(desc(kvkkVersions.version))
-      .limit(1);
-
-    const version = (latest[0]?.version ?? 0) + 1;
-
-    await db.transaction(async (tx) => {
-      // Only one row may be current, so the old one is cleared first
-      await tx
-        .update(kvkkVersions)
-        .set({ isCurrent: false, updatedAt: new Date() })
-        .where(and(eq(kvkkVersions.isCurrent, true), ne(kvkkVersions.version, version)));
-
-      await tx.insert(kvkkVersions).values({
-        version,
+    const notifyMembers = checkbox(formData, "notifyMembers");
+    const { version, notified } = await publishKvkkVersion(
+      { ...user },
+      {
         title: text(formData, "title") || "KVKK Aydınlatma Metni",
-        bodyMarkdown,
-        bodyHash: sha256Hex(bodyMarkdown),
-        publishedAt: new Date(),
-        publishedBy: user.id,
-        isCurrent: true,
-      });
-    });
+        bodyMarkdown: text(formData, "bodyMarkdown"),
+        notifyMembers,
+      },
+      meta,
+    );
 
     revalidatePath("/admin/settings");
     revalidatePath("/kvkk");
-    return { success: `KVKK metni sürüm ${version} olarak yayınlandı.` };
+    return {
+      success: notifyMembers
+        ? `KVKK metni sürüm ${version} olarak yayınlandı; ${notified} üyeye bildirim gönderildi.`
+        : `KVKK metni sürüm ${version} olarak yayınlandı.`,
+    };
   });
 }
 

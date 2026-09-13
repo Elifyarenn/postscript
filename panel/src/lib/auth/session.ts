@@ -28,6 +28,8 @@ export type SessionUser = Actor & {
   displayName: string;
   penName: string | null;
   kvkkConsentAt: Date | null;
+  /** The KVKK notice version the member last read; older than current shows the banner (D-104). */
+  kvkkConsentVersion: number | null;
   birthDate: string | null;
   /** Set when the account was registered through the public writer form. */
   writerIntentAt: Date | null;
@@ -164,6 +166,7 @@ export async function getAuthContext(): Promise<AuthContext | null> {
       emailVerifiedAt: users.emailVerifiedAt,
       isBanned: users.isBanned,
       kvkkConsentAt: users.kvkkConsentAt,
+      kvkkConsentVersion: users.kvkkConsentVersion,
       birthDate: users.birthDate,
       writerIntentAt: users.writerIntentAt,
       totpEnabledAt: users.totpEnabledAt,
@@ -207,6 +210,7 @@ export async function getAuthContext(): Promise<AuthContext | null> {
     emailVerifiedAt: row.emailVerifiedAt,
     isBanned: row.isBanned,
     kvkkConsentAt: row.kvkkConsentAt,
+    kvkkConsentVersion: row.kvkkConsentVersion,
     birthDate: row.birthDate,
     writerIntentAt: row.writerIntentAt,
     totpEnabled: row.totpEnabledAt !== null,
