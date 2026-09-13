@@ -1850,3 +1850,74 @@ snapshot al.
 
 ---
 
+## D-083 — KVKK aydınlatma metni baştan yazıldı
+
+**İstek (ürün sahibi):** Metnin 6698 sayılı Kanun açısından yeterli olup
+olmadığı soruldu; inceleme sonrası yeni metin istendi.
+
+**Tespit:** Eski metin (5 başlık, ~30 satır) KVKK m. 10'un beş zorunlu
+unsurundan üçünü hiç karşılamıyordu:
+
+- **Aktarım bilgisi yoktu.** Oysa üretim Vercel + Neon (AWS us-east-2, Ohio)
+  üzerinde; bütün kişisel veri fiilen ABD'de. Bu, m. 9 anlamında yurt dışına
+  aktarım ve metinde tek kelime geçmiyordu.
+- **Hukuki sebep yoktu.** Amaçlar sayılmış ama hiçbirine m. 5/2 dayanağı
+  gösterilmemişti; Aydınlatma Tebliği her amaç için ayrı sebep ister.
+- **Veri sorumlusunun kimliği eksikti.** "postscript e-dergi" yazıyordu; açık
+  unvan, adres, iletişim yoktu.
+
+**Ayrıca metin gerçeği anlatmıyordu:**
+
+- "Kimlik doğrulama belgesi ... 90 gün saklanır ve otomatik silinir" diyordu.
+  Kimlik belgesi adımı **D-047 ile üründen çıkarıldı**; şemada böyle bir alan
+  yok, 90 günlük silme işi de hiç yazılmadı. Metin iptal edilmiş bir tasarımı
+  anlatıyordu.
+- Fiilen işlenen ama sayılmayan veriler: `users.phone` (D-053), `bio`,
+  `socialLinks`, `avatarMediaId`, topluluk yorum/mesaj içerikleri ve bunların
+  `audit_log`'daki IP kayıtları, `isBanned`/`bannedReason`, TOTP anahtarı,
+  başvurudaki örnek çalışma.
+- Saklama süreleri fiilen sınırsızdı: `sessions` hiç temizlenmiyor, `audit_log`
+  tasarım gereği hiç silinmiyor (D-015). Metinde süre yazmıyordu.
+
+**Yapılan:** `data/kvkk-aydinlatma-metni.md` baştan yazıldı. On başlık: veri
+sorumlusu, işlenen veriler, amaç–hukuki sebep tablosu, toplama yöntemi,
+çerezler, yurt içi/yurt dışı aktarım, saklama süreleri, m. 11 hakları, başvuru
+usulü, sürüm politikası. Her satır koda bakılarak yazıldı; tahmin yok.
+
+**Neden şablon değil kod okundu:** Hazır bir KVKK şablonu, metnin eskiden
+düştüğü tuzağın aynısına düşerdi — sistemin yapmadığı şeyi anlatmak. Metindeki
+her veri kalemi, her süre ve her çerez adı şemadaki bir kolona veya koddaki bir
+sabite karşılık geliyor.
+
+**Metinde bilerek bırakılan boşluklar:** `[ORTAK 1 AD SOYAD]`, `[AÇIK ADRES]`,
+`[DERGİ E-POSTA ADRESİ]`, `[NESNE DEPOLAMA SAĞLAYICISI]`, `[E-POSTA
+SAĞLAYICISI]`. KVKK sayfası (`src/app/kvkk/page.tsx`) metni ham markdown olarak
+basar; sözleşmedeki gibi `{{...}}` yer tutucu ikamesi yoktur, bu yüzden
+değerler `site_settings`'ten otomatik gelmez. Yayınlamadan önce elle
+doldurulacak.
+
+**Yayınlanmadan önce doğru olması gerekenler (aksi hâlde metin yanlış beyan):**
+
+1. Vercel ve Neon ile **standart sözleşme** imzalanmış ve imzadan itibaren
+   5 iş günü içinde Kuruma bildirilmiş olmalı (m. 9/3). Metin bunu olmuş gibi
+   yazıyor.
+2. `sessions` için 1 yıllık temizlik işi yazılmalı; şu an hiç silinmiyor.
+3. Köşeli parantezli alanlar doldurulmalı.
+
+**Sonraki adımlara bırakılanlar:**
+
+- Kayıt formundaki kutu "okudum ve **onaylıyorum**" diyor
+  (`src/app/(auth)/register/page.tsx:64`). Aydınlatma onaylanmaz, bilgilendirir;
+  buradaki işlemenin sebebi zaten açık rıza değil, sözleşmenin ifası. "Okudum ve
+  anladım" olacak.
+- `kvkkConsentVersion` kayıtta yazılıyor ama hiçbir yerde karşılaştırılmıyor.
+  Yeni sürüm yayınlandığında mevcut kullanıcılara gösterilmiyor; metnin 10.
+  başlığı bunu vaat ediyor, kod henüz yapmıyor.
+- 5651 künyesi (`/iletisim`) ile veri sorumlusu kimliği aynı kaynaktan beslenir;
+  birlikte yapılacak.
+
+**Yayına alma:** Dosya yalnızca `pnpm seed` girdisidir. Üretimdeki metin
+`kvkk_versions` tablosunda durur; yeni sürüm admin panelindeki "Sistem"
+sayfasından yayınlanmadıkça canlıda hiçbir şey değişmez.
+
+---
