@@ -1,10 +1,12 @@
 /**
- * Turns an article's audit rows into the steps an admin reads (D-106).
+ * Turns an article's audit rows into the steps people read (D-106, D-107).
  *
  * Pure, like the state machine: the service fetches the rows and this decides
- * what each one means in words, so the wording is testable without a database.
- * Statuses stay as raw enum values; the page owns the Turkish status labels.
+ * what each one means in words and what the author may see, so both are
+ * testable without a database. Statuses stay as raw enum values; the card owns
+ * the Turkish status labels.
  */
+import type { ArticleStatus } from "@/db/schema";
 
 export type AuditRow = {
   id: string;
@@ -17,6 +19,7 @@ export type AuditRow = {
 
 export type HistoryStep = {
   id: string;
+  action: string;
   at: Date;
   actor: string;
   label: string;
@@ -24,6 +27,20 @@ export type HistoryStep = {
   toStatus: string | null;
   note: string | null;
 };
+
+/** Who is reading: editorial staff see everything, the author sees their inbox's view. */
+export type HistoryAudience = "staff" | "author";
+
+/**
+ * The status changes the author is told about by e-mail, the reviewer's note
+ * included. The author's history shows notes only for these, so the screen
+ * never reveals more than the inbox already has.
+ */
+export const AUTHOR_TOLD_STATUSES: readonly ArticleStatus[] = [
+  "revision_requested",
+  "published",
+  "withdrawn",
+];
 
 const PLAGIARISM_LABELS: Record<string, string> = {
   not_run: "kontrol edilmedi",
@@ -46,6 +63,7 @@ function field(payload: unknown, key: string): string | null {
 export function describeStep(row: AuditRow): HistoryStep {
   const base: HistoryStep = {
     id: row.id,
+    action: row.action,
     at: row.createdAt,
     // A scheduled job writes no actor, and a deleted account's id is nulled out
     actor: row.actorName ?? "Sistem",
@@ -98,4 +116,22 @@ export function describeStep(row: AuditRow): HistoryStep {
       // A new action still shows up, under its raw name, rather than vanishing
       return base;
   }
+}
+
+/** Narrows the history to what the given audience may see (D-107). */
+export function stepsForAudience(steps: HistoryStep[], audience: HistoryAudience): HistoryStep[] {
+  if (audience === "staff") return steps;
+
+  const told = AUTHOR_TOLD_STATUSES as readonly string[];
+  return (
+    steps
+      // The plagiarism check is an internal assessment the author is never shown
+      .filter((step) => step.action !== "article.plagiarism_status_set")
+      // Reviewers' notes from the internal stages were never sent to the author
+      .map((step) =>
+        step.action === "article.status_changed" && !told.includes(step.toStatus ?? "")
+          ? { ...step, note: null }
+          : step,
+      )
+  );
 }

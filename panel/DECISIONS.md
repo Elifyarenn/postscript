@@ -3334,3 +3334,80 @@ zaten sayılı ve admin'in erişimi `/admin/audit`'te zaten var. Metin değişme
   - geçişler düğme adıyla seçiliyor, tablo metni düğme değil.
 
 ---
+
+## D-107 — Süreç geçmişi editöre ve yazara da açıldı; yazar gelen kutusunun gördüğünü görür
+
+**İstek (ürün sahibi):** "Editör ve yazar da süreç geçmişini görebilsin."
+
+**D-106'dan değişen:** Kart yalnızca admin'e açıktı. Artık yazıyı okuyabilen
+herkese açık; kural yazının notları ve sürümleriyle aynı:
+- admin ve ana editör: bütün yazılar;
+- kategori editörü: yalnızca alanlarına düşen yazılar;
+- yazar: yalnızca kendi yazısı.
+
+Kapı `listArticleHistory` içinde `assertCanReadArticle`. Sayfadaki kontrol yetki
+değil; kapsam dışındaki editöre, başka bir yazara ve okura servis 403 döner.
+
+**Yazarın gördüğü — neden kısıtlı:** Denetim kaydı editörler arasındaki iç
+değerlendirmeyi de taşıyor. Yazarın bugüne kadar bildiği, e-postayla ona
+gidenlerdi.
+
+- `notifyAuthorOfStatus` yalnızca üç durumda ve notuyla e-posta atıyor:
+  `revision_requested`, `published`, `withdrawn`.
+- Kategori editörünün ya da ana editörün iç aşamalarda bıraktığı geçiş notları
+  yazara hiç iletilmiyordu.
+- Yazar sayfası intihal kontrolünü hiç göstermiyordu.
+
+Kartı olduğu gibi açmak bunları yazara ilk kez gösterirdi. Muhafazakâr kural:
+ekran gelen kutusundan fazlasını göstermez (`stepsForAudience`, saf fonksiyon).
+
+- **Bütün adımlar görünür:** kim, ne zaman, hangi durumdan hangisine.
+  Editörlerin görünen adları yazara zaten editöryal notların altında
+  görünüyordu.
+- **Geçiş notu yalnızca e-postası atılan üç durumda** görünür; diğerlerinde
+  "—".
+- **İntihal adımı hiç görünmez.** Sonucu da, notu da iç değerlendirme.
+- **Eser Onayı adımları görünür**, ret gerekçesi dahil; gerekçe yazarın kendi
+  sözü.
+- **Tek kaynak:** "yazara bildirilen durumlar" listesi
+  `src/lib/article-history.ts` → `AUTHOR_TOLD_STATUSES`. `notifyAuthorOfStatus`
+  de bu listeyi kullanıyor. Yazara e-posta giden bir durum eklenirse notu
+  geçmişte de kendiliğinden görünür; ikisi ayrışamaz.
+
+**Editör ve admin** kısıtsız görür. İntihal notunu ve iç notları zaten aynı
+sayfada okuyorlar.
+
+**Kart tek bileşen:** `src/components/article-history.tsx` →
+`ArticleHistoryCard`. Editör ve yazar sayfası aynı bileşeni kullanıyor; hangi
+adım ve notun geleceği servisin kararı, kartın değil.
+
+**IP adresi** kimseye gösterilmez (D-106'daki gibi).
+
+**Fark edilen, değiştirilmeyen:** Yazar sayfası editöryal notları kendi
+sorgusuyla okuyor ve `deleted_at` süzmüyor; `listComments` süzüyor. Kodda notu
+yumuşak silen bir yol bulunmadığı için bugün görünür bir etkisi yok. Not silme
+eklenirse bu sorgu da `listComments`'e çevrilmeli.
+
+**Hukuk:** Yeni kişisel veri, amaç veya aktarım yok. Yazar kendi yazısının
+işlenişini görüyor; editörlerin görünen adları zaten görünüyordu. İç
+değerlendirme notları ve intihal sonucu yazara açılmadı. Aydınlatma metni
+değişmedi.
+
+**Doğrulama:**
+
+- `tests/unit/article-history.test.ts`:
+  - personel her şeyi görür;
+  - yazar görünümünde intihal adımı yok;
+  - iç aşama notu boş, revizyon notu ve ret gerekçesi görünür;
+  - `AUTHOR_TOLD_STATUSES` e-postanın üç durumuyla aynı.
+- `tests/integration/article-history.test.ts`:
+  - admin ve ana editör aynı tam geçmişi görür; adımlar sırayla: revizyon
+    döngüsü, intihal, not, Eser Onayı;
+  - yazar görünümü bir adım eksik (intihal); revizyon notu var; iç notlar ve
+    intihal notu yanıtın hiçbir yerinde yok;
+  - IP adresi admin'de de yazarda da yok;
+  - alanı kapsamayan kategori editörüne, başka yazara ve okura 403;
+  - olmayan yazıya 404.
+- typecheck + lint temiz, 43 dosya / 483 test.
+
+---

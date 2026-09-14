@@ -25,7 +25,6 @@ import {
   Input,
   PageHeader,
   Select,
-  STATUS_LABELS,
   StatusBadge,
   Table,
   Td,
@@ -34,6 +33,7 @@ import {
 } from "@/components/ui";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { StatusPanel } from "./status-panel";
+import { ArticleHistoryCard } from "@/components/article-history";
 import {
   addCommentAction,
   resolveCommentAction,
@@ -76,7 +76,7 @@ export default async function EditorArticleDetailPage({
         .where(and(inArray(users.role, ["writer", "editor", "admin"]), isNull(users.deletedAt)))
         .orderBy(users.displayName),
       allMediaLicensed(article.id),
-      isAdmin ? listArticleHistory(actor, article.id) : Promise.resolve([]),
+      listArticleHistory(actor, article.id),
     ]);
 
   const preview = await renderMarkdown(article.bodyMarkdown);
@@ -294,48 +294,7 @@ export default async function EditorArticleDetailPage({
           </PanelForm>
         </Card>
 
-        {/* Only the admin: the steps come from the audit log, which is theirs (D-106) */}
-        {isAdmin && (
-          <Card>
-            <h2 className="mb-1 font-serif text-lg">Süreç geçmişi</h2>
-            <p className="mb-4 text-xs text-muted">
-              Yazının geçtiği her adım: kim yaptı, ne zaman, hangi notla.
-            </p>
-
-            {history.length === 0 ? (
-              <EmptyState>Kayıtlı adım yok.</EmptyState>
-            ) : (
-              <Table>
-                <thead>
-                  <tr>
-                    <Th>Tarih</Th>
-                    <Th>Kim</Th>
-                    <Th>Adım</Th>
-                    <Th>Not</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.map((step) => (
-                    <tr key={step.id}>
-                      <Td className="text-xs whitespace-nowrap">{formatDateTime(step.at)}</Td>
-                      <Td className="text-xs">{step.actor}</Td>
-                      <Td className="text-xs">
-                        {step.label}
-                        {step.toStatus && (
-                          <span className="block text-muted">
-                            {STATUS_LABELS[step.fromStatus ?? ""] ?? step.fromStatus ?? "—"} →{" "}
-                            {STATUS_LABELS[step.toStatus] ?? step.toStatus}
-                          </span>
-                        )}
-                      </Td>
-                      <Td className="text-xs whitespace-pre-wrap">{step.note ?? "—"}</Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            )}
-          </Card>
-        )}
+        <ArticleHistoryCard steps={history} />
 
         <Card>
           <h2 className="mb-4 font-serif text-lg">Sürüm geçmişi</h2>

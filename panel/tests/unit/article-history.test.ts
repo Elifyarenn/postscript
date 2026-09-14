@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { describeStep, type AuditRow } from "@/lib/article-history";
+import {
+  AUTHOR_TOLD_STATUSES,
+  describeStep,
+  stepsForAudience,
+  type AuditRow,
+} from "@/lib/article-history";
 
 function row(overrides: Partial<AuditRow>): AuditRow {
   return {
@@ -13,16 +18,16 @@ function row(overrides: Partial<AuditRow>): AuditRow {
   };
 }
 
+function transition(from: string, to: string, note: string) {
+  return describeStep(
+    row({ action: "article.status_changed", before: { status: from }, after: { status: to, note } }),
+  );
+}
+
 describe("describeStep", () => {
   it("reads a status change with the note the reviewer left", () => {
-    const step = describeStep(
-      row({
-        action: "article.status_changed",
-        before: { status: "in_review" },
-        after: { status: "revision_requested", note: "Giriş paragrafını kısaltın." },
-      }),
-    );
-    expect(step).toMatchObject({
+    expect(transition("in_review", "revision_requested", "Giriş paragrafını kısaltın.")).toMatchObject({
+      action: "article.status_changed",
       label: "Durum değişti",
       fromStatus: "in_review",
       toStatus: "revision_requested",
@@ -32,10 +37,7 @@ describe("describeStep", () => {
   });
 
   it("treats an empty note as no note", () => {
-    const step = describeStep(
-      row({ action: "article.status_changed", before: { status: "draft" }, after: { status: "in_review", note: "  " } }),
-    );
-    expect(step.note).toBeNull();
+    expect(transition("draft", "in_review", "  ").note).toBeNull();
   });
 
   it("names the plagiarism result and keeps its note", () => {
@@ -61,5 +63,34 @@ describe("describeStep", () => {
 
   it("keeps an unknown action visible under its raw name", () => {
     expect(describeStep(row({ action: "article.something_new" })).label).toBe("article.something_new");
+  });
+});
+
+describe("stepsForAudience", () => {
+  const steps = [
+    describeStep(row({ id: "a", action: "article.created" })),
+    transition("in_review", "pending_admin_approval", "İç değerlendirme notu."),
+    transition("in_review", "revision_requested", "Girişi kısaltın."),
+    describeStep(row({ id: "p", action: "article.plagiarism_status_set", after: { status: "clean", note: "Benzerlik yok." } })),
+    describeStep(row({ id: "d", action: "work_approval.declined", after: { reason: "Başlık değişmiş." } })),
+  ];
+
+  it("gives editorial staff everything", () => {
+    expect(stepsForAudience(steps, "staff")).toEqual(steps);
+  });
+
+  it("hides the plagiarism step and internal notes from the author, keeping what the inbox told them", () => {
+    const authorView = stepsForAudience(steps, "author");
+
+    expect(authorView.map((step) => step.action)).not.toContain("article.plagiarism_status_set");
+    expect(authorView.find((step) => step.toStatus === "pending_admin_approval")?.note).toBeNull();
+    expect(authorView.find((step) => step.toStatus === "revision_requested")?.note).toBe("Girişi kısaltın.");
+    // The refusal reason is the author's own words
+    expect(authorView.find((step) => step.action === "work_approval.declined")?.note).toBe("Başlık değişmiş.");
+    expect(authorView).toHaveLength(steps.length - 1);
+  });
+
+  it("matches the statuses the author is e-mailed about", () => {
+    expect([...AUTHOR_TOLD_STATUSES].sort()).toEqual(["published", "revision_requested", "withdrawn"]);
   });
 });

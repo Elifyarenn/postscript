@@ -5,6 +5,8 @@ import { db } from "@/db/client";
 import { articleComments, users } from "@/db/schema";
 import { guardWriterInnerPages } from "@/lib/auth/guard";
 import { findArticleById, listArticleVersions } from "@/services/articles";
+import { listArticleHistory } from "@/services/article-history";
+import { ArticleHistoryCard } from "@/components/article-history";
 import { selectableWriterCategories } from "@/services/editor-categories";
 import { readCsrfToken } from "@/lib/csrf";
 import { renderMarkdown } from "@/lib/markdown";
@@ -28,7 +30,7 @@ export default async function WriterArticleDetailPage({
   if (article.authorId !== user.id) notFound();
 
   const editable = article.status === "draft" || article.status === "revision_requested";
-  const [categories, versions, notes] = await Promise.all([
+  const [categories, versions, notes, history] = await Promise.all([
     editable ? selectableWriterCategories({ ...user }) : Promise.resolve([]),
     listArticleVersions({ ...user }, id),
     db
@@ -42,6 +44,8 @@ export default async function WriterArticleDetailPage({
       .from(articleComments)
       .leftJoin(users, eq(articleComments.authorId, users.id))
       .where(inArray(articleComments.articleId, [id])),
+    // The author's view: no plagiarism check, no internal reviewers' notes (D-107)
+    listArticleHistory({ ...user }, id),
   ]);
 
   const preview = await renderMarkdown(article.bodyMarkdown);
@@ -156,6 +160,8 @@ export default async function WriterArticleDetailPage({
             </ul>
           )}
         </Card>
+
+        <ArticleHistoryCard steps={history} />
 
         <Card>
           <h2 className="mb-4 font-serif text-lg">Sürüm geçmişi</h2>

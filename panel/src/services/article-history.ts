@@ -1,27 +1,27 @@
 /**
- * An article's step history, for the admin (D-106).
+ * An article's step history (D-106, D-107).
  *
  * Every step is already in the append-only audit log, so nothing new is stored.
- * Only the admin reads it, because the audit log is theirs; the IP address is
- * left out all the same, since the article page has no use for it.
+ * Whoever may read the article may read its steps: the admin, an editor whose
+ * areas cover it, and its author. The author sees them the way their inbox told
+ * them, without the plagiarism assessment and without reviewers' notes from the
+ * internal stages. The IP address the audit log holds is left out for everyone.
  */
 import "server-only";
 import { and, asc, eq, inArray, or } from "drizzle-orm";
 import { db } from "@/db/client";
 import { auditLog, rightsGrants, users } from "@/db/schema";
-import { describeStep, type HistoryStep } from "@/lib/article-history";
-import { canAccessAdminPanel, type Actor } from "@/lib/auth/rbac";
-import { forbidden } from "@/lib/errors";
-import { findArticleById } from "@/services/articles";
+import { describeStep, stepsForAudience, type HistoryStep } from "@/lib/article-history";
+import { canAccessEditorPanel, type Actor } from "@/lib/auth/rbac";
+import { assertCanReadArticle, findArticleById } from "@/services/articles";
 
 /** Far above any real article's step count; a guard, not a page size. */
 const HISTORY_LIMIT = 500;
 
 export async function listArticleHistory(actor: Actor, articleId: string): Promise<HistoryStep[]> {
-  if (!canAccessAdminPanel(actor)) throw forbidden();
-
-  // An unknown id is a 404, not an empty history
-  await findArticleById(articleId);
+  // An unknown id is a 404; then the same gate the notes and versions use
+  const article = await findArticleById(articleId);
+  await assertCanReadArticle(actor, article);
 
   // Work approval events are logged against the grant, not the article
   const grants = await db
@@ -59,5 +59,8 @@ export async function listArticleHistory(actor: Actor, articleId: string): Promi
     .orderBy(asc(auditLog.createdAt))
     .limit(HISTORY_LIMIT);
 
-  return rows.map(describeStep);
+  return stepsForAudience(
+    rows.map(describeStep),
+    canAccessEditorPanel(actor) ? "staff" : "author",
+  );
 }

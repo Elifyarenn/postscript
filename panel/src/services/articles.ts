@@ -20,6 +20,7 @@ import {
   type ArticleStatus,
 } from "@/db/schema";
 import { allowedTargets, autoTransitionAfter, checkTransition } from "@/lib/article-status";
+import { AUTHOR_TOLD_STATUSES } from "@/lib/article-history";
 import { writeAudit } from "@/lib/audit";
 import {
   canAccessEditorPanel,
@@ -753,8 +754,8 @@ async function notifyAuthorOfStatus(
   status: ArticleStatus,
   note?: string,
 ): Promise<void> {
-  const notifiable: ArticleStatus[] = ["revision_requested", "published", "withdrawn"];
-  if (!notifiable.includes(status) || !article.authorId) return;
+  // One list for the e-mail and for the notes the author's step history shows (D-107)
+  if (!AUTHOR_TOLD_STATUSES.includes(status) || !article.authorId) return;
 
   const rows = await db
     .select({ email: users.email, displayName: users.displayName })
