@@ -3529,3 +3529,52 @@ değişmedi.
 - typecheck + lint temiz, 45 dosya / 496 test.
 
 ---
+
+## D-110 — Canlıdaki iki yazı yumuşak silindi
+
+**İstek (ürün sahibi):** "Atılan yazıları sil."
+
+**Kapsam — ürün sahibine soruldu:** Canlıda iki yazı vardı, ikisi de
+yayımlanmamış. Yerel veritabanında yazı yoktu. Ürün sahibi ikisini de ve
+yöntem olarak "şimdi yumuşak sil"i seçti.
+
+| Yazı | Durum | Sürüm | Not | Kimlik |
+|---|---|---|---|---|
+| Madde 1 - Hukukun Peşini Bırakmadıkları | draft | 3 | 0 | `ede5e7b1-dc34-4331-8f84-d5e2cb103ab0` |
+| Kimlik Rafında | pending_admin_approval | 2 | 1 | `23d85477-2663-41ce-b417-d0fe4d88be1f` |
+
+**Neden tamamen silinmedi:** CLAUDE.md, 5187 s. K. belirsizliği nedeniyle
+hukukçu görüşü alınana kadar `article_versions`'ın silinmemesini şart koşuyor.
+`articles` satırının silinmesi sürümleri de cascade ile silerdi.
+
+**Kodda silme özelliği yok.** Yazılar `deleted_at` alanıyla yumuşak silinir.
+`findArticleById` ve bütün listeler bu alanı süzer: işaretlenen yazı panelde
+de, public API'de de bulunamaz (404).
+
+**Yapılan (2026-09-14):**
+
+- **Yedek:** `backup-before-article-soft-delete` (`br-royal-moon-b1hr15ey`),
+  hesaplamasız branch.
+- **Tek transaction (Neon üzerinden SQL):**
+  - İki yazıya kimlikleriyle `deleted_at = now()` yazıldı.
+  - `audit_log`'a her biri için `article.soft_deleted` satırı eklendi.
+    İşlemi yapan kişi: boş, çünkü panel dışından yapıldı. `before` kaydında durum
+    ve başlık, `after` kaydında gerekçe ve yöntem var.
+  - Ürün sahibine seçeneği sunarken "denetim kaydına yazılmaz" denmişti. Kayıt
+    yine de eklendi: yalnızca ekleme yapıyor, bir şeyi değiştirmiyor ve silmenin
+    izini tutuyor.
+- **Doğrulama (Neon'dan sorgulandı):**
+  - iki yazıda `deleted_at` dolu;
+  - sürümler (3 ve 2) ve editöryal not yerinde;
+  - her yazı için bir denetim satırı var;
+  - silinmemiş yazı kalmadı.
+
+**Geri alma:** Gerekirse aynı iki kimlik için `deleted_at = null` yazılır ve
+bir `article.restored` denetim satırı eklenir. Veri kaybı olmadığı için yedek
+branch'e dönmek gerekmez; branch yalnızca güvence.
+
+**Açık:** Admin paneline denetim kaydı yazan bir "yazıyı sil / geri al"
+özelliği bu adımda eklenmedi. Tekrar gerekecekse ayrı adım olarak yapılmalı;
+SQL ile silme işlemi yapanı kaydedemiyor.
+
+---
