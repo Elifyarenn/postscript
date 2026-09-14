@@ -1,9 +1,13 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowRight } from "lucide-react";
 import { requireSession } from "@/lib/auth/guard";
 import { getPublishedIssue } from "@/services/public";
 import { ArticleCard } from "@/components/magazine";
-import { Card, EmptyState, PageHeader } from "@/components/ui";
+import { SiteBanner } from "@/components/site-ui";
+import { EmptyState } from "@/components/ui";
 import { isAppError } from "@/lib/errors";
+import { formatIssueNumber } from "@/lib/site";
 import { formatDate } from "@/lib/utils";
 
 export const metadata = { title: "Sayı" };
@@ -22,24 +26,29 @@ export default async function IssuePage({ params }: { params: Promise<{ number: 
     throw error;
   });
 
+  const subtitle = [`Sayı ${formatIssueNumber(issue.number)}`, issue.theme, issue.publishedAt && formatDate(issue.publishedAt)]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <>
-      <PageHeader
-        title={`Sayı ${issue.number} · ${issue.title}`}
-        description={issue.theme ?? undefined}
-      />
+      <SiteBanner title={issue.title} subtitle={subtitle} />
 
-      {issue.publishedAt && (
-        <p className="mb-4 text-xs text-muted">{formatDate(issue.publishedAt)}</p>
-      )}
+      <section className="issues-section" aria-labelledby="contents-title">
+        <div className="site-section-head">
+          <h2 id="contents-title" className="site-caps-title">
+            İçindekiler
+          </h2>
+          <Link href="/magazine/issues" className="site-more">
+            Tüm sayılar <ArrowRight aria-hidden />
+          </Link>
+        </div>
 
-      <Card>
-        <h2 className="font-serif text-lg">İçindekiler</h2>
-        <div className="mt-2">
-          {issue.articles.length === 0 ? (
-            <EmptyState>Bu sayıda henüz yayınlanmış yazı yok.</EmptyState>
-          ) : (
-            issue.articles.map((article) => (
+        {issue.articles.length === 0 ? (
+          <EmptyState>Bu sayıda henüz yayınlanmış yazı yok.</EmptyState>
+        ) : (
+          <div className="issue-contents">
+            {issue.articles.map((article) => (
               <ArticleCard
                 key={article.slug}
                 title={article.title}
@@ -49,10 +58,10 @@ export default async function IssuePage({ params }: { params: Promise<{ number: 
                 authorSlug={article.authorSlug}
                 publishedAt={article.publishedAt}
               />
-            ))
-          )}
-        </div>
-      </Card>
+            ))}
+          </div>
+        )}
+      </section>
     </>
   );
 }

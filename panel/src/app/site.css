@@ -2134,3 +2134,137 @@
 .ps-site .post-small:hover {
   color: var(--color-danger);
 }
+
+/* ════════════════ Issues (D-114) ════════════════ */
+
+.ps-site .banner-quote {
+  max-width: 11rem;
+  font-family: var(--font-italic), Georgia, serif;
+  font-size: clamp(1.3rem, 2.4vw, 2rem);
+  font-style: italic;
+  line-height: 1.15;
+  text-align: right;
+}
+
+.ps-site .banner-button {
+  margin-top: 1.6rem;
+}
+
+.ps-site .issues-section {
+  margin-top: 2rem;
+}
+
+.ps-site .issues-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.ps-site .issues-rule {
+  display: flex;
+  min-width: 6rem;
+  flex: 1;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--site-ink);
+}
+
+.ps-site .issues-rule::before,
+.ps-site .issues-rule::after {
+  height: 1px;
+  flex: 1;
+  background: var(--site-ink);
+  content: "";
+}
+
+.ps-site .issues-rule .site-sparkle {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.ps-site .issue-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(22rem, 100%), 1fr));
+  border-top: 1px solid var(--site-ink);
+  border-left: 1px solid var(--site-ink);
+}
+
+.ps-site .issue-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.25rem;
+  padding: 0.9rem;
+  border-right: 1px solid var(--site-ink);
+  border-bottom: 1px solid var(--site-ink);
+}
+
+.ps-site .issue-cover {
+  display: grid;
+  aspect-ratio: 5 / 7;
+  place-items: center;
+  background: var(--site-night);
+  color: var(--site-paper);
+  font-family: var(--font-italic), Georgia, serif;
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-style: italic;
+  transition: background-color 0.2s;
+}
+
+.ps-site .issue-cover:hover {
+  background: var(--site-wine);
+}
+
+.ps-site .issue-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.ps-site .issue-new {
+  color: #000;
+  font-family: var(--font-caps), Georgia, serif;
+  font-size: 1.8rem;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.ps-site .issue-title {
+  color: var(--site-wine);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.ps-site .issue-title span {
+  display: block;
+}
+
+.ps-site .issue-title a:hover {
+  text-decoration: underline;
+}
+
+.ps-site .issue-theme {
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+.ps-site .issue-date {
+  color: var(--site-muted);
+  font-size: 0.95rem;
+}
+
+.ps-site .issue-contents {
+  padding: 0 1.25rem;
+  border: 1px solid var(--site-rule);
+}
+
+@media (max-width: 760px) {
+  .ps-site .banner-quote {
+    display: none;
+  }
+}

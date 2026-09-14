@@ -3913,3 +3913,36 @@ değişmedi.
   kullanıcı adı, anonim kutu, DM tercihi, gönderi, takip, beğeni, kaydetme,
   özel mesaj, anonim mesaj ve bildirimler. e2e'nin dayandığı tüm etiket ve
   düğme adları geçti; 1920 ve 390 px'de yatay taşma yok.
+
+---
+
+## D-114 — Sayılar sayfası "magazines" tasarımına göre; sayı sayfası aynı çerçevede
+
+**İstek:** D-112 ve D-113'ün devamı, `postscriptui/magazines.ai`.
+
+**Karar:**
+
+- **`/magazine/issues`:**
+  - Koyu bantta ince italik "SAYILAR" başlığı var. Altında "Yazılar, öyküler,
+    söyleşiler ve dahası…", sağda tasarımdaki alıntının çevirisi ("Daha tuhaf
+    bir dünya için daha iyi hikâyeler.") ve "Tüm sayıları keşfet!" düğmesi.
+  - "Öne çıkan sayılar" başlığı yıldızlı çizgiyle ayrılır; sayılar ince çizgili
+    bir ızgarada listelenir.
+  - En yeni sayıda "Yeni!" yazar. Başlık "POSTSCRIPT: <sayı adı>" olarak, altında
+    tema ve tarih gösterilir.
+- **Kapak:** Tasarımda da boş, koyu blok. Kapak görseli yüklenmediği ve medya
+  herkese açık değil, `/api/media` üzerinden yetkiyle verildiği için sayı
+  numarası basılır.
+- **Beğeni sayacı konmadı:** Tasarımda her sayının altında var, ama sayı beğenme
+  özelliği yok ve sahte sayı gösterilmez.
+- **`/magazine/issues/[number]`:** Aynı bant (sayı adı; sayı no, tema, tarih) ve
+  çerçeveli "İçindekiler". Yayımlanmamış sayı okura yine 404 (değişmedi).
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:**
+
+- typecheck ve lint temiz.
+- Deneme sunucusunda 1920 ve 390 px ekran görüntüsü alındı; yatay taşma yok.
+- Seed'deki sayı yayımlanmamış olduğu için ızgara boş hâliyle görüldü; dolu
+  ızgara üretimde ilk yayımlanan sayıyla görülecek.
