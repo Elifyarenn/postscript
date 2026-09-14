@@ -1,36 +1,14 @@
 import type { ReactNode } from "react";
 import { requireSession } from "@/lib/auth/guard";
-import { PanelShell, socialNav } from "@/components/shell";
-import { unreadNotificationCount } from "@/services/notifications";
-import { unreadConversationCount } from "@/services/direct-messages";
-import { unreadAnonCount } from "@/services/anon-box";
-import { getMemberSettings } from "@/services/social";
+import { SiteShell } from "@/components/site-shell";
 
 /**
  * The community area (D-089). Like the magazine it asks for a session and no
- * role; every service below still checks the actor itself.
+ * role; every service below still checks the actor itself. The member menu and
+ * its unread counts come with the magazine frame (D-112).
  */
 export default async function SocialLayout({ children }: { children: ReactNode }) {
   const { user } = await requireSession();
-  const [settings, unread, unreadConversations, unreadAnon] = await Promise.all([
-    getMemberSettings({ ...user }),
-    unreadNotificationCount({ ...user }),
-    unreadConversationCount({ ...user }),
-    unreadAnonCount({ ...user }),
-  ]);
 
-  return (
-    <PanelShell
-      user={user}
-      area="topluluk"
-      groups={socialNav({
-        username: settings.username,
-        notifications: unread,
-        messages: unreadConversations,
-        anon: unreadAnon,
-      })}
-    >
-      {children}
-    </PanelShell>
-  );
+  return <SiteShell user={user}>{children}</SiteShell>;
 }

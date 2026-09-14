@@ -6,12 +6,20 @@
  * A withdrawn article answers 410, anything else unpublished answers 404.
  */
 import "server-only";
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, isNotNull, isNull, or } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
+import { z } from "zod";
 import { db } from "@/db/client";
 import { articles, issues, media, rightsGrants, users } from "@/db/schema";
 import { gone, notFound } from "@/lib/errors";
 import { renderMarkdown } from "@/lib/markdown";
+import { containsPattern } from "@/lib/search";
+
+/** The reading screen's search box and category links (D-112). */
+export const articleFilterSchema = z.strictObject({
+  query: z.string().trim().max(100).optional(),
+  category: z.string().trim().max(100).optional(),
+});
 
 /** Shown when an article has a byline we are not allowed to fill in. */
 const ANONYMOUS_BYLINE = "İsimsiz";
@@ -238,7 +246,18 @@ export async function getPublicAuthor(penNameSlug: string) {
  * The reader's magazine screen leads with this rather than with the issue list,
  * because an article can be published before its issue is.
  */
-export async function listRecentArticles(limit = 20) {
+export async function listRecentArticles(limit = 20, rawFilter: unknown = {}) {
+  // A malformed filter (say, a hand-edited URL) reads as no filter, not as an error
+  const parsed = articleFilterSchema.safeParse(rawFilter);
+  const filter = parsed.success ? parsed.data : {};
+
+  const conditions = [eq(articles.status, "published"), isNull(articles.deletedAt)];
+  if (filter.category) conditions.push(eq(articles.category, filter.category));
+  if (filter.query) {
+    const pattern = containsPattern(filter.query);
+    conditions.push(or(ilike(articles.title, pattern), ilike(articles.summary, pattern))!);
+  }
+
   const rows = await db
     .select({
       title: articles.title,
@@ -256,7 +275,7 @@ export async function listRecentArticles(limit = 20) {
     .leftJoin(users, eq(articles.authorId, users.id))
     .leftJoin(issues, eq(articles.issueId, issues.id))
     .leftJoin(rightsGrants, signedGrantFor(articles.id))
-    .where(and(eq(articles.status, "published"), isNull(articles.deletedAt)))
+    .where(and(...conditions))
     .orderBy(desc(articles.publishedAt))
     .limit(limit);
 
@@ -267,4 +286,28 @@ export async function listRecentArticles(limit = 20) {
       ? publicByline({ penName, displayName, bylineChoice })
       : null,
   }));
+}
+
+/**
+ * The writers the about page lists (D-112): anyone with a pen name page and at
+ * least one published article. Pen names only — the page is public, and a
+ * legal name is never listed (D-076).
+ */
+export async function listPublicAuthors(): Promise<{ name: string; slug: string }[]> {
+  const rows = await db
+    .selectDistinct({ name: users.penName, slug: users.penNameSlug })
+    .from(users)
+    .innerJoin(articles, eq(articles.authorId, users.id))
+    .where(
+      and(
+        isNotNull(users.penName),
+        isNotNull(users.penNameSlug),
+        isNull(users.deletedAt),
+        eq(articles.status, "published"),
+        isNull(articles.deletedAt),
+      ),
+    )
+    .orderBy(asc(users.penName));
+
+  return rows.flatMap((row) => (row.name && row.slug ? [{ name: row.name, slug: row.slug }] : []));
 }

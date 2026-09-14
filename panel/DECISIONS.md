@@ -3698,3 +3698,133 @@ Cloudflare zaten metinde (R2). Aydınlatma metni aynı adımda güncellendi:
 - typecheck + lint temiz, 47 dosya / 508 test.
 
 ---
+
+---
+
+## D-112 — Derginin kendi çerçevesi: `postscriptui` tasarımları ana sayfaya, okuma alanına, topluluğa ve Hakkında'ya uygulandı
+
+**İstek (ürün sahibi):** "postscriptui şuanki kod yapısına göre bu dosyaya bakarak
+tasarımı ve eksiklikleri yap."
+
+**Kaynak:** `postscriptui/` klasöründe 10 Illustrator dosyası: üyeli ve üyesiz ana
+sayfa, magazines, blog (profil), about, dm, anon box, bookmarks, notifications,
+settings.
+
+- Dosyalar PDF uyumlu. pdf.js ile görüntüye çevrildiler, gömülü görseller özgün
+  çözünürlükte çıkarıldı. Renkler görüntüden ölçüldü.
+- "contact, about, categories" dosyasının PDF katmanında yalnızca ilk çizim alanı
+  (About) var. İletişim ve kategoriler tasarımı okunamadı; o sayfalar bu adımda
+  tasarıma göre yeniden çizilmedi.
+- Metin katmanı özel kodlamalı yazı tipleriyle. Metinler görüntüden okundu.
+- Tasarım dosyaları depoya eklenmedi (461 MB'lık dosyalar var).
+
+**Karar — çerçeve (`src/components/site-shell.tsx`):**
+
+- **Kapsam:** Ana sayfa, `/hakkinda`, `/magazine/*` ve `/social/*` bu çerçevede.
+  Admin, editör ve yazar panelleri `PanelShell`'de kalır; onlar çalışma aracı,
+  dergi değil. `/account` da panel çerçevesinde kalır, çünkü rol menüsünü
+  göstermek zorunda.
+- **Parçalar:** koyu üst şerit, logo, ana menü ve arama kutusu, kâğıt renkli
+  sütun, üye menüsü ve bordo alt bilgi.
+  - Üye menüsü geniş ekranda (≥1640 px) tasarımdaki gibi sütunun solunda
+    yüzer. Daha dar ekranda sütunun üstünde yatay bir şerittir.
+- **Mevcut sayfalar da paleti alır:** Panelin Tailwind renk ve yazı tipi
+  değişkenleri `.ps-site` içinde yeniden tanımlandı. `ui.tsx` ile yazılmış okuma
+  ve topluluk sayfaları yeniden yazılmadan paleti alıyor.
+- **Üst şerit:**
+  - `PROFİL` (`/account`) ve `PANEL` D-086'daki gibi, aynı adlarla (e2e bunlara
+    dayanıyor).
+  - Eklenenler: "Ayarlar" (`/social/settings`), "Blog" (kullanıcı adı varsa kendi
+    profili) ve "Çıkış".
+  - Oturum yoksa "Giriş yap" ve "Hemen katıl" görünür.
+- **Üye menüsü:** tasarımdaki beş kalem ve okunmamış sayıları (anonim kutu,
+  mesajlar, bildirimler, kaydedilenler, ayarlar).
+  - Altında ince bir satırda Akış, Keşfet ve Topluluklar var. Tasarımda yoklar;
+    konmasalar bu sayfalara yalnızca adres yazarak ulaşılırdı.
+  - Sayılar eskiden `social/layout.tsx`'teydi, artık çerçevede. Yasaklı hesaba
+    menü çizilmez.
+- **KVKK bandı (D-104):** `src/components/kvkk-notice.tsx`'e taşındı ve iki
+  çerçevede de gösterilir.
+- **Dil:** Tasarımdaki İngilizce etiketler çevrildi (tek dilli ürün, D-077).
+  "The things left unsaid" logonun parçası olduğu için İngilizce bırakıldı.
+- **Yazı tipleri:** Tasarımdakiler (Devinne Swash, West Swashy *Free Trial*,
+  Minion, Araline) web yazı tipi olarak kullanılamaz; ticari ya da deneme
+  lisansındalar.
+  - Yerlerine Source Serif 4, Bodoni Moda ve Cormorant Garamond kondu
+    (`src/lib/fonts.ts`). `next/font` bunları kendi sunucusundan verir;
+    çalışma zamanında Google'a istek gitmez.
+  - Logo yazı tipi ticari. Logo tasarım görüntüsünden alfa maskesine çevrildi
+    (`src/assets/design/wordmark.png`) ve CSS ile boyanır; aynı dosya başlıkta
+    mürekkep, alt bilgide kâğıt rengindedir.
+- **Alt bilgi:**
+  - Tasarımdaki help, faq, gossip ve subscription sayfaları yok (abonelik
+    "yapılmayacaklar" listesinde). Yalnızca var olan sayfalara bağlantı verildi.
+  - 5651 m. 3 bağlantıları korunuyor.
+  - Sosyal medya ikonları kaldırıldı. Eski ana sayfa hepsini `#`'e bağlıyordu ve
+    hesap adresleri bilinmiyor; adresler gelince eklenecek.
+- **Arama (tasarımda vardı, çalışmıyordu):** Başlıktaki kutu `/magazine?q=`
+  adresine GET yapar. Yayımlanmış yazıların başlık ve özetinde büyük-küçük harf
+  duyarsız arar (`listRecentArticles`, `articleFilterSchema`).
+  - Okurun yazdığı `%`, `_` ve `\` harfiyen alınır (`src/lib/search.ts`).
+  - Okuma alanı oturum istediği için oturumsuz arama giriş ekranına gider.
+
+**Karar — ana sayfa (`src/components/homepage.tsx`):**
+
+- **Hero:** Son yayımlanmış sayıyı gösterir. Yayımlanmış sayı yoksa tasarımdaki
+  Sayı 01 / Obsession / Bırakamadıklarımız görünür. Tasarımdaki "OBSESSSION"
+  yazım hatası taşınmadı. Artık bir server component; tarayıcıya oturum bilgisi
+  hiç gitmiyor.
+- **Kategoriler:** Tasarımda "LATEST" başlıklı şerit aslında kategori kartları;
+  başlık "Kategoriler" oldu.
+  - Kartlar `writer_areas` tablosundan gelir (etkin olanlar, admin sırası).
+  - Görsel alanın adındaki kelimeyle seçilir (`categoryImageKey`).
+  - Kart `/magazine?kategori=<ad>` açar; `articles.category` ile tam eşleşme.
+- **Sayının kitabı, eseri ve çalma listesi:** Veritabanında yerleri yok ve
+  migration üretime elle uygulanmak zorunda (D-079). Şimdilik sayı numarasına
+  göre `src/lib/issue-extras.ts`'te duruyorlar.
+  - **Kitap metni (ürün sahibi teyit etmeli):** tasarımda sayfa kenarında kesik.
+    Eksik kelimeler görünen parçalardan tamamlandı.
+  - **Çalma listesi:** Yalnızca parça listesi; site ses çalmaz, lisansı yok.
+    Tasarımdaki oynatıcı düğmeleri çalışmayacağı için konmadı. Beş satırlık yer
+    tutucu yerine tek gerçek parça yazıldı.
+
+**Karar — Hakkında (`/hakkinda`):** Herkese açık; oturum istemez.
+
+- **Hikâyemiz:** tasarımdaki metin ve yaratıcılar.
+- **Yazarlar:** en az bir yayımlanmış yazısı olan mahlaslar
+  (`listPublicAuthors`). Yalnızca mahlas gösterilir, gerçek ad hiçbir koşulda
+  gösterilmez (D-076).
+- **Editörler, tasarım ve illüstrasyon:** Bunlar için veri yok. Kısa bir metin
+  ve künye bağlantısı var.
+- **"Join us" kartı:** Tasarım "yazar, editör ya da çizer" diyor. Sitede yalnızca
+  yazar başvurusu olduğu için metin buna göre daraltıldı. Bağlantı `/account`'a,
+  oturum yoksa `/register`'a gider.
+
+**Görseller — lisans teyidi gerekiyor:**
+
+- **Kolaj:** tasarımcının işi.
+- **Wojciech Weiss, "Obsession" (1899):** Ressam 1950'de öldü; eser kamu malı.
+- **Kategori fotoğrafları** (heykel, plazma küresi, kırmızı iplik, ayakkabı,
+  plak ve gitar): tasarım dosyasından alındı, kaynakları ve lisansları bilinmiyor.
+  - Stok fotoğraf izinsiz yayımlanırsa FSEK riski doğar. Tasarımcıdan kaynaklar
+    istenmeli.
+  - Teyit edilemeyen görsel `src/assets/design/` altında aynı adla
+    değiştirilebilir; kod değişmez.
+
+**Hukuk:** Yeni bir kişisel veri alanı, amaç ya da yurt dışı sağlayıcı yok.
+Aydınlatma metni değişmedi.
+
+- Arama sorgusu adres çubuğunda taşınır ve saklanmaz. Vercel'in istek
+  günlükleri metindeki "Vercel Inc. — barındırma" satırının kapsamında.
+- Yazı tipleri kendi sunucumuzdan verilir; Google'a IP aktarımı yok.
+
+**Testler:**
+
+- Birim: `tests/unit/site.test.ts` (menü eşleşmesi, üye menüsü, kategori görseli,
+  sayı biçimi) ve `tests/unit/search.test.ts`.
+- Entegrasyon: `tests/integration/public-reading.test.ts` (kategori, arama,
+  joker karakter, taslak/silinmiş, bozuk filtre, yazar listesi).
+- E2E: `01-registration`'daki "Kullanıcı" rozeti kontrolü `/account`'a taşındı,
+  çünkü okuma alanında artık panel başlığı yok.
+
+**Doğrulama:** typecheck ve lint temiz; 50 dosya / 525 test.

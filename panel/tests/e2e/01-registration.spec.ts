@@ -47,14 +47,17 @@ test("registers as a reader, verifies the address, and stays a reader", async ({
   // A reader has a profile but no panel, so the header offers PROFİL alone
   await expect(page.getByRole("link", { name: "PROFİL", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "PANEL", exact: true })).toHaveCount(0);
-  await page.goto("/magazine");
 
-  // The account is a plain reader, not a writer
-  await expect(page.getByText("Kullanıcı")).toBeVisible();
+  // The reading area opens in the magazine frame, with the member menu (D-112)
+  await page.goto("/magazine");
+  await expect(page.getByRole("navigation", { name: "Üye menüsü" })).toBeVisible();
 
   // The top-right profile button leads to the account page
-  await page.getByRole("link", { name: NEW_READER.displayName }).click();
+  await page.getByRole("link", { name: "PROFİL", exact: true }).click();
   await page.waitForURL("**/account");
+
+  // The account is a plain reader, not a writer
+  await expect(page.getByText("Kullanıcı", { exact: true })).toBeVisible();
 
   // The birth date given at registration is stored and locked for the user
   await expect(page.getByLabel("Doğum tarihi")).toHaveValue("1995-05-20");
