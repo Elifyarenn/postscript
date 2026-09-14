@@ -314,7 +314,12 @@ export default async function EditorArticleDetailPage({
                 {versions.map((version) => (
                   <tr key={version.id}>
                     <Td>
-                      v{version.version}
+                      <Link
+                        href={`/editor/articles/${article.id}/versions/${version.version}`}
+                        className="text-accent underline"
+                      >
+                        v{version.version}
+                      </Link>
                       {version.isPublishedSnapshot && (
                         <span className="ml-2 text-xs text-accent">yayın</span>
                       )}

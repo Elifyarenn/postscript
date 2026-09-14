@@ -605,6 +605,41 @@ export async function listArticleVersions(actor: Actor, articleId: string) {
     .orderBy(desc(articleVersions.version));
 }
 
+/**
+ * One stored version and the one before it, for the version page (D-108).
+ * Same gate as the version list: whoever may read the article may read its past.
+ */
+export async function getArticleVersion(actor: Actor, articleId: string, rawVersion: unknown) {
+  // The number comes from the URL, so anything that is not a version is simply not found
+  const parsed = z.coerce.number().int().positive().safeParse(rawVersion);
+  if (!parsed.success) throw notFound("Sürüm bulunamadı.");
+
+  const article = await findArticleById(articleId);
+  await assertCanReadArticle(actor, article);
+
+  const rows = await db
+    .select({
+      id: articleVersions.id,
+      version: articleVersions.version,
+      bodyMarkdown: articleVersions.bodyMarkdown,
+      changeNote: articleVersions.changeNote,
+      changeKind: articleVersions.changeKind,
+      isPublishedSnapshot: articleVersions.isPublishedSnapshot,
+      createdAt: articleVersions.createdAt,
+      changedByName: users.displayName,
+    })
+    .from(articleVersions)
+    .leftJoin(users, eq(articleVersions.changedBy, users.id))
+    .where(and(eq(articleVersions.articleId, articleId), lte(articleVersions.version, parsed.data)))
+    .orderBy(desc(articleVersions.version))
+    .limit(2);
+
+  const version = rows[0];
+  if (!version || version.version !== parsed.data) throw notFound("Sürüm bulunamadı.");
+
+  return { article, version, previous: rows[1] ?? null };
+}
+
 /* ------------------------------------------------------------------ */
 /* Status transitions (§8)                                             */
 /* ------------------------------------------------------------------ */

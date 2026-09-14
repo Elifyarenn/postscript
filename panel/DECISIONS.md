@@ -3411,3 +3411,82 @@ değişmedi.
 - typecheck + lint temiz, 43 dosya / 483 test.
 
 ---
+
+## D-108 — Yazının önceki sürümleri açılıp bir öncekiyle karşılaştırılabilir
+
+**İstek (ürün sahibi):** "Yazıların önceki hallerini de görüntüleyebilelim."
+
+**Tespit:** `article_versions` her sürümün gövdesini tutuyor:
+- yazı oluşturulurken;
+- editör ya da yazar metni kaydedince;
+- yayına alınınca.
+
+Yanında değiştiren, not, değişikliğin türü ve yayın işareti var; başlık yok.
+Editör ve yazar sayfasındaki "Sürüm geçmişi" tablosu yalnızca numara, tarih ve
+notu gösteriyordu. Bir sürümün metnini açmanın yolu yoktu.
+
+**Karar:**
+
+- **Sürüm sayfası:** `/editor/articles/[id]/versions/[version]` ve
+  `/writer/articles/[id]/versions/[version]`. Tablodaki "v1", "v2"… bu sayfaya
+  bağlantı. İki sayfa aynı bileşeni kullanıyor
+  (`src/components/article-version.tsx`). Sayfada:
+  - kaydeden, tarih, değişikliğin türü (düzeltme / içerik değişikliği), yayın
+    işareti ve not;
+  - bir önceki sürüme göre eklenen ve silinen satırlar; değişmeyen uzun
+    bölümler katlanır, değişikliğin iki yanında iki satır kalır;
+  - sürümün metni, `renderMarkdown` ile (gömülü HTML düşer, çıktı temizlenir;
+    D-012).
+- **Servis:** `getArticleVersion` (`src/services/articles.ts`) sürümü ve bir
+  öncekini tek sorguda getirir.
+  - Kapı sürüm listesiyle aynı, `assertCanReadArticle`: admin ve ana editör
+    bütün yazılar, kategori editörü kendi alanları, yazar kendi yazısı; diğerleri
+    403.
+  - URL'den gelen numara zod ile ayrıştırılır; sayı olmayan ya da olmayan sürüm
+    404.
+- **Yazar tarafı:** yazının detay sayfasındaki kuralla aynı. Yazar alanında
+  yalnızca kendi yazısının sürümleri açılır, başkasınınki 404. Hibrit editör
+  başkasının yazısını editör alanından okur.
+- **Yazar sürümleri görebilir:** sürüm listesi ve notları ona zaten açıktı. Her
+  sürüm, yazarın bugün de gördüğü metnin bir önceki hali. Gizli bir
+  değerlendirme içermiyor; iç notlar `article_comments` ve denetim kaydında
+  (D-107).
+
+**Karşılaştırma — neden kütüphane eklenmedi:** Projede metin karşılaştırma
+kütüphanesi yok.
+
+- **Satır bazlı fonksiyon:** `src/lib/text-diff.ts`, en uzun ortak alt dizi
+  yöntemiyle, saf fonksiyon olarak yazıldı. Markdown satır satır yazıldığı için
+  editörün tanıdığı birim satır.
+- **Hız:** ortak baş ve son tabloya girmez; tipik düzenleme küçük bir tablo
+  demek.
+- **Koruma sınırı:** `DIFF_CELL_BUDGET` (4 milyon hücre). Değişen bölüm bunu
+  aşarsa karşılaştırma yapılmaz, sayfa "karşılaştırılamayacak kadar uzun" der.
+  Tek bir sayfa isteği sunucuyu meşgul edemez.
+- **Erişilebilirlik:** eklenen ve silinen satırlar renkten başka "+"/"−"
+  işaretiyle ve ekran okuyucuya "Eklendi:"/"Silindi:" metniyle ayrılıyor.
+  Projede yeşil ton yok; eklenen `accent-soft`, silinen `danger-soft`.
+
+**Hukuk:** Yeni veri, amaç veya aktarım yok. Mevcut sürüm kayıtları, onları
+zaten görebilenlere okunur biçimde gösteriliyor. `article_versions` silinmez
+kuralına (5187 s. K., CLAUDE.md) dokunulmadı; yalnızca okuma eklendi.
+
+**Doğrulama:**
+
+- `tests/unit/text-diff.test.ts`:
+  - aynı metin değişiklik üretmez;
+  - ortadaki değişen satır bir silme ve bir ekleme;
+  - sona ekleme ve baştan silme;
+  - Windows satır sonları farksız;
+  - aynı ve eklenen satırlardan yeni metin birebir yeniden kurulur;
+  - sınırın üstü reddedilir;
+  - katlama bağlamı korur ve uzun aynı bölümleri sayar.
+- `tests/integration/article-versions.test.ts`:
+  - v2 metni, kaydeden ve not ile birlikte v1'i de getirir;
+  - v1'in öncesi yok;
+  - yazar kendi yazısının sürümünü okur;
+  - başka yazara, okura ve alanı kapsamayan kategori editörüne 403;
+  - olmayan ya da geçersiz sürüm numarasına 404.
+- typecheck + lint temiz, 45 dosya / 496 test.
+
+---
