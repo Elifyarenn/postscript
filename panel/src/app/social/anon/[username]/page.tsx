@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowRight } from "lucide-react";
 import { requireSession } from "@/lib/auth/guard";
 import { readCsrfToken } from "@/lib/csrf";
 import { isAppError } from "@/lib/errors";
@@ -7,11 +8,17 @@ import { MAX_ANON_MESSAGE_LENGTH } from "@/lib/anon-box";
 import { getAnonComposeState } from "@/services/anon-box";
 import { getMemberSettings } from "@/services/social";
 import { PanelForm } from "@/components/form";
-import { Alert, Card, Field, PageHeader, Textarea } from "@/components/ui";
+import { SiteTitle, Sparkle } from "@/components/site-ui";
+import { Alert, Textarea } from "@/components/ui";
 import { sendAnonMessageAction } from "../../actions";
 
 export const metadata = { title: "Anonim mesaj" };
 
+/**
+ * Writing into a member's anonymous box, laid out as the "anon box" design
+ * (D-113). The design's note says the words are published in the magazine;
+ * this box goes to one member, so the note here says what really happens.
+ */
 export default async function AnonComposePage({
   params,
 }: {
@@ -25,7 +32,7 @@ export default async function AnonComposePage({
   if (!username) {
     return (
       <>
-        <PageHeader title="Anonim mesaj" />
+        <SiteTitle>Anonim mesaj</SiteTitle>
         <Alert tone="info">
           Anonim mesaj göndermek için{" "}
           <Link href="/social/settings" className="underline">
@@ -46,45 +53,67 @@ export default async function AnonComposePage({
   const recipient = state.recipient;
 
   return (
-    <>
-      <PageHeader
-        title="Anonim mesaj"
-        description={`@${recipient.username} kutusuna, adınızı göstermeden.`}
-        actions={
-          <Link href={`/social/u/${recipient.username}`} className="text-sm text-accent">
-            Profile dön
-          </Link>
-        }
-      />
+    <div className="anon-page">
+      <header className="anon-banner">
+        <h1>Anonim kutu</h1>
+        <p>Adını söylemeden söylemek istediklerin.</p>
+        <Sparkle />
+      </header>
 
-      <Card>
-        {/* Said before the form, not after it: the sender must know this while writing */}
-        <Alert tone="warning" title="Alıcı adınızı görmez, ama anonim değilsiniz">
-          Mesajınız hesabınızla ve 5651 sayılı Kanun gereği trafik kaydıyla birlikte saklanır.
-          Kurallara aykırı bir mesaj bildirilirse yöneticiler kimliğinizi görür; yetkili mercilerin
-          hukuka uygun talebi üzerine paylaşılabilir.
-        </Alert>
+      <p className="anon-recipient">
+        @{recipient.username} kutusuna yazıyorsunuz ·{" "}
+        <Link href={`/social/u/${recipient.username}`} className="underline">
+          Profile dön
+        </Link>
+      </p>
 
-        <div className="mt-4">
-          {state.canSend ? (
-            <PanelForm action={sendAnonMessageAction} csrfToken={csrfToken} submitLabel="Anonim gönder">
-              <input type="hidden" name="username" value={recipient.username} />
-              <Field label="Mesajınız" htmlFor="anonBody" hint={`En çok ${MAX_ANON_MESSAGE_LENGTH} karakter.`}>
-                <Textarea
-                  id="anonBody"
-                  name="body"
-                  required
-                  maxLength={MAX_ANON_MESSAGE_LENGTH}
-                  rows={4}
-                  className="font-sans"
-                />
-              </Field>
-            </PanelForm>
-          ) : (
-            <Alert tone="info">{state.problem}</Alert>
-          )}
+      {/* Said before the form, not after it: the sender must know this while writing */}
+      <div className="anon-note" role="note">
+        <strong>Alıcı adınızı görmez, ama anonim değilsiniz</strong>
+        Mesajınız hesabınızla ve 5651 sayılı Kanun gereği trafik kaydıyla birlikte saklanır.
+        Kurallara aykırı bir mesaj bildirilirse yöneticiler kimliğinizi görür; yetkili mercilerin
+        hukuka uygun talebi üzerine paylaşılabilir.
+      </div>
+
+      {state.canSend ? (
+        <div className="anon-form">
+          <PanelForm
+            action={sendAnonMessageAction}
+            csrfToken={csrfToken}
+            submitLabel="Anonim gönder"
+            submitClassName="anon-send"
+          >
+            <input type="hidden" name="username" value={recipient.username} />
+            <div className="anon-field">
+              <label htmlFor="anonBody" className="sr-only">
+                Mesajınız
+              </label>
+              <Textarea
+                id="anonBody"
+                name="body"
+                required
+                maxLength={MAX_ANON_MESSAGE_LENGTH}
+                rows={6}
+                placeholder="Söylemek istediğini buraya yaz…"
+                className="anon-textarea"
+              />
+              <p className="anon-hint">En çok {MAX_ANON_MESSAGE_LENGTH} karakter.</p>
+            </div>
+            <p className="anon-quote">Bazı şeyler söylenmek için değil, yazılmak için vardır.</p>
+            <div className="anon-divider" aria-hidden>
+              <Sparkle />
+            </div>
+          </PanelForm>
         </div>
-      </Card>
-    </>
+      ) : (
+        <Alert tone="info">{state.problem}</Alert>
+      )}
+
+      <p className="text-center text-sm">
+        <Link href="/social/anon" className="site-more">
+          Kendi kutunuz <ArrowRight aria-hidden />
+        </Link>
+      </p>
+    </div>
   );
 }

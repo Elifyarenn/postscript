@@ -3828,3 +3828,88 @@ Aydınlatma metni değişmedi.
   çünkü okuma alanında artık panel başlığı yok.
 
 **Doğrulama:** typecheck ve lint temiz; 50 dosya / 525 test.
+
+---
+
+## D-113 — Topluluk ekranları tasarıma göre yeniden çizildi: bildirimler, kaydedilenler, ayarlar, anonim kutu, mesajlar, profil
+
+**İstek:** D-112'nin devamı. `postscriptui` klasöründeki notifications,
+bookmarks, settings, anon box, dm ve blog (profil) tasarımları.
+
+**Karar:**
+
+- **Bildirimler:**
+  - Sekmeler: Tümü, Takipçiler, Beğeniler, Yanıtlar ve Dergi (`?tur=`).
+  - Tasarımdaki "Mentions" sekmesinin kaynağı yok; bahsetme özelliği yok.
+    Üyelerden gelmeyen her şey (editoryal akış, KVKK sürümü, moderasyon)
+    "Dergi" altında toplanır (`src/lib/notification-view.ts`).
+  - Başlıktaki `@kullanıcı` kalın yazılır; baş harfi kare içinde gösterilir.
+  - Göreli zaman gösterilir ("5 dakika önce") ve okunmamışlar nokta ile
+    işaretlenir.
+- **Güvenlik düzeltmesi:** Bildirim bağlantısı eskiden yalnızca `/` ile
+  başlıyor mu diye bakıyordu. `//site.com` ve `/\site.com` tarayıcıda başka bir
+  siteye gider; bu yüzden artık reddedilir (`isSitePath`, birim testli).
+- **Kaydedilenler:** Yazılar tasarımdaki kart panosunda gösterilir. Kapak alanı
+  düz renk, çünkü görsel yükleme yok (D-089). Kaydedilen gönderiler altta
+  listelenir.
+- **Ayarlar:**
+  - Tasarımdaki sol sekme sütunu var: Profil, Anonim kutu, Mesajlar, Gizlilik,
+    Hesap.
+  - Tüm bölümler tek sayfada durur ve sütun bölüme atlar. Bölümleri ayrı
+    sayfalara bölmek bir formu kaydederken diğerlerini kaybettirirdi; e2e de
+    üç formu aynı sayfada doldurur.
+  - Tasarımdaki "Bildirimler" bölümü eklenmedi, çünkü bildirim tercihi yok.
+    "İlgi alanları" etiketleri de eklenmedi: yeni bir kişisel veri alanı olur,
+    istenmedi.
+- **Anonim kutu:**
+  - Gönderme sayfası tasarımdaki bant, geniş metin kutusu, alıntı ve büyük düğme
+    düzenini alır. Gelen kutusu aynı bandı kullanır.
+  - **Metin tasarımdan ayrılır:** Tasarımdaki not "yazılar dergide
+    yayımlanacak" diyor. Buradaki kutu bir üyeye gider ve hiçbir şey
+    yayımlanmaz; not fiili davranışı ve 5651 uyarısını anlatır. "Anonim değilsiniz"
+    uyarısı formdan önce kalır (D-092).
+  - Dergiye anonim gönderim ve yayımlama ayrı bir özellik olur. Hukukçu görüşü
+    olmadan yapılmaz (yer sağlayıcıdan içerik sağlayıcılığa geçiş, kişilik hakkı
+    riski).
+- **Mesajlar:**
+  - Üç sütun: konuşmalar, konuşma, karşı taraf.
+  - Gün çipleri ve saat Istanbul saatine göre verilir; sunucu UTC'de çalışır.
+  - Tasarımdaki "online" noktası, arama, dosya/medya ekleme ve emoji
+    düğmeleri konmadı.
+    - Çevrimiçi durumu kişinin gününe dair bir bilgi; okundu bilgisi de bu
+      yüzden yok (D-091).
+    - Mesajda ek yok.
+  - Arama kutusu kullanıcı adıyla yeni konuşma açar. Telefonda konuşma açıkken
+    liste gizlenir ve "← Mesajlar" bağlantısı görünür.
+- **Profil ("blog"):**
+  - Kapak, büyük baş harf dairesi, istatistikler ve geniş "Takip et" düğmesi.
+    Sekmeler koyu blok.
+  - **Yan sütun:**
+    - "Öne çıkan gönderi": üyenin bu sayfadaki en çok beğenilen kendi
+      gönderisi.
+    - "Kategoriler": yayımlanmış yazı sayıları (`listCategoryCounts`).
+    - Tasarımdaki "Son yorumlar" ve sayfalama konmadı; bunları besleyecek
+      sorgu yok.
+  - "Gönderi sayısı" da gösterilmez; profil servisi bu sayıyı hesaplamıyor.
+- **Gönderi kartı:** simgeler ve sayılar. `ActionButton`'a `display` eklendi:
+  düğme simge ve sayı gösterir, erişilebilir adı yine "Beğen (3)" olarak kalır.
+  Ekran okuyucu ve e2e aynı adı görür. `PanelForm`'a `submitClassName` eklendi.
+- **CSS:** Tasarım kuralları `site.css`'te Tailwind katmanlarının dışında
+  duruyor ve bu sayede `ui.tsx` parçalarını yerinde yeniden biçimlendirebiliyor.
+  D-112'deki genel `.ps-site a { color: inherit }` kuralı bu nedenle
+  kaldırıldı: `text-accent` sınıfını eziyordu.
+
+**Hukuk:** Yeni bir kişisel veri, amaç ya da sağlayıcı yok. Aydınlatma metni
+değişmedi.
+
+**Doğrulama:**
+
+- typecheck ve lint temiz; 52 dosya / 534 test.
+- **Yeni testler:**
+  - Birim: `tests/unit/community-view.test.ts` (sekmeler, `@` ayrıştırma,
+    `isSitePath`, göreli zaman, Istanbul saati).
+  - Entegrasyon: `tests/integration/category-counts.test.ts`.
+- **Tarayıcı:** 07d senaryosu seed'li bir deneme veritabanında çalıştırıldı:
+  kullanıcı adı, anonim kutu, DM tercihi, gönderi, takip, beğeni, kaydetme,
+  özel mesaj, anonim mesaj ve bildirimler. e2e'nin dayandığı tüm etiket ve
+  düğme adları geçti; 1920 ve 390 px'de yatay taşma yok.

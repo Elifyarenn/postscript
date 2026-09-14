@@ -1,58 +1,113 @@
 import Link from "next/link";
+import { Bell, Check } from "lucide-react";
 import { requireSession } from "@/lib/auth/guard";
 import { readCsrfToken } from "@/lib/csrf";
+import {
+  isSitePath,
+  NOTIFICATION_TABS,
+  notificationTab,
+  parseNotificationTab,
+  splitLeadingHandle,
+} from "@/lib/notification-view";
+import { formatRelativeTime } from "@/lib/relative-time";
 import { cn, formatDateTime } from "@/lib/utils";
 import { listNotifications } from "@/services/notifications";
 import { ActionButton } from "@/components/form";
-import { Card, EmptyState, PageHeader } from "@/components/ui";
+import { SiteTitle } from "@/components/site-ui";
 import { markNotificationsReadAction } from "../actions";
 
 export const metadata = { title: "Bildirimler" };
 
-export default async function NotificationsPage() {
+/** The member's notifications, sorted into the design's tabs (D-113). */
+export default async function NotificationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tur?: string }>;
+}) {
   const { user } = await requireSession();
   const csrfToken = (await readCsrfToken()) ?? "";
-  const items = await listNotifications({ ...user });
+  const [items, params] = await Promise.all([listNotifications({ ...user }), searchParams]);
+
+  const tab = parseNotificationTab(params.tur);
+  const shown = tab === "tumu" ? items : items.filter((item) => notificationTab(item.kind) === tab);
   const hasUnread = items.some((item) => item.readAt === null);
 
   return (
     <>
-      <PageHeader
-        title="Bildirimler"
-        actions={
-          hasUnread ? (
-            <ActionButton
-              action={markNotificationsReadAction}
-              csrfToken={csrfToken}
-              label="Tümünü okundu işaretle"
-            />
-          ) : undefined
-        }
-      />
+      <SiteTitle>Bildirimler</SiteTitle>
 
-      {items.length === 0 ? (
-        <EmptyState>Henüz bildirim yok.</EmptyState>
+      <div className="notice-bar">
+        <nav className="site-tabs" aria-label="Bildirim türleri">
+          {NOTIFICATION_TABS.map((item) => (
+            <Link
+              key={item.key}
+              href={item.key === "tumu" ? "/social/notifications" : `/social/notifications?tur=${item.key}`}
+              aria-current={item.key === tab ? "page" : undefined}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+        {hasUnread && (
+          <ActionButton
+            action={markNotificationsReadAction}
+            csrfToken={csrfToken}
+            label="Tümünü okundu işaretle"
+            variant="ghost"
+            className="notice-mark"
+            display={
+              <>
+                <Check aria-hidden className="size-4" />
+                Tümünü okundu işaretle
+              </>
+            }
+          />
+        )}
+      </div>
+
+      {shown.length === 0 ? (
+        <p className="notice-empty">
+          {tab === "tumu" ? "Henüz bildirim yok." : "Bu türde bildirim yok."}
+        </p>
       ) : (
-        <Card>
-          <ul className="divide-y divide-line">
-            {items.map((item) => (
-              <li key={item.id} className="py-3">
-                <p className={cn("text-sm", item.readAt === null && "font-semibold")}>
-                  {/* Only in-site paths become links; a stored href is never trusted as external */}
-                  {item.href?.startsWith("/") ? (
-                    <Link href={item.href} className="hover:text-accent">
-                      {item.title}
-                    </Link>
-                  ) : (
-                    item.title
-                  )}
-                </p>
-                {item.body && <p className="mt-0.5 text-sm text-muted">{item.body}</p>}
-                <p className="mt-1 text-xs text-muted">{formatDateTime(item.createdAt)}</p>
+        <ul className="notice-list">
+          {shown.map((item) => {
+            const { handle, rest } = splitLeadingHandle(item.title);
+            const unread = item.readAt === null;
+            const text = handle ? (
+              <>
+                <strong>@{handle}</strong> {rest}
+              </>
+            ) : (
+              rest
+            );
+
+            return (
+              <li key={item.id} className={cn("notice-item", unread && "is-unread")}>
+                <span className="notice-avatar" aria-hidden>
+                  {handle ? handle.charAt(0) : <Bell className="size-5" />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="notice-title">
+                    {/* Only in-site paths become links; a stored href is never trusted as external */}
+                    {isSitePath(item.href) ? <Link href={item.href}>{text}</Link> : text}
+                  </p>
+                  {item.body && <p className="notice-body">“{item.body}”</p>}
+                </div>
+                <time
+                  className="notice-time"
+                  dateTime={item.createdAt.toISOString()}
+                  title={formatDateTime(item.createdAt)}
+                >
+                  {formatRelativeTime(item.createdAt)}
+                </time>
+                <span className={unread ? "notice-dot" : "notice-dot is-read"}>
+                  {unread && <span className="sr-only">Okunmadı</span>}
+                </span>
               </li>
-            ))}
-          </ul>
-        </Card>
+            );
+          })}
+        </ul>
       )}
     </>
   );

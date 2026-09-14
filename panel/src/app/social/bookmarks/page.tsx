@@ -1,16 +1,19 @@
+import Link from "next/link";
+import { Bookmark } from "lucide-react";
 import { requireSession } from "@/lib/auth/guard";
 import { readCsrfToken } from "@/lib/csrf";
+import { formatDate } from "@/lib/utils";
 import { listBookmarkedArticles } from "@/services/social";
 import { listBookmarkedPosts } from "@/services/posts";
 import { ActionButton } from "@/components/form";
-import { ArticleCard } from "@/components/magazine";
-import { Card, EmptyState, PageHeader } from "@/components/ui";
+import { SiteTitle, Sparkle } from "@/components/site-ui";
+import { EmptyState } from "@/components/ui";
 import { PostList } from "@/components/social";
 import { removeBookmarkAction } from "../actions";
 
 export const metadata = { title: "Kaydedilenler" };
 
-/** The private reading list; nobody else can see it. */
+/** The private reading list, as the design's card board (D-113); nobody else can see it. */
 export default async function BookmarksPage() {
   const { user } = await requireSession();
   const csrfToken = (await readCsrfToken()) ?? "";
@@ -21,45 +24,51 @@ export default async function BookmarksPage() {
 
   return (
     <>
-      <PageHeader title="Kaydedilenler" description="Kaydettiklerinizi yalnızca siz görürsünüz." />
+      <SiteTitle description="Kaydettiklerinizi yalnızca siz görürsünüz.">Kaydedilenler</SiteTitle>
 
-      <div className="space-y-6">
-        <Card>
-          <h2 className="font-serif text-lg">Yazılar</h2>
-          {articles.length === 0 ? (
-            <div className="mt-3">
-              <EmptyState>Henüz kaydettiğiniz bir yazı yok. Yazı sayfalarındaki “Kaydet” düğmesini kullanın.</EmptyState>
-            </div>
-          ) : (
-            articles.map((article) => (
-              <div key={article.articleId} className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <ArticleCard
-                    title={article.title}
-                    slug={article.slug}
-                    summary={article.summary}
-                    publishedAt={article.publishedAt}
-                  />
-                </div>
-                <div className="pt-5">
+      <section aria-labelledby="saved-articles">
+        <h2 id="saved-articles" className="site-subheading">
+          Yazılar
+        </h2>
+        {articles.length === 0 ? (
+          <EmptyState>
+            Henüz kaydettiğiniz bir yazı yok. Yazı sayfalarındaki “Kaydet” düğmesini kullanın.
+          </EmptyState>
+        ) : (
+          <ul className="bookmark-grid">
+            {articles.map((article) => (
+              <li key={article.articleId} className="bookmark-card">
+                <span className="bookmark-cover" aria-hidden>
+                  <Sparkle />
+                </span>
+                <h3 className="bookmark-title">
+                  <Link href={`/magazine/articles/${article.slug}`}>{article.title}</Link>
+                </h3>
+                {article.summary && <p className="bookmark-summary">{article.summary}</p>}
+                <div className="bookmark-foot">
+                  <span>{article.publishedAt ? formatDate(article.publishedAt) : ""}</span>
                   <ActionButton
                     action={removeBookmarkAction}
                     csrfToken={csrfToken}
                     label="Çıkar"
                     variant="ghost"
+                    className="bookmark-remove"
                     fields={{ articleId: article.articleId, slug: article.slug }}
+                    display={<Bookmark aria-hidden className="size-5" fill="currentColor" />}
                   />
                 </div>
-              </div>
-            ))
-          )}
-        </Card>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
-        <Card>
-          <h2 className="font-serif text-lg">Gönderiler</h2>
-          <PostList posts={posts} csrfToken={csrfToken} empty="Henüz kaydettiğiniz bir gönderi yok." />
-        </Card>
-      </div>
+      <section aria-labelledby="saved-posts" className="mt-10">
+        <h2 id="saved-posts" className="site-subheading">
+          Gönderiler
+        </h2>
+        <PostList posts={posts} csrfToken={csrfToken} empty="Henüz kaydettiğiniz bir gönderi yok." />
+      </section>
     </>
   );
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { Ban, X } from "lucide-react";
 import { requireSession } from "@/lib/auth/guard";
 import { readCsrfToken } from "@/lib/csrf";
 import { isAppError } from "@/lib/errors";
@@ -10,9 +11,9 @@ import {
   openConversation,
 } from "@/services/direct-messages";
 import { ActionButton, PanelForm } from "@/components/form";
-import { Alert, Card, Field, StatusBadge, Textarea } from "@/components/ui";
+import { Alert, StatusBadge, Textarea } from "@/components/ui";
 import { Avatar, memberName } from "@/components/social";
-import { ConversationList, MessageThread } from "@/components/messages";
+import { ConversationColumn, MessageThread } from "@/components/messages";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { blockAction, clearConversationAction, sendDirectMessageAction, unblockAction } from "../../actions";
 
@@ -21,6 +22,7 @@ export const metadata = { title: "Mesajlar" };
 /** How often an open conversation looks for new messages. */
 const REFRESH_MS = 5000;
 
+/** One conversation in the design's three columns: list, thread, the other member (D-113). */
 export default async function ConversationPage({
   params,
 }: {
@@ -49,54 +51,57 @@ export default async function ConversationPage({
     <>
       <AutoRefresh intervalMs={REFRESH_MS} />
 
-      <div className="grid gap-4 lg:grid-cols-[16rem_1fr_15rem]">
-        <Card className="hidden h-fit p-0 lg:block">
-          <h2 className="border-b border-line px-4 py-3 font-serif text-lg">
-            <Link href="/social/messages" className="hover:text-accent">
-              Mesajlar
-            </Link>
-          </h2>
-          <ConversationList conversations={conversations} activeUsername={other.username} />
-        </Card>
+      <div className="dm-layout has-info">
+        <ConversationColumn conversations={conversations} activeUsername={other.username} />
 
-        <Card className="flex min-h-[28rem] flex-col p-0">
-          <header className="flex items-center gap-3 border-b border-line px-4 py-3">
-            <Avatar username={other.username} size="sm" />
-            <div>
-              <Link href={`/social/u/${other.username}`} className="font-medium hover:text-accent">
+        <section className="dm-chat" aria-label={`@${other.username} ile konuşma`}>
+          <header className="dm-chat-head">
+            <Avatar username={other.username} size="md" />
+            <div className="min-w-0">
+              <Link href={`/social/u/${other.username}`} className="dm-chat-name">
                 {memberName(other)}
               </Link>
-              <p className="text-xs text-muted">@{other.username}</p>
+              <p className="dm-chat-handle">@{other.username}</p>
             </div>
+            <Link href="/social/messages" className="dm-back">
+              ← Mesajlar
+            </Link>
           </header>
 
-          <div className="flex-1 overflow-y-auto px-4 py-4">
+          <div className="dm-chat-body">
             <MessageThread messages={view.messages} />
           </div>
 
-          <div className="border-t border-line px-4 py-3">
+          <div className="dm-composer">
             {view.canSend ? (
-              <PanelForm action={sendDirectMessageAction} csrfToken={csrfToken} submitLabel="Gönder">
+              <PanelForm
+                action={sendDirectMessageAction}
+                csrfToken={csrfToken}
+                submitLabel="Gönder"
+                submitClassName="dm-send"
+              >
                 <input type="hidden" name="username" value={other.username} />
-                <Field label="Mesajınız" htmlFor="dmBody">
-                  <Textarea
-                    id="dmBody"
-                    name="body"
-                    required
-                    maxLength={MAX_DIRECT_MESSAGE_LENGTH}
-                    rows={2}
-                    className="min-h-16 font-sans"
-                  />
-                </Field>
+                <label htmlFor="dmBody" className="sr-only">
+                  Mesajınız
+                </label>
+                <Textarea
+                  id="dmBody"
+                  name="body"
+                  required
+                  maxLength={MAX_DIRECT_MESSAGE_LENGTH}
+                  rows={2}
+                  placeholder="Bir mesaj yazın…"
+                  className="dm-input"
+                />
               </PanelForm>
             ) : (
               <Alert tone="warning">{view.problem}</Alert>
             )}
           </div>
-        </Card>
+        </section>
 
-        <Card className="h-fit">
-          <div className="flex flex-col items-center text-center">
+        <aside className="dm-info" aria-label={`@${other.username} hakkında`}>
+          <div className="dm-info-card">
             <Avatar username={other.username} size="lg" />
             <p className="mt-3 font-serif text-lg">{memberName(other)}</p>
             <p className="text-sm text-muted">@{other.username}</p>
@@ -106,17 +111,18 @@ export default async function ConversationPage({
               </span>
             )}
             {other.bio && <p className="mt-3 text-sm whitespace-pre-wrap">{other.bio}</p>}
-            <Link href={`/social/u/${other.username}`} className="mt-3 text-sm text-accent">
+            <Link href={`/social/u/${other.username}`} className="mt-3 text-sm text-accent underline">
               Profili gör
             </Link>
           </div>
 
-          <p className="mt-4 border-t border-line pt-4 text-xs text-muted">
+          <p className="border-t border-line pt-4 text-xs text-muted">
             Özel mesajları yöneticiler okuyamaz. Bir mesajı bildirirseniz yalnızca o mesajın metni
             incelemeye gönderilir.
           </p>
 
-          <div className="mt-4 flex flex-col items-start gap-2">
+          <h2>Hızlı işlemler</h2>
+          <div className="dm-actions">
             {view.iBlocked ? (
               <ActionButton action={unblockAction} csrfToken={csrfToken} label="Engeli kaldır" fields={fields} />
             ) : (
@@ -126,7 +132,14 @@ export default async function ConversationPage({
                 label="Engelle"
                 variant="ghost"
                 fields={fields}
+                className="dm-action"
                 confirmMessage={`@${other.username} engellensin mi? Birbirinize mesaj gönderemezsiniz.`}
+                display={
+                  <>
+                    <Ban aria-hidden className="size-4" />
+                    Engelle
+                  </>
+                }
               />
             )}
             {view.conversationId && (
@@ -136,11 +149,18 @@ export default async function ConversationPage({
                 label="Konuşmayı sil"
                 variant="ghost"
                 fields={fields}
+                className="dm-action"
                 confirmMessage="Konuşma yalnızca sizin görünümünüzden silinir. Devam edilsin mi?"
+                display={
+                  <>
+                    <X aria-hidden className="size-4" />
+                    Konuşmayı sil
+                  </>
+                }
               />
             )}
           </div>
-        </Card>
+        </aside>
       </div>
     </>
   );

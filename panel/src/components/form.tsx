@@ -13,6 +13,7 @@
  */
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { cn } from "@/lib/utils";
 import { Alert, Button } from "./ui";
 import type { ReactNode } from "react";
 
@@ -76,14 +77,16 @@ function SubmitButton({
   children,
   variant = "primary",
   disabled,
+  className,
 }: {
   children: ReactNode;
   variant?: "primary" | "secondary" | "danger";
   disabled?: boolean;
+  className?: string;
 }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" variant={variant} disabled={pending || disabled}>
+    <Button type="submit" variant={variant} disabled={pending || disabled} className={className}>
       {pending ? "Gönderiliyor…" : children}
     </Button>
   );
@@ -95,12 +98,15 @@ export function PanelForm({
   submitLabel,
   submitVariant = "primary",
   requireValid = false,
+  submitClassName,
   children,
 }: {
   action: ServerAction;
   csrfToken: string;
   submitLabel: string;
   submitVariant?: "primary" | "secondary" | "danger";
+  /** Restyles the submit button, as the magazine frame's forms do (D-113). */
+  submitClassName?: string;
   /**
    * Keeps the submit button shut until every field satisfies its own
    * constraints. Used where a rule is shown live, so the button matches what
@@ -145,7 +151,11 @@ export function PanelForm({
       {children}
 
       <div className="flex items-center gap-3 pt-1">
-        <SubmitButton variant={submitVariant} disabled={requireValid && !valid}>
+        <SubmitButton
+          variant={submitVariant}
+          disabled={requireValid && !valid}
+          className={submitClassName}
+        >
           {submitLabel}
         </SubmitButton>
       </div>
@@ -161,6 +171,8 @@ export function ActionButton({
   variant = "secondary",
   fields,
   confirmMessage,
+  display,
+  className,
 }: {
   action: ServerAction;
   csrfToken: string;
@@ -169,6 +181,13 @@ export function ActionButton({
   /** Extra hidden values the action needs, such as a target id. */
   fields?: Record<string, string>;
   confirmMessage?: string;
+  /**
+   * What the button shows instead of the label, such as an icon and a count
+   * (D-113). The label stays the button's accessible name, so a screen reader
+   * still hears "Beğen (3)" rather than "3".
+   */
+  display?: ReactNode;
+  className?: string;
 }) {
   const [state, formAction] = useActionState<ActionState, FormData>(action, null);
 
@@ -184,8 +203,14 @@ export function ActionButton({
       {Object.entries(fields ?? {}).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}
-      <Button type="submit" variant={variant} className="px-2.5 py-1 text-xs">
-        {label}
+      <Button
+        type="submit"
+        variant={variant}
+        className={cn("px-2.5 py-1 text-xs", className)}
+        aria-label={display ? label : undefined}
+        title={display ? label : undefined}
+      >
+        {display ?? label}
       </Button>
       {state?.error && <span className="ml-2 text-xs text-danger">{state.error}</span>}
       {state?.success && <span className="ml-2 text-xs text-accent">{state.success}</span>}

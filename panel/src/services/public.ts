@@ -6,7 +6,7 @@
  * A withdrawn article answers 410, anything else unpublished answers 404.
  */
 import "server-only";
-import { and, asc, desc, eq, ilike, isNotNull, isNull, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, isNotNull, isNull, or } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { db } from "@/db/client";
@@ -20,6 +20,26 @@ export const articleFilterSchema = z.strictObject({
   query: z.string().trim().max(100).optional(),
   category: z.string().trim().max(100).optional(),
 });
+
+/**
+ * How many published articles each category holds, most first — the profile
+ * page's side column (D-113). Counts only: which article is in which category
+ * is already public on the reading screen.
+ */
+export async function listCategoryCounts(): Promise<{ category: string; count: number }[]> {
+  const rows = await db
+    .select({ category: articles.category, count: count() })
+    .from(articles)
+    .where(
+      and(eq(articles.status, "published"), isNull(articles.deletedAt), isNotNull(articles.category)),
+    )
+    .groupBy(articles.category)
+    .orderBy(desc(count()), asc(articles.category));
+
+  return rows.flatMap((row) =>
+    row.category ? [{ category: row.category, count: Number(row.count) }] : [],
+  );
+}
 
 /** Shown when an article has a byline we are not allowed to fill in. */
 const ANONYMOUS_BYLINE = "İsimsiz";

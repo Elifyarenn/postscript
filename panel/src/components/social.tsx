@@ -1,13 +1,17 @@
 /**
- * The pieces the community screens share (D-089): the avatar stand-in, the
- * profile header and the member list.
+ * The pieces the community screens share (D-089), drawn in the magazine
+ * frame's look since D-113: the avatar stand-in, the profile header and tabs,
+ * the post card and the member list.
  *
  * A member is always shown by pen name or handle, never by display name: the
  * handle exists so the community does not see a legal name.
  */
 import Link from "next/link";
+import { Bookmark, Heart, MessageCircle, Repeat2, Star } from "lucide-react";
+import { formatRelativeTime } from "@/lib/relative-time";
 import { cn, formatDateTime } from "@/lib/utils";
 import { ActionButton, PanelForm } from "./form";
+import { Sparkle } from "./site-ui";
 import { Field, StatusBadge, Textarea } from "./ui";
 import {
   blockAction,
@@ -32,6 +36,7 @@ const AVATAR_SIZES = {
   sm: "size-9 text-sm",
   md: "size-12 text-base",
   lg: "size-24 text-3xl",
+  xl: "profile-avatar-circle",
 } as const;
 
 /**
@@ -71,7 +76,7 @@ export function MemberLink({
 }) {
   return (
     <Link href={`/social/u/${member.username}`} className={cn("hover:text-accent", className)}>
-      <span className="font-medium">{memberName(member)}</span>{" "}
+      <span className="member-name font-medium">{memberName(member)}</span>{" "}
       <span className="text-muted">@{member.username}</span>
     </Link>
   );
@@ -87,28 +92,50 @@ export function ProfileHeader({
   const fields = { username: profile.username };
 
   return (
-    <section className="overflow-hidden rounded-lg border border-line bg-surface shadow-sm">
-      <div className="h-28 bg-accent sm:h-36" />
+    <section className="profile-card">
+      <div className="profile-cover" aria-hidden />
 
-      <div className="px-5 pb-5">
-        <div className="-mt-12 flex flex-wrap items-end justify-between gap-3">
-          <span className="rounded-full border-4 border-surface">
-            <Avatar username={profile.username} size="lg" />
-          </span>
+      <div className="profile-main">
+        <span className="profile-avatar">
+          <Avatar username={profile.username} size="xl" />
+        </span>
 
-          <div className="flex flex-wrap items-center gap-2 pb-1">
+        <div className="profile-identity">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="profile-name">{memberName(profile)}</h1>
+            {profile.role !== "user" && <StatusBadge status={profile.role} />}
+          </div>
+          <p className="profile-handle">
+            @{profile.username} · {MONTH_YEAR.format(profile.joinedAt)} tarihinde katıldı
+          </p>
+
+          {profile.viewerBlocked && (
+            <p className="mt-2 text-sm text-danger">Bu hesabı engellediniz.</p>
+          )}
+          {profile.followsViewer && <p className="mt-2 text-xs text-muted">Sizi takip ediyor</p>}
+
+          {profile.bio && <p className="profile-bio">{profile.bio}</p>}
+        </div>
+
+        <Sparkle className="profile-star" />
+
+        <div className="profile-side">
+          <p className="profile-stats">
+            <Link href={`/social/u/${profile.username}/following`}>
+              <strong>{profile.followingCount}</strong> <span>takip</span>
+            </Link>
+            <Link href={`/social/u/${profile.username}/followers`}>
+              <strong>{profile.followerCount}</strong> <span>takipçi</span>
+            </Link>
+          </p>
+
+          <div className="profile-actions">
             {profile.isSelf ? (
               <>
-                <Link
-                  href="/account"
-                  className="rounded-md border border-line px-3 py-1.5 text-sm hover:bg-paper"
-                >
+                <Link href="/account" className="profile-link">
                   Profili düzenle
                 </Link>
-                <Link
-                  href="/social/settings"
-                  className="rounded-md border border-line px-3 py-1.5 text-sm hover:bg-paper"
-                >
+                <Link href="/social/settings" className="profile-link">
                   Topluluk ayarları
                 </Link>
               </>
@@ -127,6 +154,13 @@ export function ProfileHeader({
                     csrfToken={csrfToken}
                     label="Takibi bırak"
                     fields={fields}
+                    className="profile-follow is-following"
+                    display={
+                      <>
+                        <Star aria-hidden className="size-5" fill="currentColor" />
+                        Takibi bırak
+                      </>
+                    }
                   />
                 ) : (
                   <ActionButton
@@ -135,7 +169,22 @@ export function ProfileHeader({
                     label="Takip et"
                     variant="primary"
                     fields={fields}
+                    className="profile-follow"
+                    display={
+                      <>
+                        <Star aria-hidden className="size-5" fill="currentColor" />
+                        Takip et
+                      </>
+                    }
                   />
+                )}
+                <Link href={`/social/messages/${profile.username}`} className="profile-link">
+                  Mesaj
+                </Link>
+                {profile.anonBoxEnabled && (
+                  <Link href={`/social/anon/${profile.username}`} className="profile-link">
+                    Anonim mesaj
+                  </Link>
                 )}
                 <ActionButton
                   action={blockAction}
@@ -146,20 +195,6 @@ export function ProfileHeader({
                   confirmMessage={`@${profile.username} engellensin mi? Takipleriniz karşılıklı olarak kaldırılır.`}
                 />
                 <Link
-                  href={`/social/messages/${profile.username}`}
-                  className="rounded-md border border-line px-3 py-1 text-xs hover:bg-paper"
-                >
-                  Mesaj
-                </Link>
-                {profile.anonBoxEnabled && (
-                  <Link
-                    href={`/social/anon/${profile.username}`}
-                    className="rounded-md border border-line px-3 py-1 text-xs hover:bg-paper"
-                  >
-                    Anonim mesaj
-                  </Link>
-                )}
-                <Link
                   href={`/social/report?type=member&id=${profile.id}`}
                   className="px-2 text-xs text-muted hover:text-danger"
                 >
@@ -169,30 +204,6 @@ export function ProfileHeader({
             )}
           </div>
         </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <h1 className="font-serif text-2xl">{memberName(profile)}</h1>
-          {profile.role !== "user" && <StatusBadge status={profile.role} />}
-        </div>
-        <p className="text-sm text-muted">
-          @{profile.username} · {MONTH_YEAR.format(profile.joinedAt)} tarihinde katıldı
-        </p>
-
-        {profile.viewerBlocked && (
-          <p className="mt-2 text-sm text-danger">Bu hesabı engellediniz.</p>
-        )}
-        {profile.followsViewer && <p className="mt-2 text-xs text-muted">Sizi takip ediyor</p>}
-
-        {profile.bio && <p className="mt-3 text-sm whitespace-pre-wrap">{profile.bio}</p>}
-
-        <p className="mt-3 flex flex-wrap gap-4 text-sm">
-          <Link href={`/social/u/${profile.username}/following`} className="hover:text-accent">
-            <strong>{profile.followingCount}</strong> <span className="text-muted">takip</span>
-          </Link>
-          <Link href={`/social/u/${profile.username}/followers`} className="hover:text-accent">
-            <strong>{profile.followerCount}</strong> <span className="text-muted">takipçi</span>
-          </Link>
-        </p>
       </div>
     </section>
   );
@@ -221,18 +232,12 @@ export function ProfileTabs({
   isSelf: boolean;
 }) {
   return (
-    <nav className="mt-4 flex flex-wrap gap-1 border-b border-line" aria-label="Profil sekmeleri">
+    <nav className="profile-tabs" aria-label="Profil sekmeleri">
       {PROFILE_TABS.filter(([key]) => key !== "favorites" || isSelf).map(([key, label]) => (
         <Link
           key={key}
           href={`/social/u/${username}?tab=${key}`}
           aria-current={key === active ? "page" : undefined}
-          className={cn(
-            "-mb-px border-b-2 px-3 py-2 text-sm",
-            key === active
-              ? "border-accent font-medium text-accent"
-              : "border-transparent text-muted hover:text-ink",
-          )}
         >
           {label}
         </Link>
@@ -282,21 +287,26 @@ export function PostCard({ post, csrfToken }: { post: PostView; csrfToken: strin
   const fields = { postId: post.id };
 
   return (
-    <article className="border-b border-line py-4 last:border-b-0">
+    <article className="post-card">
       {post.repostedBy && (
-        <p className="mb-1 pl-12 text-xs text-muted">
+        <p className="post-repost">
+          <Repeat2 aria-hidden className="size-3.5" />
           <MemberLink member={post.repostedBy} /> yeniden paylaştı
         </p>
       )}
 
       <div className="flex gap-3">
-        <Avatar username={post.author.username} size="sm" />
+        <Avatar username={post.author.username} size="md" />
         <div className="min-w-0 flex-1">
-          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+          <p className="post-meta">
             <MemberLink member={post.author} />
             {post.author.role !== "user" && <StatusBadge status={post.author.role} />}
-            <Link href={`/social/posts/${post.id}`} className="text-xs text-muted hover:text-ink">
-              {formatDateTime(post.createdAt)}
+            <Link
+              href={`/social/posts/${post.id}`}
+              className="post-time"
+              title={formatDateTime(post.createdAt)}
+            >
+              · {formatRelativeTime(post.createdAt)}
             </Link>
             {post.community && (
               <Link
@@ -322,14 +332,17 @@ export function PostCard({ post, csrfToken }: { post: PostView; csrfToken: strin
           )}
 
           {/* Plain text on purpose: a post is never rendered as HTML or Markdown */}
-          <p className="mt-1 text-sm break-words whitespace-pre-wrap">{post.body}</p>
+          <p className="post-body">{post.body}</p>
 
-          <div className="mt-2 flex flex-wrap items-center gap-1">
+          <div className="post-actions">
             <Link
               href={`/social/posts/${post.id}`}
-              className="rounded-md px-2.5 py-1 text-xs text-muted hover:bg-paper hover:text-ink"
+              className="post-action"
+              aria-label={`Yanıtla (${post.replyCount})`}
+              title="Yanıtla"
             >
-              Yanıtla ({post.replyCount})
+              <MessageCircle aria-hidden className="size-5" />
+              <span aria-hidden>{post.replyCount}</span>
             </Link>
             <ActionButton
               action={post.viewerLiked ? unlikePostAction : likePostAction}
@@ -337,6 +350,13 @@ export function PostCard({ post, csrfToken }: { post: PostView; csrfToken: strin
               label={`${post.viewerLiked ? "Beğenildi" : "Beğen"} (${post.likeCount})`}
               variant="ghost"
               fields={fields}
+              className={cn("post-action", post.viewerLiked && "is-on")}
+              display={
+                <>
+                  <Heart aria-hidden className="size-5" fill={post.viewerLiked ? "currentColor" : "none"} />
+                  <span>{post.likeCount}</span>
+                </>
+              }
             />
             <ActionButton
               action={post.viewerReposted ? unrepostAction : repostAction}
@@ -344,31 +364,47 @@ export function PostCard({ post, csrfToken }: { post: PostView; csrfToken: strin
               label={`${post.viewerReposted ? "Yeniden paylaşıldı" : "Yeniden paylaş"} (${post.repostCount})`}
               variant="ghost"
               fields={fields}
+              className={cn("post-action", post.viewerReposted && "is-on")}
+              display={
+                <>
+                  <Repeat2 aria-hidden className="size-5" />
+                  <span>{post.repostCount}</span>
+                </>
+              }
             />
-            <ActionButton
-              action={post.viewerBookmarked ? removePostBookmarkAction : bookmarkPostAction}
-              csrfToken={csrfToken}
-              label={post.viewerBookmarked ? "Kaydedildi" : "Kaydet"}
-              variant="ghost"
-              fields={fields}
-            />
-            {post.isOwn ? (
+
+            <span className="post-actions-end">
+              {post.isOwn ? (
+                <ActionButton
+                  action={deletePostAction}
+                  csrfToken={csrfToken}
+                  label="Sil"
+                  variant="ghost"
+                  fields={fields}
+                  className="post-small"
+                  confirmMessage="Gönderi silinsin mi?"
+                />
+              ) : (
+                <Link href={`/social/report?type=post&id=${post.id}`} className="post-small">
+                  Bildir
+                </Link>
+              )}
               <ActionButton
-                action={deletePostAction}
+                action={post.viewerBookmarked ? removePostBookmarkAction : bookmarkPostAction}
                 csrfToken={csrfToken}
-                label="Sil"
+                label={post.viewerBookmarked ? "Kaydedildi" : "Kaydet"}
                 variant="ghost"
                 fields={fields}
-                confirmMessage="Gönderi silinsin mi?"
+                className={cn("post-action", post.viewerBookmarked && "is-on")}
+                display={
+                  <Bookmark
+                    aria-hidden
+                    className="size-5"
+                    fill={post.viewerBookmarked ? "currentColor" : "none"}
+                  />
+                }
               />
-            ) : (
-              <Link
-                href={`/social/report?type=post&id=${post.id}`}
-                className="rounded-md px-2.5 py-1 text-xs text-muted hover:bg-paper hover:text-danger"
-              >
-                Bildir
-              </Link>
-            )}
+            </span>
           </div>
         </div>
       </div>
@@ -389,7 +425,7 @@ export function PostList({
     return <p className="py-6 text-center text-sm text-muted">{empty}</p>;
   }
   return (
-    <div>
+    <div className="post-list">
       {posts.map((post) => (
         <PostCard key={`${post.id}:${post.repostedBy?.username ?? ""}`} post={post} csrfToken={csrfToken} />
       ))}
