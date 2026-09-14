@@ -44,6 +44,11 @@ const envSchema = z.object({
 
   // Optional so local runs boot without it; the cron route stays closed while unset
   CRON_SECRET: z.string().optional(),
+
+  // Cloudflare Turnstile on the forms that mail a typed-in address (D-111); the
+  // check is skipped until both are set, so a deploy cannot close registration
+  TURNSTILE_SITE_KEY: z.string().optional(),
+  TURNSTILE_SECRET_KEY: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

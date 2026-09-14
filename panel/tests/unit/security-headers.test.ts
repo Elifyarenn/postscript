@@ -31,6 +31,16 @@ describe("security headers", () => {
     }
   });
 
+  it("lets only Cloudflare Turnstile in from outside, for its script and its frame (D-111)", async () => {
+    const csp = (await headerMap()).get("Content-Security-Policy") ?? "";
+    const directive = (name: string) => csp.split("; ").find((part) => part.startsWith(`${name} `)) ?? "";
+
+    expect(directive("script-src")).toContain("https://challenges.cloudflare.com");
+    expect(directive("frame-src")).toBe("frame-src https://challenges.cloudflare.com");
+    expect(directive("default-src")).toBe("default-src 'self'");
+    expect(directive("connect-src")).toBe("connect-src 'self'");
+  });
+
   it("never allows the page to be framed", async () => {
     const headers = await headerMap();
     expect(headers.get("X-Frame-Options")).toBe("DENY");

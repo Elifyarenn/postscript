@@ -3578,3 +3578,123 @@ branch'e dönmek gerekmez; branch yalnızca güvence.
 SQL ile silme işlemi yapanı kaydedemiyor.
 
 ---
+
+## D-111 — Kayıt ve doğrulama e-postası formları Cloudflare Turnstile ile korunur; bot kayıtları temizlendi
+
+**Sorun (ürün sahibi):** "Siteye sürekli bot kaydı oluyor. E-posta doğrulamasını
+zorunlu yaptım ama bu sefer de e-posta doğrulaması yapılarak bot kaydı
+oluşturulmuş."
+
+**Kanıt (canlı veri, 2026-09-14; kişisel veri çekmeden okundu):**
+
+- **11–12 Eylül dalgası:** yaklaşık 15 `user` hesabı.
+  - `user.registered` IP'leri Tor çıkış düğümleri (`185.220.100/101.x`,
+    `192.42.116.x`) ve kiralık sunucular (`205.185.113.x`, `204.8.96.x`,
+    `45.84.107.x`, `150.40.126.x`, `147.90.234.x`).
+  - Oturumlardaki tarayıcı bilgisi hepsinde aynı ve başında fazladan bir tırnak
+    var (`"Mozilla/5.0 (Macintosh…`). Gerçek tarayıcı böyle göndermez.
+  - Görünen adlar 18 karakter. Bu hesaplar sonradan silinip anonimleştirilmişti.
+- **14 Eylül 01:48:** `rhodesstate.edu` adresli hesap.
+  - Görünen adı `HbyxyxUwRhYVOBqNFstW`.
+  - Doğrulama isteği AWS'den (`54.221.111.x`) geldi; hesap hiç giriş yapmadı.
+- **Bekleyen 22 kayıt** (hiç doğrulanmamış, 12–14 Eylül):
+  - Adresler `valvesoftware.com`, `fox.com`, `nyu.edu`, `sbcglobal.net`,
+    `wcfpd.net` gibi yabancı kurumlara ait; adlar ~20 karakter.
+  - Bu, kayıt spamı: bot formu başkalarının adresiyle doldurup siteye onlara
+    e-posta attırıyor. Alıcılardan biri ya da kutusunun tarayıcısı tıklayınca
+    hesap açılıyor. İstenmeyen e-posta Resend üzerinden gönderen alan adının
+    itibarını da zedeliyor.
+
+**Neden doğrulama yetmedi:** Doğrulama zaten bir GET değil, CSRF'li bir düğme.
+Bağlantı önizlemesi token harcayamıyor. Botlar gerçek tarayıcı sürüyor
+(headless): sayfayı açıyor, çerezi alıyor, düğmeye basıyor. Görünmez tuzak alan
+ve en kısa doldurma süresi gibi hafif önlemler bu sınıfı durdurmaz. Ürün
+sahibine üç yol sunuldu: Turnstile, Vercel BotID Basic, yalnızca hafif
+önlemler. Turnstile seçildi.
+
+**Karar — koruma:**
+
+- **Kapsam:** yabancı bir adrese e-posta gönderten iki form, kayıt (`register`)
+  ve doğrulama bağlantısını yeniden gönderme (`resend_verification`). Şifre
+  sıfırlama yalnızca var olan hesaba gidiyor ve kendi hız sınırı var; bu adımda
+  eklenmedi.
+- **Sunucu:** `src/lib/turnstile.ts` → `assertHuman(token, ip, action)`.
+  Cloudflare siteverify'a gider; token, IP ve eylem adını doğrular. Başka
+  formda çözülmüş token reddedilir.
+  - Servis katmanında çağrılır (`register`, `resendVerificationEmail`).
+  - Kayıtta hız sınırından sonra, hiçbir şey saklanmadan ve gönderilmeden önce.
+    Bot selini Cloudflare selinine çevirmez; e-posta hiç çıkmaz.
+  - Token ve secret loglanmaz.
+- **İstemci:** `src/components/turnstile.tsx`. Token formun `botToken` alanına
+  yazılır. Her gönderimden sonra bileşen sıfırlanır; token tek kullanımlık ve
+  hatayla dönen form yoksa kullanılmış token'ı tekrar yollardı.
+- **Anahtarlar tanımlı değilken kontrol atlanır** (`TURNSTILE_SITE_KEY` ve
+  `TURNSTILE_SECRET_KEY` ikisi de gerekli). Kodu yayına almak, anahtarlar
+  Vercel'e girilmeden kaydı kapatamaz. Bileşen de bu durumda gösterilmez.
+- **Anahtarlar tanımlıyken kapalı başarısız olur:** Cloudflare'e ulaşılamazsa
+  form reddedilir. Kesinti sırasında botları geçirmek bu korumanın var olma
+  sebebine aykırı. Kesinti boyunca kayıt yapılamaz; bu bilerek kabul edildi.
+- **CSP:** `script-src` ve yeni `frame-src` yalnızca
+  `https://challenges.cloudflare.com` için açıldı. `default-src` ve
+  `connect-src` `'self'` kaldı; `tests/unit/security-headers.test.ts` bunu
+  denetliyor.
+- **Testler ve e2e:** Anahtarlar tanımlı olmadığı için mevcut testler ve e2e
+  etkilenmez. Turnstile yolu enjekte edilen sahte siteverify ile sınanıyor
+  (`setBotCheckFetcher`, `setMailAdapter` kalıbında).
+
+**Karar — temizlik (ürün sahibinin seçimi):**
+
+- **Yedek:** `backup-before-bot-cleanup` (`br-patient-shape-b1fj8dsl`).
+- **Bekleyen kayıtlar:** 14 Eylül 09:30'dan önce oluşmuş, kullanılmamış 22
+  bekleyen kayıt silindi. Hesap değiller; şifre özeti ve doğum tarihi
+  taşıyorlardı ve süresi dolan zaten `purge_unverified` ile siliniyordu.
+  Kalan: 0.
+- **`rhodesstate.edu` hesabı:** admin panelinin kendi "Kullanıcıyı sil" işlemiyle
+  silindi. Silme, ürün sahibinin girişli tarayıcısından ve onayıyla yapıldı;
+  gerekçe girildi.
+  - Hesap anonimleştirildi (`invalid.local`), açık oturum yok.
+  - `user.deleted_by_admin` denetim kaydı var (Neon'dan doğrulandı).
+
+**Hukuk:** Yeni bir işleme amacı ve yeni bir hizmet (Turnstile) var; sağlayıcı
+Cloudflare zaten metinde (R2). Aydınlatma metni aynı adımda güncellendi:
+
+- **§2 İşlem güvenliği:** bot doğrulaması için tarayıcıdan toplanan teknik
+  sinyaller.
+- **§3:** yeni amaç satırı; dayanak (ç) KVKK m. 12 ve (f) meşru menfaat.
+- **§4:** "Bot doğrulaması sırasında" toplama yöntemi.
+- **§6.2:** Cloudflare satırına Turnstile, hizmet ve aktarılan veri (IP, tarayıcı
+  sinyalleri).
+
+**Hukukçu görüşü / teyit gerekiyor:**
+
+- **Çerez:** Turnstile'ın tarayıcıda çerez ya da yerel depolama kullanıp
+  kullanmadığı Cloudflare'in gizlilik belgelerinden doğrulanmadı. §5 çerez
+  tablosuna bu yüzden bir şey yazılmadı; kullanıyorsa §5 güncellenmeli.
+- **m. 9 standart sözleşmesi:** Cloudflare ile imzalanmış olmalı (D-105'te zaten
+  açık).
+
+**Canlıda çalışması için (ürün sahibi):**
+
+1. Cloudflare → Turnstile → Add widget. Hostname `www.postscriptmag.com` (ve
+   `postscriptmag.com`), mod "Managed".
+2. Vercel → Environment Variables (Production): `TURNSTILE_SITE_KEY` ve
+   `TURNSTILE_SECRET_KEY`.
+3. Redeploy. Anahtarlar girilene kadar koruma kapalıdır.
+
+**Doğrulama:**
+
+- `tests/unit/turnstile.test.ts`:
+  - anahtarlardan biri eksikse atlanır ve Cloudflare çağrılmaz;
+  - onaylanan token secret ve IP ile gönderilip geçer;
+  - boş veya 2048'den uzun token Cloudflare'e sorulmadan reddedilir;
+  - reddedilen token ve başka eylem için çözülmüş token reddedilir;
+  - Cloudflare'e ulaşılamazsa reddedilir.
+- `tests/integration/bot-check.test.ts`, anahtarlar tanımlıyken:
+  - token yoksa ya da Cloudflare reddederse bekleyen kayıt oluşmaz, e-posta
+    gitmez;
+  - onaylanınca kayıt eskisi gibi ilerler;
+  - yeniden gönderme token'sız e-posta atmaz ve kayıt token'ını kabul etmez.
+- `tests/unit/security-headers.test.ts`: CSP'de yalnızca Turnstile kökeni açık.
+- typecheck + lint temiz, 47 dosya / 508 test.
+
+---

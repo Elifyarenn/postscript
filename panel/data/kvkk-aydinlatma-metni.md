@@ -23,7 +23,7 @@ ortaklık adına tek başına temsile yetkilidir.
 | Kimlik | Ad soyad (görünen ad), mahlas, doğum tarihi |
 | İletişim | E-posta adresi, telefon numarası (yalnızca yazar kaydında) |
 | Hesap güvenliği | Şifrenin geri döndürülemez özeti, iki adımlı doğrulama (TOTP) gizli anahtarı, iki adımlı doğrulama kurtarma kodlarının geri döndürülemez özetleri ve kullanılma zamanları, e-posta doğrulama ve şifre sıfırlama bağlantı kayıtları, giriş denemesi kayıtları |
-| İşlem güvenliği | IP adresi, tarayıcı bilgisi (user-agent), oturum açma ve son görülme zamanları |
+| İşlem güvenliği | IP adresi, tarayıcı bilgisi (user-agent), oturum açma ve son görülme zamanları; kayıt ve doğrulama e-postası formlarında bot doğrulaması için tarayıcınızdan toplanan teknik sinyaller |
 | Profil | Topluluk kullanıcı adı, kısa biyografi, profil görseli, sosyal medya bağlantıları, yazı alanı |
 | Yazarlık | Yazarlık başvurusu, başvuruya eklenen örnek çalışma ve başvuru notu, editör değerlendirme notları, rol değişikliği kayıtları |
 | Bilgilendirme | Aydınlatma metninin hangi sürümünü ne zaman okuduğunuzu belirttiğiniz (kayıt sırasında ve sonraki sürümlerde); önceki kayıt panel işlem kayıtlarında saklanır |
@@ -76,6 +76,7 @@ saklanmaz**.
 | İçerik bildirimlerinin alınması, incelenmesi ve 5651 sayılı Kanun kapsamındaki içerik kaldırma yükümlülüğünün yerine getirilmesi | (ç) Veri sorumlusunun hukuki yükümlülüğü, (f) Meşru menfaat |
 | Yorum, mesaj ve oturumlara ilişkin trafik kayıtlarının tutulması | (ç) Veri sorumlusunun hukuki yükümlülüğü — 5651 sayılı Kanun m. 5 |
 | Hesap güvenliğinin sağlanması, yetkisiz erişimin ve kötüye kullanımın önlenmesi, iki adımlı doğrulama | (ç) KVKK m. 12 kapsamındaki güvenlik yükümlülüğü, (f) Meşru menfaat |
+| Kayıt ve doğrulama e-postası formlarının otomatik yazılımlarca (bot) kötüye kullanılmasının, sahte hesap açılmasının ve başkalarının adresine istenmeyen e-posta gönderilmesinin önlenmesi | (ç) KVKK m. 12 kapsamındaki güvenlik yükümlülüğü, (f) Meşru menfaat |
 | İçerik moderasyonu, hesap yasaklama, kural ihlallerinin takibi | (f) Meşru menfaat |
 | Yetkili kamu kurum ve kuruluşlarının hukuka uygun taleplerinin karşılanması | (a) Kanunlarda açıkça öngörülmesi, (ç) Hukuki yükümlülük |
 | Panel içi bildirim ve duyuruların iletilmesi | (c) Sözleşmenin ifası |
@@ -95,6 +96,9 @@ Kişisel verileriniz tamamen elektronik ortamda toplanır:
 - **Kullanım sırasında otomatik olarak:** Oturum çerezi aracılığıyla tutulan
   oturum kaydı ile sunucu tarafında oluşan IP adresi, tarayıcı bilgisi ve işlem
   zamanı kayıtları.
+- **Bot doğrulaması sırasında:** Kayıt ve doğrulama e-postası formlarındaki
+  Cloudflare Turnstile bileşeni aracılığıyla, tarayıcınızdan toplanan teknik
+  sinyaller ve IP adresiniz.
 
 ## 5. Çerezler
 
@@ -125,7 +129,7 @@ sağlayıcıların yurt dışındaki sistemlerinde tutulmaktadır:
 |---|---|---|---|
 | Vercel Inc. | Uygulamanın barındırılması | Amerika Birleşik Devletleri | Bölüm 2'deki veriler, işlem sırasında |
 | Neon Inc. (ABD merkezli; sunucu: AWS eu-central-1, Frankfurt) | Veritabanı | Almanya | Bölüm 2'deki tüm veriler |
-| Cloudflare, Inc. (ABD merkezli; R2 nesne depolama) | Görsel, PDF ve belge depolama | [ÜLKE] | Profil görseli, örnek çalışma dosyaları, sözleşme PDF'leri |
+| Cloudflare, Inc. (ABD merkezli; R2 nesne depolama, Turnstile bot doğrulaması) | Görsel, PDF ve belge depolama; kayıt formlarında bot doğrulaması | [ÜLKE] | Profil görseli, örnek çalışma dosyaları, sözleşme PDF'leri; bot doğrulamasında IP adresi ve tarayıcı sinyalleri |
 | Resend, Inc. (ABD merkezli; gönderim sunucusu: AWS ap-northeast-1, Tokyo) | Doğrulama ve bildirim e-postalarının gönderimi | Japonya | E-posta adresi, görünen ad, e-posta içeriği |
 
 Bu aktarımlar KVKK'nın 9. maddesinin üçüncü fıkrası uyarınca, taraflar arasında

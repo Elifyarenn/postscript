@@ -1,9 +1,12 @@
 import type { NextConfig } from "next";
 
+// Cloudflare Turnstile guards the registration forms against bots (D-111)
+const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
+
 // React dev mode uses eval() to reconstruct call stacks, so the strict
 // production CSP (no unsafe-eval) has to be relaxed for local development.
 // Production React never calls eval, so the shipped policy stays strict.
-const scriptSrc = ["'self'", "'unsafe-inline'"];
+const scriptSrc = ["'self'", "'unsafe-inline'", TURNSTILE_ORIGIN];
 if (process.env.NODE_ENV === "development") scriptSrc.push("'unsafe-eval'");
 
 const securityHeaders = [
@@ -23,6 +26,8 @@ const securityHeaders = [
       "img-src 'self' data: blob:",
       "font-src 'self' data:",
       "connect-src 'self'",
+      // The Turnstile widget renders inside a frame served by Cloudflare
+      `frame-src ${TURNSTILE_ORIGIN}`,
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

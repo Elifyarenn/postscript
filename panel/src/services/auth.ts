@@ -19,6 +19,7 @@ import { calculateAge } from "@/lib/age";
 import { clearAttempts, consumeAttempt, currentAttemptCount, failureDelayMs } from "@/lib/rate-limit";
 import { writeAudit } from "@/lib/audit";
 import { sendMail } from "@/lib/mail/transport";
+import { assertHuman } from "@/lib/turnstile";
 import * as templates from "@emails/templates";
 
 export type RequestMeta = { ip: string | null; userAgent: string | null };
@@ -94,6 +95,8 @@ export type RegistrationResult = {
 export async function register(
   rawInput: unknown,
   meta: RequestMeta,
+  /** The Turnstile token from the form; checked only once Turnstile is configured (D-111). */
+  botToken?: string | null,
 ): Promise<RegistrationResult> {
   const parsed = registerSchema.safeParse(rawInput);
   if (!parsed.success) {
@@ -111,6 +114,10 @@ export async function register(
   // Rate limit before hashing: argon2 is deliberately expensive (§5.1)
   const limit = await consumeAttempt("register_ip", meta.ip ?? "unknown");
   if (!limit.allowed) throw rateLimited("Çok fazla kayıt denemesi yapıldı, 10 dakika bekleyin.");
+
+  // After the rate limit, so a flood of forms cannot become a flood of calls to Cloudflare;
+  // before anything is stored or mailed, because the mail is what bots come for (D-111)
+  await assertHuman(botToken, meta.ip, "register");
 
   await assertPasswordAcceptable(input.password);
 
@@ -344,7 +351,14 @@ function assertResendAllowed(lastIssuedAt: Date | null): void {
  * Sends a new verification link. Used by the "resend" button, which sits on a
  * page that has no session (D-067), so the address is the argument.
  */
-export async function resendVerificationEmail(email: string): Promise<void> {
+export async function resendVerificationEmail(
+  email: string,
+  meta: RequestMeta = { ip: null, userAgent: null },
+  botToken?: string | null,
+): Promise<void> {
+  // The resend form mails a typed-in address too, so it takes the same check (D-111)
+  await assertHuman(botToken, meta.ip, "resend_verification");
+
   const normalised = normaliseEmail(email);
 
   // The common case: a registration that has not been confirmed yet

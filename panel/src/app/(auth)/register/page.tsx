@@ -4,6 +4,8 @@ import { Card, Field, Input } from "@/components/ui";
 import { PasswordField } from "@/components/password-field";
 import { PanelForm } from "@/components/form";
 import { registerReaderAction } from "../actions";
+import { TurnstileWidget } from "@/components/turnstile";
+import { turnstileSiteKey } from "@/lib/turnstile";
 
 export const metadata = { title: "Okuyucu kaydı" };
 
@@ -15,6 +17,8 @@ export const metadata = { title: "Okuyucu kaydı" };
  */
 export default async function RegisterPage() {
   const csrfToken = (await readCsrfToken()) ?? "";
+  // Null until both Turnstile keys are set; the form then works without the widget (D-111)
+  const siteKey = turnstileSiteKey();
 
   return (
     <Card>
@@ -50,6 +54,8 @@ export default async function RegisterPage() {
           </Field>
 
           <PasswordField />
+
+          {siteKey && <TurnstileWidget siteKey={siteKey} action="register" />}
 
           <label className="flex cursor-pointer items-start gap-2 text-sm">
             <input

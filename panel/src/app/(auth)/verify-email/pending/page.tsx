@@ -3,6 +3,8 @@ import { readCsrfToken } from "@/lib/csrf";
 import { Alert, Card, Field, Input } from "@/components/ui";
 import { PanelForm } from "@/components/form";
 import { resendVerificationAction } from "../../actions";
+import { TurnstileWidget } from "@/components/turnstile";
+import { turnstileSiteKey } from "@/lib/turnstile";
 
 export const metadata = { title: "E-posta doğrulaması bekleniyor" };
 
@@ -22,6 +24,7 @@ export default async function VerifyEmailPendingPage({
   const csrfToken = (await readCsrfToken()) ?? "";
   const { email } = await searchParams;
   const shownEmail = email ? decodeURIComponent(email) : "";
+  const siteKey = turnstileSiteKey();
 
   return (
     <Card>
@@ -58,6 +61,7 @@ export default async function VerifyEmailPendingPage({
               required
             />
           </Field>
+          {siteKey && <TurnstileWidget siteKey={siteKey} action="resend_verification" />}
         </PanelForm>
       </div>
 

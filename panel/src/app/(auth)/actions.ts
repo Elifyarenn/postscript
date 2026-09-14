@@ -33,6 +33,7 @@ import {
   TWO_FACTOR_COOKIE,
 } from "@/services/two-factor";
 import { assertCsrfFromForm } from "@/lib/csrf";
+import { BOT_TOKEN_FIELD } from "@/lib/bot-token";
 import { runAction, text, checkbox, type ActionState } from "@/lib/action";
 import { clearAttempts } from "@/lib/rate-limit";
 import { isProduction } from "@/lib/env";
@@ -74,6 +75,7 @@ export async function registerReaderAction(
         kvkkConsent: checkbox(formData, "kvkkConsent") as true,
       },
       meta,
+      text(formData, BOT_TOKEN_FIELD),
     );
 
     destination = `/verify-email/pending?email=${encodeURIComponent(email)}`;
@@ -93,7 +95,8 @@ export async function resendVerificationAction(
 ): Promise<ActionState> {
   return runAction(async () => {
     await assertCsrfFromForm(formData);
-    await resendVerificationEmail(text(formData, "email"));
+    const meta = await requestMetadata();
+    await resendVerificationEmail(text(formData, "email"), meta, text(formData, BOT_TOKEN_FIELD));
     return { success: "Doğrulama bağlantısı tekrar gönderildi." };
   });
 }
