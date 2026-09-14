@@ -3490,3 +3490,42 @@ kuralına (5187 s. K., CLAUDE.md) dokunulmadı; yalnızca okuma eklendi.
 - typecheck + lint temiz, 45 dosya / 496 test.
 
 ---
+
+## D-109 — Yazar süreç geçmişinde iç aşama notlarını da görür
+
+**İstek (ürün sahibi):** "Yazar da iç notları görebilsin."
+
+**D-107'den değişen:** D-107'de yazar, geçiş notlarını yalnızca e-postası
+atılan üç durumda görüyordu (`revision_requested`, `published`, `withdrawn`).
+Kategori editörünün ve ana editörün iç aşamalarda bıraktığı notlar yazara "—"
+görünüyordu. Ürün sahibi bu kısıtı kaldırdı.
+
+**Karar:**
+
+- `stepsForAudience("author")` artık notlara dokunmuyor. Yazar her adımı ve her
+  geçiş notunu görür; iç aşamalar da dahil.
+- **İntihal adımı yazardan hâlâ gizli.** İstek "iç notlar" içindi; intihal
+  sonucu ve notu ayrı bir iç değerlendirme ve yazar sayfası onu hiç
+  göstermedi. Açılması istenirse aynı fonksiyondaki tek süzgeç kalkar.
+- `AUTHOR_TOLD_STATUSES` yerinde duruyor. Artık yalnızca e-posta için
+  kullanılıyor: yazara hangi durumlarda e-posta gideceği değişmedi. Geçmişin
+  gösterdiği notlarla bağı koptu; yorumları buna göre güncellendi.
+- **Editörlere etkisi:** iç aşamada yazılan not artık yazarın okuyacağı bir
+  metin. Editör panelindeki not alanında bunu söyleyen bir uyarı yok; gerekirse
+  ayrı adım.
+
+**Hukuk:** Yeni veri, amaç veya aktarım yok. Notlar yazarın kendi eseri
+hakkında; KVKK m. 11 kapsamında zaten talep edebileceği bilgi. Aydınlatma metni
+değişmedi.
+
+**Doğrulama:**
+
+- `tests/unit/article-history.test.ts`: yazar görünümünde iç aşama notu ve
+  revizyon notu görünür, intihal adımı yok.
+- `tests/integration/article-history.test.ts`:
+  - yazar ana editörün iç notunu görür;
+  - yazar görünümü, intihal adımı çıkarılmış personel görünümüyle birebir aynı;
+  - intihal notu yok.
+- typecheck + lint temiz, 45 dosya / 496 test.
+
+---

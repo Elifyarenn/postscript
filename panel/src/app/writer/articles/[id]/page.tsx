@@ -44,7 +44,7 @@ export default async function WriterArticleDetailPage({
       .from(articleComments)
       .leftJoin(users, eq(articleComments.authorId, users.id))
       .where(inArray(articleComments.articleId, [id])),
-    // The author's view: no plagiarism check, no internal reviewers' notes (D-107)
+    // The author's view: every step and note except the plagiarism check (D-109)
     listArticleHistory({ ...user }, id),
   ]);
 

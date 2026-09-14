@@ -789,7 +789,7 @@ async function notifyAuthorOfStatus(
   status: ArticleStatus,
   note?: string,
 ): Promise<void> {
-  // One list for the e-mail and for the notes the author's step history shows (D-107)
+  // The statuses the author is e-mailed about, the reviewer's note included
   if (!AUTHOR_TOLD_STATUSES.includes(status) || !article.authorId) return;
 
   const rows = await db

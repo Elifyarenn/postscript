@@ -79,11 +79,13 @@ describe("stepsForAudience", () => {
     expect(stepsForAudience(steps, "staff")).toEqual(steps);
   });
 
-  it("hides the plagiarism step and internal notes from the author, keeping what the inbox told them", () => {
+  it("gives the author every note, internal stages included, but not the plagiarism step", () => {
     const authorView = stepsForAudience(steps, "author");
 
     expect(authorView.map((step) => step.action)).not.toContain("article.plagiarism_status_set");
-    expect(authorView.find((step) => step.toStatus === "pending_admin_approval")?.note).toBeNull();
+    expect(authorView.find((step) => step.toStatus === "pending_admin_approval")?.note).toBe(
+      "İç değerlendirme notu.",
+    );
     expect(authorView.find((step) => step.toStatus === "revision_requested")?.note).toBe("Girişi kısaltın.");
     // The refusal reason is the author's own words
     expect(authorView.find((step) => step.action === "work_approval.declined")?.note).toBe("Başlık değişmiş.");

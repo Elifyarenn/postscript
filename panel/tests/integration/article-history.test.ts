@@ -1,8 +1,8 @@
 /**
  * An article's step history (D-106, D-107): every step from the audit log in
  * order, the work approval events included. Staff who may read the article see
- * all of it; its author sees it without the plagiarism assessment and without
- * reviewers' notes from the internal stages; everyone else is refused.
+ * all of it; its author sees it all but the plagiarism assessment (D-109);
+ * everyone else is refused.
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
@@ -152,7 +152,7 @@ describe("listArticleHistory for editorial staff", () => {
 });
 
 describe("listArticleHistory for the author", () => {
-  it("shows every step but only the notes the author was e-mailed, and no plagiarism check", async () => {
+  it("shows every step and every reviewer's note, but no plagiarism check (D-109)", async () => {
     const { admin, writer, article } = await reviewedArticle();
 
     const staffView = await listArticleHistory(admin, article.id);
@@ -163,8 +163,11 @@ describe("listArticleHistory for the author", () => {
 
     const transitions = authorView.filter((step) => step.label === "Durum değişti");
     expect(transitions.find((step) => step.toStatus === "revision_requested")?.note).toBe("Girişi kısaltın.");
-    expect(transitions.find((step) => step.toStatus === "pending_admin_approval")?.note).toBeNull();
-    expect(JSON.stringify(authorView)).not.toContain("Giriş paragrafı güçlü.");
+    expect(transitions.find((step) => step.toStatus === "pending_admin_approval")?.note).toBe(
+      "Giriş paragrafı güçlü.",
+    );
+    // Apart from the plagiarism step, the author's view is the staff's view
+    expect(authorView).toEqual(staffView.filter((step) => step.action !== "article.plagiarism_status_set"));
     expect(JSON.stringify(authorView)).not.toContain("Benzerlik bulunmadı.");
   });
 });

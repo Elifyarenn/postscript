@@ -28,14 +28,10 @@ export type HistoryStep = {
   note: string | null;
 };
 
-/** Who is reading: editorial staff see everything, the author sees their inbox's view. */
+/** Who is reading: editorial staff see everything, the author all but the plagiarism check. */
 export type HistoryAudience = "staff" | "author";
 
-/**
- * The status changes the author is told about by e-mail, the reviewer's note
- * included. The author's history shows notes only for these, so the screen
- * never reveals more than the inbox already has.
- */
+/** The status changes the author is told about by e-mail, the reviewer's note included. */
 export const AUTHOR_TOLD_STATUSES: readonly ArticleStatus[] = [
   "revision_requested",
   "published",
@@ -118,20 +114,13 @@ export function describeStep(row: AuditRow): HistoryStep {
   }
 }
 
-/** Narrows the history to what the given audience may see (D-107). */
+/**
+ * Narrows the history to what the given audience may see (D-107, D-109).
+ * The author reads every step and every reviewer's note, internal stages
+ * included; only the plagiarism check stays with the editorial staff.
+ */
 export function stepsForAudience(steps: HistoryStep[], audience: HistoryAudience): HistoryStep[] {
   if (audience === "staff") return steps;
-
-  const told = AUTHOR_TOLD_STATUSES as readonly string[];
-  return (
-    steps
-      // The plagiarism check is an internal assessment the author is never shown
-      .filter((step) => step.action !== "article.plagiarism_status_set")
-      // Reviewers' notes from the internal stages were never sent to the author
-      .map((step) =>
-        step.action === "article.status_changed" && !told.includes(step.toStatus ?? "")
-          ? { ...step, note: null }
-          : step,
-      )
-  );
+  // The plagiarism check is an internal assessment the author is never shown
+  return steps.filter((step) => step.action !== "article.plagiarism_status_set");
 }

@@ -3,9 +3,9 @@
  *
  * Every step is already in the append-only audit log, so nothing new is stored.
  * Whoever may read the article may read its steps: the admin, an editor whose
- * areas cover it, and its author. The author sees them the way their inbox told
- * them, without the plagiarism assessment and without reviewers' notes from the
- * internal stages. The IP address the audit log holds is left out for everyone.
+ * areas cover it, and its author. The author sees every step and every note
+ * except the plagiarism assessment (D-109). The IP address the audit log holds
+ * is left out for everyone.
  */
 import "server-only";
 import { and, asc, eq, inArray, or } from "drizzle-orm";
