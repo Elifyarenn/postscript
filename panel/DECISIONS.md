@@ -3946,3 +3946,23 @@ değişmedi.
 - Deneme sunucusunda 1920 ve 390 px ekran görüntüsü alındı; yatay taşma yok.
 - Seed'deki sayı yayımlanmamış olduğu için ızgara boş hâliyle görüldü; dolu
   ızgara üretimde ilk yayımlanan sayıyla görülecek.
+
+---
+
+## D-115 — Tasarım görsellerinin lisansı teyit edildi; D-112..D-114 yayına alındı
+
+**Ürün sahibi (2026-09-15):** "Telifsiz sitelerden alındı ya da tasarımcımız
+yaptı, sen yayınla ben yine de sorarım." Sayının kitabı kartındaki tamamlanmış
+metin de onaylandı.
+
+**Karar:**
+
+- D-112'deki "lisans teyidi gerekiyor" kaydı kapandı: kategori fotoğrafları
+  telifsiz kaynaklardan ya da tasarımcının kendi işinden geliyor. Ürün sahibi
+  tasarımcıya ayrıca soracak; kaynağı sorunlu çıkan görsel
+  `src/assets/design/` altında aynı adla değiştirilir, kod değişmez.
+- `src/lib/issue-extras.ts` içindeki Masumiyet Müzesi metni olduğu gibi kalıyor.
+- Step 38, 39 ve 40 `main`'e push edildi.
+
+**Üretim:** Bu üç adımda şema değişikliği ve migration yok; üretim defteri 31'de
+kalıyor (D-079 gereği kontrol edildi).
