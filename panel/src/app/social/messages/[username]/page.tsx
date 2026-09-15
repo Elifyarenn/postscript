@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Ban, X } from "lucide-react";
+import { Ban, Ellipsis, FaceSlightlySmiling, Info, Paperclip, Phone, Send, X } from "lucide-react";
 import { requireSession } from "@/lib/auth/guard";
 import { readCsrfToken } from "@/lib/csrf";
 import { isAppError } from "@/lib/errors";
@@ -22,7 +22,12 @@ export const metadata = { title: "Mesajlar" };
 /** How often an open conversation looks for new messages. */
 const REFRESH_MS = 5000;
 
-/** One conversation in the design's three columns: list, thread, the other member (D-113). */
+/**
+ * One conversation in the design's three columns: list, thread, the other
+ * member (D-113). The design's call, "more", attachment and emoji buttons are
+ * drawn but disabled until those exist (D-116). Its "online" line and read
+ * ticks are left out on purpose (D-091).
+ */
 export default async function ConversationPage({
   params,
 }: {
@@ -66,6 +71,17 @@ export default async function ConversationPage({
             <Link href="/social/messages" className="dm-back">
               ← Mesajlar
             </Link>
+            <div className="dm-head-actions">
+              <button type="button" disabled className="dm-icon" title="Sesli arama yakında" aria-label="Sesli arama (yakında)">
+                <Phone aria-hidden />
+              </button>
+              <Link href={`/social/u/${other.username}`} className="dm-icon" title="Profili gör" aria-label="Profili gör">
+                <Info aria-hidden />
+              </Link>
+              <button type="button" disabled className="dm-icon" title="Diğer işlemler yakında" aria-label="Diğer işlemler (yakında)">
+                <Ellipsis aria-hidden />
+              </button>
+            </div>
           </header>
 
           <div className="dm-chat-body">
@@ -79,20 +95,29 @@ export default async function ConversationPage({
                 csrfToken={csrfToken}
                 submitLabel="Gönder"
                 submitClassName="dm-send"
+                submitContent={<Send aria-hidden className="size-5" />}
               >
                 <input type="hidden" name="username" value={other.username} />
-                <label htmlFor="dmBody" className="sr-only">
-                  Mesajınız
-                </label>
-                <Textarea
-                  id="dmBody"
-                  name="body"
-                  required
-                  maxLength={MAX_DIRECT_MESSAGE_LENGTH}
-                  rows={2}
-                  placeholder="Bir mesaj yazın…"
-                  className="dm-input"
-                />
+                <div className="dm-compose-row">
+                  <button type="button" disabled className="dm-icon" title="Dosya ekleme yakında" aria-label="Dosya ekle (yakında)">
+                    <Paperclip aria-hidden />
+                  </button>
+                  <label htmlFor="dmBody" className="sr-only">
+                    Mesajınız
+                  </label>
+                  <Textarea
+                    id="dmBody"
+                    name="body"
+                    required
+                    maxLength={MAX_DIRECT_MESSAGE_LENGTH}
+                    rows={1}
+                    placeholder="Bir mesaj yazın…"
+                    className="dm-input"
+                  />
+                  <button type="button" disabled className="dm-icon" title="Emoji yakında" aria-label="Emoji (yakında)">
+                    <FaceSlightlySmiling aria-hidden />
+                  </button>
+                </div>
               </PanelForm>
             ) : (
               <Alert tone="warning">{view.problem}</Alert>
@@ -116,50 +141,68 @@ export default async function ConversationPage({
             </Link>
           </div>
 
-          <p className="border-t border-line pt-4 text-xs text-muted">
-            Özel mesajları yöneticiler okuyamaz. Bir mesajı bildirirseniz yalnızca o mesajın metni
-            incelemeye gönderilir.
-          </p>
+          {/* Messages carry no attachments yet, so both lists wait empty (D-116) */}
+          <section className="dm-info-section" aria-labelledby="dm-media-title">
+            <h2 id="dm-media-title">Paylaşılan medya</h2>
+            <div className="dm-media-grid" aria-hidden>
+              <span />
+              <span />
+              <span />
+              <span />
+            </div>
+            <p className="dm-info-empty">Henüz paylaşılan medya yok.</p>
+          </section>
 
-          <h2>Hızlı işlemler</h2>
-          <div className="dm-actions">
-            {view.iBlocked ? (
-              <ActionButton action={unblockAction} csrfToken={csrfToken} label="Engeli kaldır" fields={fields} />
-            ) : (
-              <ActionButton
-                action={blockAction}
-                csrfToken={csrfToken}
-                label="Engelle"
-                variant="ghost"
-                fields={fields}
-                className="dm-action"
-                confirmMessage={`@${other.username} engellensin mi? Birbirinize mesaj gönderemezsiniz.`}
-                display={
-                  <>
-                    <Ban aria-hidden className="size-4" />
-                    Engelle
-                  </>
-                }
-              />
-            )}
-            {view.conversationId && (
-              <ActionButton
-                action={clearConversationAction}
-                csrfToken={csrfToken}
-                label="Konuşmayı sil"
-                variant="ghost"
-                fields={fields}
-                className="dm-action"
-                confirmMessage="Konuşma yalnızca sizin görünümünüzden silinir. Devam edilsin mi?"
-                display={
-                  <>
-                    <X aria-hidden className="size-4" />
-                    Konuşmayı sil
-                  </>
-                }
-              />
-            )}
-          </div>
+          <section className="dm-info-section" aria-labelledby="dm-files-title">
+            <h2 id="dm-files-title">Dosyalar</h2>
+            <p className="dm-info-empty">Henüz dosya yok.</p>
+          </section>
+
+          <section className="dm-info-section" aria-labelledby="dm-actions-title">
+            <h2 id="dm-actions-title">Hızlı işlemler</h2>
+            <div className="dm-actions">
+              {view.iBlocked ? (
+                <ActionButton action={unblockAction} csrfToken={csrfToken} label="Engeli kaldır" fields={fields} />
+              ) : (
+                <ActionButton
+                  action={blockAction}
+                  csrfToken={csrfToken}
+                  label="Engelle"
+                  variant="ghost"
+                  fields={fields}
+                  className="dm-action"
+                  confirmMessage={`@${other.username} engellensin mi? Birbirinize mesaj gönderemezsiniz.`}
+                  display={
+                    <>
+                      <Ban aria-hidden className="size-4" />
+                      Engelle
+                    </>
+                  }
+                />
+              )}
+              {view.conversationId && (
+                <ActionButton
+                  action={clearConversationAction}
+                  csrfToken={csrfToken}
+                  label="Konuşmayı sil"
+                  variant="ghost"
+                  fields={fields}
+                  className="dm-action"
+                  confirmMessage="Konuşma yalnızca sizin görünümünüzden silinir. Devam edilsin mi?"
+                  display={
+                    <>
+                      <X aria-hidden className="size-4" />
+                      Konuşmayı sil
+                    </>
+                  }
+                />
+              )}
+            </div>
+            <p className="dm-info-empty mt-3">
+              Özel mesajları yöneticiler okuyamaz. Bir mesajı bildirirseniz yalnızca o mesajın metni
+              incelemeye gönderilir.
+            </p>
+          </section>
         </aside>
       </div>
     </>

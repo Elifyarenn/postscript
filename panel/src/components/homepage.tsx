@@ -3,12 +3,12 @@
  * issue over the collage, the writing areas with their pictures and the
  * issue's book, artwork and playlist.
  *
- * A server component now; the header and the member menu come from
- * `SiteShell`, so nothing of the session reaches this file at all.
+ * A server component; the header and the member menu come from `SiteShell`,
+ * so nothing of the session reaches this file at all.
  */
 import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
-import { ArrowRight, Star } from "lucide-react";
+import { ArrowRight, FastForward, Music, Play, Rewind, Star, Volume2, VolumeX, X } from "lucide-react";
 import heroCollage from "@/assets/design/hero-collage.webp";
 import categoryArt from "@/assets/design/category-art.webp";
 import categoryLifestyle from "@/assets/design/category-lifestyle.webp";
@@ -18,6 +18,7 @@ import categoryScience from "@/assets/design/category-science.webp";
 import artworkWeiss from "@/assets/design/artwork-weiss-obsession.webp";
 import type { IssueExtras } from "@/lib/issue-extras";
 import { categoryImageKey, formatIssueNumber, type CategoryImageKey } from "@/lib/site";
+import { RailEnd } from "./rail-end";
 import { Sparkle, Swoosh } from "./site-ui";
 
 const CATEGORY_IMAGES: Record<CategoryImageKey, StaticImageData> = {
@@ -31,6 +32,9 @@ const CATEGORY_IMAGES: Record<CategoryImageKey, StaticImageData> = {
 const ARTWORK_IMAGES: Record<NonNullable<IssueExtras["artwork"]>["image"], StaticImageData> = {
   "weiss-obsession": artworkWeiss,
 };
+
+/** The player's controls are drawn as designed but do nothing yet: the site plays no audio (D-116). */
+const PLAYER_SOON = "Çalma özelliği yakında";
 
 export type HomeIssue = {
   number: number;
@@ -63,7 +67,7 @@ export function HomePage({
           src={heroCollage}
           alt=""
           fill
-          sizes="(min-width: 1180px) 1180px, 100vw"
+          sizes="(min-width: 1320px) 1320px, 100vw"
           className="home-hero-art"
           placeholder="blur"
           loading="eager"
@@ -135,9 +139,9 @@ export function HomePage({
       </section>
 
       {hasExtras && (
-        <section className="issue-extras" aria-label={`Sayı ${formatIssueNumber(issue.number)} seçkisi`}>
+        <RailEnd className="extras-rail" label={`Sayı ${formatIssueNumber(issue.number)} seçkisi`}>
           {extras.book && (
-            <article className="extra-panel">
+            <article className="extra-panel extra-book">
               <h3 className="extra-heading">
                 {extras.book.title} ({extras.book.year}) - {extras.book.author}
               </h3>
@@ -147,7 +151,7 @@ export function HomePage({
           )}
 
           {extras.artwork && (
-            <article className="extra-panel">
+            <article className="extra-panel extra-art">
               <div className="extra-artwork">
                 <Image
                   src={ARTWORK_IMAGES[extras.artwork.image]}
@@ -166,30 +170,58 @@ export function HomePage({
           )}
 
           {extras.playlist && extras.playlist.length > 0 && (
-            <article className="extra-panel">
-              <h3 className="playlist-head">
-                <Star aria-hidden fill="currentColor" /> Çalma listesi
-              </h3>
-              <ol className="playlist">
-                {extras.playlist.map((track, index) => (
-                  <li key={`${track.title}-${track.artist}`}>
-                    <span>{formatIssueNumber(index + 1)}</span>
-                    <span lang="en">
-                      {track.title}
-                      <small>{track.artist}</small>
-                    </span>
-                    <span>{track.duration}</span>
-                  </li>
-                ))}
-              </ol>
-              <div className="turntable" aria-hidden>
-                <span className="turntable-deck" />
-                <span className="turntable-record" />
+            <article className="extra-player" aria-labelledby="player-title">
+              <div className="player-top">
+                <button type="button" disabled title={PLAYER_SOON} aria-label="Sesi kapat (yakında)">
+                  <VolumeX aria-hidden />
+                </button>
               </div>
-              <p className="extra-label">Sayının şarkıları</p>
+
+              <div className="player-frame">
+                <h3 id="player-title" className="player-bar">
+                  <Star aria-hidden fill="currentColor" /> Çalma listesi
+                  <span className="player-bar-icons" aria-hidden>
+                    <Volume2 />
+                    <X />
+                  </span>
+                </h3>
+
+                <div className="player-body">
+                  <ol className="player-tracks">
+                    {extras.playlist.map((track, index) => (
+                      <li key={`${track.title}-${track.artist}`}>
+                        <span>{formatIssueNumber(index + 1)}</span>
+                        <span lang="en">
+                          {track.title} <small>{track.artist}</small>
+                        </span>
+                        <span>{track.duration}</span>
+                      </li>
+                    ))}
+                  </ol>
+                  <span className="player-scroll" aria-hidden />
+                  <div className="turntable" aria-hidden>
+                    <span className="turntable-deck" />
+                    <span className="turntable-record" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="player-controls">
+                <button type="button" disabled title={PLAYER_SOON} aria-label="Önceki şarkı (yakında)">
+                  <Rewind aria-hidden fill="currentColor" />
+                </button>
+                <button type="button" disabled title={PLAYER_SOON} aria-label="Çal (yakında)">
+                  <Play aria-hidden fill="currentColor" />
+                </button>
+                <button type="button" disabled title={PLAYER_SOON} aria-label="Sonraki şarkı (yakında)">
+                  <FastForward aria-hidden fill="currentColor" />
+                </button>
+                <span className="player-slider" aria-hidden />
+                <Music aria-hidden className="player-note" />
+              </div>
             </article>
           )}
-        </section>
+        </RailEnd>
       )}
     </>
   );

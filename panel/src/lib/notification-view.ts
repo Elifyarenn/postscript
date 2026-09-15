@@ -1,14 +1,14 @@
 /**
  * How the notifications screen sorts and shows what `notifications` holds
- * (D-113). Pure, so the rules are unit tested.
+ * (D-113, tabs as in the design since D-116). Pure, so the rules are unit tested.
  */
 
 export const NOTIFICATION_TABS = [
   { key: "tumu", label: "Tümü" },
   { key: "takip", label: "Takipçiler" },
   { key: "begeni", label: "Beğeniler" },
-  { key: "yanit", label: "Yanıtlar" },
-  { key: "dergi", label: "Dergi" },
+  { key: "yorum", label: "Yorumlar" },
+  { key: "bahsetme", label: "Bahsetmeler" },
 ] as const;
 
 export type NotificationTabKey = (typeof NOTIFICATION_TABS)[number]["key"];
@@ -18,15 +18,17 @@ export function parseNotificationTab(value: string | undefined): NotificationTab
 }
 
 /**
- * The tab a stored kind belongs to. The design's "mentions" has no source
- * here; everything that is not a member's doing — the editorial workflow, the
- * privacy notice, moderation — is the magazine speaking and goes under "Dergi".
+ * The tab a stored kind belongs to, or null when it is only shown under
+ * "Tümü". Mentions have no source yet, so that tab stays empty (D-116); the
+ * magazine's own notices — the editorial workflow, the privacy notice,
+ * moderation — are not a member's doing and have no tab of their own in the
+ * design.
  */
-export function notificationTab(kind: string): Exclude<NotificationTabKey, "tumu"> {
+export function notificationTab(kind: string): Exclude<NotificationTabKey, "tumu"> | null {
   if (kind === "social.follow") return "takip";
   if (kind === "social.like" || kind === "social.repost") return "begeni";
-  if (kind === "social.reply") return "yanit";
-  return "dergi";
+  if (kind === "social.reply") return "yorum";
+  return null;
 }
 
 /**

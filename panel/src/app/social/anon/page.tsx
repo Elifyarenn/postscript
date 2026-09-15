@@ -45,7 +45,7 @@ export default async function AnonInboxPage() {
       {!settings.anonBoxEnabled && (
         <Alert tone="warning" title="Kutunuz kapalı">
           Yeni anonim mesaj gelmez.{" "}
-          <Link href="/social/settings#anonim-kutu" className="underline">
+          <Link href="/social/settings#gizlilik" className="underline">
             Ayarlardan açabilirsiniz
           </Link>
           .

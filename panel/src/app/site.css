@@ -46,7 +46,7 @@
 .ps-site .site-topbar-inner {
   display: flex;
   min-height: 2rem;
-  max-width: 1180px;
+  max-width: 1320px;
   margin: 0 auto;
   align-items: stretch;
   justify-content: space-between;
@@ -124,7 +124,7 @@
 .ps-site .site-column {
   display: flex;
   min-height: 100%;
-  max-width: 1180px;
+  max-width: 1320px;
   margin: 0 auto;
   flex-direction: column;
   background: var(--site-paper);
@@ -243,7 +243,7 @@
 /* ════════════════ Member menu ════════════════ */
 
 .ps-site .site-member-nav {
-  max-width: 1180px;
+  max-width: 1320px;
   margin: 0 auto;
   background: var(--site-night);
   color: var(--site-paper);
@@ -315,42 +315,7 @@
   text-decoration: underline;
 }
 
-/* On a wide screen the member menu floats in the wine margin, as designed */
-@media (min-width: 1640px) {
-  .ps-site .site-frame {
-    display: grid;
-    grid-template-columns: 1fr minmax(0, 1180px) 1fr;
-  }
-
-  .ps-site .site-column {
-    grid-column: 2;
-    grid-row: 1;
-    width: 100%;
-  }
-
-  .ps-site .site-member-nav {
-    position: sticky;
-    top: 1.5rem;
-    grid-column: 1;
-    grid-row: 1;
-    align-self: start;
-    justify-self: end;
-    width: min(18rem, calc(100% - 1.5rem));
-    max-width: none;
-    margin: 7rem 0 0;
-    padding-block: 0.5rem;
-  }
-
-  .ps-site .site-member-nav ul {
-    flex-direction: column;
-    overflow: visible;
-  }
-
-  .ps-site .site-member-nav li a {
-    padding: 0.95rem 1.4rem;
-    font-size: 1.05rem;
-  }
-}
+/* The wide-screen member menu is laid out in the D-116 block at the end */
 
 /* ════════════════ Footer ════════════════ */
 
@@ -2266,5 +2231,689 @@
 @media (max-width: 760px) {
   .ps-site .banner-quote {
     display: none;
+  }
+}
+
+/* ════════════════ Closer to the designs (D-116) ════════════════ */
+
+/* Frame: the wider paper column and the larger member menu of the designs */
+@media (min-width: 1400px) {
+  .ps-site .site-frame.has-member {
+    display: grid;
+    grid-template-columns: minmax(16rem, 1fr) minmax(0, 1320px) minmax(0, 1fr);
+  }
+
+  .ps-site .site-frame.has-member .site-column {
+    grid-column: 2;
+    grid-row: 1;
+    width: 100%;
+  }
+
+  .ps-site .site-frame.has-member .site-member-nav {
+    position: sticky;
+    top: 1.5rem;
+    grid-column: 1;
+    grid-row: 1;
+    align-self: start;
+    justify-self: end;
+    width: min(19rem, 100%);
+    max-width: none;
+    margin: 6.5rem 0 0;
+    padding-block: 0.6rem;
+  }
+
+  .ps-site .site-frame.has-member .site-member-nav ul {
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .ps-site .site-frame.has-member .site-member-nav li a {
+    gap: 1.1rem;
+    padding: 1.05rem 1.5rem;
+    font-size: 1.2rem;
+  }
+
+  .ps-site .site-frame.has-member .member-icon {
+    width: 1.9rem;
+    height: 1.9rem;
+  }
+
+  .ps-site .site-frame.has-member .member-badge {
+    min-width: 1.6rem;
+    height: 1.6rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* Footer: the round social icons */
+
+.ps-site .footer-social {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+}
+
+.ps-site .footer-social p {
+  font-size: 1.15rem;
+}
+
+.ps-site .footer-social ul {
+  display: flex;
+  gap: 0.9rem;
+}
+
+.ps-site .footer-social li > * {
+  display: grid;
+  width: 2.8rem;
+  height: 2.8rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--site-paper);
+  color: var(--site-strip);
+}
+
+.ps-site .footer-social a:hover {
+  background: #fff;
+}
+
+.ps-site .footer-social span[role="img"] {
+  cursor: default;
+}
+
+.ps-site .footer-social svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+/* Front page: book, artwork and playlist on one sliding rail */
+
+.ps-site .extras-rail {
+  display: grid;
+  grid-auto-columns: auto;
+  grid-auto-flow: column;
+  align-items: stretch;
+  gap: 1.5rem;
+  overflow-x: auto;
+  padding: 2rem clamp(1rem, 3vw, 2rem);
+  scroll-snap-type: x proximity;
+}
+
+.ps-site .extras-rail > * {
+  scroll-snap-align: center;
+}
+
+.ps-site .extra-book {
+  width: min(26rem, 82vw);
+}
+
+.ps-site .extra-art {
+  width: min(48rem, 88vw);
+}
+
+.ps-site .extra-player {
+  display: flex;
+  width: min(24rem, 82vw);
+  flex-direction: column;
+  justify-content: center;
+  color: var(--site-strip);
+}
+
+.ps-site .extra-player button {
+  display: grid;
+  place-items: center;
+  color: inherit;
+}
+
+.ps-site .extra-player button:disabled {
+  cursor: not-allowed;
+}
+
+.ps-site .player-top {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 0.5rem 0.3rem;
+}
+
+.ps-site .player-top svg,
+.ps-site .player-bar svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.ps-site .player-frame {
+  padding-bottom: 1rem;
+  border-top: 10px solid var(--site-strip);
+  background: var(--site-strip);
+  color: var(--site-paper);
+}
+
+.ps-site .player-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.8rem;
+  background: var(--site-paper);
+  color: var(--site-strip);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ps-site .player-bar-icons {
+  display: flex;
+  gap: 0.4rem;
+  margin-left: auto;
+}
+
+.ps-site .player-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 0.6rem;
+  gap: 0.8rem;
+  padding: 0.9rem 0.9rem 0;
+}
+
+.ps-site .player-tracks {
+  min-height: 7.5rem;
+}
+
+.ps-site .player-tracks li {
+  display: grid;
+  grid-template-columns: 1.8rem 1fr auto;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+  font-size: 0.8rem;
+}
+
+.ps-site .player-tracks small {
+  opacity: 0.7;
+}
+
+.ps-site .player-scroll {
+  position: relative;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  border: 1px solid rgb(222 210 199 / 0.6);
+}
+
+.ps-site .player-scroll::before {
+  position: absolute;
+  top: 0.4rem;
+  left: 1px;
+  right: 1px;
+  height: 2rem;
+  background: var(--site-paper);
+  content: "";
+}
+
+.ps-site .player-body .turntable {
+  grid-column: 1;
+  margin-top: 0.5rem;
+}
+
+.ps-site .player-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.8rem;
+  border-bottom: 10px solid var(--site-strip);
+}
+
+.ps-site .player-controls svg {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
+.ps-site .player-slider {
+  position: relative;
+  height: 1px;
+  flex: 1;
+  margin: 0 0.6rem;
+  background: var(--site-strip);
+}
+
+.ps-site .player-slider::after {
+  position: absolute;
+  top: -3px;
+  left: 40%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--site-strip);
+  content: "";
+}
+
+.ps-site .player-note {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+/* Issues: placeholder cards and the heart without a count */
+
+.ps-site .issues-empty {
+  margin-bottom: 1rem;
+  color: var(--site-muted);
+}
+
+.ps-site .issue-cover .site-sparkle {
+  width: 3rem;
+  height: 3rem;
+}
+
+.ps-site .issue-card.is-placeholder .issue-title {
+  color: var(--site-muted);
+}
+
+.ps-site .issue-likes {
+  display: inline-flex;
+  color: var(--site-ink);
+  opacity: 0.6;
+}
+
+/* Profile */
+
+.ps-site .profile-name-star {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--site-ink);
+}
+
+.ps-site .profile-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+  font-size: 1.05rem;
+}
+
+.ps-site .profile-more:hover {
+  text-decoration: underline;
+}
+
+.ps-site .aside-empty {
+  color: var(--site-muted);
+  font-size: 0.95rem;
+}
+
+.ps-site .featured-cover {
+  display: grid;
+  width: 7rem;
+  aspect-ratio: 1;
+  place-items: center;
+  background: var(--site-strip);
+  color: var(--site-paper);
+}
+
+.ps-site .featured-row {
+  display: flex;
+  gap: 1rem;
+}
+
+/* Notifications: ruled rows down the page */
+
+.ps-site .notice-filler {
+  height: 5.25rem;
+  border-bottom: 1px solid var(--site-rule);
+}
+
+.ps-site .notice-list .notice-empty {
+  border-bottom: 1px solid var(--site-rule);
+}
+
+/* Private messages */
+
+.ps-site .dm-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: auto;
+}
+
+.ps-site .dm-back + .dm-head-actions {
+  margin-left: 0.5rem;
+}
+
+@media (min-width: 1000px) {
+  .ps-site .dm-back + .dm-head-actions {
+    margin-left: auto;
+  }
+}
+
+.ps-site .dm-icon {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--site-ink);
+}
+
+.ps-site .dm-icon svg {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
+.ps-site .dm-icon:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.ps-site a.dm-icon:hover {
+  background: var(--color-surface);
+}
+
+.ps-site .dm-compose-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.3rem;
+  border: 1px solid var(--site-rule);
+  border-radius: 28px;
+}
+
+.ps-site .dm-compose-row:focus-within {
+  outline: 2px solid var(--site-wine);
+}
+
+.ps-site .dm-compose-row .dm-input {
+  min-height: 2.6rem;
+  flex: 1;
+  padding: 0.6rem 0.4rem;
+  border: 0;
+  box-shadow: none;
+  outline: none;
+  resize: none;
+}
+
+.ps-site .dm-send {
+  width: 3.1rem;
+  height: 3.1rem;
+  padding: 0;
+  justify-content: center;
+}
+
+.ps-site .dm-chat {
+  min-height: 42rem;
+}
+
+.ps-site .dm-conversation > .rounded-full,
+.ps-site .dm-chat-head > .rounded-full {
+  width: 3.75rem;
+  height: 3.75rem;
+  font-size: 1.3rem;
+}
+
+.ps-site .dm-conversation {
+  padding-block: 1.1rem;
+}
+
+.ps-site .dm-info-section h2 {
+  margin-bottom: 0.6rem;
+}
+
+.ps-site .dm-media-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.ps-site .dm-media-grid span {
+  aspect-ratio: 1;
+  background: var(--site-night);
+  opacity: 0.12;
+}
+
+.ps-site .dm-info-empty {
+  color: var(--site-muted);
+  font-size: 0.85rem;
+}
+
+/* Anonymous box */
+
+.ps-site .anon-warning {
+  max-width: 36rem;
+  margin: 0 auto;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.ps-site .anon-warning strong {
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.ps-site .anon-send {
+  gap: 0.9rem;
+}
+
+.ps-site .anon-send svg {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+/* Bookmarks: the empty board keeps its frame */
+
+.ps-site .bookmark-grid.is-empty {
+  display: block;
+  padding: 3rem 1.5rem;
+  color: var(--site-muted);
+  text-align: center;
+}
+
+/* Settings: the tab column beside every section */
+
+.ps-site .settings-stack {
+  display: grid;
+  gap: 2rem;
+}
+
+.ps-site .settings-block {
+  display: grid;
+  scroll-margin-top: 1.5rem;
+  border-block: 1px solid var(--site-rule);
+}
+
+@media (min-width: 900px) {
+  .ps-site .settings-block {
+    grid-template-columns: 15rem minmax(0, 1fr);
+  }
+}
+
+.ps-site .settings-tabs {
+  display: flex;
+  overflow-x: auto;
+  padding: 0.5rem;
+  background: var(--site-strip);
+}
+
+@media (min-width: 900px) {
+  .ps-site .settings-tabs {
+    flex-direction: column;
+    justify-content: center;
+    padding: 1rem 0.6rem;
+  }
+}
+
+.ps-site .settings-tabs a {
+  padding: 0.75rem 1rem;
+  color: var(--site-paper);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ps-site .settings-tabs a:hover {
+  background: rgb(109 30 46 / 0.6);
+}
+
+.ps-site .settings-tabs a[aria-current="true"] {
+  background: var(--site-wine);
+}
+
+.ps-site .settings-content {
+  min-width: 0;
+  padding: 1rem 0 1.5rem;
+}
+
+@media (min-width: 900px) {
+  .ps-site .settings-content {
+    padding-left: clamp(1rem, 3vw, 3rem);
+  }
+}
+
+.ps-site .settings-subtitle {
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.ps-site .settings-profile-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (min-width: 700px) {
+  .ps-site .settings-profile-grid {
+    grid-template-columns: 11rem minmax(0, 1fr);
+  }
+}
+
+.ps-site .settings-avatar {
+  display: grid;
+  width: 11rem;
+  aspect-ratio: 1;
+  place-items: center;
+  background: var(--site-strip);
+  color: var(--site-paper);
+  font-family: var(--font-caps), Georgia, serif;
+  font-size: 4rem;
+  text-transform: uppercase;
+}
+
+.ps-site .settings-line,
+.ps-site .settings-inline form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.25rem 1rem;
+  padding: 0.7rem 0 0.8rem;
+  border-bottom: 1px solid var(--site-rule);
+}
+
+.ps-site .settings-inline form > * {
+  margin: 0;
+}
+
+.ps-site .settings-inline form > [role="alert"] {
+  grid-column: 1 / -1;
+}
+
+.ps-site .settings-line-label {
+  grid-column: 1 / -1;
+  font-size: 1.05rem;
+}
+
+.ps-site .settings-line-value {
+  color: var(--site-muted);
+  font-size: 1.1rem;
+  white-space: pre-wrap;
+}
+
+.ps-site .settings-inline label {
+  font-size: 1.05rem;
+  font-weight: 400;
+}
+
+.ps-site .settings-inline input {
+  padding: 0.2rem 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--site-muted);
+  font-size: 1.1rem;
+}
+
+.ps-site .settings-inline input:focus {
+  box-shadow: none;
+  outline: 2px solid var(--site-wine);
+  outline-offset: 2px;
+}
+
+.ps-site .settings-save {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--site-wine);
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.ps-site .settings-save:hover {
+  background: transparent;
+  text-decoration: underline;
+}
+
+.ps-site .settings-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ps-site .settings-chip-empty {
+  padding: 0.15rem 0.8rem;
+  border: 1px dashed var(--site-rule);
+  border-radius: 8px;
+  color: var(--site-muted);
+  font-size: 0.9rem;
+}
+
+.ps-site .settings-edit[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.ps-site .settings-empty {
+  color: var(--site-muted);
+}
+
+.ps-site .settings-note {
+  margin-top: 1rem;
+  color: var(--site-muted);
+  font-size: 0.85rem;
+}
+
+/* Fixes after the side-by-side check (D-116) */
+
+/* A grid scroller drops its end padding in Chromium; the last card carries it instead */
+.ps-site .extras-rail > :last-child {
+  margin-right: clamp(1rem, 3vw, 2rem);
+}
+
+.ps-site .settings-tabs {
+  justify-content: flex-start;
+}
+
+@media (min-width: 900px) {
+  .ps-site .settings-tabs {
+    padding-top: 1.75rem;
+  }
+}
+
+@media (max-width: 999px) {
+  .ps-site .dm-chat-head {
+    flex-wrap: wrap;
+  }
+
+  .ps-site .dm-back {
+    order: -1;
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+
+  .ps-site .dm-back + .dm-head-actions {
+    margin-left: auto;
   }
 }

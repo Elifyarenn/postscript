@@ -9,6 +9,7 @@ import { getProfile } from "@/services/social";
 import { listProfilePosts, type PostView } from "@/services/posts";
 import { listCategoryCounts } from "@/services/public";
 import { parseProfileTab, PostList, ProfileHeader, ProfileTabs } from "@/components/social";
+import { Sparkle } from "@/components/site-ui";
 
 export const metadata = { title: "Profil" };
 
@@ -18,7 +19,19 @@ const EMPTY_TEXT = {
   favorites: "Henüz beğenilen gönderi yok.",
 } as const;
 
-/** A member's page, the design's "blog": header, tabs, posts and a side column (D-113). */
+/** The design's "featured post": the member's own most liked post. */
+function pickFeatured(posts: PostView[]): PostView | null {
+  return (
+    posts
+      .filter((post) => post.repostedBy === null && post.likeCount > 0)
+      .sort((a, b) => b.likeCount - a.likeCount)[0] ?? null
+  );
+}
+
+/**
+ * A member's page, the design's "blog": header, tabs, posts and a side column
+ * of recent comments, categories and a featured post (D-113, D-116).
+ */
 export default async function ProfilePage({
   params,
   searchParams,
@@ -41,20 +54,15 @@ export default async function ProfilePage({
   let tab = parseProfileTab((await searchParams).tab);
   if (tab === "favorites" && !profile.isSelf) tab = "posts";
 
-  const [posts, categories] = await Promise.all([
+  const [posts, ownPosts, categories] = await Promise.all([
     tab === "about"
       ? Promise.resolve<PostView[]>([])
       : listProfilePosts({ ...user }, profile.username, tab),
+    // The side column's featured post always comes from the member's own posts
+    tab === "posts" ? Promise.resolve<PostView[] | null>(null) : listProfilePosts({ ...user }, profile.username, "posts"),
     listCategoryCounts(),
   ]);
-
-  // The design's "featured post": the member's own most liked post on this page
-  const featured =
-    tab === "posts"
-      ? (posts
-          .filter((post) => post.repostedBy === null && post.likeCount > 0)
-          .sort((a, b) => b.likeCount - a.likeCount)[0] ?? null)
-      : null;
+  const featured = pickFeatured(ownPosts ?? posts);
 
   return (
     <>
@@ -80,31 +88,16 @@ export default async function ProfilePage({
         </div>
 
         <aside className="profile-aside" aria-label="Yan sütun">
-          {featured && (
-            <section className="aside-card" aria-labelledby="featured-title">
-              <h2 id="featured-title">Öne çıkan gönderi</h2>
-              <p className="featured-body">{featured.body}</p>
-              <p className="featured-meta">
-                <span>
-                  <Heart aria-hidden className="size-4" /> {featured.likeCount}
-                </span>
-                <span>
-                  <MessageCircle aria-hidden className="size-4" /> {featured.replyCount}
-                </span>
-                <span>
-                  <Repeat2 aria-hidden className="size-4" /> {featured.repostCount}
-                </span>
-              </p>
-              <Link href={`/social/posts/${featured.id}`} className="site-more mt-3">
-                Gönderiye git <ArrowRight aria-hidden />
-              </Link>
-            </section>
-          )}
+          <section className="aside-card" aria-labelledby="comments-title">
+            <h2 id="comments-title">Son yorumlar</h2>
+            {/* Replies to this member's posts are not gathered for this card yet (D-116) */}
+            <p className="aside-empty">Henüz yorum yok.</p>
+          </section>
 
           <section className="aside-card" aria-labelledby="categories-title">
             <h2 id="categories-title">Kategoriler</h2>
             {categories.length === 0 ? (
-              <p className="text-sm text-muted">Henüz yayımlanmış yazı yok.</p>
+              <p className="aside-empty">Henüz yayımlanmış yazı yok.</p>
             ) : (
               <ul className="aside-categories">
                 {categories.slice(0, 10).map((item) => (
@@ -116,6 +109,39 @@ export default async function ProfilePage({
                   </li>
                 ))}
               </ul>
+            )}
+          </section>
+
+          <section className="aside-card" aria-labelledby="featured-title">
+            <h2 id="featured-title">Öne çıkan gönderi</h2>
+            {featured ? (
+              <>
+                <div className="featured-row">
+                  {/* Posts carry no pictures yet, so the design's image is a plain block */}
+                  <span className="featured-cover" aria-hidden>
+                    <Sparkle />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="featured-body">{featured.body}</p>
+                    <p className="featured-meta">
+                      <span>
+                        <Heart aria-hidden className="size-4" /> {featured.likeCount}
+                      </span>
+                      <span>
+                        <MessageCircle aria-hidden className="size-4" /> {featured.replyCount}
+                      </span>
+                      <span>
+                        <Repeat2 aria-hidden className="size-4" /> {featured.repostCount}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+                <Link href={`/social/posts/${featured.id}`} className="site-more mt-3">
+                  Gönderiye git <ArrowRight aria-hidden />
+                </Link>
+              </>
+            ) : (
+              <p className="aside-empty">Henüz öne çıkan gönderi yok.</p>
             )}
           </section>
         </aside>

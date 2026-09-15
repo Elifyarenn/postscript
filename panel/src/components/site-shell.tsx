@@ -17,7 +17,7 @@ import { panelPathFor } from "@/lib/auth/rbac";
 import type { SessionUser } from "@/lib/auth/session";
 import { readCsrfToken } from "@/lib/csrf";
 import { bodyFont, capsFont, italicFont } from "@/lib/fonts";
-import { memberNav } from "@/lib/site";
+import { memberNav, SOCIAL_LINKS } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { unreadAnonCount } from "@/services/anon-box";
 import { unreadConversationCount } from "@/services/direct-messages";
@@ -25,7 +25,7 @@ import { unreadNotificationCount } from "@/services/notifications";
 import { getMemberSettings } from "@/services/social";
 import { KvkkNotice } from "./kvkk-notice";
 import { SiteMainNav, SiteMemberNav } from "./site-nav";
-import { Stars, Wordmark } from "./site-ui";
+import { SocialIcon, Stars, Wordmark } from "./site-ui";
 import "@/app/site.css";
 
 const MAGAZINE_LINKS = [
@@ -125,7 +125,7 @@ export async function SiteShell({
         </div>
       </div>
 
-      <div className="site-frame">
+      <div className={cn("site-frame", member && "has-member")}>
         {member && (
           <SiteMemberNav
             items={memberNav({
@@ -193,6 +193,32 @@ export async function SiteShell({
               ))}
             </ul>
           </nav>
+
+          <div className="footer-social">
+            <p>arkadaş olalım!</p>
+            <ul>
+              {SOCIAL_LINKS.map((link) => (
+                <li key={link.key}>
+                  {link.url ? (
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={link.label}
+                      title={link.label}
+                    >
+                      <SocialIcon name={link.key} />
+                    </a>
+                  ) : (
+                    // No address yet: drawn as designed, but not a link that goes nowhere (D-116)
+                    <span role="img" aria-label={`${link.label} hesabı yakında`} title={`${link.label} hesabı yakında`}>
+                      <SocialIcon name={link.key} />
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
 
           <Image src={footerFlowers} alt="" className="footer-flowers" />
         </div>

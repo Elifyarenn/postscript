@@ -3966,3 +3966,89 @@ metin de onaylandı.
 
 **Üretim:** Bu üç adımda şema değişikliği ve migration yok; üretim defteri 31'de
 kalıyor (D-079 gereği kontrol edildi).
+
+---
+
+## D-116 — Ekranlar tasarıma yaklaştırıldı; karşılığı olmayan bölümler görünür ama boş
+
+**İstek (ürün sahibi):** "Tasarımsal olarak yaklaştır, kod tarafında boş kısımları
+boş bırak, boş sekmeleri bildir ve tamamlayalım."
+
+Tasarım ile site yan yana karşılaştırıldı (D-112..D-114 sonrası). Görsel farklar
+kapatıldı. Tasarımda olup kodda karşılığı olmayan her bölüm yerinde çizildi ama
+sahte veri göstermez: içi boş durum metniyle ya da "yakında" etiketli, devre dışı
+bir düğmeyle bekler.
+
+**Karar — görsel yaklaştırmalar:**
+
+- **Çerçeve:**
+  - Kâğıt sütun 1180 → 1320 px.
+  - Üye menüsü tasarımdaki boyutta (≈19rem, büyük yazı ve simgeler). ≥1400 px'de
+    sütunun solunda yüzer; oturumsuz sayfalarda sütun ortalı kalır.
+- **Alt bilgi:** Tasarımdaki "arkadaş olalım!" satırı ve 5 yuvarlak sosyal medya
+  simgesi eklendi.
+- **Ana sayfa:** Kitap, eser ve çalma listesi tasarımdaki gibi kayan tek bir şeritte.
+  - Geniş ekranda şerit sona kaydırılmış açılır; kitap kartı soldan taşar.
+  - Çalma listesi tasarımdaki açık renkli retro çalar görünümünde: üst bar,
+    parça listesi, kaydırma çubuğu, pikap, ileri/geri/çal düğmeleri ve ses
+    kaydırıcısı.
+- **Sayılar:** Yayımlanmış sayı yokken ızgara boş kapaklı üç "Yakında" kartıyla
+  çizilir. Kartlarda sayısı olmayan kalp var.
+- **Profil:**
+  - Adın yanında yıldız, "Hakkında daha fazlası" bağlantısı.
+  - İstatistikler tasarımdaki sırayla: gönderi, takipçi, takip.
+  - Gönderi sayısı gerçek veri: `getProfile` artık `postCount` döndürüyor
+    (üyenin kendi paylaştığı, silinmemiş, yanıt olmayan gönderiler).
+  - Yan sütun tasarımdaki sırayla: Son yorumlar, Kategoriler, Öne çıkan gönderi.
+- **Mesajlar:**
+  - Büyük avatarlar ve satırlar.
+  - Konuşma başlığında arama, bilgi (profile gider) ve "daha fazla" simgeleri.
+  - Ek ve emoji düğmeli yuvarlak yazma kutusu, yuvarlak simge gönder düğmesi
+    (erişilebilir adı "Gönder").
+  - Sağ panelde "Paylaşılan medya" ve "Dosyalar" bölümleri.
+- **Anonim kutu:**
+  - Düğme tasarımdaki gibi "✦ Anonim olarak gönder →" (e2e bu ada güncellendi).
+  - Tasarımdaki kapanış kutusu var; metni fiili davranışı anlatır (mesaj yalnızca
+    alıcıya gider, yayımlanmaz).
+  - "Anonim değilsiniz" uyarısı formdan önce kalır (D-092).
+- **Kaydedilenler:** Boşken de pano çerçevesi çizilir.
+- **Bildirimler:**
+  - Sekmeler tasarımdaki gibi: Tümü, Takipçiler, Beğeniler, Yorumlar, Bahsetmeler.
+  - Derginin kendi bildirimleri (editoryal, KVKK, moderasyon) yalnızca "Tümü"de
+    görünür; ayrı "Dergi" sekmesi kalktı.
+  - Sayfa tasarımdaki gibi boş çizgili satırlarla dolar.
+- **Ayarlar:**
+  - Tasarımdaki gibi her bölümün yanında sekme sütunu var: Profil, Gizlilik,
+    Bildirimler, Mesajlar, Hesap. Kendi sekmesi yanar.
+  - Yalnızca ilk sütun işaret noktası (landmark) ve klavyeyle odaklanabilir;
+    ekran okuyucu aynı menüyü beş kez duymaz.
+  - Profil satırları "Kullanıcı adı … Kaydet →", "Biyografi … Düzenle →",
+    "İlgi alanları … Düzenle →" biçiminde.
+  - Anonim kutu ve engellenenler "Gizlilik" altına taşındı.
+- **Form yardımcıları:** `PanelForm`'a `submitContent` eklendi. Düğme simge
+  gösterirken erişilebilir adı yine etiket olur.
+
+**Boş bırakılanlar — tamamlanacak:**
+
+| Nerede | Boş kalan | Tamamlamak için gereken |
+|---|---|---|
+| Alt bilgi | 5 sosyal medya simgesi bağlantı değil | Hesap adresleri (`SOCIAL_LINKS`, `src/lib/site.ts`) |
+| Ana sayfa | Çalar düğmeleri (çal, ileri/geri, ses) devre dışı; listede 1 parça | Ses çalma kararı ve lisans; parça listesi |
+| Sayılar | Kalp sayısız, "Yakında" kartları | Sayı beğenme özelliği; yayımlanmış sayı |
+| Profil | "Son yorumlar" boş | Üyenin gönderilerine gelen yanıtları listeleyen sorgu |
+| Profil | Gönderilerde görsel, avatar ve kapak yok; öne çıkan gönderide görsel yok | Görsel yükleme (depolama) |
+| Profil | Sayfalama yok | Gönderi listesine sayfalama |
+| Profil | Başkasının profilinde "Beğeniler" sekmesi yok | Bilerek: beğeniler yalnızca sahibine açık (D-090) |
+| Mesajlar | Sesli arama ve "daha fazla" düğmeleri devre dışı | Özellik kararı |
+| Mesajlar | Dosya ekleme ve emoji düğmeleri devre dışı | Mesaj eki / emoji seçici |
+| Mesajlar | Paylaşılan medya ve dosyalar boş | Mesaj eki |
+| Mesajlar | "Çevrimiçi" ve okundu tikleri yok | Bilerek yok (D-091, gizlilik) |
+| Bildirimler | "Bahsetmeler" sekmesi boş | Gönderide @bahsetme özelliği |
+| Ayarlar | "Bildirimler" bölümü boş | Bildirim tercihleri |
+| Ayarlar | "İlgi alanları" boş, düzenle kapalı | Yeni kişisel veri alanı; aydınlatma metni güncellemesi |
+| Anonim kutu | Dergiye anonim gönderim ve yayımlama | Hukukçu görüşü (yer sağlayıcı → içerik sağlayıcı) |
+| Alt bilgi | help, faq, gossip sayfaları | İçerik (subscription "yapılmayacaklar"da) |
+| İletişim, kategoriler | Tasarımları okunamadı | Çizim alanlarının ayrı dışa aktarımı |
+
+**Hukuk:** Yeni kişisel veri yok. `postCount` zaten herkese açık gönderilerin
+sayısı. Aydınlatma metni değişmedi.

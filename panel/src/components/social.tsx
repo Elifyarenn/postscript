@@ -7,7 +7,7 @@
  * handle exists so the community does not see a legal name.
  */
 import Link from "next/link";
-import { Bookmark, Heart, MessageCircle, Repeat2, Star } from "lucide-react";
+import { Bookmark, Heart, Link as LinkIcon, MessageCircle, Repeat2, Star } from "lucide-react";
 import { formatRelativeTime } from "@/lib/relative-time";
 import { cn, formatDateTime } from "@/lib/utils";
 import { ActionButton, PanelForm } from "./form";
@@ -103,6 +103,7 @@ export function ProfileHeader({
         <div className="profile-identity">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="profile-name">{memberName(profile)}</h1>
+            <Star aria-hidden className="profile-name-star" fill="currentColor" />
             {profile.role !== "user" && <StatusBadge status={profile.role} />}
           </div>
           <p className="profile-handle">
@@ -115,17 +116,23 @@ export function ProfileHeader({
           {profile.followsViewer && <p className="mt-2 text-xs text-muted">Sizi takip ediyor</p>}
 
           {profile.bio && <p className="profile-bio">{profile.bio}</p>}
+          <Link href={`/social/u/${profile.username}?tab=about`} className="profile-more">
+            <LinkIcon aria-hidden className="size-4" /> Hakkında daha fazlası
+          </Link>
         </div>
 
         <Sparkle className="profile-star" />
 
         <div className="profile-side">
           <p className="profile-stats">
-            <Link href={`/social/u/${profile.username}/following`}>
-              <strong>{profile.followingCount}</strong> <span>takip</span>
+            <Link href={`/social/u/${profile.username}`}>
+              <strong>{profile.postCount}</strong> <span>gönderi</span>
             </Link>
             <Link href={`/social/u/${profile.username}/followers`}>
               <strong>{profile.followerCount}</strong> <span>takipçi</span>
+            </Link>
+            <Link href={`/social/u/${profile.username}/following`}>
+              <strong>{profile.followingCount}</strong> <span>takip</span>
             </Link>
           </p>
 

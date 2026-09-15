@@ -87,7 +87,7 @@ test("two members meet in the community area", async ({ page }) => {
   await page.goto("/social/anon/kerem_okur");
   await expect(page.getByText("Alıcı adınızı görmez, ama anonim değilsiniz")).toBeVisible();
   await page.getByLabel("Mesajınız").fill(anonymousMessage);
-  await page.getByRole("button", { name: "Anonim gönder" }).click();
+  await page.getByRole("button", { name: "Anonim olarak gönder" }).click();
   await expect(page.getByText("Mesajınız anonim olarak iletildi.")).toBeVisible();
 
   await logout(page);

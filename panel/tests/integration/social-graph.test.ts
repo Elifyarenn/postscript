@@ -126,6 +126,7 @@ describe("profiles and follows", () => {
 
     const profile = await getProfile(actorOf(velvet), "lunae");
     expect(profile.followerCount).toBe(1);
+    expect(profile.postCount).toBe(0);
     expect(profile.viewerFollows).toBe(true);
     expect(profile.isSelf).toBe(false);
 

@@ -1,18 +1,21 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Heart } from "lucide-react";
 import { requireSession } from "@/lib/auth/guard";
 import { listPublishedIssues } from "@/services/public";
 import { SiteBanner, Sparkle } from "@/components/site-ui";
-import { EmptyState } from "@/components/ui";
 import { formatIssueNumber } from "@/lib/site";
 import { formatDate } from "@/lib/utils";
 
 export const metadata = { title: "Sayılar" };
 
+/** Empty cards drawn while nothing is published, so the page keeps the design's grid (D-116). */
+const PLACEHOLDER_SLOTS = [1, 2, 3];
+
 /**
  * Every published issue, newest first, as the "magazines" design (D-114).
  * Covers are a solid block with the issue number: the design leaves them
- * empty too, and no cover is uploaded yet.
+ * empty too, and no cover is uploaded yet. Issues cannot be liked yet, so the
+ * heart is drawn without a count (D-116).
  */
 export default async function IssuesPage() {
   await requireSession();
@@ -44,7 +47,23 @@ export default async function IssuesPage() {
         </div>
 
         {issues.length === 0 ? (
-          <EmptyState>Yayınlanmış sayı yok. İlk sayı yolda.</EmptyState>
+          <>
+            <p className="issues-empty">Yayınlanmış sayı yok. İlk sayı yolda.</p>
+            <ul className="issue-grid" aria-hidden>
+              {PLACEHOLDER_SLOTS.map((slot) => (
+                <li key={slot} className="issue-card is-placeholder">
+                  <span className="issue-cover">
+                    <Sparkle />
+                  </span>
+                  <div className="issue-text">
+                    <p className="issue-title">
+                      POSTSCRIPT: <span>Yakında</span>
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
         ) : (
           <ul className="issue-grid">
             {issues.map((issue, index) => (
@@ -56,13 +75,16 @@ export default async function IssuesPage() {
                   {index === 0 && <p className="issue-new">Yeni!</p>}
                   <h3 className="issue-title">
                     <Link href={`/magazine/issues/${issue.number}`}>
-                      Postscript: <span>{issue.title}</span>
+                      POSTSCRIPT: <span>{issue.title}</span>
                     </Link>
                   </h3>
                   {issue.theme && <p className="issue-theme">{issue.theme}</p>}
                   <p className="issue-date">
                     Sayı {formatIssueNumber(issue.number)}
                     {issue.publishedAt && <> · {formatDate(issue.publishedAt)}</>}
+                  </p>
+                  <p className="issue-likes" title="Sayı beğenme yakında">
+                    <Heart aria-hidden className="size-4" />
                   </p>
                 </div>
               </li>

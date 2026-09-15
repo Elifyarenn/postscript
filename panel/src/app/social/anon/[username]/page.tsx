@@ -16,8 +16,9 @@ export const metadata = { title: "Anonim mesaj" };
 
 /**
  * Writing into a member's anonymous box, laid out as the "anon box" design
- * (D-113). The design's note says the words are published in the magazine;
- * this box goes to one member, so the note here says what really happens.
+ * (D-113, D-116). The design's note says the words are published in the
+ * magazine; this box goes to one member, so the notes here say what really
+ * happens.
  */
 export default async function AnonComposePage({
   params,
@@ -68,7 +69,7 @@ export default async function AnonComposePage({
       </p>
 
       {/* Said before the form, not after it: the sender must know this while writing */}
-      <div className="anon-note" role="note">
+      <div className="anon-warning" role="note">
         <strong>Alıcı adınızı görmez, ama anonim değilsiniz</strong>
         Mesajınız hesabınızla ve 5651 sayılı Kanun gereği trafik kaydıyla birlikte saklanır.
         Kurallara aykırı bir mesaj bildirilirse yöneticiler kimliğinizi görür; yetkili mercilerin
@@ -80,8 +81,13 @@ export default async function AnonComposePage({
           <PanelForm
             action={sendAnonMessageAction}
             csrfToken={csrfToken}
-            submitLabel="Anonim gönder"
+            submitLabel="Anonim olarak gönder"
             submitClassName="anon-send"
+            submitContent={
+              <>
+                <Sparkle /> Anonim olarak gönder <ArrowRight aria-hidden />
+              </>
+            }
           >
             <input type="hidden" name="username" value={recipient.username} />
             <div className="anon-field">
@@ -108,6 +114,13 @@ export default async function AnonComposePage({
       ) : (
         <Alert tone="info">{state.problem}</Alert>
       )}
+
+      {/* The design's closing box, telling what this box is for */}
+      <p className="anon-note">
+        Anonim kutu, @{recipient.username} adlı üyeye adını göstermeden soru, itiraf ya da güzel bir
+        söz bırakman içindir. Mesajın yalnızca ona gider, dergide yayımlanmaz. Kırıcı, +18 ya da
+        kurallara aykırı mesajlar bildirilebilir.
+      </p>
 
       <p className="text-center text-sm">
         <Link href="/social/anon" className="site-more">

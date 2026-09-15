@@ -97,3 +97,20 @@ export function categoryImageKey(name: string, index: number): CategoryImageKey 
 export function formatIssueNumber(issueNumber: number): string {
   return String(issueNumber).padStart(2, "0");
 }
+
+export type SocialKey = "x" | "tiktok" | "linkedin" | "instagram" | "pinterest";
+
+export type SocialLink = { key: SocialKey; label: string; url: string | null };
+
+/**
+ * The magazine's accounts in the footer's "arkadaş olalım!" row (D-116).
+ * The addresses are not known yet: an icon without one is drawn as designed
+ * but is not a link, so nobody is sent to a page that does not exist.
+ */
+export const SOCIAL_LINKS: SocialLink[] = [
+  { key: "x", label: "X", url: null },
+  { key: "tiktok", label: "TikTok", url: null },
+  { key: "linkedin", label: "LinkedIn", url: null },
+  { key: "instagram", label: "Instagram", url: null },
+  { key: "pinterest", label: "Pinterest", url: null },
+];

@@ -22,6 +22,7 @@ import {
   users,
   type DmPolicy,
   type Role,
+  posts,
 } from "@/db/schema";
 import { writeAudit, type Executor } from "@/lib/audit";
 import type { Actor } from "@/lib/auth/rbac";
@@ -130,9 +131,19 @@ export const usernameSchema = z.strictObject({
 
 export async function getMemberSettings(
   actor: Actor,
-): Promise<{ username: string | null; dmPolicy: DmPolicy; anonBoxEnabled: boolean }> {
+): Promise<{
+  username: string | null;
+  dmPolicy: DmPolicy;
+  anonBoxEnabled: boolean;
+  bio: string | null;
+}> {
   const rows = await db
-    .select({ username: users.username, dmPolicy: users.dmPolicy, anonBoxEnabled: users.anonBoxEnabled })
+    .select({
+      username: users.username,
+      dmPolicy: users.dmPolicy,
+      anonBoxEnabled: users.anonBoxEnabled,
+      bio: users.bio,
+    })
     .from(users)
     .where(eq(users.id, actor.id))
     .limit(1);
@@ -140,6 +151,7 @@ export async function getMemberSettings(
     username: rows[0]?.username ?? null,
     dmPolicy: rows[0]?.dmPolicy ?? "following",
     anonBoxEnabled: rows[0]?.anonBoxEnabled ?? false,
+    bio: rows[0]?.bio ?? null,
   };
 }
 
@@ -202,6 +214,8 @@ export type ProfileView = Member & {
   joinedAt: Date;
   followerCount: number;
   followingCount: number;
+  /** Posts the member shared themselves; replies and removed posts are not counted (D-116). */
+  postCount: number;
   isSelf: boolean;
   viewerFollows: boolean;
   followsViewer: boolean;
@@ -220,10 +234,14 @@ export async function getProfile(viewer: Actor, rawUsername: string): Promise<Pr
     throw notFound("Profil bulunamadı.");
   }
 
-  const [[followers], [following], viewerFollows, followsViewer, viewerBlocked] =
+  const [[followers], [following], [shared], viewerFollows, followsViewer, viewerBlocked] =
     await Promise.all([
       db.select({ value: count() }).from(follows).where(eq(follows.followeeId, target.id)),
       db.select({ value: count() }).from(follows).where(eq(follows.followerId, target.id)),
+      db
+        .select({ value: count() })
+        .from(posts)
+        .where(and(eq(posts.authorId, target.id), isNull(posts.deletedAt), isNull(posts.replyToId))),
       isSelf ? false : isFollowing(viewer.id, target.id),
       isSelf ? false : isFollowing(target.id, viewer.id),
       isSelf ? false : hasBlocked(viewer.id, target.id),
@@ -239,6 +257,7 @@ export async function getProfile(viewer: Actor, rawUsername: string): Promise<Pr
     joinedAt: target.createdAt,
     followerCount: followers?.value ?? 0,
     followingCount: following?.value ?? 0,
+    postCount: shared?.value ?? 0,
     isSelf,
     viewerFollows,
     followsViewer,

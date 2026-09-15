@@ -18,7 +18,18 @@ import { markNotificationsReadAction } from "../actions";
 
 export const metadata = { title: "Bildirimler" };
 
-/** The member's notifications, sorted into the design's tabs (D-113). */
+/** The design rules the page into rows all the way down; empty rows fill it to this many. */
+const RULED_ROWS = 8;
+
+const EMPTY_TEXT = {
+  tumu: "Henüz bildirim yok.",
+  takip: "Henüz takipçi bildirimi yok.",
+  begeni: "Henüz beğeni bildirimi yok.",
+  yorum: "Henüz yorum bildirimi yok.",
+  bahsetme: "Henüz bahsetme yok.",
+} as const;
+
+/** The member's notifications, sorted into the design's tabs (D-113, D-116). */
 export default async function NotificationsPage({
   searchParams,
 }: {
@@ -31,6 +42,7 @@ export default async function NotificationsPage({
   const tab = parseNotificationTab(params.tur);
   const shown = tab === "tumu" ? items : items.filter((item) => notificationTab(item.kind) === tab);
   const hasUnread = items.some((item) => item.readAt === null);
+  const fillerRows = Math.max(0, RULED_ROWS - Math.max(shown.length, 1));
 
   return (
     <>
@@ -65,50 +77,50 @@ export default async function NotificationsPage({
         )}
       </div>
 
-      {shown.length === 0 ? (
-        <p className="notice-empty">
-          {tab === "tumu" ? "Henüz bildirim yok." : "Bu türde bildirim yok."}
-        </p>
-      ) : (
-        <ul className="notice-list">
-          {shown.map((item) => {
-            const { handle, rest } = splitLeadingHandle(item.title);
-            const unread = item.readAt === null;
-            const text = handle ? (
-              <>
-                <strong>@{handle}</strong> {rest}
-              </>
-            ) : (
-              rest
-            );
+      <ul className="notice-list">
+        {shown.length === 0 && <li className="notice-empty">{EMPTY_TEXT[tab]}</li>}
 
-            return (
-              <li key={item.id} className={cn("notice-item", unread && "is-unread")}>
-                <span className="notice-avatar" aria-hidden>
-                  {handle ? handle.charAt(0) : <Bell className="size-5" />}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="notice-title">
-                    {/* Only in-site paths become links; a stored href is never trusted as external */}
-                    {isSitePath(item.href) ? <Link href={item.href}>{text}</Link> : text}
-                  </p>
-                  {item.body && <p className="notice-body">“{item.body}”</p>}
-                </div>
-                <time
-                  className="notice-time"
-                  dateTime={item.createdAt.toISOString()}
-                  title={formatDateTime(item.createdAt)}
-                >
-                  {formatRelativeTime(item.createdAt)}
-                </time>
-                <span className={unread ? "notice-dot" : "notice-dot is-read"}>
-                  {unread && <span className="sr-only">Okunmadı</span>}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+        {shown.map((item) => {
+          const { handle, rest } = splitLeadingHandle(item.title);
+          const unread = item.readAt === null;
+          const text = handle ? (
+            <>
+              <strong>@{handle}</strong> {rest}
+            </>
+          ) : (
+            rest
+          );
+
+          return (
+            <li key={item.id} className={cn("notice-item", unread && "is-unread")}>
+              <span className="notice-avatar" aria-hidden>
+                {handle ? handle.charAt(0) : <Bell className="size-5" />}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="notice-title">
+                  {/* Only in-site paths become links; a stored href is never trusted as external */}
+                  {isSitePath(item.href) ? <Link href={item.href}>{text}</Link> : text}
+                </p>
+                {item.body && <p className="notice-body">“{item.body}”</p>}
+              </div>
+              <time
+                className="notice-time"
+                dateTime={item.createdAt.toISOString()}
+                title={formatDateTime(item.createdAt)}
+              >
+                {formatRelativeTime(item.createdAt)}
+              </time>
+              <span className={unread ? "notice-dot" : "notice-dot is-read"}>
+                {unread && <span className="sr-only">Okunmadı</span>}
+              </span>
+            </li>
+          );
+        })}
+
+        {Array.from({ length: fillerRows }, (_, index) => (
+          <li key={`rule-${index}`} className="notice-filler" aria-hidden />
+        ))}
+      </ul>
     </>
   );
 }

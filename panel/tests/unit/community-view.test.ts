@@ -7,18 +7,22 @@ import {
 } from "@/lib/notification-view";
 import { formatClockTime, formatDayLabel, formatRelativeTime } from "@/lib/relative-time";
 
-describe("notification tabs (D-113)", () => {
-  it("files each stored kind under its tab, the magazine's own under Dergi", () => {
+describe("notification tabs (D-113, D-116)", () => {
+  it("files each member notification under its tab", () => {
     expect(notificationTab("social.follow")).toBe("takip");
     expect(notificationTab("social.like")).toBe("begeni");
     expect(notificationTab("social.repost")).toBe("begeni");
-    expect(notificationTab("social.reply")).toBe("yanit");
-    expect(notificationTab("editorial")).toBe("dergi");
-    expect(notificationTab("kvkk.new_version")).toBe("dergi");
+    expect(notificationTab("social.reply")).toBe("yorum");
+  });
+
+  it("leaves the magazine's own notices to the all tab", () => {
+    expect(notificationTab("editorial")).toBeNull();
+    expect(notificationTab("kvkk.new_version")).toBeNull();
   });
 
   it("reads an unknown tab as all", () => {
     expect(parseNotificationTab("begeni")).toBe("begeni");
+    expect(parseNotificationTab("bahsetme")).toBe("bahsetme");
     expect(parseNotificationTab("mentions")).toBe("tumu");
     expect(parseNotificationTab(undefined)).toBe("tumu");
   });

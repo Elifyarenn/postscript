@@ -7,7 +7,6 @@ import { listBookmarkedArticles } from "@/services/social";
 import { listBookmarkedPosts } from "@/services/posts";
 import { ActionButton } from "@/components/form";
 import { SiteTitle, Sparkle } from "@/components/site-ui";
-import { EmptyState } from "@/components/ui";
 import { PostList } from "@/components/social";
 import { removeBookmarkAction } from "../actions";
 
@@ -31,9 +30,10 @@ export default async function BookmarksPage() {
           Yazılar
         </h2>
         {articles.length === 0 ? (
-          <EmptyState>
-            Henüz kaydettiğiniz bir yazı yok. Yazı sayfalarındaki “Kaydet” düğmesini kullanın.
-          </EmptyState>
+          // The board keeps its frame when empty, as the design draws it (D-116)
+          <div className="bookmark-grid is-empty">
+            <p>Henüz kaydettiğiniz bir yazı yok. Yazı sayfalarındaki “Kaydet” düğmesini kullanın.</p>
+          </div>
         ) : (
           <ul className="bookmark-grid">
             {articles.map((article) => (

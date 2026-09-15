@@ -78,15 +78,23 @@ function SubmitButton({
   variant = "primary",
   disabled,
   className,
+  ariaLabel,
 }: {
   children: ReactNode;
   variant?: "primary" | "secondary" | "danger";
   disabled?: boolean;
   className?: string;
+  ariaLabel?: string;
 }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" variant={variant} disabled={pending || disabled} className={className}>
+    <Button
+      type="submit"
+      variant={variant}
+      disabled={pending || disabled}
+      className={className}
+      aria-label={ariaLabel}
+    >
       {pending ? "Gönderiliyor…" : children}
     </Button>
   );
@@ -99,6 +107,7 @@ export function PanelForm({
   submitVariant = "primary",
   requireValid = false,
   submitClassName,
+  submitContent,
   children,
 }: {
   action: ServerAction;
@@ -107,6 +116,11 @@ export function PanelForm({
   submitVariant?: "primary" | "secondary" | "danger";
   /** Restyles the submit button, as the magazine frame's forms do (D-113). */
   submitClassName?: string;
+  /**
+   * What the submit button shows instead of the label, such as an icon (D-116).
+   * The label stays the button's accessible name.
+   */
+  submitContent?: ReactNode;
   /**
    * Keeps the submit button shut until every field satisfies its own
    * constraints. Used where a rule is shown live, so the button matches what
@@ -155,8 +169,9 @@ export function PanelForm({
           variant={submitVariant}
           disabled={requireValid && !valid}
           className={submitClassName}
+          ariaLabel={submitContent ? submitLabel : undefined}
         >
-          {submitLabel}
+          {submitContent ?? submitLabel}
         </SubmitButton>
       </div>
     </form>
