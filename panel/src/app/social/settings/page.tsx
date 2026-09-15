@@ -35,12 +35,6 @@ const SECTIONS = [
 
 type SectionId = (typeof SECTIONS)[number]["id"];
 
-/** The member's two pictures, uploaded one form each (D-141). */
-const IMAGE_FIELDS = [
-  { kind: "avatar", label: "Profil fotoğrafı", field: "avatarImage" },
-  { kind: "header", label: "Kapak fotoğrafı", field: "headerImage" },
-] as const;
-
 function parseSection(value: string | undefined): SectionId {
   return SECTIONS.find((section) => section.id === value)?.id ?? "profil";
 }
@@ -99,17 +93,98 @@ export default async function SocialSettingsPage({
           </h2>
 
           {section === "profil" && (
-            <div className="settings-profile-grid">
-              <span className="settings-avatar" aria-hidden>
-                {settings.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- served by our own media route, not optimised
-                  <img src={settings.avatarUrl} alt="" className="settings-avatar-image" />
-                ) : (
-                  (settings.username ?? "?").charAt(0)
-                )}
-              </span>
+            <>
+              {/* What the other members see, drawn from the same values as the profile page (D-142) */}
+              <section className="settings-preview" aria-labelledby="settings-preview-title">
+                <h3 id="settings-preview-title" className="settings-subtitle">
+                  Profil önizlemesi
+                </h3>
 
-              <div className="settings-profile-forms min-w-0">
+                <div className="settings-preview-card">
+                  <div className="settings-preview-cover">
+                    {settings.headerUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element -- served by our own media route, not optimised
+                      <img src={settings.headerUrl} alt="" />
+                    )}
+                  </div>
+
+                  <div className="settings-preview-main">
+                    <span className="settings-preview-avatar" aria-hidden>
+                      {settings.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- served by our own media route, not optimised
+                        <img src={settings.avatarUrl} alt="" />
+                      ) : (
+                        (settings.username ?? "?").charAt(0)
+                      )}
+                    </span>
+
+                    <div className="min-w-0">
+                      <p className="settings-preview-name">
+                        {settings.penName ?? settings.username ?? "Kullanıcı adı seçilmedi"}
+                      </p>
+                      <p className="settings-preview-handle">
+                        {settings.username ? `@${settings.username}` : "Kullanıcı adı seçilmedi"}
+                      </p>
+                      <p className="settings-preview-bio">{settings.bio ?? "Biyografi eklenmemiş."}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="settings-note">Topluluktaki üyeler profilinizi böyle görür.</p>
+              </section>
+
+              <div className="settings-profile-grid">
+                <div className="settings-photo">
+                  <span className="settings-avatar" aria-hidden>
+                    {settings.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- served by our own media route, not optimised
+                      <img src={settings.avatarUrl} alt="" className="settings-avatar-image" />
+                    ) : (
+                      (settings.username ?? "?").charAt(0)
+                    )}
+                  </span>
+
+                  <PanelForm
+                    action={setProfileImageAction}
+                    csrfToken={csrfToken}
+                    submitLabel="Yükle"
+                    submitClassName="settings-save"
+                    submitContent={
+                      <>
+                        Yükle <ArrowRight aria-hidden className="size-4" />
+                      </>
+                    }
+                  >
+                    <>
+                      <input type="hidden" name="kind" value="avatar" />
+                      <Field
+                        label="Profil fotoğrafı"
+                        htmlFor="avatarImage"
+                        hint="JPEG, PNG, GIF veya WEBP; en fazla 5 MB."
+                      >
+                        <Input
+                          id="avatarImage"
+                          name="avatarImage"
+                          type="file"
+                          required
+                          accept="image/jpeg,image/png,image/gif,image/webp"
+                        />
+                      </Field>
+                    </>
+                  </PanelForm>
+
+                  {settings.avatarUrl && (
+                    <ActionButton
+                      action={clearProfileImageAction}
+                      csrfToken={csrfToken}
+                      label="Profil fotoğrafını kaldır"
+                      fields={{ kind: "avatar" }}
+                      confirmMessage="Profil fotoğrafınız kaldırılsın mı?"
+                    />
+                  )}
+                </div>
+
+                <div className="settings-profile-forms min-w-0">
                 <div className="settings-inline">
                   <PanelForm
                     action={setUsernameAction}
@@ -136,57 +211,46 @@ export default async function SocialSettingsPage({
                   </PanelForm>
                 </div>
 
-                <div className="settings-images">
-                  {IMAGE_FIELDS.map((image) => (
-                    <div key={image.kind} className="settings-image">
-                      <PanelForm
-                        action={setProfileImageAction}
-                        csrfToken={csrfToken}
-                        submitLabel="Yükle"
-                        submitClassName="settings-save"
-                        submitContent={
-                          <>
-                            Yükle <ArrowRight aria-hidden className="size-4" />
-                          </>
-                        }
+                <div className="settings-cover">
+                  <PanelForm
+                    action={setProfileImageAction}
+                    csrfToken={csrfToken}
+                    submitLabel="Yükle"
+                    submitClassName="settings-save"
+                    submitContent={
+                      <>
+                        Yükle <ArrowRight aria-hidden className="size-4" />
+                      </>
+                    }
+                  >
+                    <>
+                      <input type="hidden" name="kind" value="header" />
+                      <Field
+                        label="Kapak fotoğrafı"
+                        htmlFor="headerImage"
+                        hint="Profilinizin üstünde geniş bir şerit olarak görünür. JPEG, PNG, GIF veya WEBP; en fazla 5 MB."
                       >
-                        <>
-                          <input type="hidden" name="kind" value={image.kind} />
-                          <Field
-                            label={image.label}
-                            htmlFor={image.field}
-                            hint="JPEG, PNG, GIF veya WEBP; en fazla 5 MB. Topluluktaki üyeler görür."
-                          >
-                            <Input
-                              id={image.field}
-                              name={image.field}
-                              type="file"
-                              required
-                              accept="image/jpeg,image/png,image/gif,image/webp"
-                            />
-                          </Field>
-                        </>
-                      </PanelForm>
-
-                      {(image.kind === "avatar" ? settings.avatarUrl : settings.headerUrl) && (
-                        <ActionButton
-                          action={clearProfileImageAction}
-                          csrfToken={csrfToken}
-                          label={`${image.label}nı kaldır`}
-                          fields={{ kind: image.kind }}
-                          confirmMessage={`${image.label}nız kaldırılsın mı?`}
+                        <Input
+                          id="headerImage"
+                          name="headerImage"
+                          type="file"
+                          required
+                          accept="image/jpeg,image/png,image/gif,image/webp"
                         />
-                      )}
-                    </div>
-                  ))}
-                </div>
+                      </Field>
+                    </>
+                  </PanelForm>
 
-                {settings.headerUrl && (
-                  <div className="settings-header-preview">
-                    {/* eslint-disable-next-line @next/next/no-img-element -- served by our own media route, not optimised */}
-                    <img src={settings.headerUrl} alt="" />
-                  </div>
-                )}
+                  {settings.headerUrl && (
+                    <ActionButton
+                      action={clearProfileImageAction}
+                      csrfToken={csrfToken}
+                      label="Kapak fotoğrafını kaldır"
+                      fields={{ kind: "header" }}
+                      confirmMessage="Kapak fotoğrafınız kaldırılsın mı?"
+                    />
+                  )}
+                </div>
 
                 <div className="settings-bio">
                   <PanelForm
@@ -241,8 +305,9 @@ export default async function SocialSettingsPage({
                   biyografinizi, rolünüzü, katılım tarihinizi ve takip sayılarınızı görür. Ad
                   soyadınız, e-posta adresiniz ve doğum tarihiniz profilde gösterilmez.
                 </p>
+                </div>
               </div>
-            </div>
+            </>
           )}
 
           {section === "gizlilik" && (

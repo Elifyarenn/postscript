@@ -5150,3 +5150,26 @@ sahibi profil ve kapak fotoğrafı eklemeyi istedi.
   kendisinden sonra gelen avatarın üstüne çizildi ve avatarın üst yarısı kayboldu.
   Kapak konumlandırılmadan bırakıldı; avatar `z-index` ile üste alındı. Yeni
   ekran görüntüsünde avatar kapağın üstünde tam daire.
+
+## D-142 — Fotoğraf seçimi durduğu yerde; ayarlarda profil önizlemesi
+
+**Durum:** D-141'de iki fotoğraf da Profil bölümünün ortasında, yan yana iki
+kutuda seçiliyordu. Avatar solda ayrı duruyordu ve kapak fotoğrafının nasıl
+göründüğü yalnızca profil sayfasına gidince anlaşılıyordu. Ürün sahibi profil
+fotoğrafı seçiminin profil kısmına taşınmasını ve ayarlara profil önizlemesi
+konmasını istedi.
+
+**Karar:**
+
+- **Profil fotoğrafı** avatarın hemen altında seçilir; "Kaldır" düğmesi de orada.
+- **Kapak fotoğrafı** kendi satırında, kullanıcı adının altında seçilir.
+- **Önizleme:** Profil bölümünün en üstünde, başkalarının gördüğü profil çizilir:
+  kapak şeridi, üstüne binen avatar, ad (mahlas varsa mahlas), kullanıcı adı ve
+  biyografi. Altında "Topluluktaki üyeler profilinizi böyle görür" notu var.
+  - Önizleme profil sayfasıyla aynı değerlerden beslenir; ikinci bir kopya yok.
+  - `getMemberSettings` artık mahlası da döndürüyor.
+  - Fotoğrafı, kullanıcı adı ya da biyografisi olmayan üyede önizleme boş hâli
+    gösterir ("Kullanıcı adı seçilmedi", "Biyografi eklenmemiş.").
+
+**Hukuk:** Yeni veri yok; önizleme yalnızca üyenin kendi verisini kendisine
+gösterir.

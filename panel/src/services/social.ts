@@ -140,6 +140,7 @@ export async function getMemberSettings(
   actor: Actor,
 ): Promise<{
   username: string | null;
+  penName: string | null;
   dmPolicy: DmPolicy;
   anonBoxEnabled: boolean;
   bio: string | null;
@@ -149,6 +150,7 @@ export async function getMemberSettings(
   const rows = await db
     .select({
       username: users.username,
+      penName: users.penName,
       dmPolicy: users.dmPolicy,
       anonBoxEnabled: users.anonBoxEnabled,
       bio: users.bio,
@@ -160,6 +162,7 @@ export async function getMemberSettings(
     .limit(1);
   return {
     username: rows[0]?.username ?? null,
+    penName: rows[0]?.penName ?? null,
     dmPolicy: rows[0]?.dmPolicy ?? "following",
     anonBoxEnabled: rows[0]?.anonBoxEnabled ?? false,
     bio: rows[0]?.bio ?? null,
