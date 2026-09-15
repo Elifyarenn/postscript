@@ -4977,3 +4977,107 @@ profilinde gösteriliyordu (D-089); yalnızca düzenlendiği yer değişti.
   | Gizlilik | Anonim kutu | "Anonim kutunuz açıldı." |
   | Bildirimler, Hesap | Açılış | Formsuz tek kart |
   | Mesajlar | Mesaj tercihi | "Özel mesaj tercihiniz kaydedildi." |
+
+## D-138 — Konu başlıkları ve Sayı 01 için topluluklar açıldı (canlı veri)
+
+**Durum:** Ürün sahibi toplulukların admin panelinden kurulmasını ve şimdilik
+konu başlıkları (yazı alanları) ile ilk sayı için topluluk açılmasını istedi.
+
+- Admin panelinin "Topluluk yönetimi" sayfasında "Topluluk aç" formu zaten var
+  (D-093). Topluluğu yalnızca yöneticiler açar ve arşivler.
+- Canlıda hiç topluluk yoktu.
+
+**Karar:** Kod değişikliği yok. 2026-09-16'da canlı admin panelinin kendi
+formuyla, ürün sahibinin admin oturumunda 12 topluluk açıldı:
+
+| Topluluk | Adres |
+|---|---|
+| Sanat & Edebiyat | `/social/communities/sanat-edebiyat` |
+| Bilim & Teknoloji | `/social/communities/bilim-teknoloji` |
+| Psikoloji & İlişkiler | `/social/communities/psikoloji-iliskiler` |
+| Lifestyle & Fashion | `/social/communities/lifestyle-fashion` |
+| Pop Culture | `/social/communities/pop-culture` |
+| Film, Dizi & Kitap | `/social/communities/film-dizi-kitap` |
+| Sosyoloji & Düşünce | `/social/communities/sosyoloji-dusunce` |
+| Sosyal & Feminizm | `/social/communities/sosyal-feminizm` |
+| Tarih & Dünya | `/social/communities/tarih-dunya` |
+| Yazar Köşesi: P.S. | `/social/communities/yazar-kosesi-p-s` |
+| Eğlence & Dedikodu | `/social/communities/eglence-dedikodu` |
+| Sayı 01: Obsession | `/social/communities/sayi-01-obsession` |
+
+- Her birine konusunu anlatan kısa bir açıklama yazıldı.
+- Her açılış servisin denetim kaydına "social.community_created" olarak düştü.
+- Admin sayfası sonunda "Topluluklar (12)" gösterdi.
+
+**Hukuk:** Yeni kişisel veri yok. Topluluk gönderileri mevcut yer sağlayıcı
+düzenine tabi: bildirim, kaldırma ve trafik kaydı (D-084, D-093).
+
+## D-139 — Kullanıcı adı seçmiş üyeler öneri olarak listelenir; önerilerden takip edilir
+
+**Durum:** Takip etme profil sayfalarında vardı ama bulunması zordu.
+
+- "Tanıyor olabilirsiniz" önerileri yalnızca Keşfet sayfasındaydı. Kaynakları
+  takip edilenlerin takip ettikleri ve en çok takip edilenlerdi. Kimse kimseyi
+  takip etmediği için liste boş kalıyordu.
+- Listede takip düğmesi yoktu.
+
+Ürün sahibi, kaydı olan ve takma ad (kullanıcı adı) oluşturan üyelerin öneri
+olarak listelenmesini ve takip etme özelliğinin etkinleştirilmesini istedi.
+
+**Karar:**
+
+- **Öneri kaynağı:** `suggestMembers` önce takip ettiklerinin takip ettiklerini,
+  sonra en çok takip edilenleri alır. Liste hâlâ dolmadıysa kullanıcı adı seçmiş
+  üyelerle tamamlanır, en yeni üye önce.
+  - Dışarıda kalanlar: okurun kendisi, zaten takip ettikleri, iki yönlü engel,
+    yasaklı ve silinmiş hesaplar.
+- **Takip düğmesi:** Öneri listelerindeki her üyenin yanında "Takip et" düğmesi var
+  (`MemberList`'in `followToken`'ı). Takipçi/takip edilen listelerinde yok.
+- **Görünüm:** Öneriler Keşfet'in yanı sıra Topluluk akış sayfasında da sağ sütunda
+  gösterilir.
+- **Yenileme:** Takip et / takibi bırak topluluk sayfalarının hepsini yeniler; takip
+  edilen üye önerilerden düşer.
+
+**Hukuk:** Yeni kişisel veri yok. Önerilen üyeler kullanıcı adı, varsa mahlas ve
+rolüyle görünür; bunlar zaten topluluk profilinde herkese açık (D-089).
+
+**Doğrulama:** `tests/integration/member-suggestions.test.ts`:
+
+- Kimse takip etmezken kullanıcı adı olanlar en yeni önce öneriliyor.
+- Kendisi, takip edilen, engellenen ve yasaklı öneriye girmiyor.
+- Takip edilen öneriden düşüyor.
+
+**Demo sunucusu (okur hesabı):**
+
+- Akış sayfasının öneri kartında `@ada_yazar` "Takip et" düğmesiyle göründü.
+- Düğmeye basınca takip edildi; akış yeniden açıldığında öneriden düşmüştü.
+- Profilinde "Takibi bırak" düğmesi vardı.
+- Takip bırakılınca Keşfet önerilerine geri döndü.
+
+## D-140 — Katılım tarihi yalnızca ay ve yıl
+
+**Durum:** Topluluk profilinde katılım tarihi iki yerde farklı gösteriliyordu:
+
+- Başlıkta ay ve yıl ("Eylül 2026 tarihinde katıldı"), saat dilimi belirtilmeden.
+- "Hakkında" sekmesinde tam gün ("7 Eyl 2026").
+
+Ürün sahibi katılımın yalnızca ay ve yıl olarak gösterilmesini istedi.
+
+**Karar:**
+
+- `formatMonthYear` (`src/lib/relative-time.ts`) İstanbul saatiyle ay ve yıl
+  yazar; profil başlığı ve Hakkında sekmesi bunu kullanır.
+- Gün hiçbir yerde gösterilmez.
+- Saat dilimi İstanbul'a sabit: sunucu UTC'de çalışıyor. İstanbul saatiyle 1 Ekim
+  00:30'da katılan biri, UTC'de hâlâ 30 Eylül olduğu için "Eylül" diye
+  yazılmasın.
+
+**Hukuk:** Değişiklik yok; gösterilen bilgi azaldı.
+
+**Doğrulama:**
+
+- typecheck ve lint temiz; 56 dosyada 556 test geçti.
+- `tests/unit/relative-time.test.ts`: ay-yıl biçimi ve İstanbul saatine göre ay
+  sınırı.
+- **Demo sunucusu:** Profil başlığı "@kerem_okur · Eylül 2026 tarihinde katıldı";
+  Hakkında sekmesinde "Katılım: Eylül 2026". Gün hiçbir yerde yok.

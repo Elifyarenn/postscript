@@ -546,6 +546,20 @@ export async function suggestMembers(actor: Actor, limit = 5): Promise<MemberLis
     }
   }
 
+  if (candidates.length < limit) {
+    // A young community has few follows to learn from, so members who picked a
+    // handle fill the rest of the list, newest first (D-139)
+    const recent = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(...visibleAuthor))
+      .orderBy(desc(users.createdAt))
+      .limit(50);
+    for (const row of recent) {
+      if (!exclude.has(row.id) && !candidates.includes(row.id)) candidates.push(row.id);
+    }
+  }
+
   const shortlist = candidates.slice(0, limit * 3);
   if (shortlist.length === 0) return [];
 

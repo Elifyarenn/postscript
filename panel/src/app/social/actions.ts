@@ -348,6 +348,8 @@ export async function followAction(_state: ActionState, formData: FormData): Pro
     const { user } = await requireAuth();
     await followMember({ ...user }, text(formData, "username"));
     revalidateProfile(formData);
+    // The feed and explore pages list suggestions, which a follow changes
+    revalidatePath("/social", "layout");
     return { success: "Takip ediliyor." };
   });
 }
@@ -361,6 +363,7 @@ export async function unfollowAction(
     const { user } = await requireAuth();
     await unfollowMember({ ...user }, text(formData, "username"));
     revalidateProfile(formData);
+    revalidatePath("/social", "layout");
     return { success: "Takip bırakıldı." };
   });
 }

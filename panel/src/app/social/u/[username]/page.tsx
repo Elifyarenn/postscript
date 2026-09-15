@@ -4,7 +4,7 @@ import { ArrowRight, Heart, MessageCircle, Repeat2 } from "lucide-react";
 import { requireSession } from "@/lib/auth/guard";
 import { readCsrfToken } from "@/lib/csrf";
 import { isAppError } from "@/lib/errors";
-import { formatDate } from "@/lib/utils";
+import { formatMonthYear } from "@/lib/relative-time";
 import { getProfile } from "@/services/social";
 import { listProfilePosts, type PostView } from "@/services/posts";
 import { listCategoryCounts } from "@/services/public";
@@ -79,7 +79,7 @@ export default async function ProfilePage({
               </div>
               <div>
                 <dt className="text-muted">Katılım</dt>
-                <dd>{formatDate(profile.joinedAt)}</dd>
+                <dd>{formatMonthYear(profile.joinedAt)}</dd>
               </div>
             </dl>
           ) : (

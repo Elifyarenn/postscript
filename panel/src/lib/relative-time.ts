@@ -17,6 +17,7 @@ const DAY = new Intl.DateTimeFormat("tr-TR", {
   timeZone: ZONE,
 });
 const CLOCK = new Intl.DateTimeFormat("tr-TR", { hour: "2-digit", minute: "2-digit", timeZone: ZONE });
+const MONTH_YEAR = new Intl.DateTimeFormat("tr-TR", { month: "long", year: "numeric", timeZone: ZONE });
 
 export function formatRelativeTime(date: Date, now: Date = new Date()): string {
   const seconds = Math.round((now.getTime() - date.getTime()) / 1000);
@@ -43,4 +44,9 @@ export function formatDayLabel(date: Date): string {
 /** "18:42": the time under a message bubble. */
 export function formatClockTime(date: Date): string {
   return CLOCK.format(date);
+}
+
+/** "Eylül 2026": when a member joined. The day is left out on purpose (D-140). */
+export function formatMonthYear(date: Date): string {
+  return MONTH_YEAR.format(date);
 }

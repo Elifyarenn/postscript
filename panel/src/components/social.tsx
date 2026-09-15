@@ -8,7 +8,7 @@
  */
 import Link from "next/link";
 import { Bookmark, Heart, Link as LinkIcon, MessageCircle, Repeat2, Star } from "lucide-react";
-import { formatRelativeTime } from "@/lib/relative-time";
+import { formatMonthYear, formatRelativeTime } from "@/lib/relative-time";
 import { cn, formatDateTime } from "@/lib/utils";
 import { ActionButton, PanelForm } from "./form";
 import { Sparkle } from "./site-ui";
@@ -29,8 +29,6 @@ import {
 } from "@/app/social/actions";
 import { MAX_POST_LENGTH, type PostView } from "@/services/posts";
 import type { MemberListItem, ProfileView } from "@/services/social";
-
-const MONTH_YEAR = new Intl.DateTimeFormat("tr-TR", { month: "long", year: "numeric" });
 
 const AVATAR_SIZES = {
   sm: "size-9 text-sm",
@@ -107,7 +105,7 @@ export function ProfileHeader({
             {profile.role !== "user" && <StatusBadge status={profile.role} />}
           </div>
           <p className="profile-handle">
-            @{profile.username} · {MONTH_YEAR.format(profile.joinedAt)} tarihinde katıldı
+            @{profile.username} · {formatMonthYear(profile.joinedAt)} tarihinde katıldı
           </p>
 
           {profile.viewerBlocked && (
@@ -440,14 +438,34 @@ export function PostList({
   );
 }
 
-export function MemberList({ members }: { members: MemberListItem[] }) {
+export function MemberList({
+  members,
+  followToken,
+}: {
+  members: MemberListItem[];
+  /**
+   * Given on suggestion lists, where nobody listed is followed yet: each row
+   * then carries a follow button (D-139). Follower lists leave it out.
+   */
+  followToken?: string;
+}) {
   return (
     <ul className="divide-y divide-line">
       {members.map((member) => (
-        <li key={member.username} className="flex items-center gap-3 py-3">
+        <li key={member.username} className="flex flex-wrap items-center gap-3 py-3">
           <Avatar username={member.username} size="sm" />
           <MemberLink member={member} className="text-sm" />
           {member.role !== "user" && <StatusBadge status={member.role} />}
+          {followToken && (
+            <ActionButton
+              action={followAction}
+              csrfToken={followToken}
+              label="Takip et"
+              variant="primary"
+              fields={{ username: member.username }}
+              className="ml-auto"
+            />
+          )}
         </li>
       ))}
     </ul>

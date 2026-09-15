@@ -31,12 +31,12 @@ export default async function ExplorePage() {
         <Card className="h-fit">
           <h2 className="mb-1 font-serif text-base">Tanıyor olabilirsiniz</h2>
           <p className="mb-2 text-xs text-muted">
-            Takip ettiklerinizin takip ettikleri; yoksa en çok takip edilenler.
+            Takip ettiklerinizin takip ettikleri, en çok takip edilenler ve kullanıcı adı seçmiş yeni üyeler.
           </p>
           {suggestions.length === 0 ? (
             <p className="py-4 text-sm text-muted">Şimdilik öneri yok.</p>
           ) : (
-            <MemberList members={suggestions} />
+            <MemberList members={suggestions} followToken={csrfToken} />
           )}
         </Card>
       </div>
