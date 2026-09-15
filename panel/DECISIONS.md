@@ -4395,3 +4395,54 @@ Wikimedia Commons adlandırmasına benziyor; kaynağı ve lisansı doğrulanmal�
   | 1920 px | 1256 / 2877 px | 234 × 127 |
   | 1280 px | 1216 / 2786 px | 226 × 122 |
   | 390 px | 358 / 2592 px | 208 × 113 |
+
+## D-123 — Sayfa sütunu ortada, üye menüsü yanında
+
+**Durum:** Geniş ekranda (≥1400 px) giriş yapmış okurun çerçevesi üç sütunlu bir
+ızgaraydı (D-116): solda en az 16rem, ortada en çok 1320 px, sağda en az 0.
+
+1536 px'lik bir ekranda sağ sütun sıfıra indi. Sayfa sütunu sağa itildi
+(256–1521 px), üye menüsü sol kenara yapışıp bütün sol boşluğu kapladı. Üst şerit
+ve alt bilgi ortalı kaldığı için sütunla da hizasızdı.
+
+"postscript ana sayfa kullanıcı olan.ai" tasarımında ise sütun sayfanın ortasında.
+Menü sol boşlukta, sütunun hemen yanında duruyor; iki yanında da boşluk var.
+Ürün sahibi siteyi tasarımdaki gibi ortalamayı, menünün her yeri kaplamamasını
+istedi.
+
+**Karar (yalnızca menülü düzen, ≥1400 px):**
+
+- **Izgara:** İki yan sütun eşit: `minmax(var(--member-rail), 1fr)`. Böylece
+  sütun her genişlikte tam ortada kalır.
+  - `--member-rail` genişliğin %17'si, en az 15rem, en çok 21rem.
+- **Menü:** Yan sütunun sağına yaslanır.
+  - Sütunla arasında `--member-gap`, sol kenarla arasında `--member-edge` boşluk
+    kalır.
+  - Genişliği en çok 19rem.
+  - Yazı, ikon ve iç boşluklar ekran genişliğiyle ölçeklenir; hiçbir etiket
+    kesilmez.
+- **Başlık:** Sütun dizüstü ekranda ~920–1015 px'e daraldığı için logo, menü ve
+  arama biraz küçültüldü. Başlık tasarımdaki gibi tek satırda kalır; menülü düzen
+  dışında başlık aynı.
+- **Dokunulmayanlar:** 1400 px altındaki düzen (menü sütunun üstünde yatay şerit)
+  ve oturumu olmayan sayfalar değişmedi.
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:**
+
+- typecheck ve lint temiz; 53 dosyada 540 test geçti.
+- **Yerel tarayıcı ölçümü:** Demo okur hesabıyla, ana sayfada. Beş genişlikte de
+  menü sütuna binmiyor, başlık tek satır, başlık menüsü ve üye menüsünde kesilme
+  yok, sayfada yatay taşma yok.
+
+  | Genişlik | Sütun | Ortadan sapma | Menü | Menü–sütun arası |
+  |---|---|---|---|---|
+  | 1400 px | 240–1160 | 0 | 21–229 | 11 px |
+  | 1440 px | 245–1195 | 0 | 22–233 | 12 px |
+  | 1536 px | 261–1275 | 0 | 23–249 | 12 px |
+  | 1920 px | 326–1594 | 0 | 29–311 | 15 px |
+  | 2560 px | 620–1940 (1320) | 0 | 322–604 | 16 px |
+
+- **1400 px düzeltmesi:** İlk ölçümde başlık menüsü 13 px sığmıyordu. Logo
+  genişliği 16vw'den 15vw'ye indirilince sığdı.

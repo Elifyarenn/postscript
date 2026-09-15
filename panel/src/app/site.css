@@ -3020,3 +3020,63 @@
 .ps-site .category-card-art {
   aspect-ratio: 301 / 163;
 }
+
+/* ════════════════ Centred column beside the member menu (D-123) ════════════════ */
+
+/*
+ * The design centres the paper column on the page and hangs the member menu in
+ * the left margin beside it, with room on both of its sides. Equal side columns
+ * keep the centre; the menu and the header scale down so neither covers the
+ * page nor wraps on a laptop-sized screen.
+ */
+@media (min-width: 1400px) {
+  .ps-site .site-frame.has-member {
+    --member-rail: clamp(15rem, 17vw, 21rem);
+    --member-gap: clamp(0.6rem, 0.8vw, 1rem);
+    --member-edge: clamp(0.75rem, 1.5vw, 2.5rem);
+    grid-template-columns:
+      minmax(var(--member-rail), 1fr)
+      minmax(0, 1320px)
+      minmax(var(--member-rail), 1fr);
+  }
+
+  .ps-site .site-frame.has-member .site-member-nav {
+    width: min(19rem, calc(var(--member-rail) - var(--member-gap) - var(--member-edge)));
+    margin-right: var(--member-gap);
+  }
+
+  .ps-site .site-frame.has-member .site-member-nav li a {
+    gap: clamp(0.7rem, 0.9vw, 1.1rem);
+    padding: clamp(0.8rem, 0.9vw, 1.05rem) clamp(0.9rem, 1.1vw, 1.5rem);
+    font-size: clamp(0.95rem, 1vw, 1.2rem);
+  }
+
+  .ps-site .site-frame.has-member .member-icon {
+    width: clamp(1.4rem, 1.5vw, 1.9rem);
+    height: clamp(1.4rem, 1.5vw, 1.9rem);
+  }
+
+  /* The narrower column still keeps the wordmark, menu and search on one row */
+  .ps-site .site-frame.has-member .site-header {
+    flex-wrap: nowrap;
+    gap: 1rem 1.5rem;
+  }
+
+  .ps-site .site-frame.has-member .site-brand .site-wordmark {
+    width: clamp(11rem, 15vw, 19rem);
+  }
+
+  .ps-site .site-frame.has-member .site-header-tools {
+    flex-wrap: nowrap;
+    gap: 0.75rem 1rem;
+  }
+
+  .ps-site .site-frame.has-member .site-nav {
+    gap: clamp(0.8rem, 1vw, 1.3rem);
+    font-size: clamp(0.72rem, 0.8vw, 0.8rem);
+  }
+
+  .ps-site .site-frame.has-member .site-search input {
+    width: clamp(6rem, 7vw, 8.5rem);
+  }
+}
