@@ -4516,3 +4516,18 @@ Depodaki metinde (`data/kvkk-aydinlatma-metni.md`) tebligat adresi yerinde hâl�
 
 **Hukuk:** D-117'deki hukukçu soruları (m. 9 aktarım dayanağı, ortak veri
 sorumluluğu) hâlâ açık.
+
+**Ürün sahibinin yayın kararı (2026-09-15):**
+
+- **Sıra değişti:** Ürün sahibi, tebligat adresini sonra vereceğini belirterek
+  bağlantının hemen yayına alınmasını istedi. Yukarıdaki sıra bu yüzden
+  uygulanmadı; dal `main`'e alındı ve push edildi.
+- **Canlı metin geride:** Yayındaki aydınlatma metni hâlâ 1. sürüm (6 Eylül 2026)
+  ve Spotify'dan söz etmiyor. İlk kurulumdan kalma kısa metin olduğu için Cloudflare,
+  Resend, Vercel ve Neon'u da anlatmıyor. Depodaki tam metin yayınlanmadı.
+- **Çaların hâlâ yaptığı:** Oyna düğmesine basmadan Spotify'a hiçbir istek
+  gitmiyor. Düğmenin yanındaki not, basınca Spotify'ın IP ve tarayıcı bilgisini
+  alacağını ve kendi çerezlerini kullanabileceğini söylüyor (D-117). Notun
+  "Ayrıntılar" bağlantısı ise şu an Spotify'ı anlatmayan metne gidiyor.
+- **Kapanış koşulu:** Adres gelince md'ye yazılır ve tam metin yeni sürüm olarak
+  yayınlanır; o zaman aradaki fark kapanır. Hukukçu soruları (D-117) açık.
