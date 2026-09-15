@@ -4227,3 +4227,19 @@ alanı dışında kalan kartlar ayrı dışa aktarılırsa eklenir.
 - Şeridin kaydırma çubuğu ince ve bordo; kaydırılabildiği görünür.
 
 **Hukuk:** Değişiklik yok.
+
+**Doğrulama (D-119):**
+
+- typecheck ve lint temiz; üretim derlemesi başarılı.
+- **Yerel tarayıcı ölçümü:** Çalma listesi hiçbir genişlikte şeridin içinde
+  değil; sayfada yatay taşma yok.
+
+  | Genişlik | Kart şeridi | Çalma listesi |
+  |---|---|---|
+  | 1920 px | 848 px görünür / 1208 px içerik, sona kaydırılmış | 384 px, kolonun içinde tam |
+  | 1280 px | 808 / 1208 px | 384 px, kolonun içinde tam |
+  | 390 px | Üstte kayar (358 / 687 px) | Altta tam genişlik |
+
+- **Canlıya alma:** b5e417e push'u için Vercel hiç deploy oluşturmadı; GitHub'a
+  durum kaydı düşmedi, Vercel durum sayfasında da kesinti yoktu. Deploy bu
+  kayıtla yeniden tetiklendi.
