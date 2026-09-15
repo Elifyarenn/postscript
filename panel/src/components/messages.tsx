@@ -14,6 +14,7 @@ import { cn, formatDateTime } from "@/lib/utils";
 import { Avatar } from "./social";
 import { Sparkle } from "./site-ui";
 import type { ConversationMessage, ConversationSummary } from "@/services/direct-messages";
+import type { MemberListItem } from "@/services/social";
 
 export function ConversationList({
   conversations,
@@ -69,12 +70,48 @@ export function ConversationList({
   );
 }
 
+/**
+ * The members who follow the reader and are followed back (D-143): the people
+ * a conversation can be started with, without knowing their handle by heart.
+ * Anyone already in the conversation list above is left out.
+ */
+function MutualFollows({
+  members,
+  activeUsername,
+}: {
+  members: MemberListItem[];
+  activeUsername?: string;
+}) {
+  if (members.length === 0) return null;
+
+  return (
+    <section className="dm-mutuals" aria-labelledby="dm-mutuals-title">
+      <h2 id="dm-mutuals-title" className="dm-mutuals-title">
+        Takipleştikleriniz
+      </h2>
+      <ul>
+        {members.map((member) => (
+          <li key={member.username} className={cn(member.username === activeUsername && "is-active")}>
+            <Link href={`/social/messages/${member.username}`} className="dm-conversation">
+              <Avatar username={member.username} size="md" />
+              <span className="dm-name">{member.penName ?? member.username}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 /** The left column: the title, the "new conversation" box and the list. */
 export function ConversationColumn({
   conversations,
+  mutualFollows = [],
   activeUsername,
 }: {
   conversations: ConversationSummary[];
+  /** Members to offer a new conversation with (D-143). */
+  mutualFollows?: MemberListItem[];
   activeUsername?: string;
 }) {
   return (
@@ -103,6 +140,8 @@ export function ConversationColumn({
       </form>
 
       <ConversationList conversations={conversations} activeUsername={activeUsername} />
+
+      <MutualFollows members={mutualFollows} activeUsername={activeUsername} />
     </section>
   );
 }

@@ -3448,3 +3448,28 @@
   font-size: 0.9rem;
   white-space: pre-wrap;
 }
+
+/* ════════════════ Mutual follows in the messages column (D-143) ════════════════ */
+
+.ps-site .dm-mutuals {
+  border-top: 1px solid var(--site-rule);
+  padding-top: 0.75rem;
+}
+
+.ps-site .dm-mutuals-title {
+  padding: 0 1rem 0.5rem;
+  color: var(--site-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ps-site .dm-mutuals ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ps-site .dm-mutuals li.is-active {
+  background: var(--site-rule);
+}

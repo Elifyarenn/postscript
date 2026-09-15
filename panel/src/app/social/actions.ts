@@ -17,6 +17,7 @@ import {
   followMember,
   removeBookmark,
   setBio,
+  setPenName,
   setUsername,
   unblockMember,
   unfollowMember,
@@ -321,6 +322,23 @@ export async function setUsernameAction(
     // The sidebar links to the profile, so every community page changes
     revalidatePath("/social", "layout");
     return { success: `Kullanıcı adınız @${username} olarak kaydedildi.` };
+  });
+}
+
+export async function setPenNameAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireAuth();
+
+    const penName = await setPenName({ ...user }, { penName: text(formData, "penName") });
+
+    // The pen name is the name on the profile, on posts and on published work
+    revalidatePath("/social", "layout");
+    revalidatePath("/magazine", "layout");
+    return { success: penName ? `Mahlasınız "${penName}" olarak kaydedildi.` : "Mahlasınız kaldırıldı." };
   });
 }
 

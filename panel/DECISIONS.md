@@ -5173,3 +5173,75 @@ konmasını istedi.
 
 **Hukuk:** Yeni veri yok; önizleme yalnızca üyenin kendi verisini kendisine
 gösterir.
+
+## D-143 — Mesajlar sütununda takipleştikleriniz
+
+**Durum:** Mesajlar ekranında yalnızca daha önce başlamış konuşmalar
+listeleniyordu. Yeni bir konuşma açmak için kullanıcı adını ezbere yazmak
+gerekiyordu (D-091, D-113). Ürün sahibi listede doğrudan karşılıklı takipleşilen
+kişilerin görünmesini istedi.
+
+**Karar:**
+
+- **Kim listeleniyor:** `listMutualFollows` hem okurun takip ettiği hem de okuru
+  takip eden üyeleri verir.
+  - İki yönden biri engellemişse çift listeden düşer.
+  - Yasaklı, silinmiş ve kullanıcı adı olmayan hesaplar listelenmez.
+  - Kullanıcı adına göre sıralı, en çok 20 kişi.
+- **Neden karşılıklı takip:** Varsayılan mesaj tercihi "takip ettiklerim". Alıcı
+  göndereni takip ediyorsa mesaj gidebiliyor; karşılıklı takip bu koşulu zaten
+  sağlar. Yani listedeki kişi, yazılabilecek kişidir.
+  - Alıcı tercihini "kimse" yaptıysa ya da yaş sınırı varsa engeli konuşma ekranı
+    söyler; kural yine tek yerde (D-091).
+- **Görünüm:** Konuşma listesinin altında "Takipleştikleriniz" başlıklı bölüm.
+  Zaten konuşma açılmış kişiler burada tekrar gösterilmez.
+- Tıklayınca o kişiyle konuşma ekranı açılır.
+
+**Hukuk:** Yeni veri yok; takip ilişkisi ve kullanıcı adları üyeye zaten görünür
+(D-089).
+
+**Doğrulama:**
+
+- typecheck ve lint temiz; 59 dosyada 569 test geçti.
+- `tests/integration/mutual-follows.test.ts`: yalnızca karşılıklı takip
+  listeleniyor; tek yönlü takip, iki yönden engel, yasaklı ve silinmiş hesap
+  listelenmiyor.
+- **Demo sunucusu:** Üç hesapla karşılıklı takip kuruldu. Mesajlar sütununda
+  "Takipleştikleriniz" bölümü çıktı ve konuşma geçmişi olmayan `aday_uye`'yi
+  listeledi; zaten konuşulan `ada_yazar` bölümde tekrar gösterilmedi.
+
+## D-144 — Profil topluluk içinde düzenlenir; panel yönetim için kalır
+
+**Durum:** Topluluk profilindeki "Profili düzenle" düğmesi panele (`/account`)
+gidiyordu. Yanında ayrıca "Topluluk ayarları" düğmesi vardı. Mahlas da yalnızca
+paneldeki profil formundan değiştirilebiliyordu; o form ad soyad, telefon ve
+doğum tarihini de istiyor.
+
+Ürün sahibi profil düzenlemenin panele gitmemesini, panelin yalnızca yönetim
+için kalmasını ve düzenlemenin Twitter'daki gibi tek yerde toplanmasını istedi.
+
+**Karar:**
+
+- **"Profili düzenle"** artık topluluk ayarlarının Profil bölümüne gider. Yanındaki
+  ikinci düğme "Hesabım" oldu.
+- **Mahlas** topluluk ayarlarından düzenlenir (`setPenName`).
+  - Boş bırakılırsa mahlas silinir; profil kullanıcı adını gösterir.
+  - Mahlastan yazar sayfasının adresi üretilir; adres başkasındaysa "Bu mahlas
+    alınmış." denir. Panelde bu kontrol yoktu, veritabanı hatası dönerdi.
+  - Yalnızca noktalama içeren bir mahlas reddedilir (adres üretilemez).
+- **Profil bölümünde artık tek yerde:** fotoğraf, kapak, kullanıcı adı, mahlas ve
+  biyografi.
+- **Panelde kalanlar:** ad soyad, e-posta, şifre, iki adımlı doğrulama, yazar
+  başvurusu — hesap ve güvenlik işleri. Ayarlarda bunlara bir bağlantı var.
+
+**Hukuk:** Yeni veri yok. Mahlas zaten üyenin düzenleyebildiği ve yayımlanmış
+işlerde görünen ad (FSEK ve künye bakımından değişmedi).
+
+**Doğrulama:**
+
+- `tests/integration/pen-name.test.ts`: kaydetme ve adres üretimi, silme,
+  başkasının mahlasını alamama, geçersiz ad, yasaklı hesap.
+- **Demo sunucusu:** Kendi profilindeki düğmeler "Profili düzenle=/social/settings"
+  ve "Hesabım=/account". Mahlas topluluk ayarlarından kaydedildi
+  ("Mahlasınız … olarak kaydedildi."), önizlemede göründü; boşaltılınca önizleme
+  kullanıcı adına döndü.

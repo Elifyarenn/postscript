@@ -150,11 +150,12 @@ export function ProfileHeader({
           <div className="profile-actions">
             {profile.isSelf ? (
               <>
-                <Link href="/account" className="profile-link">
+                {/* The profile is edited in the community; the panel is for administration (D-144) */}
+                <Link href="/social/settings" className="profile-link">
                   Profili düzenle
                 </Link>
-                <Link href="/social/settings" className="profile-link">
-                  Topluluk ayarları
+                <Link href="/account" className="profile-link">
+                  Hesabım
                 </Link>
               </>
             ) : profile.viewerBlocked ? (

@@ -16,6 +16,7 @@ import {
   clearProfileImageAction,
   setAnonBoxAction,
   setBioAction,
+  setPenNameAction,
   setProfileImageAction,
   setDirectMessagePolicyAction,
   setUsernameAction,
@@ -270,11 +271,37 @@ export default async function SocialSettingsPage({
                   </PanelForm>
                 </div>
 
+                <div className="settings-inline">
+                  <PanelForm
+                    action={setPenNameAction}
+                    csrfToken={csrfToken}
+                    submitLabel="Kaydet"
+                    submitClassName="settings-save"
+                    submitContent={saveContent}
+                  >
+                    <Field
+                      label="Mahlas"
+                      htmlFor="penName"
+                      hint="Profilinizde ve yazılarınızda görünen ad. Boş bırakırsanız kullanıcı adınız görünür."
+                    >
+                      <Input
+                        id="penName"
+                        name="penName"
+                        defaultValue={settings.penName ?? ""}
+                        maxLength={80}
+                        autoComplete="off"
+                      />
+                    </Field>
+                  </PanelForm>
+                </div>
+
                 <div className="settings-line">
-                  <span className="settings-line-label">Ad soyad ve mahlas</span>
-                  <span className="settings-line-value">Hesabım sayfasında düzenlenir.</span>
+                  <span className="settings-line-label">Ad soyad, e-posta, şifre</span>
+                  <span className="settings-line-value">
+                    Hesabınızla ilgili bilgiler Hesabım sayfasında.
+                  </span>
                   <Link href="/account" className="settings-edit">
-                    Düzenle <ArrowRight aria-hidden className="size-4" />
+                    Hesabım <ArrowRight aria-hidden className="size-4" />
                   </Link>
                 </div>
 

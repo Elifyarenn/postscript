@@ -11,7 +11,7 @@
  * retracts must not outlive the retraction there.
  */
 import "server-only";
-import { and, count, desc, eq, isNull, ne, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, ne, notExists, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
 import {
@@ -27,6 +27,7 @@ import {
 import { writeAudit, type Executor } from "@/lib/audit";
 import type { Actor } from "@/lib/auth/rbac";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
+import { slugify } from "@/lib/slug";
 import { normalizeUsername, usernameProblem } from "@/lib/username";
 import { assertMayPost } from "./community";
 import { notify } from "./notifications";
@@ -169,6 +170,52 @@ export async function getMemberSettings(
     avatarUrl: mediaUrl(rows[0]?.avatarMediaId ?? null),
     headerUrl: mediaUrl(rows[0]?.headerMediaId ?? null),
   };
+}
+
+const penNameSchema = z.strictObject({
+  penName: z.string().trim().max(80, "Mahlas en fazla 80 karakter olabilir."),
+});
+
+/**
+ * The pen name shown on the profile and on published work (D-144). Edited in
+ * the community now, beside the handle and the bio; the account page keeps the
+ * real name, the address and the password. An empty pen name clears it, and
+ * the profile falls back to the handle.
+ */
+export async function setPenName(actor: Actor, rawInput: unknown): Promise<string | null> {
+  assertMayPost(actor);
+
+  const parsed = penNameSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    throw badRequest("Mahlas geçersiz.", z.flattenError(parsed.error).fieldErrors);
+  }
+
+  const penName = parsed.data.penName || null;
+  const slug = penName ? slugify(penName) : null;
+  if (penName && !slug) {
+    throw badRequest("Mahlas en az bir harf ya da rakam içermeli.", {
+      penName: ["Mahlas en az bir harf ya da rakam içermeli."],
+    });
+  }
+
+  if (slug) {
+    // The slug is the author page's address, so two members cannot share one
+    const taken = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.penNameSlug, slug), isNull(users.deletedAt), ne(users.id, actor.id)))
+      .limit(1);
+    if (taken[0]) {
+      throw conflict("Bu mahlas alınmış.", { penName: ["Bu mahlas alınmış."] });
+    }
+  }
+
+  await db
+    .update(users)
+    .set({ penName, penNameSlug: slug, updatedAt: new Date() })
+    .where(eq(users.id, actor.id));
+
+  return penName;
 }
 
 /** Picks or changes the handle. Returns the stored, normalised form. */
@@ -333,6 +380,52 @@ async function listGraph(
     .limit(500);
 
   return rows.filter((row): row is MemberListItem => row.username !== null);
+}
+
+/**
+ * The members the viewer and the other follow each other (D-143). The messages
+ * column offers them, because under the default preference a mutual follow is
+ * exactly who may be written to. A block on either side removes the pair, and
+ * somebody without a handle is not in the community yet.
+ */
+export async function listMutualFollows(actor: Actor, limit = 20): Promise<MemberListItem[]> {
+  const me = await requireMember(actor);
+
+  const theyFollowMe = db
+    .select({ id: follows.followerId })
+    .from(follows)
+    .where(eq(follows.followeeId, me.id));
+
+  const rows = await db
+    .select({ username: users.username, penName: users.penName, role: users.role })
+    .from(follows)
+    .innerJoin(users, eq(users.id, follows.followeeId))
+    .where(
+      and(
+        eq(follows.followerId, me.id),
+        inArray(follows.followeeId, theyFollowMe),
+        isNull(users.deletedAt),
+        eq(users.isBanned, false),
+        isNotNull(users.username),
+        notExists(
+          db
+            .select({ id: userBlocks.id })
+            .from(userBlocks)
+            .where(
+              or(
+                and(eq(userBlocks.blockerId, me.id), eq(userBlocks.blockedId, users.id)),
+                and(eq(userBlocks.blockerId, users.id), eq(userBlocks.blockedId, me.id)),
+              ),
+            ),
+        ),
+      ),
+    )
+    .orderBy(asc(users.username))
+    .limit(limit);
+
+  return rows.flatMap((row) =>
+    row.username ? [{ username: row.username, penName: row.penName, role: row.role }] : [],
+  );
 }
 
 export async function listFollowers(viewer: Actor, rawUsername: string) {
