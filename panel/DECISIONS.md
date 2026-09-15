@@ -4052,3 +4052,89 @@ bir düğmeyle bekler.
 
 **Hukuk:** Yeni kişisel veri yok. `postCount` zaten herkese açık gönderilerin
 sayısı. Aydınlatma metni değişmedi.
+
+---
+
+## D-117 — Çalma listesi Spotify çalarıyla; çalar yalnızca okur "çal"a basınca yüklenir
+
+**İstek (ürün sahibi):** "Çalma listesine şarkı koymamız gerekiyor, Spotify'dan
+şarkı çekebilir miyiz?" Üç yol sunuldu:
+
+1. Spotify çalarını gömmek.
+2. Yalnızca "Spotify'da dinle" bağlantısı vermek.
+3. Spotify API ile şarkı bilgilerini çekmek.
+
+Ürün sahibi 1'i seçti.
+
+**Neden ses sitede çalınmıyor:** Şarkıların sesini sitede barındırıp çalmak telif
+ihlalidir. Spotify'ın gömülü çaları lisansı Spotify'ın sorumluluğunda tutar.
+Spotify'a girişli dinleyici şarkının tamamını, girişsiz dinleyici önizlemesini
+duyar.
+
+**Karar:**
+
+- **Veri:** Her sayının çalma listesi, Spotify paylaşım bağlantısıyla
+  `src/lib/issue-extras.ts` içinde tutulur (`playlist.spotifyUrl`).
+  - Sayı 01 için bağlantı henüz yok (`null`). Çalar tasarımdaki gibi çizilir ve
+    "çok yakında" der; çal düğmesi kapalıdır.
+  - D-112'deki elle yazılmış tek parçalık liste kalktı. Parça listesini artık
+    Spotify çaları gösteriyor.
+- **Bağlantı güvenliği:** `src/lib/spotify.ts` yalnızca `https://open.spotify.com`
+  üzerindeki bir çalma listesini kabul eder. Çalar adresi yalnızca liste
+  kimliğinden yeniden kurulur: veri dosyasına ne yapıştırılırsa yapıştırılsın,
+  çerçeve başka bir sayfaya yönlendirilemez ve ek parametre taşımaz.
+- **Tıklayınca yükleme (`src/components/spotify-player.tsx`):**
+  - Sayfa açıldığında Spotify'a hiçbir istek gitmez. Düğmenin yanındaki not,
+    basmadan önce ne olacağını söyler: çalar Spotify'dan yüklenir, Spotify IP
+    adresini ve tarayıcı bilgisini alır, kendi çerezlerini kullanabilir. Notta
+    KVKK sayfasına bağlantı var.
+  - Düğmeye basılınca çerçeve yüklenir.
+  - Gerekçe: Spotify'ın gömülü çaları zorunlu olmayan, üçüncü taraf çerezler
+    koyar. Widget kullanım şartları sitenin bunu kullanıcıya bildirmesini
+    ister. Bu tür çerezler rıza olmadan yüklenmemeli.
+- **Spotify widget şartları:** Çalar değiştirilmeden ve üstü örtülmeden
+  gösterilir. Otomatik çalma yok; `Permissions-Policy`'deki `autoplay=()`
+  zaten engelliyor. Ticari kullanım yok; dergi kâr amacı gütmüyor. Spotify
+  kullanıcılarının kişisel verisi toplanmaz.
+- **CSP:** `frame-src`'ye yalnızca `https://open.spotify.com` eklendi.
+  `script-src`, `connect-src` ve `default-src` değişmedi.
+  `tests/unit/security-headers.test.ts` bunu denetliyor. Çerçevenin kendi
+  içindeki yüklemeleri Spotify'ın politikasına tabidir.
+
+**Hukuk — aydınlatma metni aynı adımda güncellendi**
+(`data/kvkk-aydinlatma-metni.md`):
+
+- **§2:** "Müzik çalar" satırı (IP adresi, tarayıcı bilgisi; veri doğrudan
+  Spotify AB'ye gider).
+- **§3:** Amaç satırı; dayanak açık rıza (KVKK m. 5/1). Rıza, düğmeye basarak
+  ve basmadan önce okunan notla verilir.
+- **§4:** "Müzik çaları açtığınızda" toplama yöntemi.
+- **§5:** Çalar açılınca Spotify'ın kendi çerezleri.
+- **§6.2:** Spotify AB, İsveç satırı.
+
+**Canlıya almadan önce (ürün sahibi):**
+
+1. Sayı 01 için Spotify'da dergi hesabından çalma listesi oluşturulur. Paylaşım
+   bağlantısı `issue-extras.ts`'e yazılır; bu tek satırlık bir değişikliktir.
+2. **Bağlantı eklenmeden önce** aydınlatma metninin yeni sürümü yönetim
+   panelindeki "Sistem" sayfasından yayınlanır. Canlı metin veritabanındaki
+   sürümden gelir; depodaki dosyayı güncellemek canlı metni değiştirmez. Metinde
+   hâlâ `[AÇIK ADRES]` ve `[ÜLKE]` yer tutucuları var ve bunlar dolmadan yeni
+   sürüm yayınlanmamalı.
+
+**Hukukçu görüşü gerekiyor:**
+
+- **Aktarım dayanağı:** Açık rızaya dayalı yurt dışı aktarım, KVKK m. 9'un 2024
+  değişikliğinden sonra yalnızca arızi aktarımlarda kullanılabiliyor. Çaları
+  açan okurun tarayıcısının doğrudan Spotify'a bağlanmasının bu kapsama girip
+  girmediği teyit edilmeli.
+- **Ortak veri sorumluluğu:** Gömülü içerikte veri toplamaya aracılık eden site
+  de sorumlu sayılabilir. Sorumluluğun paylaşımına bakılmalı.
+
+**Doğrulama:**
+
+- typecheck ve lint temiz.
+- Yeni birim testi: `tests/unit/spotify.test.ts`.
+- Tarayıcıda geçici bir herkese açık çalma listesiyle denendi: çal düğmesine
+  basmadan Spotify'a istek gitmedi. Düğmeden sonra çalar yüklendi; CSP ya da
+  Permissions-Policy hatası çıkmadı. Test bağlantısı geri alındı.

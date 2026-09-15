@@ -21,13 +21,21 @@ export type IssueExtras = {
      */
     lang?: string;
   };
-  playlist?: { title: string; artist: string; duration: string }[];
+  playlist?: {
+    /**
+     * The issue's playlist on Spotify, as its share link
+     * (https://open.spotify.com/playlist/…). Null until the playlist is made:
+     * the player is then drawn but stays empty (D-117). The site itself never
+     * plays audio; Spotify's own player does, once the reader asks for it.
+     */
+    spotifyUrl: string | null;
+  };
 };
 
 const ISSUE_EXTRAS: Record<number, IssueExtras> = {
   1: {
-    // The design cuts this card off at the page edge; the missing words are
-    // filled in from the visible fragments and are for the owner to confirm (D-112)
+    // The design cuts this card off at the page edge; the missing words were
+    // filled in from the visible fragments and confirmed by the owner (D-115)
     book: {
       title: "Masumiyet Müzesi",
       author: "Orhan Pamuk",
@@ -49,8 +57,7 @@ const ISSUE_EXTRAS: Record<number, IssueExtras> = {
         "veya duygusal saplantıya hapsolmuşluk hissi verir. Karanlık atmosfer ve güçlü " +
         "kontrastlar, eserin psikolojik ve rahatsız edici havasını güçlendirir.",
     },
-    // A track list only: the site plays no audio, it has no licence to
-    playlist: [{ title: "Every Breath You Take", artist: "The Police", duration: "4:13" }],
+    playlist: { spotifyUrl: null },
   },
 };
 

@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 // Cloudflare Turnstile guards the registration forms against bots (D-111)
 const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
 
+// The front page playlist is played in Spotify's own player, loaded on request (D-117)
+const SPOTIFY_ORIGIN = "https://open.spotify.com";
+
 // React dev mode uses eval() to reconstruct call stacks, so the strict
 // production CSP (no unsafe-eval) has to be relaxed for local development.
 // Production React never calls eval, so the shipped policy stays strict.
@@ -26,8 +29,8 @@ const securityHeaders = [
       "img-src 'self' data: blob:",
       "font-src 'self' data:",
       "connect-src 'self'",
-      // The Turnstile widget renders inside a frame served by Cloudflare
-      `frame-src ${TURNSTILE_ORIGIN}`,
+      // Turnstile and the Spotify player both render inside frames served by their owners
+      `frame-src ${TURNSTILE_ORIGIN} ${SPOTIFY_ORIGIN}`,
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

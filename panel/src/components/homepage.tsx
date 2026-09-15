@@ -8,7 +8,7 @@
  */
 import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
-import { ArrowRight, FastForward, Music, Play, Rewind, Star, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowRight, Star, Volume2, VolumeX, X } from "lucide-react";
 import heroCollage from "@/assets/design/hero-collage.webp";
 import categoryArt from "@/assets/design/category-art.webp";
 import categoryLifestyle from "@/assets/design/category-lifestyle.webp";
@@ -18,7 +18,9 @@ import categoryScience from "@/assets/design/category-science.webp";
 import artworkWeiss from "@/assets/design/artwork-weiss-obsession.webp";
 import type { IssueExtras } from "@/lib/issue-extras";
 import { categoryImageKey, formatIssueNumber, type CategoryImageKey } from "@/lib/site";
+import { spotifyEmbedUrl } from "@/lib/spotify";
 import { RailEnd } from "./rail-end";
+import { SpotifyPlayer } from "./spotify-player";
 import { Sparkle, Swoosh } from "./site-ui";
 
 const CATEGORY_IMAGES: Record<CategoryImageKey, StaticImageData> = {
@@ -32,9 +34,6 @@ const CATEGORY_IMAGES: Record<CategoryImageKey, StaticImageData> = {
 const ARTWORK_IMAGES: Record<NonNullable<IssueExtras["artwork"]>["image"], StaticImageData> = {
   "weiss-obsession": artworkWeiss,
 };
-
-/** The player's controls are drawn as designed but do nothing yet: the site plays no audio (D-116). */
-const PLAYER_SOON = "Çalma özelliği yakında";
 
 export type HomeIssue = {
   number: number;
@@ -56,7 +55,7 @@ export function HomePage({
   extras: IssueExtras | null;
 }) {
   const hasExtras =
-    extras !== null && (Boolean(extras.book) || Boolean(extras.artwork) || (extras.playlist?.length ?? 0) > 0);
+    extras !== null && (Boolean(extras.book) || Boolean(extras.artwork) || Boolean(extras.playlist));
 
   return (
     <>
@@ -169,56 +168,25 @@ export function HomePage({
             </article>
           )}
 
-          {extras.playlist && extras.playlist.length > 0 && (
+          {extras.playlist && (
             <article className="extra-player" aria-labelledby="player-title">
-              <div className="player-top">
-                <button type="button" disabled title={PLAYER_SOON} aria-label="Sesi kapat (yakında)">
-                  <VolumeX aria-hidden />
-                </button>
+              <div className="player-top" aria-hidden>
+                <VolumeX />
               </div>
 
-              <div className="player-frame">
-                <h3 id="player-title" className="player-bar">
-                  <Star aria-hidden fill="currentColor" /> Çalma listesi
-                  <span className="player-bar-icons" aria-hidden>
-                    <Volume2 />
-                    <X />
-                  </span>
-                </h3>
-
-                <div className="player-body">
-                  <ol className="player-tracks">
-                    {extras.playlist.map((track, index) => (
-                      <li key={`${track.title}-${track.artist}`}>
-                        <span>{formatIssueNumber(index + 1)}</span>
-                        <span lang="en">
-                          {track.title} <small>{track.artist}</small>
-                        </span>
-                        <span>{track.duration}</span>
-                      </li>
-                    ))}
-                  </ol>
-                  <span className="player-scroll" aria-hidden />
-                  <div className="turntable" aria-hidden>
-                    <span className="turntable-deck" />
-                    <span className="turntable-record" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="player-controls">
-                <button type="button" disabled title={PLAYER_SOON} aria-label="Önceki şarkı (yakında)">
-                  <Rewind aria-hidden fill="currentColor" />
-                </button>
-                <button type="button" disabled title={PLAYER_SOON} aria-label="Çal (yakında)">
-                  <Play aria-hidden fill="currentColor" />
-                </button>
-                <button type="button" disabled title={PLAYER_SOON} aria-label="Sonraki şarkı (yakında)">
-                  <FastForward aria-hidden fill="currentColor" />
-                </button>
-                <span className="player-slider" aria-hidden />
-                <Music aria-hidden className="player-note" />
-              </div>
+              <SpotifyPlayer
+                embedUrl={spotifyEmbedUrl(extras.playlist.spotifyUrl)}
+                title={`Sayı ${formatIssueNumber(issue.number)} çalma listesi (Spotify)`}
+                header={
+                  <h3 id="player-title" className="player-bar">
+                    <Star aria-hidden fill="currentColor" /> Çalma listesi
+                    <span className="player-bar-icons" aria-hidden>
+                      <Volume2 />
+                      <X />
+                    </span>
+                  </h3>
+                }
+              />
             </article>
           )}
         </RailEnd>
