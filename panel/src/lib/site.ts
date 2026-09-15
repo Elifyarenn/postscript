@@ -132,7 +132,7 @@ export function formatIssueNumber(issueNumber: number): string {
   return String(issueNumber).padStart(2, "0");
 }
 
-export type SocialKey = "x" | "tiktok" | "linkedin" | "instagram" | "pinterest";
+export type SocialKey = "x" | "tiktok" | "spotify" | "instagram" | "pinterest";
 
 export type SocialLink = { key: SocialKey; label: string; url: string | null };
 
@@ -144,7 +144,8 @@ export type SocialLink = { key: SocialKey; label: string; url: string | null };
 export const SOCIAL_LINKS: SocialLink[] = [
   { key: "x", label: "X", url: null },
   { key: "tiktok", label: "TikTok", url: null },
-  { key: "linkedin", label: "LinkedIn", url: null },
+  // The account that owns the issue playlists (D-117, D-128)
+  { key: "spotify", label: "Spotify", url: "https://open.spotify.com/user/31ni3zrhtxradpywcotdp4jr6k2y" },
   { key: "instagram", label: "Instagram", url: null },
   { key: "pinterest", label: "Pinterest", url: null },
 ];

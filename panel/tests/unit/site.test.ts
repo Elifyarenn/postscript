@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { issueExtrasFor } from "@/lib/issue-extras";
-import { categoryImageKey, formatIssueNumber, isNavActive, memberNav } from "@/lib/site";
+import { categoryImageKey, formatIssueNumber, isNavActive, memberNav, SOCIAL_LINKS } from "@/lib/site";
 
 describe("isNavActive (D-112)", () => {
   it("lights the front page only on the front page", () => {
@@ -98,5 +98,13 @@ describe("issueExtrasFor", () => {
     expect(cards.map((card) => card.kind)).toEqual(["movie", "series", "book", "artwork"]);
     expect(cards.at(-1)?.credit).toBe("Wojciech Weiss");
     expect(issueExtrasFor(99)).toBeNull();
+  });
+});
+
+describe("SOCIAL_LINKS (D-128)", () => {
+  it("links the footer's Spotify icon to the magazine's account and has no LinkedIn", () => {
+    const spotify = SOCIAL_LINKS.find((link) => link.key === "spotify");
+    expect(spotify?.url?.startsWith("https://open.spotify.com/user/")).toBe(true);
+    expect(SOCIAL_LINKS.map((link) => link.key)).not.toContain("linkedin");
   });
 });

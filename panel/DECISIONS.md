@@ -4634,3 +4634,34 @@ yerleşmesini, çalma başlayınca da orada dönmesini istedi.
   ölçülemedi.
   - Mesajdan plağa giden yol D-126'dan beri değişmedi ve orada gerçek çalmayla
     doğrulanmıştı.
+
+## D-128 — Alt bilgide LinkedIn yerine Spotify
+
+**Durum:** Alt bilgideki "arkadaş olalım!" satırında tasarımdaki beş sosyal medya
+ikonu var: X, TikTok, LinkedIn, Instagram, Pinterest (D-116). Hiçbirinin adresi
+bilinmediği için hepsi bağlantısız çiziliyordu. Ürün sahibi LinkedIn'in yerine
+Spotify'ı istedi. Derginin Spotify hesabı açık ve Sayı 01 çalma listesinin
+sahibi (D-125).
+
+**Karar:**
+
+- `SocialKey` içinde `linkedin` yerine `spotify` geldi; sırası aynı kaldı (üçüncü).
+- **Adres:** Spotify ikonu hesabın profiline gerçek bir bağlantı:
+  `https://open.spotify.com/user/31ni3zrhtxradpywcotdp4jr6k2y`.
+  - Adres çalma listesinin kendi sayfasındaki sahip bağlantısından alındı.
+  - Diğer ikonlar gibi yeni sekmede açılır (`target="_blank"`,
+    `rel="noopener noreferrer"`).
+- **İkon:** Simple Icons'ın Spotify işareti (CC0), diğer ikonlarla aynı 24 × 24
+  ızgarada.
+- X, TikTok, Instagram ve Pinterest adresleri hâlâ bilinmiyor; bağlantısız
+  kaldılar.
+
+**Hukuk:** Düz bir dış bağlantı: tıklanana kadar Spotify'a hiçbir istek gitmez,
+tıklayınca okur Spotify'ın kendi sitesine geçer. Aydınlatma metni değişmedi.
+
+**Doğrulama:**
+
+- typecheck ve lint temiz; 53 dosyada 544 test geçti.
+- **Yerel tarayıcı:** Alt bilgide LinkedIn geçmiyor. Spotify, dergi hesabına giden
+  ve yeni sekmede açılan bir bağlantı; ikonu çiziliyor. Diğer dört ikon
+  "hesabı yakında" etiketiyle bağlantısız.
