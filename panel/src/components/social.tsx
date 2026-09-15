@@ -44,19 +44,27 @@ const AVATAR_SIZES = {
 export function Avatar({
   username,
   size = "md",
+  imageUrl,
 }: {
   username: string;
   size?: keyof typeof AVATAR_SIZES;
+  /** The member's own picture; without one the initial stands in (D-141). */
+  imageUrl?: string | null;
 }) {
   return (
     <span
       aria-hidden
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full bg-accent font-serif text-paper uppercase",
+        "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent font-serif text-paper uppercase",
         AVATAR_SIZES[size],
       )}
     >
-      {username.charAt(0)}
+      {imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- served by our own media route, not optimised
+        <img src={imageUrl} alt="" className="size-full object-cover" />
+      ) : (
+        username.charAt(0)
+      )}
     </span>
   );
 }
@@ -91,11 +99,16 @@ export function ProfileHeader({
 
   return (
     <section className="profile-card">
-      <div className="profile-cover" aria-hidden />
+      <div className="profile-cover" aria-hidden>
+        {profile.headerUrl && (
+          // eslint-disable-next-line @next/next/no-img-element -- served by our own media route, not optimised
+          <img src={profile.headerUrl} alt="" className="profile-cover-image" />
+        )}
+      </div>
 
       <div className="profile-main">
         <span className="profile-avatar">
-          <Avatar username={profile.username} size="xl" />
+          <Avatar username={profile.username} size="xl" imageUrl={profile.avatarUrl} />
         </span>
 
         <div className="profile-identity">

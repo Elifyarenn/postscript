@@ -36,6 +36,7 @@ ortaklık adına tek başına temsile yetkilidir.
 | Trafik kaydı | Her yorum, sohbet mesajı, özel mesaj, anonim mesaj, gönderi ve yanıt için: gönderen hesap, IP adresi, tarayıcı bilgisi (user-agent), işlem türü ve zamanı |
 | Moderasyon | Yasaklama durumu ve gerekçesi, kaldırılan içerik kayıtları |
 | Denetim | Panelde yapılan işlemlerin kaydı: kimin, ne zaman, hangi işlemi, hangi IP adresinden yaptığı |
+| Profil görselleri | Topluluk profilinize yüklediğiniz profil fotoğrafı ve kapak fotoğrafı; yükleyen hesap, dosya türü ve boyutu. Bu görselleri giriş yapmış diğer üyeler görür; yüklemek zorunlu değildir |
 | Müzik çalar | Üye olarak giriş yapmışken ana sayfadaki Spotify çalarını açtığınızda tarayıcınızın Spotify ile kurduğu bağlantıda iletilen IP adresi ve tarayıcı bilgisi; bu veriler dergiye değil, doğrudan Spotify AB şirketine gider |
 
 Özel mesajlarınızı yalnızca siz ve yazıştığınız üye görür; yöneticiler özel
@@ -151,6 +152,7 @@ esas alınarak gerçekleştirilmektedir.
 | Veri | Saklama süresi |
 |---|---|
 | Hesap verileri (kimlik, iletişim, profil) | Hesap açık kaldığı sürece. Silme talebiniz üzerine 30 gün sonra anonimleştirilir. |
+| Profil ve kapak fotoğrafı | Siz kaldırana kadar. Yenisini yüklediğinizde eskisi hemen silinir; hesabınız silindiğinde dosyalar da silinir. |
 | Tamamlanmamış (e-postası doğrulanmamış) kayıtlar | 7 gün |
 | E-posta doğrulama bağlantıları | 24 saat |
 | Şifre sıfırlama bağlantıları | 30 dakika |

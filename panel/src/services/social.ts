@@ -75,6 +75,8 @@ async function findReachableMember(rawUsername: string) {
       role: users.role,
       createdAt: users.createdAt,
       anonBoxEnabled: users.anonBoxEnabled,
+      avatarMediaId: users.avatarMediaId,
+      headerMediaId: users.headerMediaId,
     })
     .from(users)
     .where(and(eq(users.username, username), isNull(users.deletedAt), eq(users.isBanned, false)))
@@ -129,6 +131,11 @@ export const usernameSchema = z.strictObject({
   username: z.string().max(40, "Kullanıcı adı çok uzun."),
 });
 
+/** The address the media route serves a picture from. */
+export function mediaUrl(mediaId: string | null): string | null {
+  return mediaId ? `/api/media/${mediaId}` : null;
+}
+
 export async function getMemberSettings(
   actor: Actor,
 ): Promise<{
@@ -136,6 +143,8 @@ export async function getMemberSettings(
   dmPolicy: DmPolicy;
   anonBoxEnabled: boolean;
   bio: string | null;
+  avatarUrl: string | null;
+  headerUrl: string | null;
 }> {
   const rows = await db
     .select({
@@ -143,6 +152,8 @@ export async function getMemberSettings(
       dmPolicy: users.dmPolicy,
       anonBoxEnabled: users.anonBoxEnabled,
       bio: users.bio,
+      avatarMediaId: users.avatarMediaId,
+      headerMediaId: users.headerMediaId,
     })
     .from(users)
     .where(eq(users.id, actor.id))
@@ -152,6 +163,8 @@ export async function getMemberSettings(
     dmPolicy: rows[0]?.dmPolicy ?? "following",
     anonBoxEnabled: rows[0]?.anonBoxEnabled ?? false,
     bio: rows[0]?.bio ?? null,
+    avatarUrl: mediaUrl(rows[0]?.avatarMediaId ?? null),
+    headerUrl: mediaUrl(rows[0]?.headerMediaId ?? null),
   };
 }
 
@@ -234,6 +247,9 @@ export type ProfileView = Member & {
   bio: string | null;
   /** Whether the profile shows the "anonymous message" link (D-092). */
   anonBoxEnabled: boolean;
+  /** Where to fetch the member's pictures, or null when they have none (D-141). */
+  avatarUrl: string | null;
+  headerUrl: string | null;
   joinedAt: Date;
   followerCount: number;
   followingCount: number;
@@ -277,6 +293,8 @@ export async function getProfile(viewer: Actor, rawUsername: string): Promise<Pr
     role: target.role,
     bio: target.bio,
     anonBoxEnabled: target.anonBoxEnabled,
+    avatarUrl: mediaUrl(target.avatarMediaId),
+    headerUrl: mediaUrl(target.headerMediaId),
     joinedAt: target.createdAt,
     followerCount: followers?.value ?? 0,
     followingCount: following?.value ?? 0,

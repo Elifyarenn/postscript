@@ -218,6 +218,13 @@
       "when": 1789296393903,
       "tag": "0031_shiny_tattoo",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1789512392120,
+      "tag": "0032_stormy_quasimodo",
+      "breakpoints": true
     }
   ]
 }

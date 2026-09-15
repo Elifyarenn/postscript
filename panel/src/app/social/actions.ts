@@ -9,6 +9,7 @@ import { revalidatePath } from "next/cache";
 import { requestMetadata, requireAuth } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
 import { checkbox, runAction, text, type ActionState } from "@/lib/action";
+import { badRequest } from "@/lib/errors";
 import { normalizeUsername } from "@/lib/username";
 import {
   blockMember,
@@ -45,6 +46,7 @@ import {
   setAnonBoxEnabled,
 } from "@/services/anon-box";
 import { joinCommunity, leaveCommunity } from "@/services/communities";
+import { clearProfileImage, setProfileImage, type ProfileImageKind } from "@/services/profile-images";
 
 /* ------------------------------------------------------------------ */
 /* Communities (D-093)                                                 */
@@ -332,6 +334,60 @@ export async function setBioAction(_state: ActionState, formData: FormData): Pro
     // The bio shows on the member's own profile page
     revalidatePath("/social", "layout");
     return { success: "Biyografiniz kaydedildi." };
+  });
+}
+
+function profileImageKind(formData: FormData): ProfileImageKind {
+  return text(formData, "kind") === "header" ? "header" : "avatar";
+}
+
+export async function setProfileImageAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireAuth();
+    const meta = await requestMetadata();
+
+    const kind = profileImageKind(formData);
+    const file = formData.get(kind === "header" ? "headerImage" : "avatarImage");
+    if (!(file instanceof File) || file.size === 0) throw badRequest("Görsel seçilmedi.");
+
+    await setProfileImage(
+      { ...user },
+      {
+        kind,
+        buffer: Buffer.from(await file.arrayBuffer()),
+        fileName: file.name,
+        declaredMime: file.type,
+      },
+      meta,
+    );
+
+    revalidatePath("/social", "layout");
+    return {
+      success: kind === "header" ? "Kapak fotoğrafınız kaydedildi." : "Profil fotoğrafınız kaydedildi.",
+    };
+  });
+}
+
+export async function clearProfileImageAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireAuth();
+    const meta = await requestMetadata();
+
+    const kind = profileImageKind(formData);
+    await clearProfileImage({ ...user }, kind, meta);
+
+    revalidatePath("/social", "layout");
+    return {
+      success: kind === "header" ? "Kapak fotoğrafınız kaldırıldı." : "Profil fotoğrafınız kaldırıldı.",
+    };
   });
 }
 

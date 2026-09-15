@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "header_media_id" uuid;

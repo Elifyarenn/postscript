@@ -5081,3 +5081,72 @@ rolüyle görünür; bunlar zaten topluluk profilinde herkese açık (D-089).
   sınırı.
 - **Demo sunucusu:** Profil başlığı "@kerem_okur · Eylül 2026 tarihinde katıldı";
   Hakkında sekmesinde "Katılım: Eylül 2026". Gün hiçbir yerde yok.
+
+## D-141 — Profil fotoğrafı ve kapak fotoğrafı
+
+**Durum:** Topluluk profilinde fotoğraf yoktu; avatarın yerinde kullanıcı adının
+ilk harfi duruyordu ve profilin üstündeki kapak alanı düz renkti (D-089).
+Veritabanında `avatar_media_id` sütunu vardı ama hiç kullanılmıyordu. Ürün
+sahibi profil ve kapak fotoğrafı eklemeyi istedi.
+
+**Karar:**
+
+- **Veri:** `users.header_media_id` sütunu eklendi; profil fotoğrafı mevcut
+  `avatar_media_id`'yi kullanır. Her ikisi de `media` tablosuna işaret eder.
+- **Yükleme (`src/services/profile-images.ts`):** Makale medyasından ayrı bir
+  servis.
+  - Yalnızca topluluğa yazabilen üye (`assertMayPost`): yasaklı ya da e-postası
+    doğrulanmamış hesap yükleyemez.
+  - Dosya türü içeriğinden doğrulanır (`assertUploadAcceptable`); yalnızca görsel
+    kabul edilir, PDF reddedilir.
+  - Sınır 5 MB (makale görsellerinde 10 MB).
+  - Dosya adı sunucuda üretilir, yükleyenin verdiği ad kullanılmaz.
+  - Lisans türü `own_work`: bu görsel üyenin kendi fotoğrafı, makale lisans
+    kuralları uygulanmaz.
+  - Her türden tek fotoğraf tutulur: yenisi yüklenince eskisi hem depodan silinir
+    hem de kütüphanede silinmiş işaretlenir.
+  - "Kaldır" fotoğrafı tamamen siler.
+- **Sunum:** `/api/media/:id` profil görsellerini giriş yapmış her üyeye verir.
+  Sözleşme PDF'leri ve kütüphane medyası için kurallar aynı kaldı; görseller
+  oturumsuz okura hiç sunulmaz.
+- **Görünüm:** Profil sayfasında kapak fotoğrafı üst şeride, profil fotoğrafı
+  avatar dairesine yerleşir. Fotoğrafı olmayan üyede eskisi gibi ilk harf görünür.
+  - Ayarlar → Profil bölümünde iki yükleme formu ve kaldırma düğmeleri var.
+- **Hesap silme:** Anonimleştirme sırasında iki sütun da boşaltılır ve dosyalar
+  depodan silinir.
+- **Sonraki adım:** Akıştaki gönderi kartlarında, üye listelerinde ve mesajlarda
+  avatar hâlâ ilk harf. Oradaki sorgulara fotoğraf alanını taşımak ayrı bir adım.
+
+**Hukuk:**
+
+- Profil ve kapak fotoğrafı kişisel veridir; aydınlatma metnine "Profil
+  görselleri" satırı eklendi (§2) ve saklama süresi yazıldı (§7).
+- Dosyalar mevcut nesne depolamasında (Cloudflare R2, AB yerleşimi — D-118)
+  tutulur; metindeki Cloudflare satırı bunu zaten kapsıyor.
+- Fotoğraf yüklemek zorunlu değil; yüklenen fotoğrafı giriş yapmış üyeler görür.
+  Hesap silinince fotoğraflar da silinir.
+- Fotoğraf içeriği için ayrı bir denetim yok; uygunsuz fotoğraf, üye bildirimi ve
+  moderasyon yoluyla kaldırılır (D-084). Yükleyen hesap denetim kaydına yazılır.
+
+**Doğrulama (D-141):**
+
+- typecheck ve lint temiz; 57 dosyada 562 test geçti.
+- `tests/integration/profile-images.test.ts`: yükleme, değiştirince eskisinin
+  depodan ve kütüphaneden silinmesi, iki fotoğrafın ayrı tutulması, görsel
+  olmayan dosya ve 5 MB üstü reddi, yasaklı hesap reddi, kaldırma.
+- **Demo sunucusu (okur hesabı):**
+
+  | Adım | Sonuç |
+  |---|---|
+  | Ayarlar → Profil, profil fotoğrafı yükleme | "Profil fotoğrafınız kaydedildi." |
+  | Kapak fotoğrafı yükleme | "Kapak fotoğrafınız kaydedildi." |
+  | Profil sayfası | Kapak ve avatar görselleri yüklendi (`/api/media/…`) |
+  | Oturumsuz istek | 401 |
+  | Kaldırma | İki fotoğraf da kalktı |
+
+- **Migration:** `drizzle/0032_stormy_quasimodo.sql` tek satır:
+  `ALTER TABLE "users" ADD COLUMN "header_media_id" uuid;` (boş bırakılabilir).
+- **Düzeltme:** Kapak alanına görsel için `position: relative` verilince kapak,
+  kendisinden sonra gelen avatarın üstüne çizildi ve avatarın üst yarısı kayboldu.
+  Kapak konumlandırılmadan bırakıldı; avatar `z-index` ile üste alındı. Yeni
+  ekran görüntüsünde avatar kapağın üstünde tam daire.

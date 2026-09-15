@@ -13,8 +13,10 @@ import { DM_POLICIES, DM_POLICY_LABELS } from "@/lib/direct-messages";
 import { countAnonMutes } from "@/services/anon-box";
 import {
   clearAnonMutesAction,
+  clearProfileImageAction,
   setAnonBoxAction,
   setBioAction,
+  setProfileImageAction,
   setDirectMessagePolicyAction,
   setUsernameAction,
   unblockAction,
@@ -32,6 +34,12 @@ const SECTIONS = [
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
+
+/** The member's two pictures, uploaded one form each (D-141). */
+const IMAGE_FIELDS = [
+  { kind: "avatar", label: "Profil fotoğrafı", field: "avatarImage" },
+  { kind: "header", label: "Kapak fotoğrafı", field: "headerImage" },
+] as const;
 
 function parseSection(value: string | undefined): SectionId {
   return SECTIONS.find((section) => section.id === value)?.id ?? "profil";
@@ -93,7 +101,12 @@ export default async function SocialSettingsPage({
           {section === "profil" && (
             <div className="settings-profile-grid">
               <span className="settings-avatar" aria-hidden>
-                {(settings.username ?? "?").charAt(0)}
+                {settings.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- served by our own media route, not optimised
+                  <img src={settings.avatarUrl} alt="" className="settings-avatar-image" />
+                ) : (
+                  (settings.username ?? "?").charAt(0)
+                )}
               </span>
 
               <div className="settings-profile-forms min-w-0">
@@ -122,6 +135,58 @@ export default async function SocialSettingsPage({
                     </Field>
                   </PanelForm>
                 </div>
+
+                <div className="settings-images">
+                  {IMAGE_FIELDS.map((image) => (
+                    <div key={image.kind} className="settings-image">
+                      <PanelForm
+                        action={setProfileImageAction}
+                        csrfToken={csrfToken}
+                        submitLabel="Yükle"
+                        submitClassName="settings-save"
+                        submitContent={
+                          <>
+                            Yükle <ArrowRight aria-hidden className="size-4" />
+                          </>
+                        }
+                      >
+                        <>
+                          <input type="hidden" name="kind" value={image.kind} />
+                          <Field
+                            label={image.label}
+                            htmlFor={image.field}
+                            hint="JPEG, PNG, GIF veya WEBP; en fazla 5 MB. Topluluktaki üyeler görür."
+                          >
+                            <Input
+                              id={image.field}
+                              name={image.field}
+                              type="file"
+                              required
+                              accept="image/jpeg,image/png,image/gif,image/webp"
+                            />
+                          </Field>
+                        </>
+                      </PanelForm>
+
+                      {(image.kind === "avatar" ? settings.avatarUrl : settings.headerUrl) && (
+                        <ActionButton
+                          action={clearProfileImageAction}
+                          csrfToken={csrfToken}
+                          label={`${image.label}nı kaldır`}
+                          fields={{ kind: image.kind }}
+                          confirmMessage={`${image.label}nız kaldırılsın mı?`}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {settings.headerUrl && (
+                  <div className="settings-header-preview">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- served by our own media route, not optimised */}
+                    <img src={settings.headerUrl} alt="" />
+                  </div>
+                )}
 
                 <div className="settings-bio">
                   <PanelForm

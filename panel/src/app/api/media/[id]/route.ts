@@ -20,6 +20,7 @@ import { agreementAcceptances, media, rightsGrants, writerApplications } from "@
 import { requireAuth } from "@/lib/auth/session";
 import { canAccessEditorPanel, canViewContractDocuments } from "@/lib/auth/rbac";
 import { getStorage } from "@/lib/storage";
+import { isProfileImage } from "@/services/profile-images";
 import { errorJson } from "@/lib/api";
 import { forbidden, notFound } from "@/lib/errors";
 
@@ -56,6 +57,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         });
       }
     } else if (
+      // A profile picture or cover photo is shown to every signed-in member (D-141)
+      !(await isProfileImage(row.id)) &&
       !canAccessEditorPanel(context.user) &&
       !(await ownsApplicationSample(context.user.id, row.id))
     ) {

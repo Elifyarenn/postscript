@@ -202,6 +202,8 @@ export const users = pgTable(
     anonBoxEnabled: boolean("anon_box_enabled").notNull().default(false),
     bio: text("bio"),
     avatarMediaId: uuid("avatar_media_id"),
+    /** The cover photo across the top of the community profile (D-141). */
+    headerMediaId: uuid("header_media_id"),
     socialLinks: jsonb("social_links").$type<SocialLinks>(),
 
     /**

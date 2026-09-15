@@ -55,6 +55,7 @@ import { env } from "@/lib/env";
 import { sendMail } from "@/lib/mail/transport";
 import { slugify } from "@/lib/slug";
 import * as templates from "@emails/templates";
+import { removeProfileImages } from "./profile-images";
 import type { RequestMeta } from "./auth";
 
 /* ------------------------------------------------------------------ */
@@ -825,6 +826,9 @@ export async function cancelAccountDeletion(actor: Actor): Promise<void> {
  * completion and by the admin deletion.
  */
 async function anonymise(user: User): Promise<void> {
+  // The pictures leave storage before the columns forget where they were (D-141)
+  await removeProfileImages(user.id);
+
   await db
     .update(users)
     .set({
@@ -837,6 +841,7 @@ async function anonymise(user: User): Promise<void> {
       socialLinks: null,
       birthDate: null,
       avatarMediaId: null,
+      headerMediaId: null,
       passwordHash: "disabled",
       anonymizedAt: new Date(),
       deletedAt: new Date(),
