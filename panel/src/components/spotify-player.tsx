@@ -9,8 +9,9 @@
  * press does before it is made. Without a playlist link the player is drawn as
  * designed and stays empty.
  *
- * Once open, the player tells the page when the playlist plays or pauses, and
- * the record on the turntable turns while it plays. Those messages stay in the
+ * Once open, the record settles onto the turntable, and the player tells the
+ * page when the playlist plays or pauses so the record turns while it plays
+ * (D-126, D-127). Those messages stay in the
  * reader's browser; nothing about them reaches the site's server.
  */
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -19,11 +20,11 @@ import { FastForward, Music, Play, Rewind } from "lucide-react";
 import { readEmbedMessage, SPOTIFY_ORIGIN } from "@/lib/spotify";
 import { cn } from "@/lib/utils";
 
-function Turntable({ playing }: { playing: boolean }) {
+function Turntable({ seated, playing }: { seated: boolean; playing: boolean }) {
   return (
     <div className="turntable" aria-hidden>
       <span className={cn("turntable-deck", playing && "is-playing")} />
-      <span className={cn("turntable-record", playing && "is-spinning")} />
+      <span className={cn("turntable-record", seated && "is-seated", playing && "is-spinning")} />
     </div>
   );
 }
@@ -42,8 +43,16 @@ export function SpotifyPlayer({
 }) {
   const [open, setOpen] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [seated, setSeated] = useState(false);
   const frameRef = useRef<HTMLIFrameElement>(null);
   const soon = embedUrl ? "Spotify çalarında kullanılır" : "Çalma listesi yakında";
+
+  // The record is drawn beside the deck first, so its move onto the platter can be seen
+  useEffect(() => {
+    if (!open) return;
+    const timer = window.setTimeout(() => setSeated(true), 60);
+    return () => window.clearTimeout(timer);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -83,7 +92,7 @@ export function SpotifyPlayer({
           />
         </div>
         <div className="player-deck">
-          <Turntable playing={playing} />
+          <Turntable seated={seated} playing={playing} />
         </div>
       </div>
     );
@@ -108,7 +117,7 @@ export function SpotifyPlayer({
             )}
           </div>
           <span className="player-scroll" aria-hidden />
-          <Turntable playing={false} />
+          <Turntable seated={false} playing={false} />
         </div>
       </div>
 

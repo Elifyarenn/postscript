@@ -4588,3 +4588,49 @@ aynı; aydınlatma metni değişmedi.
   | Duraklatıldı | Durdu |
 
   CSP hatası yok.
+
+## D-127 — Çalma listesi açılınca plak plak çalara yerleşir
+
+**Durum:** D-126 ile plak, çalma listesi çalarken dönmeye başladı. Ama plak çalarla
+yan yana dönüyordu. Ürün sahibi, çalma listesi açılınca plağın plak çalara
+yerleşmesini, çalma başlayınca da orada dönmesini istedi.
+
+**Karar:**
+
+- **Çalar kapalıyken:** Plak eskisi gibi plak çaların yanında durur.
+- **Çalar açılınca:** Plak 0.9 sn'de kayarak plak çaların tablasına yerleşir. Biraz
+  küçülür (%84) ve çerçevenin içine tam ortalanır.
+  - Kaydırma mesafesi bir plak çalar genişliği artı aradaki boşluk
+    (`--record-shift`).
+  - Yerleşme, bileşen açıldıktan hemen sonra `is-seated` sınıfıyla tetiklenir.
+    Böylece plak önce yanda çizilir ve hareketi görünür.
+- **Çalma başlayınca:** Plak tablada döner (D-126), kol plağın üstüne iner.
+- **Dönme ve yerleşme ayrı özellikler:** Yerleşme CSS'in ayrı `translate` ve
+  `scale` özellikleriyle, dönme `transform` animasyonuyla yapılır. İkisi birbirini
+  ezmez; plak dönerken yerinden oynamaz.
+- **Kol:** Kol ve pimi plağın üstünde çizilir (`z-index`).
+- **Hareketi azaltma:** `prefers-reduced-motion` açık olan okurda plak kaymadan
+  yerine geçer, dönmez (D-126).
+
+**Hukuk:** Değişiklik yok; yalnızca görünüm.
+
+**Doğrulama:**
+
+- typecheck ve lint temiz; 53 dosyada 543 test geçti.
+- **Yerel tarayıcı ölçümü (1440 px):**
+
+  | Durum | Plak merkezi (plak çalara göre) | Plak çerçevenin içinde |
+  |---|---|---|
+  | Çalar kapalı | 107 px sağda | Hayır |
+  | Açıldıktan 250 ms sonra (kayarken) | 31 px sağda | Hayır |
+  | Açıldıktan 2.75 sn sonra | 0, 0 | Evet |
+
+- **Dönme ve yerleşme birlikte:** Dönme sınıfı yalnızca testte elle eklendi. 450 ms
+  arayla açı değişti, merkez 0,0'da kaldı. Kol plağın üstündeydi ve plağa indi.
+- **Spotify ile gerçek çalma:** Mesajlar geldi ("ready", çalıyor, sonra
+  duraklatıldı). Ancak art arda yapılan denemelerden sonra Spotify, oturum
+  açmamış dinleyiciye "Spotify'ı edinin" penceresi gösterip önizlemeyi kendisi
+  durdurdu. Bu yüzden çalma sırasındaki dönme bu adımda Spotify'la yeniden
+  ölçülemedi.
+  - Mesajdan plağa giden yol D-126'dan beri değişmedi ve orada gerçek çalmayla
+    doğrulanmıştı.

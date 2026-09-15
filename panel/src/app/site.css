@@ -3151,3 +3151,35 @@
     transition: none;
   }
 }
+
+/* ════════════════ The record settles onto the turntable (D-127) ════════════════ */
+
+/* One deck width and the gap: the record's move from beside the deck onto its platter */
+.ps-site .turntable {
+  --record-shift: calc(-1 * (5.5rem + 1.2rem));
+}
+
+/* Placement uses translate and scale, so the spin can keep using transform */
+.ps-site .turntable-record {
+  z-index: 1;
+  transition:
+    translate 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+    scale 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ps-site .turntable-record.is-seated {
+  translate: var(--record-shift) 0;
+  scale: 0.84;
+}
+
+/* The tonearm and its pivot lie over the record once it is on the platter */
+.ps-site .turntable-deck::before,
+.ps-site .turntable-deck::after {
+  z-index: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ps-site .turntable-record {
+    transition: none;
+  }
+}
