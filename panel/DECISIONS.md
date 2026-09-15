@@ -4138,3 +4138,53 @@ duyar.
 - Tarayıcıda geçici bir herkese açık çalma listesiyle denendi: çal düğmesine
   basmadan Spotify'a istek gitmedi. Düğmeden sonra çalar yüklendi; CSP ya da
   Permissions-Policy hatası çıkmadı. Test bağlantısı geri alındı.
+
+---
+
+## D-118 — Nesne depolama AB veri yerleşimi garantili R2 bucket'ına taşındı
+
+**Neden:** KVKK metnindeki `[ÜLKE]` alanı için Cloudflare'e bakıldı. İki bucket
+(`postscript`, `postscript-identity`) yalnızca "Eastern Europe (EEUR)" konum
+ipucu taşıyordu. Cloudflare bu ipucunda ülke belirtmiyor ve konumu garanti
+etmiyor; belgeye göre "Location Hints are a best effort and not a guarantee".
+Yurt dışı aktarım bildiriminde ülke yazılamıyordu. Ürün sahibi önerilen taşımayı
+onayladı.
+
+**Karar ve yapılanlar (2026-09-15):**
+
+- **Yeni bucket:** Cloudflare'de jurisdiction **European Union (EU)** ile aynı
+  adla (`postscript`) yeni bir bucket açıldı. Cloudflare panelinde doğrulandı.
+  Aynı ad seçildiği için `S3_BUCKET` değişmedi.
+- **Anahtar:** Mevcut R2 API anahtarı (`pstscrpt`) "All buckets / Object Read &
+  Write" olduğu için yeni bucket'a erişiyor; anahtar değişmedi.
+- **Dosyalar:** Eski bucket'taki iki dosya Wrangler ile (ürün sahibinin OAuth
+  girişi) aynı anahtarlarla kopyalandı:
+  - `contracts/2026-09-07/b9fb9d93-….pdf` (34.805 B)
+  - `writer-applications/2026-09-07/7366564e-….pdf` (29 B)
+  - Kopyalar AB'den geri okunup SHA-256 ile karşılaştırıldı; ikisi de eşleşti.
+  - Geçici yerel kopyalar silindi. Veritabanındaki `storage_key` değerleri
+    değişmedi.
+- **Vercel:** Ürün sahibi Production `S3_ENDPOINT` değerini
+  `https://2f1f4e90eb9c1eb27997e13e9191aa63.eu.r2.cloudflarestorage.com` yaptı ve
+  redeploy etti. Deploy listesinde redeploy'un değişken güncellemesinden sonra
+  "Ready" olduğu görüldü.
+- **Kopyalama sırasında bir hata:** İlk kopyalama denemesi Wrangler oturumu
+  henüz açılmadan çalıştı ve hiçbir şey yazmadı. Betik, çıktıyı `tail`'e
+  aktardığı için hatayı yakalamadı. AB bucket'ının boş kaldığı panelden
+  doğrulandı. İkinci betik her adımın çıkış kodunu, boş dosyayı ve SHA-256
+  eşleşmesini denetledi.
+
+**Hukuk:** Aydınlatma metni §6.2'deki Cloudflare satırında ülke "Avrupa Birliği
+(depolama)" olarak dolduruldu; satır AB veri yerleşimi garantisini belirtiyor.
+Turnstile bot doğrulaması bu garantinin kapsamında değil; o veri Cloudflare'in
+küresel ağında işlenir. Metinde doldurulmayı bekleyen yalnızca `[AÇIK ADRES]`
+kaldı.
+
+**Ürün sahibine kalanlar:**
+
+1. Taşıma doğrulandığı için eski bucket (konumu "Automatic", EEUR) ve boş
+   `postscript-identity` bucket'ı Cloudflare'den silinebilir. Kalıcı silme
+   olduğu için bu işi ürün sahibi yapar.
+2. `[AÇIK ADRES]` doldurulunca aydınlatma metninin yeni sürümü "Sistem"
+   sayfasından yayınlanır. Bu sürüm Spotify satırlarını (D-117) ve AB
+   depolamasını da içerir.
