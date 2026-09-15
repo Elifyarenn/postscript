@@ -36,7 +36,7 @@ ortaklık adına tek başına temsile yetkilidir.
 | Trafik kaydı | Her yorum, sohbet mesajı, özel mesaj, anonim mesaj, gönderi ve yanıt için: gönderen hesap, IP adresi, tarayıcı bilgisi (user-agent), işlem türü ve zamanı |
 | Moderasyon | Yasaklama durumu ve gerekçesi, kaldırılan içerik kayıtları |
 | Denetim | Panelde yapılan işlemlerin kaydı: kimin, ne zaman, hangi işlemi, hangi IP adresinden yaptığı |
-| Müzik çalar | Ana sayfadaki Spotify çalarını açtığınızda tarayıcınızın Spotify ile kurduğu bağlantıda iletilen IP adresi ve tarayıcı bilgisi; bu veriler dergiye değil, doğrudan Spotify AB şirketine gider |
+| Müzik çalar | Üye olarak giriş yapmışken ana sayfadaki Spotify çalarını açtığınızda tarayıcınızın Spotify ile kurduğu bağlantıda iletilen IP adresi ve tarayıcı bilgisi; bu veriler dergiye değil, doğrudan Spotify AB şirketine gider |
 
 Özel mesajlarınızı yalnızca siz ve yazıştığınız üye görür; yöneticiler özel
 mesajları listeleyemez ve okuyamaz. Taraflardan biri bir mesajı bildirirse
@@ -82,7 +82,7 @@ saklanmaz**.
 | Yetkili kamu kurum ve kuruluşlarının hukuka uygun taleplerinin karşılanması | (a) Kanunlarda açıkça öngörülmesi, (ç) Hukuki yükümlülük |
 | Panel içi bildirim ve duyuruların iletilmesi | (c) Sözleşmenin ifası |
 | Aydınlatma metninin yeni sürümlerinin duyurulması ve hangi sürümün ne zaman okunduğunun kaydedilmesi | (ç) Veri sorumlusunun hukuki yükümlülüğü — KVKK m. 10 |
-| Sayının çalma listesinin, yalnızca siz çal düğmesine bastığınızda Spotify çaları yüklenerek dinletilmesi | Açık rıza (KVKK m. 5/1): çalar, düğmeye basmanızdan önce hiçbir veri iletmez; basmazsanız yüklenmez |
+| Sayının çalma listesinin, yalnızca üye olarak giriş yapmışken siz çal düğmesine bastığınızda Spotify çaları yüklenerek dinletilmesi | Açık rıza (KVKK m. 5/1): çalar, düğmeye basmanızdan önce hiçbir veri iletmez; basmazsanız yüklenmez |
 
 Pazarlama, reklam veya profilleme amacıyla kişisel veri işlemiyoruz. Hakkınızda
 hukuki sonuç doğuran veya sizi önemli ölçüde etkileyen, münhasıran otomatik
@@ -101,7 +101,7 @@ Kişisel verileriniz tamamen elektronik ortamda toplanır:
 - **Bot doğrulaması sırasında:** Kayıt ve doğrulama e-postası formlarındaki
   Cloudflare Turnstile bileşeni aracılığıyla, tarayıcınızdan toplanan teknik
   sinyaller ve IP adresiniz.
-- **Müzik çaları açtığınızda:** Ana sayfadaki çalma listesinde çal düğmesine
+- **Müzik çaları açtığınızda:** Üye olarak giriş yapmışken ana sayfadaki çalma listesinde çal düğmesine
   bastığınızda Spotify AB tarafından sunulan çalar yüklenir; tarayıcınız IP
   adresinizi ve tarayıcı bilgilerinizi doğrudan Spotify sunucularına iletir.
 
@@ -116,7 +116,7 @@ Sitede yalnızca işlevin çalışması için zorunlu iki çerez kullanılır:
 
 Reklam, ölçümleme, analitik veya üçüncü taraf takip çerezi kullanılmaz.
 
-Ana sayfadaki müzik çaları siz çal düğmesine basmadıkça yüklenmez. Bastığınızda
+Ana sayfadaki müzik çaları yalnızca üyelere açılır; üye olmayan ziyaretçiler için hiç yüklenmez, üyeler için de çal düğmesine basmadıkça yüklenmez. Bastığınızda
 çalar Spotify AB tarafından sunulur ve Spotify, kendi alan adı altında kendi
 çerezlerini kullanabilir; bu çerezler için Spotify çerez politikası geçerlidir.
 
@@ -140,7 +140,7 @@ sağlayıcıların yurt dışındaki sistemlerinde tutulmaktadır:
 | Neon Inc. (ABD merkezli; sunucu: AWS eu-central-1, Frankfurt) | Veritabanı | Almanya | Bölüm 2'deki tüm veriler |
 | Cloudflare, Inc. (ABD merkezli; R2 nesne depolama Avrupa Birliği veri yerleşimi garantili, Turnstile bot doğrulaması) | Görsel, PDF ve belge depolama; kayıt formlarında bot doğrulaması | Avrupa Birliği (depolama) | Profil görseli, örnek çalışma dosyaları, sözleşme PDF'leri; bot doğrulamasında IP adresi ve tarayıcı sinyalleri |
 | Resend, Inc. (ABD merkezli; gönderim sunucusu: AWS ap-northeast-1, Tokyo) | Doğrulama ve bildirim e-postalarının gönderimi | Japonya | E-posta adresi, görünen ad, e-posta içeriği |
-| Spotify AB | Çalma listesi çaları (yalnızca siz açtığınızda yüklenir) | İsveç | Çaları açtığınızda IP adresi ve tarayıcı bilgisi; aktarım tarayıcınızdan doğrudan yapılır |
+| Spotify AB | Çalma listesi çaları (yalnızca üyeler açtığında yüklenir) | İsveç | Çaları açtığınızda IP adresi ve tarayıcı bilgisi; aktarım tarayıcınızdan doğrudan yapılır |
 
 Bu aktarımlar KVKK'nın 9. maddesinin üçüncü fıkrası uyarınca, taraflar arasında
 imzalanan ve Kişisel Verileri Koruma Kurumu'na bildirilen **standart sözleşme**

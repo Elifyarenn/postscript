@@ -31,6 +31,13 @@ export type IssueCard = {
   lang?: string;
 };
 
+export type PlaylistTrack = {
+  title: string;
+  artist: string;
+  /** As Spotify shows it, minutes and seconds ("4:13"). */
+  duration: string;
+};
+
 export type IssueExtras = {
   /** In the design's order, left to right; the rail opens at the first one (D-121). */
   cards?: IssueCard[];
@@ -42,6 +49,13 @@ export type IssueExtras = {
      * plays audio; Spotify's own player does, once the reader asks for it.
      */
     spotifyUrl: string | null;
+    /**
+     * The playlist's name and songs as Spotify lists them, copied here when the
+     * playlist changes (D-131). The closed player shows them without asking
+     * Spotify, so the front page still sends it nothing before play is pressed.
+     */
+    name?: string;
+    tracks?: PlaylistTrack[];
   };
 };
 
@@ -102,8 +116,15 @@ const ISSUE_EXTRAS: Record<number, IssueExtras> = {
           "kontrastlar, eserin psikolojik ve rahatsız edici havasını güçlendirir.",
       },
     ],
-    // Goes live only after the KVKK notice naming Spotify is published (D-117, D-125)
-    playlist: { spotifyUrl: "https://open.spotify.com/playlist/5dLgq2RgLa3kR2Gag6EmFS" },
+    // Live since D-125; the name and songs were read from Spotify's own player on 2026-09-16
+    playlist: {
+      spotifyUrl: "https://open.spotify.com/playlist/5dLgq2RgLa3kR2Gag6EmFS",
+      name: "Obsession",
+      tracks: [
+        { title: "Every Breath You Take", artist: "The Police", duration: "4:13" },
+        { title: "Hysteria", artist: "Muse", duration: "3:47" },
+      ],
+    },
   },
 };
 

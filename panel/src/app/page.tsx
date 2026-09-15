@@ -41,6 +41,8 @@ export default async function HomePageRoute() {
         issue={issue}
         areas={areas.map((area) => area.name)}
         extras={issueExtrasFor(issue.number)}
+        // Banned accounts get no member menu either (SiteShell), so no player
+        member={Boolean(context?.user && !context.user.isBanned)}
       />
     </SiteShell>
   );

@@ -3210,3 +3210,37 @@
   outline: 2px solid var(--site-wine);
   outline-offset: 1px;
 }
+
+/* ════════════════ The playlist's name and first songs on the closed player (D-131) ════════════════ */
+
+.ps-site .player-list-name {
+  margin-bottom: 0.45rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ps-site .player-track-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ps-site .player-track-list li {
+  align-items: baseline;
+}
+
+.ps-site .player-track-list small {
+  display: block;
+}
+
+.ps-site .player-signin {
+  margin-top: 0.5rem;
+  font-size: 0.68rem;
+  line-height: 1.4;
+  opacity: 0.8;
+}
+
+.ps-site .player-signin a {
+  color: inherit;
+}

@@ -108,3 +108,16 @@ describe("SOCIAL_LINKS (D-128)", () => {
     expect(SOCIAL_LINKS.map((link) => link.key)).not.toContain("linkedin");
   });
 });
+
+describe("issue 01 playlist songs (D-131)", () => {
+  it("names the playlist and gives each song a minutes:seconds length", () => {
+    const playlist = issueExtrasFor(1)?.playlist;
+    expect(playlist?.name).toBe("Obsession");
+    expect(playlist?.tracks?.length).toBeGreaterThan(0);
+    for (const track of playlist?.tracks ?? []) {
+      expect(track.title.length).toBeGreaterThan(0);
+      expect(track.artist.length).toBeGreaterThan(0);
+      expect(/^\d{1,2}:[0-5]\d$/.test(track.duration)).toBe(true);
+    }
+  });
+});

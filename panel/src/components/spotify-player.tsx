@@ -5,9 +5,10 @@
  *
  * Spotify's embedded player is loaded only when the reader presses play. Until
  * then no request reaches Spotify, so opening the front page sends nobody's IP
- * address or browser details abroad; the note beside the button says what the
- * press does before it is made. Without a playlist link the player is drawn as
- * designed and stays empty.
+ * address or browser details abroad. Only signed-in members, who accepted the
+ * privacy notice when they joined, get the player at all; a visitor sees the
+ * playlist's songs and a link to sign in (D-132). Without a playlist link the
+ * player is drawn as designed and stays empty.
  *
  * Once open, the record settles onto the turntable, and the player tells the
  * page when the playlist plays or pauses so the record turns while it plays.
@@ -22,6 +23,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { FastForward, Music, Play, Rewind, Volume2, VolumeX, X } from "lucide-react";
+import type { PlaylistTrack } from "@/lib/issue-extras";
 import { readEmbedMessage, SPOTIFY_ORIGIN } from "@/lib/spotify";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +41,9 @@ export function SpotifyPlayer({
   title,
   heading,
   headingId,
+  listName,
+  tracks = [],
+  locked = false,
 }: {
   /** Built by `spotifyEmbedUrl`, so it can only be a Spotify playlist player. */
   embedUrl: string | null;
@@ -48,6 +53,12 @@ export function SpotifyPlayer({
   heading: ReactNode;
   /** Lets the surrounding article take its name from the title bar. */
   headingId: string;
+  /** The playlist's name, shown on the closed player. */
+  listName?: string;
+  /** The playlist's songs; the closed player lists the first three. */
+  tracks?: PlaylistTrack[];
+  /** There is a playlist, but only a signed-in member may open it. */
+  locked?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [ready, setReady] = useState(false);
@@ -57,7 +68,11 @@ export function SpotifyPlayer({
   const frameRef = useRef<HTMLIFrameElement>(null);
   const openButtonRef = useRef<HTMLButtonElement>(null);
   const closedByReader = useRef(false);
-  const soon = embedUrl ? "Spotify çalarında kullanılır" : "Çalma listesi yakında";
+  const soon = embedUrl
+    ? "Spotify çalarında kullanılır"
+    : locked
+      ? "Çalmak için giriş yapın"
+      : "Çalma listesi yakında";
 
   const sendCommand = (command: "pause" | "resume") => {
     frameRef.current?.contentWindow?.postMessage({ command }, SPOTIFY_ORIGIN);
@@ -175,14 +190,37 @@ export function SpotifyPlayer({
         {bar}
         <div className="player-body">
           <div className="player-tracks">
-            {embedUrl ? (
+            {(embedUrl || locked) && tracks.length > 0 ? (
+              <>
+                {listName && <p className="player-list-name">{listName}</p>}
+                <ol className="player-track-list" aria-label="İlk şarkılar">
+                  {tracks.slice(0, 3).map((track, index) => (
+                    <li key={`${track.title}-${track.artist}`}>
+                      <span aria-hidden>{String(index + 1).padStart(2, "0")}</span>
+                      <span>
+                        {track.title}
+                        <small>{track.artist}</small>
+                      </span>
+                      <span>{track.duration}</span>
+                    </li>
+                  ))}
+                </ol>
+                {locked && (
+                  <p className="player-signin">
+                    <Link href="/login" className="underline">
+                      Dinlemek için giriş yap
+                    </Link>
+                  </p>
+                )}
+              </>
+            ) : locked ? (
               <p className="player-message">
-                Çalar Spotify tarafından sunulur ve çal düğmesine bastığınızda yüklenir. Spotify bu
-                sırada IP adresinizi ve tarayıcı bilgilerinizi alır, kendi çerezlerini kullanabilir.{" "}
-                <Link href="/kvkk" className="underline">
-                  Ayrıntılar
+                <Link href="/login" className="underline">
+                  Dinlemek için giriş yap
                 </Link>
               </p>
+            ) : embedUrl ? (
+              <p className="player-message">Çal düğmesine basınca çalma listesi açılır.</p>
             ) : (
               <p className="player-message">Bu sayının çalma listesi çok yakında burada.</p>
             )}
@@ -202,7 +240,7 @@ export function SpotifyPlayer({
           disabled={!embedUrl}
           onClick={() => setOpen(true)}
           title={embedUrl ? "Spotify çalarını aç" : soon}
-          aria-label={embedUrl ? "Spotify çalarını aç" : "Çal (yakında)"}
+          aria-label={embedUrl ? "Spotify çalarını aç" : locked ? "Çalmak için giriş yapın" : "Çal (yakında)"}
           className="player-play"
         >
           <Play aria-hidden fill="currentColor" />

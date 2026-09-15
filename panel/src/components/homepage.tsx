@@ -3,8 +3,9 @@
  * issue over the collage, the writing areas with their pictures and the
  * issue's movie, series, book and artwork cards beside its playlist.
  *
- * A server component; the header and the member menu come from `SiteShell`,
- * so nothing of the session reaches this file at all.
+ * A server component; the header and the member menu come from `SiteShell`.
+ * Of the session one fact reaches this file: whether the reader is a signed-in
+ * member, the only kind of reader who may open the playlist (D-132).
  */
 import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
@@ -79,12 +80,16 @@ export function HomePage({
   issue,
   areas,
   extras,
+  member,
 }: {
   issue: HomeIssue;
   /** Active writing area names, in the admin's order. */
   areas: string[];
   extras: IssueExtras | null;
+  /** A signed-in member, who accepted the privacy notice on joining. */
+  member: boolean;
 }) {
+  const playlistEmbed = extras?.playlist ? spotifyEmbedUrl(extras.playlist.spotifyUrl) : null;
   const cards = extras?.cards ?? [];
   const hasExtras = extras !== null && (cards.length > 0 || Boolean(extras.playlist));
 
@@ -208,9 +213,13 @@ export function HomePage({
           {extras.playlist && (
             <article className="extra-player" aria-labelledby="player-title">
               <SpotifyPlayer
-                embedUrl={spotifyEmbedUrl(extras.playlist.spotifyUrl)}
+                // A visitor is never handed the player's address, so nothing of theirs reaches Spotify
+                embedUrl={member ? playlistEmbed : null}
+                locked={!member && playlistEmbed !== null}
                 title={`Sayı ${formatIssueNumber(issue.number)} çalma listesi (Spotify)`}
                 headingId="player-title"
+                listName={extras.playlist.name}
+                tracks={extras.playlist.tracks}
                 heading={
                   <>
                     <Star aria-hidden fill="currentColor" /> Çalma listesi

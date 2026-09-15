@@ -4733,3 +4733,60 @@ sahibi kaldırılmasını istedi.
 - Sesin durumunu artık yalnızca başlık çubuğundaki düğme gösteriyor.
 
 **Hukuk:** Değişiklik yok; yalnızca görünüm.
+
+## D-131 — Kapalı çalarda çalma listesinin adı ve ilk üç şarkısı
+
+**Durum:** Çalar kapalıyken çalma listesi alanında Spotify'ın ne alacağını
+anlatan uzun bir not duruyordu (D-117). Ürün sahibi bunun yerine çalma listesinin
+adının ve ilk üç şarkısının yazmasını istedi.
+
+**Karar:**
+
+- **Veri:** `issue-extras.ts`'teki çalma listesine `name` ve `tracks` (şarkı adı,
+  sanatçı, süre) eklendi.
+  - Bilgiler 2026-09-16'da Spotify'ın gömülü çalar sayfasındaki listeden okundu.
+  - Liste değişince elle güncellenir.
+  - Kapalı çalar bunları Spotify'a sormadan gösterir; ana sayfa açılırken Spotify'a
+    yine hiçbir istek gitmez.
+- **Görünüm:** Liste adı büyük harfle, şarkılar tasarımdaki satır düzeniyle (sıra no,
+  ad ve sanatçı, süre) gösterilir. Yalnızca ilk üç şarkı listelenir.
+- **Şu anki liste:** Listede iki şarkı var (Every Breath You Take – The Police,
+  Hysteria – Muse); ikisi de görünüyor.
+
+**Hukuk:** Kişisel veri yok. Notun yerini D-132 düzenledi.
+
+## D-132 — Çalma listesini yalnızca üyeler açabilir; kapalı çalarda KVKK notu yok
+
+**Durum:** Ürün sahibi, çalarda KVKK bilgilendirmesi gösterilmemesini istedi.
+Onun yerine üye olmayan biri çaları hiç açamasın: üyeler kayıt olurken aydınlatma
+metnini onaylamış oluyor.
+
+**Karar:**
+
+- **Kim açabilir:** Ana sayfa, okurun giriş yapmış ve yasaklı olmayan bir üye olup
+  olmadığını `HomePage`'e iletir (`member`). Yasaklılar üye menüsünü de görmüyor.
+- **Ziyaretçi:** Çaların Spotify adresi sunucuda hiç verilmez (`embedUrl: null`,
+  `locked`).
+  - Ziyaretçi şarkı listesini ve "Dinlemek için giriş yap" bağlantısını görür.
+  - Çal düğmesi pasif, etiketi "Çalmak için giriş yapın".
+  - Tarayıcı araçlarıyla bile açabileceği bir adres sayfada yok.
+- **Üye:** Kapalı çalarda KVKK notu gösterilmez. Çalar, eskisi gibi yalnızca çal'a
+  basınca yüklenir.
+- **Aydınlatma metni:** Spotify satırları (§2, §3, §4, çerezler, §6.2) "yalnızca üye
+  olarak giriş yapmışken" diye güncellendi.
+
+**Hukuk — hukukçu görüşü gerekiyor:**
+
+- **Rıza dayanağı:** D-117'de çalar için dayanak açık rızaydı. Rıza, çal'a basmadan
+  önce okunan notla bilgilendirilmiş sayılıyordu. Not kaldırıldı; artık okura
+  basmadan önce ne olacağı söylenmiyor.
+  - Üyenin kayıtta aydınlatma metnini onaylaması aydınlatma yükümlülüğünü
+    karşılayabilir. Belirli bir işleme verilmiş açık rıza sayılıp sayılmayacağı
+    belirsiz.
+- **Onaylanan sürüm:** Üyelerin kayıtta onayladığı canlı metin 1. sürüm ve Spotify'ı
+  içermiyor (D-125).
+  - Tam metin yeni sürüm olarak yayınlanınca `KvkkNotice` bandı üyelerden yeni
+    metni okuduklarını onaylamalarını ister (D-104).
+  - O zamana kadar üyeler Spotify'ı anlatmayan bir metni onaylamış durumda.
+- Ürün sahibinin açık talebiyle uygulandı; muhafazakâr kısmı ziyaretçiye çaların hiç
+  verilmemesi.
