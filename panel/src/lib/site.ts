@@ -10,7 +10,7 @@ export type SiteNavItem = { href: string; label: string };
 /** The header menu, in the designs' order. */
 export const SITE_NAV: SiteNavItem[] = [
   { href: "/", label: "Ana sayfa" },
-  { href: "/#kategoriler", label: "Kategoriler" },
+  { href: "/kategoriler", label: "Kategoriler" },
   { href: "/hakkinda", label: "Hakkında" },
   { href: "/magazine/issues", label: "Sayılar" },
   { href: "/social", label: "Topluluk" },

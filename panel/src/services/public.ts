@@ -331,3 +331,45 @@ export async function listPublicAuthors(): Promise<{ name: string; slug: string 
 
   return rows.flatMap((row) => (row.name && row.slug ? [{ name: row.name, slug: row.slug }] : []));
 }
+
+export type PublicStaffMember = { name: string; href: string };
+
+/**
+ * The about page's writers and editors (D-135), read from the accounts that
+ * hold the role rather than from bylines, so someone who has not published yet
+ * is listed too. Only names the public site may show are read: the pen name,
+ * or else the community handle. Nobody's real name, e-mail or birth date
+ * leaves this function. A banned, suspended, deleted or anonymised account, or
+ * one with no public name at all, is left out.
+ */
+export async function listPublicStaff(role: "writer" | "editor"): Promise<PublicStaffMember[]> {
+  const rows = await db
+    .select({
+      penName: users.penName,
+      penNameSlug: users.penNameSlug,
+      username: users.username,
+      writerStatus: users.writerStatus,
+      editorStatus: users.editorStatus,
+    })
+    .from(users)
+    .where(
+      and(
+        eq(users.role, role),
+        eq(users.isBanned, false),
+        isNull(users.deletedAt),
+        isNull(users.anonymizedAt),
+      ),
+    );
+
+  const members = rows.flatMap((row): PublicStaffMember[] => {
+    const status = role === "writer" ? row.writerStatus : row.editorStatus;
+    if (status === "suspended") return [];
+    if (row.penName && row.penNameSlug) {
+      return [{ name: row.penName, href: `/magazine/authors/${row.penNameSlug}` }];
+    }
+    if (row.username) return [{ name: `@${row.username}`, href: `/social/u/${row.username}` }];
+    return [];
+  });
+
+  return members.sort((a, b) => a.name.localeCompare(b.name, "tr"));
+}

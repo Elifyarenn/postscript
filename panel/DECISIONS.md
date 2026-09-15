@@ -4814,3 +4814,67 @@ olmamasını istedi.
 **Doğrulama:** Yerel ana sayfada imza metni "Designed by Elif Yaren Çekiç & Tuanna
 Demir"; içindeki tek bağlantı "Elif Yaren Çekiç", yeni sekmede açılıyor.
 typecheck ve lint temiz; 53 dosyada 545 test geçti.
+
+## D-134 — Tüm kategoriler için ayrı sayfa
+
+**Durum:** Üst menüdeki "Kategoriler" bağlantısı ana sayfadaki kategori şeridine
+kayıyordu (`/#kategoriler`). Ürün sahibi, bağlantının tüm kategorilerin
+gösterildiği ayrı bir sayfa açmasını istedi.
+
+**Karar:**
+
+- **Yeni sayfa `/kategoriler`:** Etkin yazı alanlarının hepsi, admin panelindeki
+  sırayla (D-122) bir ızgarada gösterilir.
+  - Her kartta tasarımdaki fotoğraf, alan adı ve yayımlanmış yazı sayısı var ("n yazı"
+    ya da "Henüz yazı yok").
+  - Kart, alanın yazılarına (`/magazine?kategori=…`) gider.
+- **Erişim:** Sayfa ana sayfa gibi herkese açık; kartların götürdüğü okuma alanı
+  yine oturum ister.
+- **Bağlantılar:** Üst menüdeki "Kategoriler", ana sayfadaki "Tümünü gör" ve kahraman
+  alanındaki "Ve dahası…" artık bu sayfaya gider. Ana sayfadaki kategori şeridi
+  yerinde kaldı.
+- **Ortak kart:** Kart bileşeni (`CategoryCard`) ana sayfa şeridinden ayrıldı;
+  şerit ve sayfa aynı kartı çizer.
+- **Site haritası:** `/kategoriler` site haritasına eklendi.
+
+**Hukuk:** Değişiklik yok; yeni veri işlenmiyor.
+
+**Doğrulama:**
+
+- typecheck ve lint temiz; 53 dosyada 547 test geçti.
+- **Yerel tarayıcı:** `/kategoriler` 200 döndü, 11 alanın hepsi fotoğrafı yüklenmiş kartla görünüyor.
+  - Her kartta yazı sayısı var (yerel veritabanında "Henüz yazı yok").
+  - Menüde "Kategoriler" etkin görünüyor; sayfada yatay taşma yok.
+- **Ana sayfa:** "Tümünü gör" ve "Ve dahası…" `/kategoriler`'e gidiyor; şerit 11 kart, sayısız.
+
+## D-135 — Hakkında: yazarlar ve editörler hesaplardan listelenir; "Tanış" topluluğa gider
+
+**Durum:**
+
+- Hakkında sayfasının Yazarlar bölümü yalnızca yayımlanmış yazısı olan mahlasları
+  listeliyordu (`listPublicAuthors`).
+- Editörler bölümünde kimse listelenmiyordu.
+- "Yazarlar" kartındaki "Tanış" düğmesi aynı sayfanın Yazarlar bölümüne gidiyordu.
+
+Ürün sahibi yazar ve editörlerin kullanıcılardan çekilip listelenmesini,
+"Tanış"ın topluluğa yönlendirmesini istedi.
+
+**Karar:**
+
+- **Kaynak:** `listPublicStaff(role)` rolü "writer" ya da "editor" olan hesapları
+  okur. Henüz yayını olmayan yazar da listelenir.
+- **Gösterilen ad:** Yalnızca herkese açık gösterilebilecek adlar.
+  - Mahlas varsa mahlas, yazar sayfasına bağlantıyla.
+  - Yoksa topluluk adı (`@kullanıcıadı`), profil sayfasına bağlantıyla.
+  - Gerçek ad, e-posta ve doğum tarihi okunmaz (CLAUDE.md, public API kuralı).
+- **Dışarıda kalanlar:** Yasaklı, askıya alınmış (`suspended`), silinmiş ya da
+  anonimleştirilmiş hesaplar ve herkese açık adı hiç olmayanlar.
+- **Sıra:** Türkçe alfabetik.
+- **Tanış:** "Yazarlar" kartındaki "Tanış" düğmesi `/social`'a gider. Topluluk
+  oturum ister; ziyaretçi giriş sayfasına yönlenir.
+
+**Hukuk:** Yeni kişisel veri yok. Listelenen adlar, üyelerin topluluk
+profillerinde zaten herkese gösterilen adlar (D-089).
+
+**Doğrulama:** `tests/integration/public-reading.test.ts` içinde iki yeni test.
+Yerel tarayıcıda "Tanış" `/social`'a gidiyor. Yerel veritabanında herkese açık adı olan yazar ya da editör olmadığı için iki bölüm de "çok yakında" metnini gösteriyor.

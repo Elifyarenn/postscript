@@ -11,40 +11,16 @@ import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
 import { ArrowRight, Star } from "lucide-react";
 import heroCollage from "@/assets/design/hero-collage.webp";
-import categoryArt from "@/assets/design/category-art.webp";
-import categoryAuthor from "@/assets/design/category-author.webp";
-import categoryBooks from "@/assets/design/category-books.webp";
-import categoryFeminism from "@/assets/design/category-feminism.webp";
-import categoryGossip from "@/assets/design/category-gossip.webp";
-import categoryHistory from "@/assets/design/category-history.webp";
-import categoryLifestyle from "@/assets/design/category-lifestyle.webp";
-import categoryPop from "@/assets/design/category-pop.webp";
-import categoryPsychology from "@/assets/design/category-psychology.webp";
-import categoryScience from "@/assets/design/category-science.webp";
-import categoryThought from "@/assets/design/category-thought.webp";
 import artworkWeiss from "@/assets/design/artwork-weiss-obsession.webp";
 import bookMasumiyet from "@/assets/design/book-masumiyet-muzesi.webp";
 import movieBlackSwan from "@/assets/design/movie-black-swan.webp";
 import seriesYou from "@/assets/design/series-you.webp";
 import type { IssueCard, IssueCardImage, IssueCardKind, IssueExtras } from "@/lib/issue-extras";
-import { categoryImageKey, formatIssueNumber, type CategoryImageKey } from "@/lib/site";
+import { formatIssueNumber } from "@/lib/site";
 import { spotifyEmbedUrl } from "@/lib/spotify";
 import { SpotifyPlayer } from "./spotify-player";
-import { Sparkle, Swoosh } from "./site-ui";
-
-const CATEGORY_IMAGES: Record<CategoryImageKey, StaticImageData> = {
-  art: categoryArt,
-  science: categoryScience,
-  psychology: categoryPsychology,
-  lifestyle: categoryLifestyle,
-  pop: categoryPop,
-  books: categoryBooks,
-  thought: categoryThought,
-  feminism: categoryFeminism,
-  history: categoryHistory,
-  author: categoryAuthor,
-  gossip: categoryGossip,
-};
+import { CategoryCard } from "./category-card";
+import { Sparkle } from "./site-ui";
 
 const CARD_IMAGES: Record<IssueCardImage, StaticImageData> = {
   "black-swan": movieBlackSwan,
@@ -131,7 +107,7 @@ export function HomePage({
               ))}
               {areas.length > 4 && (
                 <li>
-                  <Link href="/#kategoriler">Ve dahası…</Link>
+                  <Link href="/kategoriler">Ve dahası…</Link>
                 </li>
               )}
             </ul>
@@ -144,7 +120,7 @@ export function HomePage({
           <h2 id="home-categories-title" className="site-caps-title">
             Kategoriler
           </h2>
-          <Link href="/magazine" className="site-more">
+          <Link href="/kategoriler" className="site-more">
             Tümünü gör <ArrowRight aria-hidden />
           </Link>
         </div>
@@ -155,18 +131,7 @@ export function HomePage({
           <ul className="category-rail">
             {areas.map((name, index) => (
               <li key={name}>
-                <Link href={`/magazine?kategori=${encodeURIComponent(name)}`} className="category-card">
-                  <span className="category-card-art">
-                    <Image
-                      src={CATEGORY_IMAGES[categoryImageKey(name, index)]}
-                      alt=""
-                      fill
-                      sizes="(min-width: 768px) 16rem, 70vw"
-                    />
-                  </span>
-                  <span className="category-name">{name}</span>
-                  <Swoosh className="category-swoosh" />
-                </Link>
+                <CategoryCard name={name} index={index} sizes="(min-width: 768px) 16rem, 70vw" />
               </li>
             ))}
           </ul>

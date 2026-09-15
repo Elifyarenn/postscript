@@ -16,6 +16,7 @@ describe("isNavActive (D-112)", () => {
 
   it("never treats an anchor as a page", () => {
     expect(isNavActive("/", "/#kategoriler")).toBe(false);
+    expect(isNavActive("/kategoriler", "/kategoriler")).toBe(true);
   });
 });
 

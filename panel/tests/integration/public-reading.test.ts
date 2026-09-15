@@ -6,7 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
 import { articles, users } from "@/db/schema";
-import { listPublicAuthors, listRecentArticles } from "@/services/public";
+import { listPublicAuthors, listPublicStaff, listRecentArticles } from "@/services/public";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
 import { createUser } from "../helpers/factories";
 
@@ -125,5 +125,54 @@ describe("listPublicAuthors", () => {
     await db.update(users).set({ deletedAt: new Date() }).where(eq(users.id, gone.id));
 
     expect(await listPublicAuthors()).toEqual([]);
+  });
+});
+
+describe("listPublicStaff (D-135)", () => {
+  async function member(
+    role: "user" | "writer" | "editor",
+    values: { penName?: string; slug?: string; username?: string; banned?: boolean; suspended?: boolean; deleted?: boolean } = {},
+  ) {
+    const status = values.suspended ? "suspended" : "active";
+    const created = await createUser({
+      role,
+      writerStatus: role === "writer" ? status : null,
+      editorStatus: role === "editor" ? status : null,
+      isBanned: values.banned ?? false,
+    });
+    await db
+      .update(users)
+      .set({
+        penName: values.penName ?? null,
+        penNameSlug: values.slug ?? null,
+        username: values.username ?? null,
+        deletedAt: values.deleted ? new Date() : null,
+      })
+      .where(eq(users.id, created.id));
+    return created;
+  }
+
+  it("lists writers by pen name, or by handle without one, whether or not they have published", async () => {
+    await member("writer", { penName: "Zeynep K.", slug: "zeynep-k" });
+    await member("writer", { username: "ada_yazar" });
+    await member("editor", { penName: "Editör E.", slug: "editor-e" });
+
+    expect(await listPublicStaff("writer")).toEqual([
+      { name: "@ada_yazar", href: "/social/u/ada_yazar" },
+      { name: "Zeynep K.", href: "/magazine/authors/zeynep-k" },
+    ]);
+    expect(await listPublicStaff("editor")).toEqual([
+      { name: "Editör E.", href: "/magazine/authors/editor-e" },
+    ]);
+  });
+
+  it("leaves out readers and banned, suspended, deleted or nameless accounts", async () => {
+    await member("user", { penName: "Okur", slug: "okur" });
+    await member("writer", { penName: "Yasakli", slug: "yasakli", banned: true });
+    await member("writer", { penName: "Askida", slug: "askida", suspended: true });
+    await member("writer", { penName: "Giden", slug: "giden-yazar", deleted: true });
+    await member("writer");
+
+    expect(await listPublicStaff("writer")).toEqual([]);
   });
 });

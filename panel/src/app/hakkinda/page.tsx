@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { getAuthContext } from "@/lib/auth/session";
-import { listPublicAuthors } from "@/services/public";
+import { listPublicStaff, type PublicStaffMember } from "@/services/public";
 import { SiteShell } from "@/components/site-shell";
 import { SiteBanner, Sparkle } from "@/components/site-ui";
 
@@ -20,13 +20,28 @@ function parseSection(value: string | undefined): SectionKey {
   return SECTIONS.find((section) => section.key === value)?.key ?? "hikayemiz";
 }
 
+/** A list of writers or editors by their public names (D-135). */
+function StaffList({ members, empty }: { members: PublicStaffMember[]; empty: string }) {
+  if (members.length === 0) return <p>{empty}</p>;
+  return (
+    <ul className="about-writers">
+      {members.map((member) => (
+        <li key={member.href}>
+          <Link href={member.href}>{member.name}</Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function sectionHref(key: SectionKey): string {
   return key === "hikayemiz" ? "/hakkinda" : `/hakkinda?bolum=${key}`;
 }
 
 /**
  * Who we are (D-112), from the "about" design. Public like the legal pages: it
- * needs no session, and the writers it lists are shown by pen name only.
+ * needs no session, and the writers and editors it lists are shown by pen name
+ * or community handle, never by their real name (D-135).
  */
 export default async function AboutPage({
   searchParams,
@@ -35,7 +50,10 @@ export default async function AboutPage({
 }) {
   const [context, params] = await Promise.all([getAuthContext(), searchParams]);
   const section = parseSection(params.bolum);
-  const authors = section === "yazarlar" ? await listPublicAuthors() : [];
+  const staff =
+    section === "yazarlar" || section === "editorler"
+      ? await listPublicStaff(section === "yazarlar" ? "writer" : "editor")
+      : [];
   const user = context?.user ?? null;
 
   return (
@@ -93,19 +111,9 @@ export default async function AboutPage({
           {section === "yazarlar" && (
             <>
               <h2 id="about-heading">Yazarlar</h2>
-              {authors.length === 0 ? (
-                <p>İlk yazılar yayımlandığında yazarlarımız burada listelenecek.</p>
-              ) : (
-                <ul className="about-writers">
-                  {authors.map((author) => (
-                    <li key={author.slug}>
-                      <Link href={`/magazine/authors/${author.slug}`}>{author.name}</Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <StaffList members={staff} empty="Yazarlarımız çok yakında burada listelenecek." />
               <p className="mt-6 text-sm text-muted">
-                Yazarlarımız dergide mahlaslarıyla yer alır.
+                Yazarlarımız dergide mahlaslarıyla, mahlası olmayanlar topluluk adlarıyla yer alır.
               </p>
             </>
           )}
@@ -113,6 +121,7 @@ export default async function AboutPage({
           {section === "editorler" && (
             <>
               <h2 id="about-heading">Editörler</h2>
+              <StaffList members={staff} empty="Editörlerimiz çok yakında burada listelenecek." />
               <p>
                 Her yazı, kendi alanının editörü tarafından okunur, gerekirse yazarıyla birlikte
                 yeniden elden geçirilir ve yayına öyle hazırlanır.
@@ -154,7 +163,8 @@ export default async function AboutPage({
             Biz; gerçek hikâyelerin gücüne inanan yaratıcılar, yazarlar ve hayalperestlerden oluşan
             bir topluluğuz.
           </p>
-          <Link href={sectionHref("yazarlar")} className="site-button">
+          {/* The writers are met and followed in the community (D-135) */}
+          <Link href="/social" className="site-button">
             Tanış <ArrowRight aria-hidden />
           </Link>
         </aside>

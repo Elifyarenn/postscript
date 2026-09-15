@@ -3244,3 +3244,24 @@
 .ps-site .player-signin a {
   color: inherit;
 }
+
+/* ════════════════ The categories page (D-134) ════════════════ */
+
+.ps-site .categories-page {
+  padding: 2rem clamp(1rem, 3vw, 2rem) 3rem;
+}
+
+.ps-site .category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
+  gap: 2.2rem 1.9rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ps-site .category-count {
+  color: var(--site-muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
