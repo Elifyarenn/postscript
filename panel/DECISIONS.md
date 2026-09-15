@@ -4665,3 +4665,54 @@ tıklayınca okur Spotify'ın kendi sitesine geçer. Aydınlatma metni değişme
 - **Yerel tarayıcı:** Alt bilgide LinkedIn geçmiyor. Spotify, dergi hesabına giden
   ve yeni sekmede açılan bir bağlantı; ikonu çiziliyor. Diğer dört ikon
   "hesabı yakında" etiketiyle bağlantısız.
+
+## D-129 — Çalma listesi başlığındaki çarpı çaları kapatır, hoparlör sesi kapatıp açar
+
+**Durum:** Çalma listesinin başlık çubuğundaki hoparlör ve çarpı ikonları süstü
+(D-112); ana sayfa onları sunucuda çiziyordu. Ürün sahibi iki şey istedi:
+
+- Çarpıya basınca Spotify görünümünden çıkılsın.
+- Hoparlöre basınca ses kapanıp açılsın. Ses kapalıyken ikon, çalma listesinin
+  üstündeki çarpılı hoparlör gibi görünsün.
+
+**Kısıt:** Spotify'ın gömülü çaları sayfadan ses komutu almıyor. Resmî iframe
+API'sinin komutları: `play`, `play_from_start`, `pause`, `resume`, `toggle`,
+`seek`. Ses ya da sessiz komutu yok. Farklı kökenden bir iframe'in sesini sayfa
+kendisi de kısamaz.
+
+**Karar:**
+
+- **Başlık çubuğu çalar bileşeninde:** Ana sayfa yalnızca başlığın metnini
+  (`heading`) ve kimliğini (`headingId`) veriyor. Makale adını hâlâ bu başlıktan
+  alıyor (`aria-labelledby="player-title"`).
+- **Çarpı ("Spotify çalarını kapat"):** Spotify çalarını kaldırır, tasarımdaki
+  çizili çalar geri gelir. Çalma durur, plak plak çaların yanına döner.
+  - Klavye odağı kaybolmasın diye "Spotify çalarını aç" düğmesine taşınır.
+  - Çalar kapalıyken düğme pasif.
+- **Hoparlör ("Sesi kapat", `aria-pressed`):** Sesi kapatmak çalmayı duraklatır
+  (`pause`), sesi açmak kaldığı yerden sürdürür (`resume`).
+  - Ses kapalıyken ikon çarpılı hoparlöre (`VolumeX`) döner.
+  - Duraklayınca plak da durur, çünkü müzik gerçekten çalmıyor.
+  - Okur Spotify çalarında çal'a basarsa ses kapalı durumu kendiliğinden kalkar.
+  - Düğme yalnızca çalar hazırken ve çalma sürerken ya da ses kapalıyken etkin.
+- **Görünüm:** Düğmelere üzerine gelme ve klavye odağı stili eklendi. Pasif hâlde
+  soluk çizilirler.
+
+**Hukuk:** Değişiklik yok. Komutlar tarayıcıda Spotify çalarına gidiyor, sunucuya
+bir şey gitmiyor.
+
+**Doğrulama:**
+
+- typecheck ve lint temiz; 53 dosyada 544 test geçti.
+- **Yerel Chrome denemesi (gerçek çalma):**
+
+  | Durum | Hoparlör | Çarpı | Spotify çaları | Plak |
+  |---|---|---|---|---|
+  | Çalar kapalı | Pasif | Pasif | Yok | Yanda |
+  | Açık, çalmıyor | Pasif | Etkin | Var | Tablada |
+  | Çalıyor | Etkin, açık ikon | Etkin | Var | Dönüyor |
+  | Hoparlöre basıldı | Basılı, çarpılı ikon | Etkin | Var ("paused" geldi) | Durdu |
+  | Tekrar basıldı | Açık ikon | Etkin | Var ("playing" geldi) | Dönüyor |
+  | Çarpıya basıldı | Pasif | Pasif | Kaldırıldı | Yanda |
+
+  Çarpıdan sonra odak "Spotify çalarını aç" düğmesinde.

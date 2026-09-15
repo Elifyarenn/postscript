@@ -8,7 +8,7 @@
  */
 import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
-import { ArrowRight, Star, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowRight, Star, VolumeX } from "lucide-react";
 import heroCollage from "@/assets/design/hero-collage.webp";
 import categoryArt from "@/assets/design/category-art.webp";
 import categoryAuthor from "@/assets/design/category-author.webp";
@@ -214,14 +214,11 @@ export function HomePage({
               <SpotifyPlayer
                 embedUrl={spotifyEmbedUrl(extras.playlist.spotifyUrl)}
                 title={`Sayı ${formatIssueNumber(issue.number)} çalma listesi (Spotify)`}
-                header={
-                  <h3 id="player-title" className="player-bar">
+                headingId="player-title"
+                heading={
+                  <>
                     <Star aria-hidden fill="currentColor" /> Çalma listesi
-                    <span className="player-bar-icons" aria-hidden>
-                      <Volume2 />
-                      <X />
-                    </span>
-                  </h3>
+                  </>
                 }
               />
             </article>

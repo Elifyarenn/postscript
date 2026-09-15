@@ -3183,3 +3183,37 @@
     transition: none;
   }
 }
+
+/* ════════════════ The playlist title bar's buttons (D-129) ════════════════ */
+
+.ps-site .player-bar-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+.ps-site .player-bar-icons button {
+  padding: 0.15rem;
+  border-radius: 3px;
+}
+
+.ps-site .player-bar-icons button:not(:disabled) {
+  cursor: pointer;
+}
+
+.ps-site .player-bar-icons button:not(:disabled):hover {
+  background: color-mix(in srgb, var(--site-strip) 14%, transparent);
+}
+
+/* A closed player has nothing to close or silence; the buttons are drawn but resting */
+.ps-site .player-bar-icons button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.ps-site .player-bar-icons button:focus-visible {
+  outline: 2px solid var(--site-wine);
+  outline-offset: 1px;
+}
