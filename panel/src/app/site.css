@@ -3080,3 +3080,18 @@
     width: clamp(6rem, 7vw, 8.5rem);
   }
 }
+
+/* ════════════════ One issue card at a time on the rail (D-124) ════════════════ */
+
+/* Each card fills the rail, so the first view shows one whole card and a swipe or
+   scroll settles on the next one rather than between two */
+.ps-site .issue-extras-row .extras-rail {
+  grid-auto-columns: 100%;
+  scroll-snap-type: x mandatory;
+}
+
+.ps-site .issue-extras-row .extras-rail > * {
+  width: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}

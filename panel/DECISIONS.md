@@ -4446,3 +4446,40 @@ istedi.
 
 - **1400 px düzeltmesi:** İlk ölçümde başlık menüsü 13 px sığmıyordu. Logo
   genişliği 16vw'den 15vw'ye indirilince sığdı.
+
+## D-124 — Sayının kartları şeritte birer birer görünür
+
+**Durum:** Ana sayfadaki kart şeridinde (film, dizi, kitap, eser; D-120) kartlar
+sabit genişlikteydi: afiş kartı en çok 40rem, tablo kartı 48rem. İlk görünümde
+bir kart tam, bir sonrakinin bir parçası görünüyordu. Kaydırma yakalaması
+`proximity` olduğu için şerit iki kartın arasında da durabiliyordu. Ürün sahibi
+ilk görünümde tek kart görünmesini istedi.
+
+**Karar:**
+
+- Şeritteki her kart şeridin tam genişliğini kaplar (`grid-auto-columns: 100%`,
+  kart `width: 100%`). İlk görünümde yalnızca Sayının filmi görünür.
+- Kaydırma yakalaması `mandatory`, kart başına hizalı ve `scroll-snap-stop:
+  always`. Kaydırma ya da parmakla sürükleme her zaman tek bir karta oturur, bir
+  hamlede kart atlanmaz.
+- Kartlar arasındaki boşluk (1.5rem) kaldı; sonraki kart görünür alanın
+  dışında başlar.
+- Çalma listesi ve sabit düzen (D-119) değişmedi.
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:**
+
+- typecheck ve lint temiz; 53 dosyada 540 test geçti.
+- **Yerel tarayıcı ölçümü:** Üç genişlikte de ilk görünümde tek kart tam görünüyor;
+  kart metni taşmıyor, sayfada yatay taşma yok. Yarım kart genişliğinden fazla
+  kaydırılınca şerit tam olarak ikinci karta (Sayının dizisi) oturuyor.
+
+  | Genişlik | Şerit | İlk görünüm | Kaydırma sonrası |
+  |---|---|---|---|
+  | 1920 px | 848 px | Sayının filmi 848/848 | Sayının dizisi 848/848 |
+  | 1000 px | 615 px | Sayının filmi 615/615 | Sayının dizisi 615/615 |
+  | 390 px | 358 px | Sayının filmi 358/358 | Sayının dizisi 358/358 |
+
+  1000 px'deki şerit genişliği, 1536 px ekranda üye düzenindeki şeride (D-123)
+  yakın.
