@@ -32,7 +32,7 @@ export type IssueCard = {
 };
 
 export type IssueExtras = {
-  /** In the design's order, left to right; the rail opens at the last one. */
+  /** In the design's order, left to right; the rail opens at the first one (D-121). */
   cards?: IssueCard[];
   playlist?: {
     /**
@@ -102,7 +102,8 @@ const ISSUE_EXTRAS: Record<number, IssueExtras> = {
           "kontrastlar, eserin psikolojik ve rahatsız edici havasını güçlendirir.",
       },
     ],
-    playlist: { spotifyUrl: null },
+    // Goes live only after the KVKK notice naming Spotify is published (D-117, D-125)
+    playlist: { spotifyUrl: "https://open.spotify.com/playlist/5dLgq2RgLa3kR2Gag6EmFS" },
   },
 };
 

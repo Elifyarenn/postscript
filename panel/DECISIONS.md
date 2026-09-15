@@ -4483,3 +4483,36 @@ ilk görünümde tek kart görünmesini istedi.
 
   1000 px'deki şerit genişliği, 1536 px ekranda üye düzenindeki şeride (D-123)
   yakın.
+
+## D-125 — Sayı 01 çalma listesi bağlantısı hazır, yayını KVKK sürümüne bağlı
+
+**Durum:** Ürün sahibi dergi hesabındaki çalma listesinin paylaşım bağlantısını
+verdi (`https://open.spotify.com/playlist/5dLgq2RgLa3kR2Gag6EmFS`, izleme
+parametreleriyle).
+
+D-117'nin canlıya alma koşulu: bağlantı eklenmeden önce aydınlatma metninin
+Spotify'ı anlatan yeni sürümü yönetim panelinden yayınlanmalı. Canlıdaki metin
+hâlâ 6 Eylül 2026 tarihli 1. sürüm ve Spotify'dan söz etmiyor.
+
+Depodaki metinde (`data/kvkk-aydinlatma-metni.md`) tebligat adresi yerinde hâlâ
+`[AÇIK ADRES]` yer tutucusu var; yer tutucu dolmadan yeni sürüm yayınlanamaz.
+
+**Karar:**
+
+- Bağlantı `issue-extras.ts`'e yazıldı. Değişiklik `main`'e değil
+  `spotify-playlist-issue-01` dalına commit'lendi; push edilmedi.
+  - `main`'e push canlıya yayın demek. Çalar açılırsa okurun IP ve tarayıcı
+    bilgisi Spotify'a (İsveç) gider, ama canlı metin bunu anlatmıyor.
+  - Bu, D-083'teki "metin koddan geri kaldı" durumunun tekrarı olurdu.
+- Bağlantı çözümleyiciden geçiyor. Çalar adresi yalnızca kimlikten yeniden
+  kuruluyor, izleme parametreleri atılıyor. Paylaşılan bağlantının kendisiyle
+  bir birim testi eklendi.
+
+**Canlıya alma sırası:**
+
+1. Tebligat adresi `data/kvkk-aydinlatma-metni.md`'ye yazılır.
+2. Metnin yeni sürümü yönetim panelindeki "Sistem" sayfasından yayınlanır.
+3. Dal `main`'e alınır ve push edilir.
+
+**Hukuk:** D-117'deki hukukçu soruları (m. 9 aktarım dayanağı, ortak veri
+sorumluluğu) hâlâ açık.

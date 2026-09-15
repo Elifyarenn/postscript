@@ -27,6 +27,16 @@ describe("spotifyPlaylistId (D-117)", () => {
   });
 });
 
+describe("issue 01 playlist", () => {
+  it("accepts the link as the owner shared it, tracking parameters and all", () => {
+    expect(
+      spotifyEmbedUrl(
+        "https://open.spotify.com/playlist/5dLgq2RgLa3kR2Gag6EmFS?si=RgUi3lVOSE2xhpQRFewcWQ&utm_source=copy-link&pi=_P6DNt0wSZuS0",
+      ),
+    ).toBe("https://open.spotify.com/embed/playlist/5dLgq2RgLa3kR2Gag6EmFS");
+  });
+});
+
 describe("spotifyEmbedUrl", () => {
   it("rebuilds the player address from the id alone", () => {
     expect(spotifyEmbedUrl(`https://open.spotify.com/playlist/${ID}?si=abc&utm_source=x`)).toBe(
