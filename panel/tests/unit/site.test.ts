@@ -63,7 +63,9 @@ describe("formatIssueNumber", () => {
 
 describe("issueExtrasFor", () => {
   it("has the designs' panels for issue 01 and nothing for an issue without an entry", () => {
-    expect(issueExtrasFor(1)?.artwork?.artist).toBe("Wojciech Weiss");
+    const cards = issueExtrasFor(1)?.cards ?? [];
+    expect(cards.map((card) => card.kind)).toEqual(["movie", "series", "book", "artwork"]);
+    expect(cards.at(-1)?.credit).toBe("Wojciech Weiss");
     expect(issueExtrasFor(99)).toBeNull();
   });
 });

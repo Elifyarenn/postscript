@@ -1,7 +1,7 @@
 /**
  * The magazine's front page (D-112), drawn from the "ana sayfa" designs: the
  * issue over the collage, the writing areas with their pictures and the
- * issue's book, artwork and playlist.
+ * issue's movie, series, book and artwork cards beside its playlist.
  *
  * A server component; the header and the member menu come from `SiteShell`,
  * so nothing of the session reaches this file at all.
@@ -16,7 +16,10 @@ import categoryPop from "@/assets/design/category-pop.webp";
 import categoryPsychology from "@/assets/design/category-psychology.webp";
 import categoryScience from "@/assets/design/category-science.webp";
 import artworkWeiss from "@/assets/design/artwork-weiss-obsession.webp";
-import type { IssueExtras } from "@/lib/issue-extras";
+import bookMasumiyet from "@/assets/design/book-masumiyet-muzesi.webp";
+import movieBlackSwan from "@/assets/design/movie-black-swan.webp";
+import seriesYou from "@/assets/design/series-you.webp";
+import type { IssueCard, IssueCardImage, IssueCardKind, IssueExtras } from "@/lib/issue-extras";
 import { categoryImageKey, formatIssueNumber, type CategoryImageKey } from "@/lib/site";
 import { spotifyEmbedUrl } from "@/lib/spotify";
 import { RailEnd } from "./rail-end";
@@ -31,9 +34,26 @@ const CATEGORY_IMAGES: Record<CategoryImageKey, StaticImageData> = {
   pop: categoryPop,
 };
 
-const ARTWORK_IMAGES: Record<NonNullable<IssueExtras["artwork"]>["image"], StaticImageData> = {
+const CARD_IMAGES: Record<IssueCardImage, StaticImageData> = {
+  "black-swan": movieBlackSwan,
+  you: seriesYou,
+  "masumiyet-muzesi": bookMasumiyet,
   "weiss-obsession": artworkWeiss,
 };
+
+const CARD_LABELS: Record<IssueCardKind, string> = {
+  movie: "Sayının filmi",
+  series: "Sayının dizisi",
+  book: "Sayının kitabı",
+  artwork: "Sayının eseri",
+};
+
+function cardImageAlt(card: IssueCard): string {
+  const name = `${card.title} (${card.year})`;
+  if (card.kind === "book") return `${card.credit}, ${name} kitap kapağı`;
+  if (card.kind === "artwork") return `${card.credit}, ${name}`;
+  return `${name} afişi`;
+}
 
 export type HomeIssue = {
   number: number;
@@ -54,8 +74,8 @@ export function HomePage({
   areas: string[];
   extras: IssueExtras | null;
 }) {
-  const hasExtras =
-    extras !== null && (Boolean(extras.book) || Boolean(extras.artwork) || Boolean(extras.playlist));
+  const cards = extras?.cards ?? [];
+  const hasExtras = extras !== null && (cards.length > 0 || Boolean(extras.playlist));
 
   return (
     <>
@@ -141,36 +161,34 @@ export function HomePage({
         // The design keeps the playlist still at the right while the issue's cards slide
         // past it; on a phone the playlist drops below the rail (D-119)
         <section className="issue-extras-row" aria-label={`Sayı ${formatIssueNumber(issue.number)} seçkisi`}>
-          {(extras.book || extras.artwork) && (
+          {cards.length > 0 && (
             <RailEnd className="extras-rail" label="Sayının kartları">
-              {extras.book && (
-                <article className="extra-panel extra-book">
-                  <h3 className="extra-heading">
-                    {extras.book.title} ({extras.book.year}) - {extras.book.author}
-                  </h3>
-                  <p className="extra-text">{extras.book.text}</p>
-                  <p className="extra-label">Sayının kitabı</p>
-                </article>
-              )}
-
-              {extras.artwork && (
-                <article className="extra-panel extra-art">
-                  <div className="extra-artwork">
-                    <Image
-                      src={ARTWORK_IMAGES[extras.artwork.image]}
-                      alt={`${extras.artwork.artist}, ${extras.artwork.title} (${extras.artwork.year})`}
-                      sizes="(min-width: 1000px) 26rem, 90vw"
-                    />
-                    <div className="space-y-4">
-                      <h3 className="extra-heading" lang={extras.artwork.lang}>
-                        {extras.artwork.title} ({extras.artwork.year}) - {extras.artwork.artist}
-                      </h3>
-                      <p className="extra-text">{extras.artwork.text}</p>
+              {cards.map((card) => {
+                const image = CARD_IMAGES[card.image];
+                // Posters and covers stand upright; the painting lies flat and gets a wider card
+                const upright = image.height > image.width;
+                return (
+                  <article
+                    key={`${card.kind}-${card.title}`}
+                    className={`extra-panel ${upright ? "extra-poster" : "extra-art"}`}
+                  >
+                    <div className="extra-artwork">
+                      <Image
+                        src={image}
+                        alt={cardImageAlt(card)}
+                        sizes={upright ? "(min-width: 640px) 14rem, 90vw" : "(min-width: 1000px) 26rem, 90vw"}
+                      />
+                      <div className="space-y-4">
+                        <h3 className="extra-heading" lang={card.lang}>
+                          {card.title} ({card.year}) - {card.credit}
+                        </h3>
+                        <p className="extra-text">{card.text}</p>
+                      </div>
                     </div>
-                  </div>
-                  <p className="extra-label">Sayının eseri</p>
-                </article>
-              )}
+                    <p className="extra-label">{CARD_LABELS[card.kind]}</p>
+                  </article>
+                );
+              })}
             </RailEnd>
           )}
 

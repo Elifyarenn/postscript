@@ -2343,8 +2343,8 @@
   scroll-snap-align: center;
 }
 
-.ps-site .extra-book {
-  width: min(26rem, 82vw);
+.ps-site .extra-poster {
+  width: min(40rem, 88vw);
 }
 
 .ps-site .extra-art {
@@ -2985,5 +2985,21 @@
   .ps-site .issue-extras-row .extra-player {
     position: sticky;
     top: 1.5rem;
+  }
+}
+
+/* ════════════════ Movie, series and book cards on the rail (D-120) ════════════════ */
+
+/* A poster keeps a narrow column so its text gets the room a painting would take */
+@media (min-width: 640px) {
+  .ps-site .extra-poster .extra-artwork {
+    grid-template-columns: minmax(0, 14rem) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 639px) {
+  .ps-site .extra-poster .extra-artwork img {
+    width: min(100%, 14rem);
+    margin-inline: auto;
   }
 }

@@ -4243,3 +4243,66 @@ alanı dışında kalan kartlar ayrı dışa aktarılırsa eklenir.
 - **Canlıya alma:** b5e417e push'u için Vercel hiç deploy oluşturmadı; GitHub'a
   durum kaydı düşmedi, Vercel durum sayfasında da kesinti yoktu. Deploy bu
   kayıtla yeniden tetiklendi.
+
+## D-120 — Tasarımın çizim alanı dışındaki kartları da şeride eklendi
+
+**Durum:** D-119, "postscript ana sayfa kullanıcı olan.ai" dosyasında yalnızca iki
+kart (kitap ve eser) olduğunu söylüyordu. Bu yanlıştı. O sonuç yalnızca PDF
+katmanına bakılarak çıkarılmıştı ve PDF katmanı çizim alanıyla kırpılıyor.
+
+Illustrator'ın kendi verisi (`AIPrivateData`, ZStandard ile sıkıştırılmış) çözüldü:
+
+- **Gömülü görseller:** Çizim alanının solunda üç kart görseli daha var:
+  - Masumiyet Müzesi kapağı (x≈−550)
+  - *You* afişi (x≈−1440)
+  - *Black Swan* afişi (x≈−2336)
+- **Metin belgesi:** `AI11TextDocument`, satır başında tek `%` bulunan ASCII85
+  kodlaması. Kart başlıkları ve metinleri buradan okundu:
+  - MOVIE OF THE ISSUE: Black Swan (2010), Darren Aronofsky
+  - SERIES OF THE ISSUE: You, Greg Berlanti & Sera Gamble
+  - BOOK OF THE ISSUE: Masumiyet Müzesi (2008), Orhan Pamuk. Kitap metninin tam
+    hâli de burada; D-115'te görünen parçalardan tamamlanan metnin yerini aldı.
+  - ARTWORK OF THE ISSUE: Obsession (1899), Wojciech Weiss
+
+**Karar:**
+
+- `issue-extras.ts` artık `book`/`artwork` alanları yerine sıralı bir `cards`
+  listesi tutuyor.
+  - Sıra tasarımdaki gibi soldan sağa: film, dizi, kitap, eser.
+  - Şerit geniş ekranda sona kaydırılmış açıldığı için okur önce eseri görür
+    (tasarımdaki gibi), geri kaydırdıkça kitap, dizi ve filme ulaşır.
+- Kart etiketleri Türkçe: Sayının filmi, Sayının dizisi, Sayının kitabı, Sayının eseri.
+- Dikey görselli kartlar (afiş, kapak) 14rem'lik dar bir görsel sütunuyla
+  (`extra-poster`), yatay tablo geniş kartla (`extra-art`) çizilir. Hangisinin
+  kullanılacağı görselin boyutundan anlaşılır.
+- Metinlerde iki düzeltme yapıldı:
+  - Tasarım *You* için "2008" diyor. Dizi 2018'de yayına başladı; 2018 yazıldı.
+  - Black Swan metnindeki çift nokta ("işler..") teke indi.
+- Görseller tasarım dosyasındaki ham RGB verisinden çıkarıldı, 560 px genişliğe
+  indirilip WebP olarak `src/assets/design/` altına kondu.
+
+**Hukuk (hukukçu görüşü gerekiyor):**
+
+- Kitap kapağı (YKY) ile *You* ve *Black Swan* afişleri telifsiz görsel değil.
+  Hakları yayınevine ve yapımcılara ait.
+- Sahip, tasarımdaki görsellerin yayınlanmasını istedi (D-115: "sen yayınla ben
+  yine de sorarım"). Kartlar eseri tanıtan ve inceleyen metinlerle birlikte
+  kullanılıyor.
+- Bu kullanımın FSEK m. 35 (iktibas) kapsamında kalıp kalmadığı hukukçuya
+  sorulmalı. Olumsuz görüş gelirse görsel kaldırılır ya da lisanslı bir
+  görselle değiştirilir; kartın metni kalır.
+- Kişisel veri değişikliği yok; KVKK metni değişmedi.
+
+**Doğrulama:**
+
+- typecheck ve lint temiz; 53 dosyada 539 test geçti.
+- **Yerel tarayıcı ölçümü:** Çalma listesi hiçbir genişlikte şeridin içinde değil;
+  sayfada yatay taşma yok.
+
+  | Genişlik | Kart şeridi | Çalma listesi |
+  |---|---|---|
+  | 1920 px | 848 px görünür / 2760 px içerik, sona kaydırılmış | 384 px, sabit |
+  | 1280 px | 808 / 2760 px | 384 px, sabit |
+  | 390 px | Üstte kayar (358 / 1445 px) | Altta tam genişlik |
+
+- Dört kartın görselleri yüklendi; başlık, etiket ve alt metinleri doğru.
