@@ -36,6 +36,7 @@ ortaklık adına tek başına temsile yetkilidir.
 | Trafik kaydı | Her yorum, sohbet mesajı, özel mesaj, anonim mesaj, gönderi ve yanıt için: gönderen hesap, IP adresi, tarayıcı bilgisi (user-agent), işlem türü ve zamanı |
 | Moderasyon | Yasaklama durumu ve gerekçesi, kaldırılan içerik kayıtları |
 | Denetim | Panelde yapılan işlemlerin kaydı: kimin, ne zaman, hangi işlemi, hangi IP adresinden yaptığı |
+| İletişim formu | İletişim sayfasındaki formu doldurduğunuzda yazdığınız ad, e-posta adresi, konu ve mesajınız. Bu bilgiler sitede saklanmaz; doğrudan derginin e-posta kutusuna iletilir |
 | Profil görselleri | Topluluk profilinize yüklediğiniz profil fotoğrafı ve kapak fotoğrafı; yükleyen hesap, dosya türü ve boyutu. Bu görselleri giriş yapmış diğer üyeler görür; yüklemek zorunlu değildir |
 | Müzik çalar | Üye olarak giriş yapmışken ana sayfadaki Spotify çalarını açtığınızda tarayıcınızın Spotify ile kurduğu bağlantıda iletilen IP adresi ve tarayıcı bilgisi; bu veriler dergiye değil, doğrudan Spotify AB şirketine gider |
 
@@ -83,6 +84,7 @@ saklanmaz**.
 | Yetkili kamu kurum ve kuruluşlarının hukuka uygun taleplerinin karşılanması | (a) Kanunlarda açıkça öngörülmesi, (ç) Hukuki yükümlülük |
 | Panel içi bildirim ve duyuruların iletilmesi | (c) Sözleşmenin ifası |
 | Aydınlatma metninin yeni sürümlerinin duyurulması ve hangi sürümün ne zaman okunduğunun kaydedilmesi | (ç) Veri sorumlusunun hukuki yükümlülüğü — KVKK m. 10 |
+| İletişim formundan gönderdiğiniz mesajı okumak ve size cevap vermek | Meşru menfaat (KVKK m. 5/2-f): bize yazan kişiye cevap verebilmek. Formu doldurmak zorunda değilsiniz; aynı adrese doğrudan da yazabilirsiniz |
 | Sayının çalma listesinin, yalnızca üye olarak giriş yapmışken siz çal düğmesine bastığınızda Spotify çaları yüklenerek dinletilmesi | Açık rıza (KVKK m. 5/1): çalar, düğmeye basmanızdan önce hiçbir veri iletmez; basmazsanız yüklenmez |
 
 Pazarlama, reklam veya profilleme amacıyla kişisel veri işlemiyoruz. Hakkınızda
@@ -99,6 +101,10 @@ Kişisel verileriniz tamamen elektronik ortamda toplanır:
 - **Kullanım sırasında otomatik olarak:** Oturum çerezi aracılığıyla tutulan
   oturum kaydı ile sunucu tarafında oluşan IP adresi, tarayıcı bilgisi ve işlem
   zamanı kayıtları.
+- **İletişim formunu gönderdiğinizde:** Yazdığınız ad, e-posta adresi, konu ve
+  mesaj derginin e-posta kutusuna iletilir; site bu bilgileri kaydetmez. Formun
+  kötüye kullanılmasını önlemek için gönderim sırasında IP adresiniz sayaç
+  amacıyla kullanılır.
 - **Bot doğrulaması sırasında:** Kayıt ve doğrulama e-postası formlarındaki
   Cloudflare Turnstile bileşeni aracılığıyla, tarayıcınızdan toplanan teknik
   sinyaller ve IP adresiniz.
@@ -152,6 +158,7 @@ esas alınarak gerçekleştirilmektedir.
 | Veri | Saklama süresi |
 |---|---|
 | Hesap verileri (kimlik, iletişim, profil) | Hesap açık kaldığı sürece. Silme talebiniz üzerine 30 gün sonra anonimleştirilir. |
+| İletişim formu mesajları | Sitede saklanmaz. Derginin e-posta kutusunda, talebiniz karşılandıktan sonra en geç 1 yıl içinde silinir. |
 | Profil ve kapak fotoğrafı | Siz kaldırana kadar. Yenisini yüklediğinizde eskisi hemen silinir; hesabınız silindiğinde dosyalar da silinir. |
 | Tamamlanmamış (e-postası doğrulanmamış) kayıtlar | 7 gün |
 | E-posta doğrulama bağlantıları | 24 saat |

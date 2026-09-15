@@ -307,3 +307,24 @@ export function mandatoryAnnouncement(input: {
       signature,
   };
 }
+
+export function contactMessage(input: {
+  name: string;
+  email: string;
+  subject: string | null;
+  topic: string | null;
+  message: string;
+}): Template {
+  return {
+    subject: `postscript · İletişim formu: ${input.subject ?? input.topic ?? "yeni mesaj"}`,
+    text:
+      "İletişim formundan yeni bir mesaj geldi.\n\n" +
+      `Ad: ${input.name}\n` +
+      `E-posta: ${input.email}\n` +
+      `Konu: ${input.subject ?? "—"}\n` +
+      `Başlık: ${input.topic ?? "—"}\n\n` +
+      `Mesaj:\n${input.message}\n\n` +
+      "Yanıtlamak için gönderenin e-posta adresine yazın." +
+      signature,
+  };
+}

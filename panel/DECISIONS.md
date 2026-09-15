@@ -5245,3 +5245,71 @@ işlerde görünen ad (FSEK ve künye bakımından değişmedi).
   ve "Hesabım=/account". Mahlas topluluk ayarlarından kaydedildi
   ("Mahlasınız … olarak kaydedildi."), önizlemede göründü; boşaltılınca önizleme
   kullanıcı adına döndü.
+
+## D-145 — İletişim sayfası tasarımdaki hâliyle: mesaj formu
+
+**Durum:** `/iletisim` D-137'de dört bilgi kartından oluşuyordu. Tasarımda
+("contact, about, categories.ai") ise iki sütun var: solda davet metni ve
+adresler, sağda "SEND US A MESSAGE" formu. Ürün sahibi sayfanın tasarımla aynı
+olmasını istedi.
+
+**Tasarımdan okunanlar:** Dosyanın tek çizim alanı About ekranı; iletişim ekranı
+çizim alanının dışında (x≈+2165) duruyor ve PDF katmanında yok. Metinler
+Illustrator'ın kendi verisinden çıkarıldı: "GET IN TOUCH", "HAVE A QUESTION?",
+"SEND US A MESSAGE", davet paragrafı, alanlar (Name *, Email*, Subject, "Choose
+a topic...", Message *), "SEND" düğmesi, `magpostscript@gmail.com` ve
+`postscriptmgzn`.
+
+**Karar:**
+
+- **Sayfa:** İki sütun. Solda "Bize ulaşın" başlığı, tasarımdaki davet paragrafı,
+  e-posta adresi, adresi bilinen hesaplar, künye/KVKK yönlendirmesi ve "Aramıza
+  katıl" düğmesi. Sağda "Bize mesaj gönderin" formu: Ad *, E-posta *, Konu,
+  başlık seçimi, Mesaj * ve "Gönder".
+- **Form ne yapıyor:** Mesaj derginin künyedeki e-posta adresine gönderilir.
+  - **Veritabanına hiçbir şey yazılmaz;** mesaj yalnızca posta kutusunda kalır.
+  - Bot doğrulaması (Turnstile, "contact" eylemi) ve IP başına saatte üç mesaj
+    sınırı var. Sınır için `auth_scope` listesine `contact_form_ip` eklendi
+    (migration 0033).
+  - Form sabit bir adrese, yani bize yazar; yabancı bir adrese posta göndermek
+    için kullanılamaz.
+- **Tasarımdan iki sapma:**
+  - Tasarımda `magpostscript@gmail.com` yazıyor. Sayfa künyedeki adresi gösterir;
+    adres tek yerde (site ayarları) tutulur ve panelden değiştirilir. Gmail adresi
+    gösterilecekse ayarlardan yazılması yeterli.
+  - "Choose a topic..." listesinin seçenekleri tasarımda yok; liste yazı
+    alanlarından (kategoriler) ve "Diğer" seçeneğinden oluşuyor.
+- **Metinler Türkçe:** Tasarımın çerçevesi İngilizce, site Türkçe (D-112'den beri).
+  Başlıklar aynı anlamla Türkçeye çevrildi.
+
+**Hukuk:**
+
+- Form yeni kişisel veri topluyor: ad, e-posta, konu, mesaj. Aydınlatma metnine
+  eklendi: işlenen veri (§2), amaç ve hukuki sebep (§3, meşru menfaat — bize yazan
+  kişiye cevap verebilmek), toplanma yöntemi (§4) ve saklama (§7: sitede
+  saklanmaz; posta kutusunda en geç 1 yıl).
+- Mesajı göndermek zorunlu değil; aynı adrese doğrudan yazılabilir.
+- **Canlı metin hâlâ 1. sürüm.** Form canlıya alınmadan önce ürün sahibinin
+  tebligat adresini vermesi ve tam metnin yayınlanması gerekiyor (D-125, D-132).
+
+**Doğrulama (D-145):**
+
+- typecheck ve lint temiz; 60 dosyada 572 test geçti.
+- `tests/integration/contact-form.test.ts`: mesaj künyedeki adrese gidiyor ve
+  gönderenin adresiyle metni içeriyor; kısa mesaj, bozuk e-posta ve boş ad 400
+  dönüyor; aynı IP'den saatte dördüncü mesaj 429 alıyor ve sayaç
+  `contact_form_ip` kapsamında tutuluyor. Veritabanına mesaj yazılmıyor.
+- **Demo sunucusu (1440 px ve 390 px):**
+
+  | Kontrol | Sonuç |
+  |---|---|
+  | Başlık | "İletişim" / "Bir sorunuz mu var?" |
+  | Sütunlar | 1440 px'de yan yana, 390 px'de alt alta; yatay taşma yok |
+  | Kart başlıkları | "Bize ulaşın", "Bize mesaj gönderin" |
+  | Alanlar | Ad *, E-posta *, Konu, Başlık seçin, Mesaj *; düğme "Gönder" |
+  | Başlık listesi | Yazı alanları ve "Diğer" |
+  | Gönderim | "Mesajınız bize ulaştı. En kısa sürede yanıtlayacağız." |
+  | Posta | Künyedeki adrese gitti; konu ve gönderenin adresi içinde |
+
+- **Düzeltme:** İki sütun tasarımdaki gibi aynı yükseklikte olacak şekilde
+  hizalandı.

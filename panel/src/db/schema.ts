@@ -151,6 +151,8 @@ export const authScopeEnum = pgEnum("auth_scope", [
   "login_account",
   "login_2fa",
   "password_reset_ip",
+  /** The contact form, counted per IP address (D-145). */
+  "contact_form_ip",
 ]);
 
 /* ------------------------------------------------------------------ */

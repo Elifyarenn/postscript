@@ -225,6 +225,13 @@
       "when": 1789512392120,
       "tag": "0032_stormy_quasimodo",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1789515811261,
+      "tag": "0033_brown_sentry",
+      "breakpoints": true
     }
   ]
 }

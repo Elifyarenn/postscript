@@ -1,0 +1,1 @@
+ALTER TYPE "public"."auth_scope" ADD VALUE 'contact_form_ip';

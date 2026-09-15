@@ -3270,28 +3270,62 @@
 
 .ps-site .contact-page {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
   gap: 1.5rem;
   padding: 2rem clamp(1rem, 3vw, 2rem) 3rem;
 }
 
-.ps-site .contact-card {
+/* The design puts the invitation beside the message form (D-145) */
+@media (min-width: 960px) {
+  .ps-site .contact-page {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    align-items: stretch;
+  }
+}
+
+.ps-site .contact-intro,
+.ps-site .contact-form-card {
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
-  padding: 1.5rem;
+  gap: 1rem;
+  padding: 1.75rem clamp(1.25rem, 3vw, 2rem);
   border: 1px solid var(--site-rule);
 }
 
-.ps-site .contact-card h2 {
+.ps-site .contact-heading {
   font-family: var(--font-caps), Georgia, serif;
-  font-size: 1.3rem;
+  font-size: clamp(1.3rem, 2.4vw, 1.8rem);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
-.ps-site .contact-card .site-button {
+.ps-site .contact-text {
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.ps-site .contact-note {
+  color: var(--site-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.ps-site .contact-consent {
+  color: var(--site-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.ps-site .contact-intro .site-button {
   align-self: flex-start;
+}
+
+.ps-site .contact-form-card form {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.ps-site .contact-form-card textarea {
+  min-height: 9rem;
 }
 
 .ps-site .contact-mail {

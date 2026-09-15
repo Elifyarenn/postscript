@@ -10,7 +10,13 @@ import { and, eq, lt } from "drizzle-orm";
 import { db } from "@/db/client";
 import { authAttempts } from "@/db/schema";
 
-export type AuthScope = "register_ip" | "login_ip" | "login_account" | "login_2fa" | "password_reset_ip";
+export type AuthScope =
+  | "register_ip"
+  | "login_ip"
+  | "login_account"
+  | "login_2fa"
+  | "password_reset_ip"
+  | "contact_form_ip";
 
 export type RateLimitRule = {
   /** How many attempts are allowed inside one window. */
@@ -29,6 +35,8 @@ export const RULES: Record<AuthScope, RateLimitRule> = {
   // The second factor is six digits: five tries a window before a lockout
   login_2fa: { limit: 5, windowMs: 15 * 60_000, lockMs: 15 * 60_000 },
   password_reset_ip: { limit: 5, windowMs: 15 * 60_000, lockMs: 15 * 60_000 },
+  // The contact form mails the magazine; three messages an hour from one address is plenty (D-145)
+  contact_form_ip: { limit: 3, windowMs: 60 * 60_000, lockMs: 60 * 60_000 },
 };
 
 export type RateLimitResult = {
