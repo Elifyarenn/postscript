@@ -4531,3 +4531,60 @@ sorumluluğu) hâlâ açık.
   "Ayrıntılar" bağlantısı ise şu an Spotify'ı anlatmayan metne gidiyor.
 - **Kapanış koşulu:** Adres gelince md'ye yazılır ve tam metin yeni sürüm olarak
   yayınlanır; o zaman aradaki fark kapanır. Hukukçu soruları (D-117) açık.
+
+## D-126 — Çalma listesi çalarken plak döner
+
+**Durum:** Ana sayfadaki çalma listesinde (D-117) çal düğmesine basılınca
+Spotify çaları bütün çerçeveyi kaplıyordu; tasarımdaki plak çalar kayboluyordu.
+Ürün sahibi, çalma listesi başladığında plağın plak çalarda dönmesini istedi.
+
+**İnceleme:** Spotify'ın resmî iframe API betiği
+(`open.spotify.com/embed/iframe-api/v1`) çalarla yalnızca `postMessage` ile
+konuşuyor:
+
+- Çalar yüklenince `{ type: "ready" }` gönderiyor. API bu mesaja
+  `{ command: "load_complete_ack" }` ile cevap veriyor.
+- Çalma başlayınca, duraklayınca ya da ilerleyince
+  `{ type: "playback_update", payload: { isPaused, isBuffering, position, duration } }`
+  gönderiyor.
+- API iframe'e `allow="autoplay; …"` izni veriyor. Canlı sitede Chrome ile
+  yapılan denemede bu izin olmadan çalma başlamadı. İzin verilince `playback_update`
+  mesajları geldi, `pause` komutu da çaları durdurdu.
+
+**Karar:**
+
+- **Betik eklenmedi:** Spotify'ın API betiği sayfaya yüklenmedi; sitenin kendi
+  kökeninde üçüncü taraf kod çalışmaz. CSP değişmedi.
+  - Bileşen mesajları kendisi dinliyor.
+  - Yalnızca `https://open.spotify.com` kökeninden ve kendi açtığı iframe'in
+    penceresinden gelen mesajları kabul ediyor.
+  - Cevabı da yalnızca o kökene gönderiyor.
+- **Mesaj okuma:** Tek yerde, `readEmbedMessage` (`src/lib/spotify.ts`) içinde.
+  Bozuk ya da bilinmeyen mesajlar yok sayılır; birim testi eklendi.
+- **Açık çalar:** Çalar açıldığında plak çalar çaların altında görünür kalır.
+  - `isPaused: false` iken plak döner (1.8 sn'de bir tur) ve kol plağa iner.
+  - Duraklatınca plak durur.
+- **Dönüşün görünmesi:** Plağın oyukları her açıda aynı görünür. Dönüşü göstermek
+  için plağa hafif bir parlama, etiketine bir nokta eklendi.
+- **Hareketi azaltma:** `prefers-reduced-motion` açık olan okurda plak dönmez,
+  kol hareket etmez.
+- **İzin:** Iframe'in `allow` listesine `autoplay` eklendi. Çalar yine yalnızca
+  okur çal düğmesine bastıktan sonra yükleniyor.
+
+**Hukuk:** Yeni kişisel veri yok. Çalarla sayfa arasındaki mesajlar okurun
+tarayıcısında kalıyor, sunucuya gitmiyor. Spotify'ın aldığı veri D-117'dekiyle
+aynı; aydınlatma metni değişmedi.
+
+**Doğrulama:**
+
+- typecheck ve lint temiz; 53 dosyada 543 test geçti (`tests/unit/spotify.test.ts` 7).
+- **Yerel Chrome denemesi (gerçek çalma):**
+
+  | Durum | Plak |
+  |---|---|
+  | Çalar kapalı | Dönmüyor |
+  | Çalar açık, çalmıyor | Dönmüyor |
+  | Çalıyor | `ps-record-spin` animasyonu çalışıyor; 400 ms arayla açısı değişti |
+  | Duraklatıldı | Durdu |
+
+  CSP hatası yok.

@@ -36,3 +36,24 @@ export function spotifyEmbedUrl(link: string | null | undefined): string | null 
   const id = spotifyPlaylistId(link);
   return id ? `https://open.spotify.com/embed/playlist/${id}` : null;
 }
+
+/** The only origin whose messages the player listens to. */
+export const SPOTIFY_ORIGIN = "https://open.spotify.com";
+
+export type EmbedMessage = { kind: "ready" } | { kind: "playback"; playing: boolean };
+
+/**
+ * A message from Spotify's embedded player, as its own iframe API reads them
+ * (D-126): "ready" once the player loads, then "playback_update" whenever it
+ * starts, pauses or moves on. Anything else, or a malformed message, is null.
+ */
+export function readEmbedMessage(data: unknown): EmbedMessage | null {
+  if (typeof data !== "object" || data === null) return null;
+  const { type, payload } = data as { type?: unknown; payload?: unknown };
+  if (type === "ready") return { kind: "ready" };
+  if (type === "playback_update" && typeof payload === "object" && payload !== null) {
+    const paused = (payload as { isPaused?: unknown }).isPaused;
+    if (typeof paused === "boolean") return { kind: "playback", playing: !paused };
+  }
+  return null;
+}

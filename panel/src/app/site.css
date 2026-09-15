@@ -3095,3 +3095,59 @@
   scroll-snap-align: start;
   scroll-snap-stop: always;
 }
+
+/* ════════════════ The record turns while the playlist plays (D-126) ════════════════ */
+
+.ps-site .player-deck {
+  padding: 0.8rem 0.9rem 0;
+}
+
+/* The grooves look the same at every angle, so a sheen and a spot on the label show the turn */
+.ps-site .turntable-record::before {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    transparent 0deg 30deg,
+    rgb(255 255 255 / 0.16) 45deg,
+    transparent 60deg 210deg,
+    rgb(255 255 255 / 0.1) 225deg,
+    transparent 240deg
+  );
+  content: "";
+}
+
+.ps-site .turntable-record::after {
+  background:
+    radial-gradient(circle at 50% 28%, var(--site-paper) 0 9%, transparent 10%),
+    var(--site-wine);
+}
+
+.ps-site .turntable-record.is-spinning {
+  animation: ps-record-spin 1.8s linear infinite;
+}
+
+/* The tonearm settles onto the record while it plays */
+.ps-site .turntable-deck::after {
+  transition: transform 0.6s ease;
+}
+
+.ps-site .turntable-deck.is-playing::after {
+  transform: rotate(-8deg);
+}
+
+@keyframes ps-record-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ps-site .turntable-record.is-spinning {
+    animation: none;
+  }
+
+  .ps-site .turntable-deck::after {
+    transition: none;
+  }
+}

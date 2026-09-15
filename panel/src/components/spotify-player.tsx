@@ -1,17 +1,32 @@
 "use client";
 
 /**
- * The front page playlist's player (D-117).
+ * The front page playlist's player (D-117, D-126).
  *
  * Spotify's embedded player is loaded only when the reader presses play. Until
  * then no request reaches Spotify, so opening the front page sends nobody's IP
  * address or browser details abroad; the note beside the button says what the
  * press does before it is made. Without a playlist link the player is drawn as
  * designed and stays empty.
+ *
+ * Once open, the player tells the page when the playlist plays or pauses, and
+ * the record on the turntable turns while it plays. Those messages stay in the
+ * reader's browser; nothing about them reaches the site's server.
  */
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { FastForward, Music, Play, Rewind } from "lucide-react";
+import { readEmbedMessage, SPOTIFY_ORIGIN } from "@/lib/spotify";
+import { cn } from "@/lib/utils";
+
+function Turntable({ playing }: { playing: boolean }) {
+  return (
+    <div className="turntable" aria-hidden>
+      <span className={cn("turntable-deck", playing && "is-playing")} />
+      <span className={cn("turntable-record", playing && "is-spinning")} />
+    </div>
+  );
+}
 
 export function SpotifyPlayer({
   embedUrl,
@@ -26,7 +41,30 @@ export function SpotifyPlayer({
   header: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const frameRef = useRef<HTMLIFrameElement>(null);
   const soon = embedUrl ? "Spotify çalarında kullanılır" : "Çalma listesi yakında";
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onMessage = (event: MessageEvent) => {
+      const frame = frameRef.current?.contentWindow;
+      // Only the player this component opened may move the record
+      if (event.origin !== SPOTIFY_ORIGIN || !frame || event.source !== frame) return;
+
+      const message = readEmbedMessage(event.data);
+      if (message?.kind === "ready") {
+        // Spotify's own iframe API answers the handshake; the player reports playback only after it
+        frame.postMessage({ command: "load_complete_ack" }, SPOTIFY_ORIGIN);
+      } else if (message?.kind === "playback") {
+        setPlaying(message.playing);
+      }
+    };
+
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [open]);
 
   if (embedUrl && open) {
     return (
@@ -34,13 +72,18 @@ export function SpotifyPlayer({
         {header}
         <div className="player-embed">
           <iframe
+            ref={frameRef}
             src={embedUrl}
             title={title}
             width="100%"
             height="352"
             loading="lazy"
-            allow="clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+            // The reader has already pressed play here; autoplay lets that press start the music
+            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
           />
+        </div>
+        <div className="player-deck">
+          <Turntable playing={playing} />
         </div>
       </div>
     );
@@ -65,10 +108,7 @@ export function SpotifyPlayer({
             )}
           </div>
           <span className="player-scroll" aria-hidden />
-          <div className="turntable" aria-hidden>
-            <span className="turntable-deck" />
-            <span className="turntable-record" />
-          </div>
+          <Turntable playing={false} />
         </div>
       </div>
 

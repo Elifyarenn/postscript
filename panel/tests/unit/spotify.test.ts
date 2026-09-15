@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { spotifyEmbedUrl, spotifyPlaylistId } from "@/lib/spotify";
+import { readEmbedMessage, spotifyEmbedUrl, spotifyPlaylistId } from "@/lib/spotify";
 
 const ID = "37i9dQZF1DXcBWIGoYBM5M";
 
@@ -43,5 +43,29 @@ describe("spotifyEmbedUrl", () => {
       `https://open.spotify.com/embed/playlist/${ID}`,
     );
     expect(spotifyEmbedUrl(null)).toBeNull();
+  });
+});
+
+describe("readEmbedMessage (D-126)", () => {
+  it("reads the player's handshake and whether the playlist is playing", () => {
+    expect(readEmbedMessage({ type: "ready" })).toEqual({ kind: "ready" });
+    expect(
+      readEmbedMessage({
+        type: "playback_update",
+        payload: { isPaused: false, isBuffering: true, duration: 29713, position: 0 },
+      }),
+    ).toEqual({ kind: "playback", playing: true });
+    expect(readEmbedMessage({ type: "playback_update", payload: { isPaused: true } })).toEqual({
+      kind: "playback",
+      playing: false,
+    });
+  });
+
+  it("ignores anything else", () => {
+    expect(readEmbedMessage(null)).toBeNull();
+    expect(readEmbedMessage("ready")).toBeNull();
+    expect(readEmbedMessage({ type: "playback_update" })).toBeNull();
+    expect(readEmbedMessage({ type: "playback_update", payload: { isPaused: "no" } })).toBeNull();
+    expect(readEmbedMessage({ type: "playback_started", payload: {} })).toBeNull();
   });
 });
