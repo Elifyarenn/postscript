@@ -11,7 +11,7 @@ import type { ReactNode } from "react";
  */
 
 const LEGAL_LINKS = [
-  { href: "/iletisim", label: "Künye ve iletişim" },
+  { href: "/kunye", label: "Künye" },
   { href: "/kullanim-sartlari", label: "Kullanım şartları" },
   { href: "/kvkk", label: "KVKK aydınlatma metni" },
 ] as const;

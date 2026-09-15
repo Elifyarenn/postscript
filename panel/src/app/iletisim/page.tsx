@@ -1,129 +1,88 @@
-import { getSiteSettings } from "@/services/site-settings";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { getAuthContext } from "@/lib/auth/session";
-import { buildImprint, imprintFields } from "@/lib/legal";
-import { LegalPage } from "@/components/legal";
-import { Alert } from "@/components/ui";
+import { buildImprint } from "@/lib/legal";
+import { SOCIAL_LINKS } from "@/lib/site";
+import { getSiteSettings } from "@/services/site-settings";
+import { SiteShell } from "@/components/site-shell";
+import { SiteBanner } from "@/components/site-ui";
 
-export const metadata = { title: "Künye ve İletişim" };
+export const metadata = { title: "İletişim" };
 
-// The publisher details are admin-editable, so the page is rendered per request
+// The address comes from the admin-editable site settings, so it is read per request
 export const dynamic = "force-dynamic";
 
 /**
- * The notice 5651 s. 3 requires: who runs this site, where they can be reached,
- * and how a removal request is made (D-084).
- *
- * The law wants these facts reachable from the front page under a contact
- * heading, so the homepage nav and footer both link here.
+ * How to reach the magazine (D-137). The address is the imprint's own, so it
+ * is kept in one place (site_settings); removal requests and the statutory
+ * details stay on the imprint page, which this page points to. There is no
+ * form: a message sent from here would be a new kind of personal data.
  */
 export default async function ContactPage() {
   const [settings, context] = await Promise.all([getSiteSettings(), getAuthContext()]);
-  const imprint = buildImprint(settings);
-  const email = imprint.email;
-
-  // A blank line is a job for whoever can fix it. Telling every reader that the
-  // notice is incomplete only advertises the gap, so the warning is admin-only
-  // and the public page simply shows the lines that are filled in (D-085).
-  const isAdmin = context?.user.role === "admin";
-
-  // An admin sees the blanks so they know what is left to fill; a reader sees
-  // only the lines that carry a fact.
-  const allFields = imprintFields(imprint);
-  const fields = isAdmin ? allFields : allFields.filter((field) => field.value !== null);
+  const { email } = buildImprint(settings);
+  const user = context?.user ?? null;
+  const accounts = SOCIAL_LINKS.flatMap((link) => (link.url ? [{ ...link, url: link.url }] : []));
 
   return (
-    <LegalPage title="Künye ve İletişim" current="/iletisim">
-      <p>
-        Bu sayfa, 5651 sayılı İnternet Ortamında Yapılan Yayınların Düzenlenmesi ve Bu Yayınlar
-        Yoluyla İşlenen Suçlarla Mücadele Edilmesi Hakkında Kanun&rsquo;un 3. maddesi uyarınca
-        yayımlanmıştır.
-      </p>
+    <SiteShell user={user} bleed>
+      <SiteBanner title="İletişim" subtitle="Bize ulaşın" />
 
-      {isAdmin && imprint.missing.length > 0 ? (
-        <Alert tone="warning" title="Künye bilgileri eksik">
-          Şu alanlar henüz doldurulmadı: {imprint.missing.join(", ")}. Yöneticiler bu bilgileri
-          yönetim panelindeki &ldquo;Sistem&rdquo; sayfasından girer.
-        </Alert>
-      ) : null}
+      <div className="contact-page">
+        <section className="contact-card" aria-labelledby="contact-mail">
+          <h2 id="contact-mail">E-posta</h2>
+          <p>Dergiyle ilgili her konuda bize e-postayla yazabilirsiniz.</p>
+          {email ? (
+            <a href={`mailto:${email}`} className="contact-mail">
+              {email}
+            </a>
+          ) : (
+            <p className="contact-muted">E-posta adresimiz çok yakında burada.</p>
+          )}
+        </section>
 
-      <h2>Tanıtıcı bilgiler</h2>
+        <section className="contact-card" aria-labelledby="contact-writing">
+          <h2 id="contact-writing">Yazar olmak</h2>
+          <p>
+            Dergide yazmak istiyorsan hesabım sayfasından yazar başvurusu yapabilirsin. Başvurular
+            editör ve yönetim tarafından değerlendirilir.
+          </p>
+          {/* The writer application lives on the account page (D-037); a visitor signs up first */}
+          <Link href={user ? "/account" : "/register"} className="site-button">
+            Aramıza katıl <ArrowRight aria-hidden />
+          </Link>
+        </section>
 
-      <dl className="my-4 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-[12rem_1fr]">
-        {fields.map((field) => (
-          <div key={field.label} className="contents">
-            <dt className="text-muted">{field.label}</dt>
-            <dd>{field.value ?? <span className="text-muted">— belirtilmedi —</span>}</dd>
-          </div>
-        ))}
-      </dl>
+        <section className="contact-card" aria-labelledby="contact-legal">
+          <h2 id="contact-legal">Başvurular</h2>
+          <p>
+            Derginin tanıtıcı bilgileri ve içerik kaldırma başvurularının usulü{" "}
+            <Link href="/kunye" className="underline">
+              künye sayfasındadır
+            </Link>
+            . Kişisel verilerinize ilişkin başvurular için{" "}
+            <Link href="/kvkk" className="underline">
+              KVKK aydınlatma metnine
+            </Link>{" "}
+            bakın.
+          </p>
+        </section>
 
-      <p>
-        Postscript Dergisi kâr amacı gütmeyen bir e-dergidir. Ortaklardan her biri ortaklık adına
-        tek başına temsile yetkilidir. Dergiye ilişkin her konuda yukarıdaki e-posta adresi
-        kullanılabilir.
-      </p>
-
-      <h2>Hangi sıfatla sorumluyuz</h2>
-
-      <p>
-        Dergide yayımlanan yazılar bakımından <strong>içerik sağlayıcı</strong>, okuyucuların
-        yazdığı yorumlar ve topluluk sohbeti mesajları bakımından <strong>yer sağlayıcı</strong>
-        konumundayız. Yer sağlayıcı olarak barındırdığımız içeriği denetlemekle yükümlü değiliz;
-        hukuka aykırılığı bildirilen içeriği ise aşağıdaki usulle kaldırırız.
-      </p>
-
-      <h2>İçerik kaldırma ve itiraz başvuruları</h2>
-
-      <p>
-        Dergide yayımlanan bir içerik nedeniyle kişilik haklarının veya özel hayatın gizliliğinin
-        ihlal edildiğini düşünen herkes, 5651 sayılı Kanun&rsquo;un 9. ve 9/A maddeleri uyarınca
-        doğrudan bize başvurabilir. Başvuru için mahkeme kararı şartı yoktur.
-      </p>
-
-      <p>Başvurunuzda şunlar bulunmalıdır:</p>
-
-      <ul>
-        <li>Ad soyadınız ve size ulaşabileceğimiz bir e-posta adresi,</li>
-        <li>Şikâyet ettiğiniz içeriğin tam adresi (URL),</li>
-        <li>İçeriğin hangi hakkınızı nasıl ihlal ettiğine dair kısa açıklama,</li>
-        <li>Talebiniz: içeriğin kaldırılması, düzeltilmesi veya cevap hakkı.</li>
-      </ul>
-
-      <p>
-        Başvurunuzu{" "}
-        {email ? (
-          <a className="text-accent underline" href={`mailto:${email}`}>
-            {email}
-          </a>
-        ) : (
-          <span className="text-muted">künyedeki e-posta adresine</span>
-        )}{" "}
-        gönderin. Başvuruları <strong>en geç yirmi dört saat içinde</strong> cevaplandırırız.
-        Talebi yerinde bulursak içerik aynı süre içinde yayından kaldırılır; kaldırılan bir yazının
-        adresi, geri çekildiği bilgisiyle birlikte açık kalır. Talebi yerinde bulmazsak gerekçemizi
-        yazılı olarak bildiririz — bu durumda sulh ceza hâkimliğine başvurma hakkınız saklıdır.
-      </p>
-
-      <p>
-        Yazarlar, kendi yayımlanmış yazılarının kaldırılmasını panel üzerinden de talep edebilir;
-        bu talep yazar sözleşmesinin 9. maddesine tabidir.
-      </p>
-
-      <h2>Kişisel verilere ilişkin başvurular</h2>
-
-      <p>
-        6698 sayılı Kanun kapsamındaki taleplerinizin usulü ayrıca düzenlenmiştir; KVKK aydınlatma
-        metninin &ldquo;Başvuru usulü&rdquo; başlığına bakın.
-      </p>
-
-      <h2>Barındırma</h2>
-
-      <p>
-        {/* Region read from the Neon API, not assumed (D-100) */}
-        Site Vercel Inc. altyapısında yayımlanmakta, veritabanı ABD merkezli Neon Inc. tarafından
-        Almanya&rsquo;da (AWS eu-central-1, Frankfurt) işletilmektedir. Bu, derginin yer sağlayıcı
-        sıfatını ve yukarıdaki başvuru usulünü değiştirmez.
-      </p>
-    </LegalPage>
+        {accounts.length > 0 && (
+          <section className="contact-card" aria-labelledby="contact-follow">
+            <h2 id="contact-follow">Bizi takip edin</h2>
+            <ul className="contact-accounts">
+              {accounts.map((link) => (
+                <li key={link.key}>
+                  <a href={link.url} target="_blank" rel="noopener noreferrer">
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
+    </SiteShell>
   );
 }

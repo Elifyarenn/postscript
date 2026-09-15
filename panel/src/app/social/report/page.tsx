@@ -36,7 +36,7 @@ export default async function ReportPage({
           Bildiriminiz yöneticilere iletilir ve en geç 24 saat içinde incelenir. İçeriğin sahibi
           kimin bildirdiğini görmez. Kişilik haklarınızı ihlal eden bir içerik için 5651 sayılı Kanun
           kapsamındaki başvuru yolu{" "}
-          <Link href="/iletisim" className="underline">
+          <Link href="/kunye" className="underline">
             künye sayfasındadır
           </Link>
           .

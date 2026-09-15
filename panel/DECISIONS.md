@@ -4878,3 +4878,51 @@ profillerinde zaten herkese gösterilen adlar (D-089).
 
 **Doğrulama:** `tests/integration/public-reading.test.ts` içinde iki yeni test.
 Yerel tarayıcıda "Tanış" `/social`'a gidiyor. Yerel veritabanında herkese açık adı olan yazar ya da editör olmadığı için iki bölüm de "çok yakında" metnini gösteriyor.
+
+## D-137 — "İletişim" iletişim sayfasını açar; künye `/kunye`'de, alt bilgiden bağlı
+
+**Durum:** `/iletisim` hem 5651 s. 3 künyesiydi hem de üst menünün "İletişim"
+bağlantısının açtığı sayfaydı ("Künye ve İletişim", D-084). Ürün sahibi iki şey
+istedi:
+
+- "İletişim" bağlantısı bir iletişim sayfası açsın.
+- Künye alt bilgiye eklensin.
+
+**Karar:**
+
+- **Künye `/kunye`'ye taşındı:** İçerik aynı; yalnızca başlığı "Künye" oldu.
+  - Tanıtıcı bilgiler, sorumluluk sıfatı, içerik kaldırma usulü, kişisel veri
+    başvuruları ve barındırma bilgisi burada.
+  - Bilgiler yine `site_settings`'ten gelir.
+- **Yeni `/iletisim`:** Dergi çerçevesinde bir iletişim sayfası.
+  - Künyedeki e-posta adresi (aynı ayardan; ikinci kopya yok).
+  - Yazar başvurusuna yönlendirme.
+  - Künye ve KVKK sayfalarına yönlendirme.
+  - Adresi bilinen hesaplar (şimdilik Spotify).
+  - Form yok: buradan gönderilen bir mesaj yeni bir kişisel veri türü olurdu.
+- **Künyeye giden bağlantılar `/kunye`'ye döndü:**
+  - Yasal sayfaların alt menüsü ve panellerin alt bilgisi ("Künye").
+  - Kullanım şartlarındaki iki bağlantı.
+  - Topluluk bildirim sayfası.
+  - Hakkında'daki Editörler bölümü.
+- **Dergi alt bilgisi:** Dergi bağlantılarına "iletişim", yasal bağlantılara "künye"
+  eklendi. Künye, ana sayfa dahil her sayfanın alt bilgisinden tek tıkla
+  erişilebilir; 5651 s. 3'ün "ana sayfadan doğrudan erişim" şartı böyle karşılanıyor.
+- **Site haritası:** İki sayfa da site haritasına eklendi.
+- **CLAUDE.md farkı:** CLAUDE.md künyeyi `/iletisim` adresiyle anıyor. Gerçek adres
+  artık `/kunye`; bu kayıt geçerli.
+
+**Hukuk:** Künyenin içeriği değişmedi, yalnızca adresi. Eski adres
+(`/iletisim`) artık künye değil. Dışarıdan künyeye eski adresle verilmiş bir
+bağlantı iletişim sayfasına düşer; o sayfa da künyeye yönlendiriyor.
+
+**Doğrulama:**
+
+- typecheck ve lint temiz.
+- **Yerel tarayıcı, `/iletisim` (200):** Dört kart: E-posta, Yazar olmak, Başvurular, Bizi takip edin.
+  - E-posta bağlantısı künyedeki adresle aynı.
+  - Başvurular kartı `/kunye` ve `/kvkk`'ya, takip kartı Spotify hesabına gidiyor.
+  - Menüde "İletişim" etkin; yatay taşma yok.
+  - Alt bilgide "iletişim=/iletisim" ve "künye=/kunye" var.
+- **`/kunye` (200):** Başlık "Künye"; beş bölümün hepsi yerinde. Yasal alt menü "Künye" (bu sayfa), "Kullanım şartları", "KVKK aydınlatma metni".
+- **Kullanım şartları:** Künyeye giden bütün bağlantılar `/kunye`.

@@ -33,13 +33,14 @@ const MAGAZINE_LINKS = [
   { href: "/magazine", label: "son yazılar" },
   { href: "/social", label: "topluluk" },
   { href: "/hakkinda", label: "hakkında" },
+  { href: "/iletisim", label: "iletişim" },
 ] as const;
 
 // 5651 s. 3 wants these reachable from the front page (D-084)
 const LEGAL_LINKS = [
   { href: "/kullanim-sartlari", label: "kullanım şartları" },
   { href: "/kvkk", label: "gizlilik ve KVKK" },
-  { href: "/iletisim", label: "künye ve iletişim" },
+  { href: "/kunye", label: "künye" },
 ] as const;
 
 async function memberState(user: SessionUser) {

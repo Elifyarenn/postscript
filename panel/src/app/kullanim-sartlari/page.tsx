@@ -28,7 +28,7 @@ export default async function TermsPage() {
         Bu şartlar, Postscript Dergisi&rsquo;nin internet sitesini kullanan herkes için geçerlidir.
         Siteye kayıt olarak veya kayıtlı hesabınızla giriş yaparak bu şartları kabul etmiş
         olursunuz. Derginin tanıtıcı bilgileri ve iletişim adresi{" "}
-        <Link href="/iletisim" className="text-accent underline">
+        <Link href="/kunye" className="text-accent underline">
           künye sayfasındadır
         </Link>
         .
@@ -149,7 +149,7 @@ export default async function TermsPage() {
         </li>
         <li>
           Bir içeriğin kaldırılmasını talep etmek isterseniz{" "}
-          <Link href="/iletisim" className="text-accent underline">
+          <Link href="/kunye" className="text-accent underline">
             künye sayfasındaki başvuru usulünü
           </Link>{" "}
           izleyin; başvurular en geç yirmi dört saat içinde cevaplanır.

@@ -3265,3 +3265,54 @@
   font-size: 0.78rem;
   letter-spacing: 0.04em;
 }
+
+/* ════════════════ The contact page (D-137) ════════════════ */
+
+.ps-site .contact-page {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
+  gap: 1.5rem;
+  padding: 2rem clamp(1rem, 3vw, 2rem) 3rem;
+}
+
+.ps-site .contact-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding: 1.5rem;
+  border: 1px solid var(--site-rule);
+}
+
+.ps-site .contact-card h2 {
+  font-family: var(--font-caps), Georgia, serif;
+  font-size: 1.3rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ps-site .contact-card .site-button {
+  align-self: flex-start;
+}
+
+.ps-site .contact-mail {
+  font-size: 1.1rem;
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+
+.ps-site .contact-muted {
+  color: var(--site-muted);
+}
+
+.ps-site .contact-accounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ps-site .contact-accounts a {
+  text-decoration: underline;
+}

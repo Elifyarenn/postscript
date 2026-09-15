@@ -128,7 +128,7 @@ export default async function AboutPage({
               </p>
               <p>
                 Derginin sorumluları ve iletişim bilgileri{" "}
-                <Link href="/iletisim" className="underline">
+                <Link href="/kunye" className="underline">
                   künye sayfasında
                 </Link>
                 .

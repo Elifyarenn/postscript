@@ -281,8 +281,8 @@ export async function PanelShell({
             className="mb-2 flex flex-wrap justify-center gap-x-4 gap-y-1"
             aria-label="Yasal sayfalar"
           >
-            <Link href="/iletisim" className="hover:text-ink">
-              Künye ve iletişim
+            <Link href="/kunye" className="hover:text-ink">
+              Künye
             </Link>
             <Link href="/kullanim-sartlari" className="hover:text-ink">
               Kullanım şartları
