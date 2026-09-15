@@ -4188,3 +4188,42 @@ kaldı.
 2. `[AÇIK ADRES]` doldurulunca aydınlatma metninin yeni sürümü "Sistem"
    sayfasından yayınlanır. Bu sürüm Spotify satırlarını (D-117) ve AB
    depolamasını da içerir.
+
+---
+
+## D-119 — Ana sayfanın alt bölümünde çalma listesi sabit, sayının kartları kayar
+
+**İstek (ürün sahibi):** "Tasarımdaki hatayı düzelt: altta sayının kitabı, resmi
+vs. olan kısımda playlist sabit olacak, geri kalanı scroll olacak. Tasarımdaki
+tüm kartları çek ve scroll yap."
+
+**Sorun:** D-116'da kitap, eser ve çalma listesi aynı kayan şeritteydi. Şerit
+sona kaydırılarak açıldığı için çalma listesi de şeridin bir parçası gibi
+kayıyordu. Bazı genişliklerde kolonun kenarında kesik görünebiliyordu.
+
+**Tasarım dosyasındaki kartlar:** "ana sayfa" dosyalarının PDF katmanı çizim
+alanıyla kırpılı; alanın dışında hiçbir çizim yok (sol ve sağ bölgeler görüntüye
+çevrildi, boş). Kart sayısı iki kanıtla belirlendi:
+
+- **Metin katmanı:** Alt bölümde yalnızca iki kart etiketi var. Biri x≈0'da,
+  soldan taşan "(BOOK OF) THE ISSUE"; diğeri "ARTWORK OF THE ISSUE". Sayfanın
+  dışına yerleştirilmiş başka metin yok.
+- **Gömülü görseller:** Dosyada kolaj, 5 kategori fotoğrafı ve Weiss tablosu var;
+  başka bir kart görseli yok.
+
+Yani tasarımdaki kayan kartlar kitap ve eserdir; ikisi de sitede. Tasarımcı daha
+fazla kart çizdiyse, bunlar PDF katmanına aktarılmamış. Illustrator'da çizim
+alanı dışında kalan kartlar ayrı dışa aktarılırsa eklenir.
+
+**Karar:**
+
+- Alt bölüm iki sütun: solda kayan kart şeridi (`RailEnd`, kitap ve eser), sağda
+  sabit çalma listesi. Çalma listesi artık şeridin içinde değil.
+  - Geniş ekranda şerit sona kaydırılmış açılır: eser tam görünür, kitap soldan
+    taşar (tasarımdaki gibi). Okur geri kaydırabilir.
+  - Çalma listesi sayfa kaydırılırken kendi sütununda yapışkan kalır
+    (`position: sticky`).
+- Telefonda (<1000 px) şerit üstte yatay kayar, çalma listesi altına iner.
+- Şeridin kaydırma çubuğu ince ve bordo; kaydırılabildiği görünür.
+
+**Hukuk:** Değişiklik yok.

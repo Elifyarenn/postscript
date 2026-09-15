@@ -2947,3 +2947,43 @@
   border: 0;
   border-radius: 12px;
 }
+
+/* ════════════════ Issue cards beside a fixed playlist (D-119) ════════════════ */
+
+.ps-site .issue-extras-row {
+  display: grid;
+  gap: 1.5rem;
+  padding: 2rem clamp(1rem, 3vw, 2rem);
+}
+
+@media (min-width: 1000px) {
+  .ps-site .issue-extras-row {
+    grid-template-columns: minmax(0, 1fr) min(24rem, 32%);
+    align-items: stretch;
+  }
+}
+
+/* The rail now scrolls inside its own column, so it carries no outer padding */
+.ps-site .issue-extras-row .extras-rail {
+  min-width: 0;
+  padding: 0 0 0.9rem;
+  scroll-padding-inline: 0;
+  scrollbar-color: var(--site-wine) transparent;
+  scrollbar-width: thin;
+}
+
+.ps-site .issue-extras-row .extras-rail > :last-child {
+  margin-right: 0;
+}
+
+.ps-site .issue-extras-row .extra-player {
+  width: 100%;
+  align-self: start;
+}
+
+@media (min-width: 1000px) {
+  .ps-site .issue-extras-row .extra-player {
+    position: sticky;
+    top: 1.5rem;
+  }
+}

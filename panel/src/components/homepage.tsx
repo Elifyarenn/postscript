@@ -138,34 +138,40 @@ export function HomePage({
       </section>
 
       {hasExtras && (
-        <RailEnd className="extras-rail" label={`Sayı ${formatIssueNumber(issue.number)} seçkisi`}>
-          {extras.book && (
-            <article className="extra-panel extra-book">
-              <h3 className="extra-heading">
-                {extras.book.title} ({extras.book.year}) - {extras.book.author}
-              </h3>
-              <p className="extra-text">{extras.book.text}</p>
-              <p className="extra-label">Sayının kitabı</p>
-            </article>
-          )}
-
-          {extras.artwork && (
-            <article className="extra-panel extra-art">
-              <div className="extra-artwork">
-                <Image
-                  src={ARTWORK_IMAGES[extras.artwork.image]}
-                  alt={`${extras.artwork.artist}, ${extras.artwork.title} (${extras.artwork.year})`}
-                  sizes="(min-width: 1000px) 26rem, 90vw"
-                />
-                <div className="space-y-4">
-                  <h3 className="extra-heading" lang={extras.artwork.lang}>
-                    {extras.artwork.title} ({extras.artwork.year}) - {extras.artwork.artist}
+        // The design keeps the playlist still at the right while the issue's cards slide
+        // past it; on a phone the playlist drops below the rail (D-119)
+        <section className="issue-extras-row" aria-label={`Sayı ${formatIssueNumber(issue.number)} seçkisi`}>
+          {(extras.book || extras.artwork) && (
+            <RailEnd className="extras-rail" label="Sayının kartları">
+              {extras.book && (
+                <article className="extra-panel extra-book">
+                  <h3 className="extra-heading">
+                    {extras.book.title} ({extras.book.year}) - {extras.book.author}
                   </h3>
-                  <p className="extra-text">{extras.artwork.text}</p>
-                </div>
-              </div>
-              <p className="extra-label">Sayının eseri</p>
-            </article>
+                  <p className="extra-text">{extras.book.text}</p>
+                  <p className="extra-label">Sayının kitabı</p>
+                </article>
+              )}
+
+              {extras.artwork && (
+                <article className="extra-panel extra-art">
+                  <div className="extra-artwork">
+                    <Image
+                      src={ARTWORK_IMAGES[extras.artwork.image]}
+                      alt={`${extras.artwork.artist}, ${extras.artwork.title} (${extras.artwork.year})`}
+                      sizes="(min-width: 1000px) 26rem, 90vw"
+                    />
+                    <div className="space-y-4">
+                      <h3 className="extra-heading" lang={extras.artwork.lang}>
+                        {extras.artwork.title} ({extras.artwork.year}) - {extras.artwork.artist}
+                      </h3>
+                      <p className="extra-text">{extras.artwork.text}</p>
+                    </div>
+                  </div>
+                  <p className="extra-label">Sayının eseri</p>
+                </article>
+              )}
+            </RailEnd>
           )}
 
           {extras.playlist && (
@@ -189,7 +195,7 @@ export function HomePage({
               />
             </article>
           )}
-        </RailEnd>
+        </section>
       )}
     </>
   );
