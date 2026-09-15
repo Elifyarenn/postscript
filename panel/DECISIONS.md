@@ -4716,3 +4716,20 @@ bir şey gitmiyor.
   | Çarpıya basıldı | Pasif | Pasif | Kaldırıldı | Yanda |
 
   Çarpıdan sonra odak "Spotify çalarını aç" düğmesinde.
+
+## D-130 — Çalma listesinin üstündeki çarpılı hoparlör kaldırıldı
+
+**Durum:** Tasarımda çalma listesi çerçevesinin üstünde, sağda süs amaçlı bir
+çarpılı hoparlör ikonu vardı (D-112). D-129 ile başlık çubuğundaki hoparlör
+gerçek bir sesi kapat/aç düğmesi oldu; ses kapalıyken o da çarpılı hoparlöre
+dönüyor. Üstteki ikon bir işe yaramıyordu ve düğmeyle karışabiliyordu. Ürün
+sahibi kaldırılmasını istedi.
+
+**Karar:**
+
+- `homepage.tsx`'teki `player-top` kutusu ve ondan kalan `VolumeX` içe aktarımı
+  silindi.
+- `site.css`'teki `.player-top` kuralları kaldırıldı.
+- Sesin durumunu artık yalnızca başlık çubuğundaki düğme gösteriyor.
+
+**Hukuk:** Değişiklik yok; yalnızca görünüm.
