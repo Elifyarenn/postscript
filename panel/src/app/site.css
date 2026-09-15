@@ -3316,3 +3316,29 @@
 .ps-site .contact-accounts a {
   text-decoration: underline;
 }
+
+/* ════════════════ Community settings: one card at a time (D-136) ════════════════ */
+
+/* The tab column is now real navigation, so the current tab is marked as the page */
+.ps-site .settings-tabs a[aria-current="page"] {
+  background: var(--site-wine);
+}
+
+.ps-site .settings-profile-forms {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.ps-site .settings-bio form {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.ps-site .settings-bio textarea {
+  width: 100%;
+  min-height: 6.5rem;
+}
+
+.ps-site .settings-bio .settings-save {
+  justify-self: start;
+}

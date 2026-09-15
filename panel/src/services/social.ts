@@ -203,6 +203,29 @@ export async function setUsername(
   return username;
 }
 
+const bioSchema = z.strictObject({
+  bio: z.string().trim().max(2000, "Biyografi en fazla 2000 karakter olabilir."),
+});
+
+/**
+ * The short bio on the member's community profile (D-136), edited from the
+ * community settings. It is saved on its own: the account form also asks for
+ * the real name, which a member changing a sentence about themselves should
+ * not have to send again. An empty bio clears it.
+ */
+export async function setBio(actor: Actor, rawInput: unknown): Promise<string | null> {
+  assertMayPost(actor);
+
+  const parsed = bioSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    throw badRequest("Biyografi geçersiz.", z.flattenError(parsed.error).fieldErrors);
+  }
+
+  const bio = parsed.data.bio || null;
+  await db.update(users).set({ bio, updatedAt: new Date() }).where(eq(users.id, actor.id));
+  return bio;
+}
+
 /* ------------------------------------------------------------------ */
 /* Profiles                                                            */
 /* ------------------------------------------------------------------ */

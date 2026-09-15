@@ -38,10 +38,12 @@ test("two members meet in the community area", async ({ page }) => {
   await signIn(page, SEED.reader);
   await pickHandle(page, "kerem_okur");
 
+  await page.goto("/social/settings?bolum=gizlilik");
   await page.getByLabel("Anonim kutum açık olsun").check();
   await formWith(page, "Anonim kutum açık olsun").getByRole("button", { name: "Kaydet" }).click();
   await expect(page.getByText("Anonim kutunuz açıldı.")).toBeVisible();
 
+  await page.goto("/social/settings?bolum=mesajlar");
   await page.getByLabel("Bana kimler özel mesaj gönderebilir?").selectOption("everyone");
   await formWith(page, "Bana kimler özel mesaj gönderebilir?").getByRole("button", { name: "Kaydet" }).click();
   await expect(page.getByText("Özel mesaj tercihiniz kaydedildi.")).toBeVisible();

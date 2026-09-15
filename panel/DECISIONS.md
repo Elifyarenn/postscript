@@ -4926,3 +4926,54 @@ bağlantı iletişim sayfasına düşer; o sayfa da künyeye yönlendiriyor.
   - Alt bilgide "iletişim=/iletisim" ve "künye=/kunye" var.
 - **`/kunye` (200):** Başlık "Künye"; beş bölümün hepsi yerinde. Yasal alt menü "Künye" (bu sayfa), "Kullanım şartları", "KVKK aydınlatma metni".
 - **Kullanım şartları:** Künyeye giden bütün bağlantılar `/kunye`.
+
+## D-136 — Topluluk ayarları: tek kart, soldaki menü seçer; biyografi yerinde düzenlenir
+
+**Durum:** Topluluk ayarları sayfası tasarımın beş bölümünü (Profil, Gizlilik,
+Bildirimler, Mesajlar, Hesap) alt alta, her birinin yanında aynı sekme sütunuyla
+çiziyordu. Sekmeler yalnızca sayfada o bölüme kaydırıyordu (D-116).
+
+Profil bölümünde yalnızca kullanıcı adı düzenlenebiliyordu. Biyografinin
+"Düzenle" bağlantısı Hesabım sayfasına gidiyordu. Oradaki profil formu gerçek adı
+ve diğer alanları da istediği için biyografiyi değiştirmek zahmetliydi.
+
+Ürün sahibi iki şey istedi:
+
+- Ayarlar sayfası "çalışmıyor"; profil düzenlenebilsin.
+- Beş kart yerine tek kart olsun; soldaki menüden hangisi seçilirse o görünsün.
+
+**Karar:**
+
+- **Tek kart:** Sayfa tek bir kart çizer. Soldaki sütun gerçek gezinme:
+  `/social/settings?bolum=profil|gizlilik|bildirimler|mesajlar|hesap`.
+  - Seçili bölüm `aria-current="page"` ile işaretlenir; bilinmeyen bir değer
+    Profil'e düşer.
+  - Her bölümün formu kendi başına kaydedilir.
+- **Biyografi:** Profil bölümünde doğrudan düzenlenir.
+  - Yeni `setBio` servisi yalnızca biyografiyi yazar: ad soyad, mahlas ve diğer
+    alanlara dokunmaz.
+  - En fazla 2000 karakter; boş bırakılırsa silinir.
+  - Topluluğa yazmaya yetkisi olmayan hesap (`assertMayPost`) değiştiremez.
+- **Diğer alanlar:** Ad soyad ve mahlas için Hesabım sayfasına bağlantı kaldı.
+  İlgi alanları hâlâ pasif: saklanmayan yeni bir kişisel veri alanı olur (D-116).
+- **Gizlilik:** Kullanıcı adı yoksa anonim kutu notu Profil bölümüne bağlanır.
+- **e2e:** `07d-social.spec.ts` anonim kutu ve mesaj tercihini kendi sekmelerine
+  giderek kaydediyor.
+
+**Hukuk:** Yeni kişisel veri yok. Biyografi zaten saklanıyor ve topluluk
+profilinde gösteriliyordu (D-089); yalnızca düzenlendiği yer değişti.
+
+**Doğrulama:**
+
+- typecheck ve lint temiz; 54 dosyada 551 test geçti.
+- `tests/integration/community-bio.test.ts`: kaydetme, silme, uzunluk ve fazladan
+  alan reddi, yasaklı hesap.
+- **Demo sunucusu (okur hesabı), her sekmede tek kart ve seçili sekme işaretli:**
+
+  | Sekme | Denenen | Sonuç |
+  |---|---|---|
+  | Profil | Kullanıcı adı | "Kullanıcı adınız @kerem_okur olarak kaydedildi." |
+  | Profil | Biyografi | "Biyografiniz kaydedildi."; profil sayfasında göründü |
+  | Gizlilik | Anonim kutu | "Anonim kutunuz açıldı." |
+  | Bildirimler, Hesap | Açılış | Formsuz tek kart |
+  | Mesajlar | Mesaj tercihi | "Özel mesaj tercihiniz kaydedildi." |

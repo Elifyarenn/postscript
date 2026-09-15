@@ -15,6 +15,7 @@ import {
   bookmarkArticle,
   followMember,
   removeBookmark,
+  setBio,
   setUsername,
   unblockMember,
   unfollowMember,
@@ -318,6 +319,19 @@ export async function setUsernameAction(
     // The sidebar links to the profile, so every community page changes
     revalidatePath("/social", "layout");
     return { success: `Kullanıcı adınız @${username} olarak kaydedildi.` };
+  });
+}
+
+export async function setBioAction(_state: ActionState, formData: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireAuth();
+
+    await setBio({ ...user }, { bio: text(formData, "bio") });
+
+    // The bio shows on the member's own profile page
+    revalidatePath("/social", "layout");
+    return { success: "Biyografiniz kaydedildi." };
   });
 }
 
