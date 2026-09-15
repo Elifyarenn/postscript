@@ -67,17 +67,50 @@ export function isNavActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export type CategoryImageKey = "art" | "science" | "psychology" | "lifestyle" | "pop";
+export type CategoryImageKey =
+  | "art"
+  | "science"
+  | "psychology"
+  | "lifestyle"
+  | "pop"
+  | "books"
+  | "thought"
+  | "feminism"
+  | "history"
+  | "author"
+  | "gossip";
 
-const CATEGORY_IMAGE_ORDER: CategoryImageKey[] = ["art", "science", "psychology", "lifestyle", "pop"];
+/** The design's category photos, left to right as it places them (D-122). */
+const CATEGORY_IMAGE_ORDER: CategoryImageKey[] = [
+  "art",
+  "science",
+  "psychology",
+  "lifestyle",
+  "pop",
+  "books",
+  "thought",
+  "feminism",
+  "history",
+  "author",
+  "gossip",
+];
 
-/** Words in an area's name that pick its picture; the first match wins. */
+/**
+ * Words in an area's name that pick its picture; the first match wins. The
+ * design names its areas in English and the site in Turkish, so both count.
+ */
 const CATEGORY_KEYWORDS: [CategoryImageKey, string[]][] = [
-  ["art", ["sanat", "edebiyat", "şiir", "öykü"]],
-  ["science", ["bilim", "teknoloji"]],
-  ["psychology", ["psikoloji", "ilişki"]],
-  ["lifestyle", ["yaşam", "moda", "stil"]],
-  ["pop", ["pop", "kültür", "müzik", "sinema", "film", "dizi", "kitap"]],
+  ["art", ["sanat", "edebiyat", "şiir", "öykü", "literature"]],
+  ["science", ["bilim", "teknoloji", "science", "technology"]],
+  ["psychology", ["psikoloji", "ilişki", "psychology", "relationship"]],
+  ["lifestyle", ["yaşam", "moda", "stil", "lifestyle", "fashion"]],
+  ["books", ["film", "dizi", "kitap", "sinema", "series", "book", "movie"]],
+  ["pop", ["pop", "kültür", "müzik", "culture", "music"]],
+  ["thought", ["sosyoloji", "düşünce", "felsefe", "sociology", "thought", "philosophy"]],
+  ["feminism", ["sosyal", "feminizm", "kadın", "social", "feminism"]],
+  ["history", ["tarih", "dünya", "history", "world"]],
+  ["author", ["yazar", "köşe", "author"]],
+  ["gossip", ["eğlence", "dedikodu", "magazin", "entertainment", "gossip"]],
 ];
 
 /**
@@ -86,7 +119,8 @@ const CATEGORY_KEYWORDS: [CategoryImageKey, string[]][] = [
  * turn by its position, and neighbours rarely repeat.
  */
 export function categoryImageKey(name: string, index: number): CategoryImageKey {
-  const lowered = name.toLocaleLowerCase("tr");
+  // Turkish lower case turns an English capital I into a dotless ı, which no keyword has
+  const lowered = name.toLocaleLowerCase("tr").replaceAll("ı", "i");
   for (const [key, words] of CATEGORY_KEYWORDS) {
     if (words.some((word) => lowered.includes(word))) return key;
   }

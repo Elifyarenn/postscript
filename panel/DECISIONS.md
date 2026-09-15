@@ -4326,3 +4326,72 @@ yani son kartı görüyordu. Ürün sahibi şeridin en baştan başlamasını is
   start`). Orta hizada ilk kart açılışta içeri çekilebiliyordu.
 
 **Hukuk:** Değişiklik yok.
+
+## D-122 — Her kategoriye tasarımdaki kendi fotoğrafı; kategori şeridi kart şeridi gibi kayar
+
+**Durum:** Ana sayfadaki kategori şeridinde canlıda 11 yazı alanı var. Bunlar
+tasarımdaki 5 görseli sırayla paylaşıyordu (D-112). Görseller PDF katmanından,
+yani yalnızca çizim alanında görünen 5 karttan alınmıştı.
+
+"postscript ana sayfa kullanıcı olan.ai" dosyasının Illustrator verisi çözüldü
+(D-120 yöntemi). Kategori sırasında 11 fotoğraf var; 6'sı çizim alanının
+sağında. Her fotoğrafın ardında kartın kırpma dikdörtgeni var (301 × 163 pt).
+
+Etiketler fotoğraflardan eşlendi, soldan sağa. İlk beşi çizim alanındaki PDF
+etiketleriyle doğrulandı:
+
+| Sıra | Tasarım etiketi | Sitedeki alan | Fotoğraf |
+|---|---|---|---|
+| 1 | ART & LITERATURE | Sanat & Edebiyat | Oceanus heykeli |
+| 2 | SCIENCE & TECHNOLOGY | Bilim & Teknoloji | Plazma küresi |
+| 3 | PSYCHOLOGY & RELATIONSHIPS | Psikoloji & İlişkiler | Kırmızı iplikli eller |
+| 4 | LIFESTYLE & FASHION | Lifestyle & Fashion | Kırmızı ayakkabılar |
+| 5 | POP CULTURE | Pop Culture | Plak ve gitar |
+| 6 | FILM, SERIES & BOOKS | Film, Dizi & Kitap | Açık kitap ve gül |
+| 7 | SOCIOLOGY & THOUGHT | Sosyoloji & Düşünce | Büst, oyuncak araba, mum |
+| 8 | SOCIAL & FEMINISM | Sosyal & Feminizm | "Yes, I am feminist" yazılı sırt |
+| 9 | HISTORY & WORLD | Tarih & Dünya | Anıtkabir |
+| 10 | AUTHOR'S CORNER | Yazar Köşesi: P.S. | Daktilo |
+| 11 | ENTERTAINMENT & GOSSIP | Eğlence & Dedikodu | Dudak telefon |
+
+**Karar:**
+
+- **Fotoğraflar:** Her biri tasarımın ham görsel verisinden, kendi kırpma
+  dikdörtgeniyle kesildi ve 640 × 347 WebP olarak `src/assets/design/category-*.webp`
+  yazıldı.
+  - Önceki 5 görsel de bu tam çözünürlüklü kesimlerle değiştirildi.
+  - Tasarım Anıtkabir fotoğrafını kartına sığdırırken yatayda esnetmiş; çıktı
+    kart oranına doldurulduğu için bu da tasarımdaki gibi.
+- **Eşleme:** `categoryImageKey` 11 anahtar tanıyor. Ad hem Türkçe hem İngilizce
+  kelimelerle eşleşir; "Lifestyle", "Pop Culture" gibi adlar canlıda İngilizce.
+  - Türkçe küçük harfe çevirme İngilizce büyük "I"yı "ı" yapar; eşleşmeden önce
+    "ı" → "i" çevrilir.
+  - "Film, Dizi & Kitap" artık pop görselini değil kendi kitap fotoğrafını alır.
+  - Hiçbir kelimeyle eşleşmeyen alan 11 fotoğrafı sırayla paylaşır.
+- **Şerit** kart şeridine (D-119, D-121) benzetildi:
+  - baştan açılır, JavaScript yok;
+  - kaydırma yakalaması `proximity`, başa hizalı;
+  - kaydırma çubuğu ince ve bordo.
+  - Geniş ekranda tasarımdaki gibi dört kart ve beşincinin çoğu görünür.
+- **Çerçeve oranı:** Fotoğraf çerçevesi 16:9 yerine tasarımdaki 301:163.
+- **Sıra:** Alanların sırası koddan değil admin panelindeki sıra alanından gelir
+  (`/admin/categories`). Canlı sıra tasarımdakinden farklı, ama üretim verisine
+  dokunulmadı. Tasarımdaki sıra istenirse tablodaki sırayla oradan ayarlanır.
+
+**Hukuk:** Fotoğraflar ürün sahibinin telifsiz sitelerden aldığını belirttiği
+görseller (D-115). Görsel dosya adları Unsplash ve Pexels'i gösteriyor.
+Oceanus heykeli (İstanbul Arkeoloji Müzesi) fotoğrafının dosya adı
+Wikimedia Commons adlandırmasına benziyor; kaynağı ve lisansı doğrulanmalı. Kişisel veri değişikliği yok.
+
+**Doğrulama:**
+
+- typecheck ve lint temiz; 53 dosyada 540 test geçti.
+- **Yerel tarayıcı ölçümü:** 11 alanın her biri farklı ve doğru fotoğrafı alıyor;
+  şerit baştan açık, yakalama başa hizalı, kaydırma çubuğu ince ve bordo; sayfada
+  yatay taşma yok.
+
+  | Genişlik | Görünür / içerik | Fotoğraf çerçevesi |
+  |---|---|---|
+  | 1920 px | 1256 / 2877 px | 234 × 127 |
+  | 1280 px | 1216 / 2786 px | 226 × 122 |
+  | 390 px | 358 / 2592 px | 208 × 113 |

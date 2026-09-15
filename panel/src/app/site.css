@@ -3003,3 +3003,20 @@
     margin-inline: auto;
   }
 }
+
+/* ════════════════ Category rail like the issue card rail (D-122) ════════════════ */
+
+/* Four cards and most of a fifth show at once, as in the design; the rest slide in */
+.ps-site .category-rail {
+  grid-auto-columns: max(13rem, calc((100% - 4 * 1.9rem) / 4.85));
+  gap: 1.9rem;
+  padding-bottom: 0.9rem;
+  scroll-snap-type: x proximity;
+  scrollbar-color: var(--site-wine) transparent;
+  scrollbar-width: thin;
+}
+
+/* The design's photo frame is 301 x 163 pt */
+.ps-site .category-card-art {
+  aspect-ratio: 301 / 163;
+}

@@ -43,13 +43,44 @@ describe("categoryImageKey", () => {
     expect(categoryImageKey("Psikoloji & İlişkiler", 0)).toBe("psychology");
     expect(categoryImageKey("Yaşam & Moda", 0)).toBe("lifestyle");
     expect(categoryImageKey("Popüler Kültür", 0)).toBe("pop");
-    expect(categoryImageKey("Film, Dizi & Kitap", 2)).toBe("pop");
+    expect(categoryImageKey("Film, Dizi & Kitap", 2)).toBe("books");
+  });
+
+  it("gives each of the design's eleven areas its own photo", () => {
+    const names = [
+      "Sanat & Edebiyat",
+      "Bilim & Teknoloji",
+      "Psikoloji & İlişkiler",
+      "LIFESTYLE & FASHION",
+      "Pop Culture",
+      "Film, Dizi & Kitap",
+      "Sosyoloji & Düşünce",
+      "Sosyal & Feminizm",
+      "Tarih & Dünya",
+      "Yazar Köşesi: P.S.",
+      "Eğlence & Dedikodu",
+    ];
+    const keys = names.map((name) => categoryImageKey(name, 0));
+    expect(keys).toEqual([
+      "art",
+      "science",
+      "psychology",
+      "lifestyle",
+      "pop",
+      "books",
+      "thought",
+      "feminism",
+      "history",
+      "author",
+      "gossip",
+    ]);
   });
 
   it("takes the pictures in turn for a name that matches nothing", () => {
     expect(categoryImageKey("Gezi", 0)).toBe("art");
     expect(categoryImageKey("Gezi", 1)).toBe("science");
-    expect(categoryImageKey("Gezi", 5)).toBe("art");
+    expect(categoryImageKey("Gezi", 5)).toBe("books");
+    expect(categoryImageKey("Gezi", 11)).toBe("art");
   });
 });
 

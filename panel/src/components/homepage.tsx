@@ -11,10 +11,16 @@ import Link from "next/link";
 import { ArrowRight, Star, Volume2, VolumeX, X } from "lucide-react";
 import heroCollage from "@/assets/design/hero-collage.webp";
 import categoryArt from "@/assets/design/category-art.webp";
+import categoryAuthor from "@/assets/design/category-author.webp";
+import categoryBooks from "@/assets/design/category-books.webp";
+import categoryFeminism from "@/assets/design/category-feminism.webp";
+import categoryGossip from "@/assets/design/category-gossip.webp";
+import categoryHistory from "@/assets/design/category-history.webp";
 import categoryLifestyle from "@/assets/design/category-lifestyle.webp";
 import categoryPop from "@/assets/design/category-pop.webp";
 import categoryPsychology from "@/assets/design/category-psychology.webp";
 import categoryScience from "@/assets/design/category-science.webp";
+import categoryThought from "@/assets/design/category-thought.webp";
 import artworkWeiss from "@/assets/design/artwork-weiss-obsession.webp";
 import bookMasumiyet from "@/assets/design/book-masumiyet-muzesi.webp";
 import movieBlackSwan from "@/assets/design/movie-black-swan.webp";
@@ -31,6 +37,12 @@ const CATEGORY_IMAGES: Record<CategoryImageKey, StaticImageData> = {
   psychology: categoryPsychology,
   lifestyle: categoryLifestyle,
   pop: categoryPop,
+  books: categoryBooks,
+  thought: categoryThought,
+  feminism: categoryFeminism,
+  history: categoryHistory,
+  author: categoryAuthor,
+  gossip: categoryGossip,
 };
 
 const CARD_IMAGES: Record<IssueCardImage, StaticImageData> = {
@@ -144,7 +156,7 @@ export function HomePage({
                       src={CATEGORY_IMAGES[categoryImageKey(name, index)]}
                       alt=""
                       fill
-                      sizes="(min-width: 768px) 20rem, 80vw"
+                      sizes="(min-width: 768px) 16rem, 70vw"
                     />
                   </span>
                   <span className="category-name">{name}</span>
