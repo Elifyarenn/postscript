@@ -2340,7 +2340,7 @@
 }
 
 .ps-site .extras-rail > * {
-  scroll-snap-align: center;
+  scroll-snap-align: start;
 }
 
 .ps-site .extra-poster {

@@ -4306,3 +4306,23 @@ Illustrator'ın kendi verisi (`AIPrivateData`, ZStandard ile sıkıştırılmı�
   | 390 px | Üstte kayar (358 / 1445 px) | Altta tam genişlik |
 
 - Dört kartın görselleri yüklendi; başlık, etiket ve alt metinleri doğru.
+
+## D-121 — Kart şeridi baştan açılır
+
+**Durum:** D-116 ve D-119 kart şeridini geniş ekranda sona kaydırılmış açıyordu.
+Böylece tasarımdaki görüntü taklit ediliyordu: eser tam görünür, önceki kart
+soldan taşar. D-120 ile şeritte dört kart oldu. Okur ilk olarak "Sayının eseri"ni,
+yani son kartı görüyordu. Ürün sahibi şeridin en baştan başlamasını istedi.
+
+**Karar:**
+
+- Şerit her genişlikte ilk karttan (Sayının filmi) başlar.
+- Sona kaydıran `RailEnd` istemci bileşeni kaldırıldı. Şerit artık sunucuda
+  çizilen düz bir kaydırma kutusu; ana sayfanın bu bölümü tarayıcıya JavaScript
+  göndermiyor.
+- Kutu `tabIndex={0}` ile odaklanabilir. Klavye kullanan okur, kenarın ötesindeki
+  kartlara ok tuşlarıyla ulaşır.
+- Kaydırma yakalaması kartın ortasına değil başına hizalanır (`scroll-snap-align:
+  start`). Orta hizada ilk kart açılışta içeri çekilebiliyordu.
+
+**Hukuk:** Değişiklik yok.
