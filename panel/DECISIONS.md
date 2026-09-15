@@ -4790,3 +4790,27 @@ metnini onaylamış oluyor.
   - O zamana kadar üyeler Spotify'ı anlatmayan bir metni onaylamış durumda.
 - Ürün sahibinin açık talebiyle uygulandı; muhafazakâr kısmı ziyaretçiye çaların hiç
   verilmemesi.
+
+## D-133 — İmzada yalnızca "Elif Yaren Çekiç" bağlantı
+
+**Durum:** Dergi alt bilgisinde, panellerde, yasal sayfalarda ve giriş
+sayfalarında imza satırının tamamı ("Designed by Elif Yaren Çekiç & Tuanna
+Demir") web sitesi bağlantısıydı. Ürün sahibi yalnızca "Elif Yaren Çekiç"
+yazısına basınca web sitesine gidilmesini, satırın geri kalanının bağlantı
+olmamasını istedi.
+
+**Karar:**
+
+- Dört yerde ("site-shell", "legal", "shell", giriş düzeni) satır düz metin oldu.
+  İçindeki yalnızca "Elif Yaren Çekiç" `https://www.elifyarencekic.com/`
+  bağlantısı; bağlantı yeni sekmede açılır (`noopener noreferrer`).
+- Satır tek bir `span` içinde duruyor; yan yana dizilen alt bilgilerde kelimeler
+  ayrı parçalara bölünmüyor.
+- Ürün sahibinin genel yönergesi imza bağlantısının metnini "Designed by Elif Yaren
+  Çekiç" olarak tarif ediyordu. Bu adımda ürün sahibinin açık talebi uygulandı.
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:** Yerel ana sayfada imza metni "Designed by Elif Yaren Çekiç & Tuanna
+Demir"; içindeki tek bağlantı "Elif Yaren Çekiç", yeni sekmede açılıyor.
+typecheck ve lint temiz; 53 dosyada 545 test geçti.

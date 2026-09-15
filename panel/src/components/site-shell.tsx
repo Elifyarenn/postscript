@@ -224,9 +224,13 @@ export async function SiteShell({
         </div>
 
         <p className="site-credit">
-          <a href="https://www.elifyarencekic.com/" target="_blank" rel="noopener noreferrer">
-            Designed by Elif Yaren Çekiç &amp; Tuanna Demir
-          </a>
+          <span>
+            Designed by{" "}
+            <a href="https://www.elifyarencekic.com/" target="_blank" rel="noopener noreferrer">
+              Elif Yaren Çekiç
+            </a>{" "}
+            &amp; Tuanna Demir
+          </span>
         </p>
       </footer>
     </div>

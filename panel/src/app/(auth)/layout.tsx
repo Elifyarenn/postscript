@@ -16,14 +16,18 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         {children}
 
         <p className="mt-8 text-center text-xs text-muted">
-          <a
+          <span>
+            Designed by{" "}
+            <a
             href="https://www.elifyarencekic.com/"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-ink"
           >
-            Designed by Elif Yaren Çekiç & Tuanna Demir
-          </a>
+              Elif Yaren Çekiç
+            </a>{" "}
+            &amp; Tuanna Demir
+          </span>
         </p>
       </div>
     </div>

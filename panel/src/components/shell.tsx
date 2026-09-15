@@ -291,14 +291,18 @@ export async function PanelShell({
               KVKK aydınlatma metni
             </Link>
           </nav>
-          <a
+          <span>
+            Designed by{" "}
+            <a
             href="https://www.elifyarencekic.com/"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-ink"
           >
-            Designed by Elif Yaren Çekiç & Tuanna Demir
-          </a>
+              Elif Yaren Çekiç
+            </a>{" "}
+            &amp; Tuanna Demir
+          </span>
         </footer>
       </div>
     </div>

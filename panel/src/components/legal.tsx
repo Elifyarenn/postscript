@@ -59,14 +59,18 @@ export function LegalPage({
       </nav>
 
       <p className="mt-6 text-center text-xs text-muted">
-        <a
+        <span>
+            Designed by{" "}
+            <a
           href="https://www.elifyarencekic.com/"
           target="_blank"
           rel="noopener noreferrer"
           className="hover:text-ink"
         >
-          Designed by Elif Yaren Çekiç &amp; Tuanna Demir
-        </a>
+              Elif Yaren Çekiç
+            </a>{" "}
+            &amp; Tuanna Demir
+          </span>
       </p>
     </main>
   );
