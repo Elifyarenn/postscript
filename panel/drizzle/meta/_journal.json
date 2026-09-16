@@ -253,6 +253,13 @@
       "when": 1789546115613,
       "tag": "0036_fixed_gravity",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1789573145919,
+      "tag": "0037_community_nickname",
+      "breakpoints": true
     }
   ]
 }

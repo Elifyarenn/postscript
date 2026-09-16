@@ -39,7 +39,8 @@ import type { RequestMeta } from "./auth";
 export type Member = {
   id: string;
   username: string;
-  penName: string | null;
+  /** The community name (D-163); the pen name is the magazine's and never shown here. */
+  nickname: string | null;
   role: Role;
 };
 
@@ -51,7 +52,7 @@ export async function requireMember(actor: Actor): Promise<Member> {
   assertMayPost(actor);
 
   const rows = await db
-    .select({ id: users.id, username: users.username, penName: users.penName, role: users.role })
+    .select({ id: users.id, username: users.username, nickname: users.nickname, role: users.role })
     .from(users)
     .where(and(eq(users.id, actor.id), isNull(users.deletedAt)))
     .limit(1);
@@ -73,7 +74,7 @@ async function findReachableMember(rawUsername: string) {
     .select({
       id: users.id,
       username: users.username,
-      penName: users.penName,
+      nickname: users.nickname,
       bio: users.bio,
       role: users.role,
       createdAt: users.createdAt,
@@ -143,6 +144,7 @@ export async function getMemberSettings(
   actor: Actor,
 ): Promise<{
   username: string | null;
+  nickname: string | null;
   penName: string | null;
   dmPolicy: DmPolicy;
   anonBoxEnabled: boolean;
@@ -154,6 +156,7 @@ export async function getMemberSettings(
   const rows = await db
     .select({
       username: users.username,
+      nickname: users.nickname,
       penName: users.penName,
       dmPolicy: users.dmPolicy,
       anonBoxEnabled: users.anonBoxEnabled,
@@ -167,6 +170,7 @@ export async function getMemberSettings(
     .limit(1);
   return {
     username: rows[0]?.username ?? null,
+    nickname: rows[0]?.nickname ?? null,
     penName: rows[0]?.penName ?? null,
     dmPolicy: rows[0]?.dmPolicy ?? "following",
     anonBoxEnabled: rows[0]?.anonBoxEnabled ?? false,
@@ -394,7 +398,7 @@ export async function getProfile(viewer: Actor, rawUsername: string): Promise<Pr
   return {
     id: target.id,
     username: target.username,
-    penName: target.penName,
+    nickname: target.nickname,
     role: target.role,
     bio: target.bio,
     anonBoxEnabled: target.anonBoxEnabled,
@@ -411,7 +415,7 @@ export async function getProfile(viewer: Actor, rawUsername: string): Promise<Pr
   };
 }
 
-export type MemberListItem = Pick<Member, "username" | "penName" | "role">;
+export type MemberListItem = Pick<Member, "username" | "nickname" | "role">;
 
 async function listGraph(
   viewer: Actor,
@@ -427,7 +431,7 @@ async function listGraph(
       : [follows.followerId, follows.followeeId];
 
   const rows = await db
-    .select({ username: users.username, penName: users.penName, role: users.role })
+    .select({ username: users.username, nickname: users.nickname, role: users.role })
     .from(follows)
     .innerJoin(users, eq(other, users.id))
     .where(and(eq(anchor, profile.id), isNull(users.deletedAt), eq(users.isBanned, false)))
@@ -452,7 +456,7 @@ export async function listMutualFollows(actor: Actor, limit = 20): Promise<Membe
     .where(eq(follows.followeeId, me.id));
 
   const rows = await db
-    .select({ username: users.username, penName: users.penName, role: users.role })
+    .select({ username: users.username, nickname: users.nickname, role: users.role })
     .from(follows)
     .innerJoin(users, eq(users.id, follows.followeeId))
     .where(
@@ -479,7 +483,7 @@ export async function listMutualFollows(actor: Actor, limit = 20): Promise<Membe
     .limit(limit);
 
   return rows.flatMap((row) =>
-    row.username ? [{ username: row.username, penName: row.penName, role: row.role }] : [],
+    row.username ? [{ username: row.username, nickname: row.nickname, role: row.role }] : [],
   );
 }
 
@@ -584,14 +588,14 @@ export async function unblockMember(actor: Actor, rawUsername: string): Promise<
 
 export async function listBlockedMembers(actor: Actor) {
   const rows = await db
-    .select({ username: users.username, penName: users.penName, blockedAt: userBlocks.createdAt })
+    .select({ username: users.username, nickname: users.nickname, blockedAt: userBlocks.createdAt })
     .from(userBlocks)
     .innerJoin(users, eq(userBlocks.blockedId, users.id))
     .where(and(eq(userBlocks.blockerId, actor.id), isNull(users.deletedAt)))
     .orderBy(desc(userBlocks.createdAt));
 
   return rows.filter(
-    (row): row is { username: string; penName: string | null; blockedAt: Date } =>
+    (row): row is { username: string; nickname: string | null; blockedAt: Date } =>
       row.username !== null,
   );
 }

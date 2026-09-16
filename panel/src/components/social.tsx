@@ -3,11 +3,13 @@
  * frame's look since D-113: the avatar stand-in, the profile header and tabs,
  * the post card and the member list.
  *
- * A member is always shown by pen name or handle, never by display name: the
- * handle exists so the community does not see a legal name.
+ * A member is shown by nickname or handle, never by display name or pen name:
+ * the handle exists so the community does not see a legal name, and the pen
+ * name belongs to the magazine (D-163).
  */
 import Link from "next/link";
 import { Bookmark, Heart, Link as LinkIcon, MessageCircle, Repeat2, Star } from "lucide-react";
+import { communityName } from "@/lib/nickname";
 import { formatMonthYear, formatRelativeTime } from "@/lib/relative-time";
 import { cn, formatDateTime } from "@/lib/utils";
 import { ActionButton, PanelForm } from "./form";
@@ -70,15 +72,16 @@ export function Avatar({
   );
 }
 
-export function memberName(member: { username: string; penName: string | null }): string {
-  return member.penName ?? member.username;
+/** The community shows the nickname, never the pen name, which is the magazine's (D-163). */
+export function memberName(member: { username: string; nickname: string | null }): string {
+  return communityName(member);
 }
 
 export function MemberLink({
   member,
   className,
 }: {
-  member: { username: string; penName: string | null };
+  member: { username: string; nickname: string | null };
   className?: string;
 }) {
   return (
@@ -155,6 +158,7 @@ export function ProfileHeader({
                 <ProfileEditor
                   profile={{
                     username: profile.username,
+                    nickname: profile.nickname,
                     bio: profile.bio,
                     avatarUrl: profile.avatarUrl,
                     headerUrl: profile.headerUrl,

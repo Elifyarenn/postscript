@@ -35,6 +35,7 @@ const FIELD_LABELS: Record<string, string> = {
   currentPassword: "Mevcut şifre",
   displayName: "Ad Soyad",
   penName: "Mahlas",
+  nickname: "Takma ad",
   birthDate: "Doğum tarihi",
   bio: "Biyografi",
   title: "Başlık",

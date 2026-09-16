@@ -48,10 +48,10 @@ export default async function MessagesPage({
   const mutualFollows = mutuals.filter((member) => !talking.has(member.username));
 
   // The design's search box narrows the column by handle or pen name (D-147)
-  const matches = (candidate: { username: string | null; penName: string | null }) => {
+  const matches = (candidate: { username: string | null; nickname: string | null }) => {
     if (!query) return true;
     const needle = query.replace(/^@/, "").toLocaleLowerCase("tr");
-    return [candidate.username, candidate.penName].some((value) =>
+    return [candidate.username, candidate.nickname].some((value) =>
       (value ?? "").toLocaleLowerCase("tr").includes(needle),
     );
   };

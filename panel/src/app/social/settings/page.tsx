@@ -120,7 +120,7 @@ export default async function SocialSettingsPage({
 
                     <div className="min-w-0">
                       <p className="settings-preview-name">
-                        {settings.penName ?? settings.username ?? "Kullanıcı adı seçilmedi"}
+                        {settings.nickname ?? settings.username ?? "Kullanıcı adı seçilmedi"}
                       </p>
                       <p className="settings-preview-handle">
                         {settings.username ? `@${settings.username}` : "Kullanıcı adı seçilmedi"}
@@ -132,12 +132,13 @@ export default async function SocialSettingsPage({
 
                 <p className="settings-note">Topluluktaki üyeler profilinizi böyle görür.</p>
 
-                {/* The pictures and the bio are edited together, in the same dialog
-                    the profile page opens: one save, as on X (D-160). The pen
-                    name lives on the account page (D-162) */}
+                {/* The nickname, the pictures and the bio are edited together, in the
+                    same dialog the profile page opens: one save, as on X (D-160,
+                    D-163). The pen name is the magazine's, on the account page (D-162) */}
                 <ProfileEditor
                   profile={{
                     username: settings.username,
+                    nickname: settings.nickname,
                     bio: settings.bio,
                     avatarUrl: settings.avatarUrl,
                     headerUrl: settings.headerUrl,
@@ -227,7 +228,7 @@ export default async function SocialSettingsPage({
 
                 {/* Says exactly what getProfile hands to other members (D-089) */}
                 <p className="settings-note">
-                  Topluluk profilinizde diğer üyeler kullanıcı adınızı, varsa mahlasınızı, kısa
+                  Topluluk profilinizde diğer üyeler kullanıcı adınızı, varsa takma adınızı, kısa
                   biyografinizi, rolünüzü, katılım tarihinizi ve takip sayılarınızı görür. Ad
                   soyadınız, e-posta adresiniz ve doğum tarihiniz profilde gösterilmez.
                 </p>

@@ -1,6 +1,7 @@
 /**
- * The profile edited in one dialog with one save, as X does it (D-160); the pen
- * name is no longer part of it (D-162).
+ * The profile edited in one dialog with one save, as X does it (D-160): the
+ * community nickname (D-163), the bio and both pictures. The pen name is the
+ * magazine's and not part of it (D-162).
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
@@ -46,6 +47,7 @@ const replace = (buffer = png(), declaredMime = "image/png"): PictureChange => (
 });
 
 const edit = (overrides: Partial<ProfileEdit> = {}): ProfileEdit => ({
+  nickname: "",
   bio: "",
   avatar: KEEP,
   header: KEEP,
@@ -84,6 +86,23 @@ describe("updateProfile (D-160)", () => {
     expect(storage().objects.size).toBe(2);
   });
 
+  it("saves the nickname the community shows, and never hands it the pen name (D-163)", async () => {
+    const member = await createUser();
+    await setUsername(actorOf(member), { username: "deniz_su" }, noMeta);
+    await setPenName(actorOf(member), { penName: "Zeynep K." });
+
+    await updateProfile(actorOf(member), edit({ nickname: "  Deniz   Su " }), noMeta);
+
+    const profile = await getProfile(actorOf(member), "deniz_su");
+    expect(profile.nickname).toBe("Deniz Su");
+    // The magazine name stays in the magazine
+    expect("penName" in profile).toBe(false);
+    expect((await rowOf(member.id)).penName).toBe("Zeynep K.");
+
+    await updateProfile(actorOf(member), edit({ nickname: "   " }), noMeta);
+    expect((await getProfile(actorOf(member), "deniz_su")).nickname).toBeNull();
+  });
+
   it("never touches the pen name, so saving a photo cannot erase it (D-162)", async () => {
     const member = await createUser();
     await setPenName(actorOf(member), { penName: "Zeynep K." });
@@ -99,7 +118,7 @@ describe("updateProfile (D-160)", () => {
     const member = await createUser();
     const withPenName = { ...edit({ bio: "x" }), penName: "Başka" } as unknown as ProfileEdit;
 
-    await expect(updateProfile(actorOf(member), withPenName, noMeta)).resolves.toEqual({ bio: "x" });
+    await expect(updateProfile(actorOf(member), withPenName, noMeta)).resolves.toEqual({ nickname: null, bio: "x" });
     const row = await rowOf(member.id);
     expect(row.penName).toBeNull();
     expect(row.penNameSlug).toBeNull();
@@ -113,16 +132,22 @@ describe("updateProfile (D-160)", () => {
     const error = await failure(
       updateProfile(
         actorOf(member),
-        edit({ bio: "b".repeat(2001), avatar: replace(), header: replace(pdf, "application/pdf") }),
+        edit({
+          nickname: "Postscript Destek",
+          bio: "b".repeat(2001),
+          avatar: replace(),
+          header: replace(pdf, "application/pdf"),
+        }),
         noMeta,
       ),
     );
 
     expect(error.status).toBe(400);
-    expect(Object.keys(error.details ?? {}).sort()).toEqual(["bio", "headerImage"]);
+    expect(Object.keys(error.details ?? {}).sort()).toEqual(["bio", "headerImage", "nickname"]);
 
     // The valid avatar was not saved either
     const row = await rowOf(member.id);
+    expect(row.nickname).toBeNull();
     expect(row.bio).toBe("Eski bio");
     expect(row.avatarMediaId).toBeNull();
     expect(storage().objects.size).toBe(0);

@@ -30,14 +30,14 @@ export function ConversationList({
   return (
     <ul className="dm-conversations">
       {conversations.map((conversation) => {
-        const { username, penName } = conversation.other;
+        const { username, nickname } = conversation.other;
         const last = conversation.lastMessage;
         const content = (
           <>
             <Avatar username={username ?? "?"} size="md" />
             <div className="min-w-0 flex-1">
               <p className="dm-conversation-row">
-                <span className="dm-name">{username ? (penName ?? username) : "Silinmiş kullanıcı"}</span>
+                <span className="dm-name">{username ? (nickname ?? username) : "Silinmiş kullanıcı"}</span>
                 <span className="dm-time">{formatRelativeTime(last.createdAt)}</span>
               </p>
               <p className="dm-conversation-row">
@@ -94,7 +94,7 @@ function MutualFollows({
           <li key={member.username} className={cn(member.username === activeUsername && "is-active")}>
             <Link href={`/social/messages/${member.username}`} className="dm-conversation">
               <Avatar username={member.username} size="md" />
-              <span className="dm-name">{member.penName ?? member.username}</span>
+              <span className="dm-name">{member.nickname ?? member.username}</span>
             </Link>
           </li>
         ))}

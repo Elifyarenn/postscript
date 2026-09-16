@@ -365,9 +365,9 @@ async function pictureChange(formData: FormData, kind: "avatar" | "header"): Pro
 }
 
 /**
- * The edit-profile dialog's single save (D-160): the bio and both pictures in
- * one request, kept or refused together by the service. The pen name is not
- * read here; it is changed on the account page (D-162).
+ * The edit-profile dialog's single save (D-160): the nickname (D-163), the bio
+ * and both pictures in one request, kept or refused together by the service.
+ * The pen name is not read here; it is changed on the account page (D-162).
  */
 export async function updateProfileAction(
   _state: ActionState,
@@ -381,6 +381,7 @@ export async function updateProfileAction(
     await updateProfile(
       { ...user },
       {
+        nickname: text(formData, "nickname"),
         bio: text(formData, "bio"),
         avatar: await pictureChange(formData, "avatar"),
         header: await pictureChange(formData, "header"),
@@ -388,7 +389,7 @@ export async function updateProfileAction(
       meta,
     );
 
-    // The pictures and the bio show across the community, not on the magazine
+    // The name, the pictures and the bio show across the community, not on the magazine
     revalidatePath("/social", "layout");
     return { success: "Profiliniz kaydedildi." };
   });

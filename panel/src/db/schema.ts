@@ -190,7 +190,10 @@ export const users = pgTable(
     passwordHash: text("password_hash").notNull(),
 
     displayName: text("display_name").notNull(),
-    /** Pen name (mahlas). This is what the public site shows when it is set. */
+    /**
+     * Pen name (mahlas). The magazine's name for the member: published work,
+     * the imprint and the author page. Not shown in the community (D-163).
+     */
     penName: text("pen_name"),
     penNameSlug: text("pen_name_slug"),
     /**
@@ -198,6 +201,11 @@ export const users = pgTable(
      * the member opts into the social layer; nothing social works without it.
      */
     username: text("username"),
+    /**
+     * The name the community shows in place of the handle (D-163), X's "Name".
+     * Free text, not unique, never an address; without one the handle shows.
+     */
+    nickname: text("nickname"),
     /** Defaults to the people the member follows: nobody is reachable by strangers unasked. */
     dmPolicy: dmPolicyEnum("dm_policy").notNull().default("following"),
     /** The anonymous box is opt-in (D-092): closed until the member opens it. */

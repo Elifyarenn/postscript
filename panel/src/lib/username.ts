@@ -54,3 +54,21 @@ export function usernameProblem(normalized: string): string | null {
   }
   return null;
 }
+
+/**
+ * Whether a display name reads as the magazine or its staff (D-163). The
+ * nickname is free text, so it is folded first: Turkish letters to their plain
+ * form, case dropped, everything but letters and digits removed. "Post Script",
+ * "YÖNETİM" and "Editör Ayşe" are all caught; a whole word must match, so
+ * "Yazarlık tutkunu" is not.
+ */
+export function readsAsStaff(name: string): boolean {
+  const folded = name
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ı/g, "i")
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "");
+  const words = folded.split(/[^a-z0-9]+/).filter(Boolean);
+  if (words.length === 0) return false;
+  return RESERVED.has(words.join("")) || words.some((word) => RESERVED.has(word));
+}

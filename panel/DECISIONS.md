@@ -6279,3 +6279,69 @@ ve gönderilen `penName`'in yok sayıldığını doğruluyor. `pen-name.test.ts`
 Hesabım formu için üç test eklendi: mahlas adresiyle kaydediliyor; alınmış
 mahlas 409, harfsiz mahlas 400; kuraldan önce kaydedilmiş uygunsuz mahlas
 başka bir güncellemeyi engellemiyor. Kapı: typecheck, lint, 66 dosya / 615 test.
+
+## D-163 — Mahlas dergide, takma ad toplulukta
+
+**İstek (ürün sahibi):** "mahlas dergide nickname sosyal toplulukta kullanılacak"
+— D-162'nin hemen ardından.
+
+**Durum:** Topluluk her yerde `mahlas ?? kullanıcı adı` gösteriyordu (D-089).
+Yazar olan bir üyenin dergideki imzası sosyal katmanda da adı oluyordu;
+yazar olmayan bir üyenin toplulukta kendine bir ad vermesinin tek yolu da
+dergi için tasarlanmış mahlas alanıydı.
+
+**Karar:** İki ayrı ad.
+
+- **Mahlas = dergi.** Yayımlanan yazı, künye, yazar sayfası adresi, sözleşme ve
+  eser onayı. Hesabım'dan düzenlenir (D-162), kuralları aynı. Makale
+  yorumlarındaki ad (`community.ts`, `coalesce(pen_name, '@' || username,
+  display_name)`) dergi sayfasında durduğu için mahlasta kaldı.
+- **Takma ad = topluluk (`users.nickname`, migration 0037).** X'teki "Name":
+  profil başlığı, gönderi ve yanıt yazarı, yeniden paylaşan, takipçi/takip ve
+  engellenen listeleri, karşılıklı takip önerileri, mesaj listesi, konuşma
+  başlığı ve mesaj araması, anonim kutu alıcısı, ayarlardaki önizleme. Hepsi
+  `communityName` (`src/lib/nickname.ts`) üzerinden: takma ad yoksa kullanıcı
+  adı görünür. Topluluk tipleri (`Member`, `MemberListItem`, `ProfileView`,
+  `PostAuthor`, mesaj ve anonim kutu tipleri) artık `penName` taşımıyor;
+  mahlas topluluk ekranlarına hiç gitmiyor.
+- **Düzenleme:** "Profili düzenle" penceresinin en üstünde "Takma ad" alanı,
+  aynı tek Kaydet'le (D-160). Pencerenin altındaki not artık "Dergide
+  yazılarınızda görünen mahlasınızı Hesabım sayfasından değiştirebilirsiniz".
+- **Kurallar (`nicknameProblem`, saf fonksiyon, birim testli):**
+  - En fazla **50 karakter**; karakter sayılır, UTF-16 birimi değil (emoji bir
+    kez sayılır). Boşluklar kırpılır ve tek boşluğa indirilir; boş takma ad
+    silinir.
+  - **Benzersiz değil** — X'te de değil. Bu yüzden kullanıcı adı her zaman
+    yanında görünür; iki "Deniz" karışmaz.
+  - Görünmeyen ve yön değiştiren karakterler (`\p{Cc}`, `\p{Cf}`) reddedilir:
+    bir adı başka bir ad gibi ya da boş gibi göstermeye yarıyorlar.
+  - **Dergiyi veya ekibi çağrıştıran adlar reddedilir:** kullanıcı adındaki
+    yasaklı liste (D-089) serbest metne uyarlandı (`readsAsStaff`): Türkçe
+    harfler sadeleştirilir, büyük/küçük harf ve noktalama atılır, bütün ad ya
+    da tek bir kelime listedeyse ret. "Post Script", "YÖNETİM", "Editör Ayşe"
+    yakalanır; kelimenin tamamı gerektiği için "Yazarlık tutkunu" yakalanmaz.
+- **Mevcut mahlaslar takma ada kopyalanmadı:** Migration yalnızca boş bir
+  sütun ekliyor. Kopyalamak, üyenin dergi imzasını onun kararı olmadan
+  topluluk adı yapardı; ayrıca veri taşıyan bir migration üretimde yedek dal
+  ister ve Neon ücretsiz planda dal/snapshot kotası dolu. Sonuç: yayından sonra
+  mahlası olan üyeler toplulukta takma ad seçene kadar `@kullanıcıadı` olarak
+  görünür.
+
+**Migration sırası:** `ALTER TABLE "users" ADD COLUMN "nickname" text;` —
+boş bırakılabilir, varsayılansız; eski kod bu sütunu okumaz. Bu yüzden
+**koddan önce** uygulanır: yeni kod sütunu seçtiği için sıra tersine dönerse
+topluluk sayfaları kırılır.
+
+**Hukuk:** Yeni kişisel veri alanı. Aydınlatma metninin "Profil" satırına
+"toplulukta görünen takma ad" eklendi (aynı amaç: topluluk profilinin
+gösterilmesi, sözleşmenin ifası). Canlıdaki metin veritabanındaki sürümden
+gelir; yeni sürümün yayımı yönetici işlemidir ve `[AÇIK ADRES]` dolana kadar
+bekliyor (bkz. üretim notları).
+
+**Doğrulama:** `tests/unit/nickname.test.ts` (7 test): kırpma, karakter
+sayımı, görünmeyen karakterler, dergi/ekip çağrışımı, kelime sınırı, gösterilen
+ad. `profile-edit.test.ts`: takma ad kaydediliyor ve temizleniyor; topluluk
+profili mahlas taşımıyor, mahlas yerinde kalıyor; resmî görünen takma ad diğer
+hatalarla birlikte tek seferde dönüyor ve hiçbir şey yazılmıyor.
+`mutual-follows.test.ts` takma ada güncellendi. Kapı: typecheck, lint,
+67 dosya / 623 test.
