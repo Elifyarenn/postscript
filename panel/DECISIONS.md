@@ -5313,3 +5313,16 @@ a topic...", Message *), "SEND" düğmesi, `magpostscript@gmail.com` ve
 
 - **Düzeltme:** İki sütun tasarımdaki gibi aynı yükseklikte olacak şekilde
   hizalandı.
+
+**Ürün sahibinin yayın kararı (2026-09-16):** Form, KVKK metninin tam sürümü
+yayınlanmadan canlıya alındı. Ürün sahibine üç seçenek sunuldu (sayfayı alıp
+formu sonra açmak, hepsini şimdi yayınlamak, hiç yayınlamamak); "hepsini şimdi
+push et" dendi.
+
+- **Aradaki fark:** Canlı aydınlatma metni 1. sürüm (6 Eylül 2026) ve iletişim
+  formunu anlatmıyor. Depodaki metinde satırlar hazır (§2, §3, §4, §7).
+- **Formun hâli:** Sayfadaki not, gönderilen bilgilerin yalnızca cevap vermek
+  için kullanıldığını ve sitede saklanmadığını söylüyor; mesaj veritabanına
+  yazılmıyor, yalnızca dergi posta kutusuna gidiyor.
+- **Kapanış koşulu:** Tebligat adresi gelince tam metin yeni sürüm olarak
+  yayınlanır; o zaman fark kapanır (D-125, D-132).
