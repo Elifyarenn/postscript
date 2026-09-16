@@ -6612,3 +6612,11 @@ geçerli.
 
 **Doğrulama:** Kapı: typecheck, lint, 66 dosya / 624 test. Canlıda Playwright
 ile kutu ölçüleri.
+- **Düzeltme (canlı ölçümden sonra):** Kutular tasarımla birebir çıktı (alanlar
+  98 / 168 / 241 / 318; tasarımda 97 / 167 / 240 / 317), ama bant 555 yerine
+  738'di: görünür bot doğrulaması (78) ve formun altındaki veri notu (80).
+  İletişim formunda Turnstile artık `interaction-only`: Cloudflare ziyaretçiden
+  bir şey istemedikçe görünmez, doğrulama yine her gönderimde çalışır.
+  Veri notu künye yönlendirmesiyle birleşip sol sütunun altına küçük yazıyla
+  taşındı. Davet metni tasarımdaki üç satıra sığsın diye ölçüsü sütun
+  genişliği (628).

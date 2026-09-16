@@ -3483,7 +3483,9 @@
 }
 
 .ps-site .contact-text {
-  max-width: calc(560 * var(--cdu));
+  /* The design breaks after 528; the stand-in face sets wider, so the measure
+     is the column's, which keeps the paragraph on its three lines */
+  max-width: calc(628 * var(--cdu));
   margin-top: calc(18 * var(--cdu));
   color: var(--site-ink);
   /* 24 units on a 29 line */
@@ -3523,9 +3525,9 @@
 
 .ps-site .contact-note {
   margin-top: auto;
-  padding-top: calc(32 * var(--cdu));
+  padding-top: calc(24 * var(--cdu));
   color: var(--site-muted);
-  font-size: calc(17 * var(--cdu));
+  font-size: max(12px, calc(15 * var(--cdu)));
   line-height: 1.5;
 }
 
@@ -3594,7 +3596,8 @@
   resize: vertical;
 }
 
-.ps-site .contact-form-card .turnstile-slot {
+/* The bot check stays out of sight unless Cloudflare asks the visitor to act (D-168) */
+.ps-site .contact-form-card .turnstile-slot > div:has(iframe) {
   margin-top: calc(21 * var(--cdu));
 }
 
@@ -3624,13 +3627,6 @@
 .ps-site .contact-send svg {
   width: calc(16 * var(--cdu));
   height: calc(16 * var(--cdu));
-}
-
-.ps-site .contact-consent {
-  margin-top: calc(14 * var(--cdu));
-  color: var(--site-muted);
-  font-size: max(12px, calc(15 * var(--cdu)));
-  line-height: 1.5;
 }
 
 @media (max-width: 959px) {

@@ -108,16 +108,19 @@ export default async function ContactPage() {
             </li>
           </ul>
 
+          {/* Not in the design, but owed: what the form does with the data (D-145) and
+              where the statutory details are (5651 s. m. 3); kept small, under the addresses */}
           <p className="contact-note">
-            İçerik kaldırma başvuruları ve derginin tanıtıcı bilgileri{" "}
-            <Link href="/kunye" className="underline">
-              künye sayfasında
-            </Link>
-            ; kişisel verilerinize ilişkin başvurular için{" "}
+            Formla gönderdiğiniz ad, e-posta ve mesaj yalnızca size cevap vermek için dergi
+            e-postasına iletilir, sitede saklanmaz (
             <Link href="/kvkk" className="underline">
-              KVKK aydınlatma metnine
-            </Link>{" "}
-            bakın.
+              KVKK
+            </Link>
+            ). Kaldırma başvuruları ve tanıtıcı bilgiler{" "}
+            <Link href="/kunye" className="underline">
+              künyede
+            </Link>
+            .
           </p>
         </section>
 
@@ -196,19 +199,11 @@ export default async function ContactPage() {
               {/* Null until both Turnstile keys are set; the form then works without the widget (D-111) */}
               {siteKey && (
                 <div className="turnstile-slot">
-                  <TurnstileWidget siteKey={siteKey} action="contact" />
+                  <TurnstileWidget siteKey={siteKey} action="contact" appearance="interaction-only" />
                 </div>
               )}
             </>
           </PanelForm>
-
-          <p className="contact-consent">
-            Gönderdiğiniz ad, e-posta adresi ve mesaj yalnızca size cevap verebilmek için kullanılır
-            ve dergi posta kutusuna iletilir; sitede saklanmaz.{" "}
-            <Link href="/kvkk" className="underline">
-              Ayrıntılar
-            </Link>
-          </p>
         </section>
 
         <div className="contact-strip" aria-hidden />

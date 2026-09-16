@@ -24,7 +24,16 @@ declare global {
   }
 }
 
-export function TurnstileWidget({ siteKey, action }: { siteKey: string; action: string }) {
+export function TurnstileWidget({
+  siteKey,
+  action,
+  appearance = "always",
+}: {
+  siteKey: string;
+  action: string;
+  /** "interaction-only" keeps the widget hidden unless Cloudflare needs the visitor to act (D-168). */
+  appearance?: "always" | "interaction-only";
+}) {
   const container = useRef<HTMLDivElement>(null);
   const widgetId = useRef<string | null>(null);
 
@@ -35,8 +44,9 @@ export function TurnstileWidget({ siteKey, action }: { siteKey: string; action: 
       action,
       "response-field-name": BOT_TOKEN_FIELD,
       language: "tr",
+      appearance,
     });
-  }, [siteKey, action]);
+  }, [siteKey, action, appearance]);
 
   useEffect(() => {
     // The script may already be loaded from an earlier page, in which case onLoad never fires
