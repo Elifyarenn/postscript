@@ -6553,3 +6553,8 @@ Playwright ile 2078 genişlikte kutu ölçüleri tasarımla karşılaştırılı
 - Türkçe başlık dört satıra taşıyordu: "Bize katılır mısın?" (tasarımda iki
   satır "YOU WANNA JOIN US?"), düğme "Katıl" ("JOIN US"). Sekme "Tasarımcı /
   ve / çizerler": "Tasarımcılar" 227 birimlik şeride sığmıyordu.
+- İkinci ölçümde kutular 1440 genişlikte 798 yerine 850 (oranla) çıktı:
+  Source Serif Minion'dan geniş dizdiği için hikâye metni bir satır fazla
+  kırılıyor. Başlık altı (48→36) ve Yaratıcılar kutusunun üst/alt boşluğu
+  (64→44, 38→26) o satırı geri veriyor. Kart başlığı metinden 10 birim geniş:
+  "BİZE KATILIR" tasarımdaki gibi tek satır.

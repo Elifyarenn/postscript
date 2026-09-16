@@ -953,7 +953,9 @@
 }
 
 .ps-site .about-panel h2 {
-  margin-bottom: calc(48 * var(--adu));
+  /* The design has 48 here; Source Serif sets wider than Minion and wraps one
+     line more, so the gaps give that line back and the panel stays 798 tall */
+  margin-bottom: calc(36 * var(--adu));
   color: var(--site-ink);
   font-family: var(--font-caps), Georgia, serif;
   /* OUR STORY: 49.5 units */
@@ -988,8 +990,8 @@
 }
 
 .ps-site .about-creators {
-  margin: calc(64 * var(--adu)) calc(-5 * var(--adu)) 0 calc(-7 * var(--adu));
-  padding: calc(14 * var(--adu)) calc(24 * var(--adu)) calc(38 * var(--adu)) calc(33 * var(--adu));
+  margin: calc(44 * var(--adu)) calc(-5 * var(--adu)) 0 calc(-7 * var(--adu));
+  padding: calc(14 * var(--adu)) calc(24 * var(--adu)) calc(26 * var(--adu)) calc(33 * var(--adu));
   border: 1px solid var(--site-rule);
 }
 
@@ -1051,7 +1053,8 @@
 .ps-site .about-card h3 {
   /* Two lines tall either way, so both cards' copy starts on the same line */
   min-height: 2.4em;
-  margin-bottom: calc(24 * var(--adu));
+  /* A little wider than the copy, so "BİZE KATILIR" stays on one line as in the design */
+  margin: 0 calc(-10 * var(--adu)) calc(24 * var(--adu));
   color: var(--site-wine);
   /* YOU WANNA JOIN US?, WRITERS: 29.3 units */
   font-size: calc(29.3 * var(--adu));
