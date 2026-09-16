@@ -87,7 +87,7 @@ export function HomePage({
 
         <div className="home-hero-copy">
           <p className="hero-issue">Sayı {formatIssueNumber(issue.number)}</p>
-          <h2 id="home-issue-title" className="hero-title" lang={issue.titleLang}>
+          <h2 id="home-issue-title" className="hero-title fit-line" lang={issue.titleLang}>
             {issue.title}
           </h2>
           {issue.theme && <p className="hero-theme">{issue.theme}</p>}

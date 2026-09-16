@@ -5977,3 +5977,59 @@ arayüz yazılarında ikinci satır yok, hiçbir genişlikte sayfa taşması yok
 typecheck, lint, 64 dosya / 594 test.
 
 **Hukuk:** Yalnızca görünüm.
+
+## D-158 — Yazı boyutları tasarımın kendi ölçeğinden; büyük başlıklar ekranla orantılı
+
+**İstek (ürün sahibi):** "gereksiz büyük yazılar var, onları tasarımdaki boyutta
+yap; ana hero'daki Obsession yazısı da çok büyük, son harfi alta taşmasın;
+ekran boyutuna göre tüm yazılar orantılansın."
+
+**Ölçüm:** Boyutlar tahmin edilmedi, tasarım dosyalarının PDF katmanından
+okundu. pdf.js her metin parçasının yazı tipini, boyutunu ve konumunu veriyor;
+metin kodlaması bozuk olsa bile boyut doğru. Sayfalar 2057–2078 birim genişliğinde:
+
+| Yazı | Tasarım (birim) | 1440 px'te karşılığı | Bizdeki eski boyut |
+|---|---|---|---|
+| Kapak başlığı (OBSESSION, Araline Italic) | 126,3 | 87,5 px | 136 px |
+| Sayfa başlıkları (NOTIFICATIONS, BOOKMARKS, SETTINGS, ANON BOX) | 130,3 | 90,3 px | 80 px (üst sınır) |
+| Afiş başlıkları (MAGAZINES 114,4 · ABOUT 125,8) | ≈120 | 83 px | 136 px |
+| Bölüm başlıkları | 49,5–51,6 | ≈35 px | 51 px |
+| Afiş alt başlıkları | 33,1–34,7 | ≈24 px | 24 px |
+| Profil adı | 33,9 | ≈23 px | 30 px |
+| Mesajlar başlığı | 39 | ≈27 px | 30 px |
+| Kapak "Sayı" satırı | 25,3 | ≈17,5 px | 20 px |
+| Sekmeler, üye menüsü | 23,3–24,4 | ≈16 px | 16 px |
+
+**Karar:**
+
+- **Büyük başlıklar tamamen ekranla orantılı:** `--du` bir tasarım birimi
+  (`100vw / 2078`). Kapak başlığı, sayfa başlıkları, afiş başlıkları ve anonim
+  kutu başlığı `birim × --du` ile tanımlandı; her genişlikte tasarımla aynı
+  oranda. Kapak başlığı da tek satır kuralına (D-157) alındı: son harf hiçbir
+  genişlikte alta düşmez.
+- **Diğer yazılar tasarım birimine bağlı:** 1rem = 23 tasarım birimi (sekmeler
+  ve üye menüsü). Yukarıdaki orta boy yazılar bu ölçekle yeniden yazıldı.
+- **Kök boyut ekranla büyür, ama 16 pikselin altına inmez:**
+  `html:has(.ps-site) { font-size: max(16px, 23 × 100vw / 2078) }`. 1446
+  pikselin üstünde bütün rem tabanlı yazılar ekranla orantılı büyür (1920'de
+  kök 21,25 px). Altında bugünkü 16 px kalır: tasarımın telefon sürümü yok,
+  tamamen orantılı bir gövde metni telefonda ≈4 px olurdu ve telefonlar 16
+  pikselin altındaki form alanlarına odaklanınca sayfayı yakınlaştırır.
+  Paneller (`PanelShell`) etkilenmez.
+- **Dokunulmayanlar:** İletişim ve kategoriler çizim alanları PDF katmanında
+  yok (D-112), o yüzden oradaki başlıkların boyutu ölçülemedi; kapak numarası,
+  afiş alıntısı ve "Artwork of the issue" etiketi de tasarımdaki karşılığı kesin
+  eşleşmediği için tahminle değiştirilmedi.
+
+**Doğrulama:** Demo sunucusunda ölçüldü.
+
+- Kapak başlığı 390 / 1440 / 1920 pikselde 23,7 / 87,5 / 116,7 px. Tasarım
+  oranıyla birebir, tek satır, küçültme gerekmeden sığıyor.
+- Afiş başlığı 22,5 / 83,2 / 110,9 px. Sayfa ve anonim kutu başlıkları 24,5 /
+  90,3 / 120,4 px; hepsi tasarımın değerinde.
+- 16 sayfa × 320–1920 arası 7 genişlik: kayan şerit yok (kategori rayı hariç),
+  kısa arayüz yazılarında ikinci satır yok, sayfa taşması yok. "KAYDEDİLENLER"
+  1440'ta sütuna kıl payı sığmadığı için %94'e küçülüyor (85 px), tek satır.
+- Kapı: typecheck, lint, 64 dosya / 594 test.
+
+**Hukuk:** Yalnızca görünüm.

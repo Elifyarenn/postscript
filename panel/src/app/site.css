@@ -16,6 +16,8 @@
   --site-frame-inset: clamp(0.5rem, 0.8vw, 0.95rem);
   /* The paper between the last content and the frame's bottom line (D-156) */
   --site-frame-clear: 2rem;
+  /* One unit of the designs, which are 2078 units wide (D-158) */
+  --du: calc(100vw / 2078);
   --site-rule: #7b3444;
   --site-muted: #75625e;
 
@@ -424,7 +426,8 @@
   gap: 0.25em 0.35em;
   color: var(--site-ink);
   font-family: var(--font-caps), Georgia, serif;
-  font-size: clamp(2.4rem, 6.5vw, 5rem);
+  /* NOTIFICATIONS, BOOKMARKS, SETTINGS: 130.3 units */
+  font-size: calc(130.3 * var(--du));
   font-weight: 600;
   letter-spacing: -0.01em;
   line-height: 1;
@@ -454,7 +457,8 @@
 
 .ps-site .site-banner-title {
   font-family: var(--font-italic), Georgia, serif;
-  font-size: clamp(3.2rem, 11vw, 8.5rem);
+  /* MAGAZINES 114.4, ABOUT 125.8 units */
+  font-size: calc(120 * var(--du));
   font-style: italic;
   font-weight: 300;
   line-height: 0.9;
@@ -463,7 +467,8 @@
 
 .ps-site .site-banner-subtitle {
   margin-top: 1.2rem;
-  font-size: clamp(0.95rem, 2vw, 1.5rem);
+  /* 33.1–34.7 units */
+  font-size: 1.48rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -491,7 +496,8 @@
 .ps-site .site-caps-title {
   color: var(--site-ink);
   font-family: var(--font-caps), Georgia, serif;
-  font-size: clamp(2rem, 4.5vw, 3.2rem);
+  /* section titles: 49.5–51.6 units */
+  font-size: 2.17rem;
   font-weight: 600;
   letter-spacing: -0.01em;
   line-height: 1;
@@ -590,7 +596,8 @@
 
 .ps-site .hero-issue {
   margin-left: clamp(0rem, 16vw, 16rem);
-  font-size: clamp(0.95rem, 1.6vw, 1.25rem);
+  /* 25.3 units */
+  font-size: 1.1rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -598,7 +605,8 @@
 .ps-site .hero-title {
   margin: 0.3rem 0 0.8rem;
   font-family: var(--font-italic), Georgia, serif;
-  font-size: clamp(3.4rem, 10vw, 8rem);
+  /* OBSESSION: 126.3 of the design's 2078 units */
+  font-size: calc(126.3 * var(--du));
   font-style: italic;
   font-weight: 300;
   line-height: 0.95;
@@ -629,7 +637,8 @@
 .ps-site .hero-categories {
   display: grid;
   gap: 0.9rem;
-  font-size: clamp(0.95rem, 1.5vw, 1.15rem);
+  /* 19.8 units */
+  font-size: 0.86rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -901,7 +910,8 @@
   margin-bottom: 1.5rem;
   color: var(--site-ink);
   font-family: var(--font-caps), Georgia, serif;
-  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  /* 33.1 units */
+  font-size: 1.44rem;
   font-weight: 600;
   text-transform: uppercase;
 }
@@ -1320,7 +1330,8 @@
 
 .ps-site .anon-banner h1 {
   font-family: var(--font-caps), Georgia, serif;
-  font-size: clamp(2.6rem, 8vw, 5.5rem);
+  /* ANON BOX: 130.3 units */
+  font-size: calc(130.3 * var(--du));
   font-weight: 600;
   line-height: 1;
   text-transform: uppercase;
@@ -1328,7 +1339,8 @@
 
 .ps-site .anon-banner p {
   margin-top: 0.5rem;
-  font-size: clamp(1rem, 2.4vw, 1.6rem);
+  /* 34.7 units */
+  font-size: 1.51rem;
 }
 
 .ps-site .anon-banner .site-sparkle {
@@ -1512,7 +1524,8 @@
   padding: 1.1rem 1.1rem 0.7rem;
   color: var(--site-wine);
   font-family: var(--font-caps), Georgia, serif;
-  font-size: 1.9rem;
+  /* 39 units */
+  font-size: 1.7rem;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -1873,7 +1886,8 @@
 }
 
 .ps-site .profile-name {
-  font-size: 1.9rem;
+  /* 33.9 units */
+  font-size: 1.47rem;
   font-weight: 700;
 }
 
@@ -1921,7 +1935,8 @@
 
 .ps-site .profile-stats strong {
   color: var(--site-wine);
-  font-size: 1.5rem;
+  /* 29.1 units */
+  font-size: 1.27rem;
 }
 
 .ps-site .profile-stats span {
@@ -3802,4 +3817,17 @@
 .ps-site .fit-line > * {
   flex-shrink: 0;
   overflow-x: visible;
+}
+
+/* ════════════════ Type scale from the designs (D-158) ════════════════ */
+
+/*
+ * One rem is 23 design units, so text sized in rem keeps the design's
+ * proportions and grows with the screen. It never drops below today's 16
+ * pixels: the designs have no phone version, and a proportional body text
+ * would be about 4 pixels on a phone (and phones zoom into inputs under 16).
+ * Display lines use `--du` directly and stay proportional at every width.
+ */
+html:has(.ps-site) {
+  font-size: max(16px, calc(23 * 100vw / 2078));
 }
