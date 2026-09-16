@@ -24,6 +24,8 @@ import {
   listBookmarkedPosts,
   listExplorePosts,
   listHomeFeed,
+  listProfileComments,
+  listProfileFeed,
   listProfilePosts,
   POSTS_PER_MINUTE,
   pruneDeletedPosts,
@@ -397,5 +399,53 @@ describe("retention", () => {
     expect(
       await db.select().from(postLikes).where(and(eq(postLikes.userId, lunae.id), eq(postLikes.postId, theirs.id))),
     ).toHaveLength(0);
+  });
+});
+
+describe("a profile's side column and pager (D-150)", () => {
+  it("lists what other members answered, newest first, and leaves out the member's own replies", async () => {
+    const lunae = await member("lunae");
+    const velvet = await member("velvet");
+    const ada = await member("ada");
+    const original = await post(lunae, "ana gönderi");
+
+    await post(velvet, "bu çok gerçek", original.id);
+    await post(lunae, "kendi yanıtım", original.id);
+    await post(ada, "hep en güzelini yazıyorsun", original.id);
+
+    const comments = await listProfileComments(actorOf(lunae), "lunae");
+    expect(comments.map((item) => item.body)).toEqual([
+      "hep en güzelini yazıyorsun",
+      "bu çok gerçek",
+    ]);
+    expect(comments[0]!.author.username).toBe("ada");
+  });
+
+  it("hides the replies of someone the viewer blocked", async () => {
+    const lunae = await member("lunae");
+    const velvet = await member("velvet");
+    const original = await post(lunae, "ana gönderi");
+    await post(velvet, "yanıt", original.id);
+
+    await blockMember(actorOf(lunae), "velvet");
+    expect(await listProfileComments(actorOf(lunae), "lunae")).toEqual([]);
+  });
+
+  it("cuts the posts tab into pages and pulls an out-of-range page back", async () => {
+    const lunae = await member("lunae");
+    const first = await post(lunae, "birinci");
+    const second = await post(lunae, "ikinci");
+    const third = await post(lunae, "üçüncü");
+
+    const pageOne = await listProfileFeed(actorOf(lunae), "lunae", "posts", 1, 2);
+    expect(pageOne.pageCount).toBe(2);
+    expect(pageOne.posts.map((item) => item.id)).toEqual([third.id, second.id]);
+
+    const pageTwo = await listProfileFeed(actorOf(lunae), "lunae", "posts", 2, 2);
+    expect(pageTwo.posts.map((item) => item.id)).toEqual([first.id]);
+
+    const beyond = await listProfileFeed(actorOf(lunae), "lunae", "posts", 99, 2);
+    expect(beyond.page).toBe(2);
+    expect(beyond.posts.map((item) => item.id)).toEqual([first.id]);
   });
 });

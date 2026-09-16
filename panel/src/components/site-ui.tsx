@@ -3,6 +3,7 @@
  * star, the pair of solid stars and the page titles built from them.
  */
 import type { ReactNode } from "react";
+import Link from "next/link";
 import wordmark from "@/assets/design/wordmark.png";
 import type { SocialKey } from "@/lib/site";
 import { cn } from "@/lib/utils";
@@ -129,5 +130,91 @@ export function SiteBanner({
         {aside}
       </div>
     </section>
+  );
+}
+
+/**
+ * The pages the strip lists: a window around the current page, the first and
+ * the last always there, gaps marked with an ellipsis (null).
+ */
+function pagerPages(page: number, pageCount: number): (number | null)[] {
+  const shown = new Set<number>([1, pageCount]);
+  for (let value = page - 1; value <= page + 1; value += 1) {
+    if (value >= 1 && value <= pageCount) shown.add(value);
+  }
+  // The design opens with "1 2 3 4 5 … 10", so the near end stays whole
+  const run = (from: number) => {
+    for (let value = from; value < from + 5 && value <= pageCount; value += 1) {
+      if (value >= 1) shown.add(value);
+    }
+  };
+  if (page <= 3) run(1);
+  if (page > pageCount - 3) run(pageCount - 4);
+
+  const pages: (number | null)[] = [];
+  let previous = 0;
+  for (const value of [...shown].sort((a, b) => a - b)) {
+    if (previous > 0 && value - previous > 1) pages.push(null);
+    pages.push(value);
+    previous = value;
+  }
+  return pages;
+}
+
+/**
+ * The strip of page numbers the designs draw under a list (D-150). It is plain
+ * links, so it works before JavaScript and each page has its own address.
+ */
+export function Pager({
+  page,
+  pageCount,
+  href,
+  label = "Sayfalar",
+}: {
+  page: number;
+  pageCount: number;
+  href: (page: number) => string;
+  label?: string;
+}) {
+  if (pageCount < 2) return null;
+
+  return (
+    <nav className="site-pager" aria-label={label}>
+      {page > 1 ? (
+        <Link href={href(page - 1)} className="site-pager-cell" aria-label="Önceki sayfa">
+          ←
+        </Link>
+      ) : (
+        <span className="site-pager-cell is-off" aria-hidden>
+          ←
+        </span>
+      )}
+
+      {pagerPages(page, pageCount).map((value, index) =>
+        value === null ? (
+          <span key={`gap-${index}`} className="site-pager-cell is-gap" aria-hidden>
+            …
+          </span>
+        ) : value === page ? (
+          <span key={value} className="site-pager-cell is-current" aria-current="page">
+            {value}
+          </span>
+        ) : (
+          <Link key={value} href={href(value)} className="site-pager-cell" aria-label={`Sayfa ${value}`}>
+            {value}
+          </Link>
+        ),
+      )}
+
+      {page < pageCount ? (
+        <Link href={href(page + 1)} className="site-pager-cell" aria-label="Sonraki sayfa">
+          →
+        </Link>
+      ) : (
+        <span className="site-pager-cell is-off" aria-hidden>
+          →
+        </span>
+      )}
+    </nav>
   );
 }

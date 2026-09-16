@@ -19,10 +19,12 @@ import {
   isNotNull,
   isNull,
   lt,
+  ne,
   notInArray,
   or,
   type SQL,
 } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { db } from "@/db/client";
 import {
@@ -580,28 +582,27 @@ export async function suggestMembers(actor: Actor, limit = 5): Promise<MemberLis
 
 export type ProfileTab = "posts" | "replies" | "favorites";
 
-/**
- * A profile's tabs. Likes are shown to the profile owner alone: a list of what
- * someone liked says more about them than they chose to publish (D-090).
- */
-export async function listProfilePosts(
-  actor: Actor,
-  rawUsername: string,
-  tab: ProfileTab,
-  limit = 50,
-): Promise<PostView[]> {
-  const profile = await getProfile(actor, rawUsername);
-  const blocked = await blockedIdsFor(actor.id);
+/** How many posts a profile shows at once; the design draws a pager (D-150). */
+export const PROFILE_PAGE_SIZE = 10;
 
+type ProfileOwner = { id: string; username: string; penName: string | null; role: Role };
+
+/** One page of a tab's entries, newest first. */
+async function profileEntries(
+  profile: ProfileOwner,
+  tab: ProfileTab,
+  limit: number,
+  offset: number,
+): Promise<Entry[]> {
   if (tab === "favorites") {
-    if (!profile.isSelf) throw forbidden("Beğeniler yalnızca profil sahibine görünür.");
     const likes = await db
       .select({ postId: postLikes.postId, at: postLikes.createdAt })
       .from(postLikes)
       .where(eq(postLikes.userId, profile.id))
       .orderBy(desc(postLikes.createdAt))
-      .limit(limit);
-    return hydrate(actor.id, likes.map((row) => ({ ...row, repostedBy: null })), blocked);
+      .limit(limit)
+      .offset(offset);
+    return likes.map((row) => ({ ...row, repostedBy: null }));
   }
 
   if (tab === "replies") {
@@ -610,34 +611,176 @@ export async function listProfilePosts(
       .from(posts)
       .where(and(eq(posts.authorId, profile.id), isNotNull(posts.replyToId), isNull(posts.deletedAt)))
       .orderBy(desc(posts.createdAt))
-      .limit(limit);
-    return hydrate(actor.id, replies.map((row) => ({ ...row, repostedBy: null })), blocked);
+      .limit(limit)
+      .offset(offset);
+    return replies.map((row) => ({ ...row, repostedBy: null }));
   }
 
   const author: PostAuthor = { username: profile.username, penName: profile.penName, role: profile.role };
+  // Two sources become one timeline, so each is read down to the end of the
+  // asked-for page and the window is cut only after they are merged
+  const reach = limit + offset;
   const [own, reposts] = await Promise.all([
     db
       .select({ postId: posts.id, at: posts.createdAt })
       .from(posts)
       .where(and(eq(posts.authorId, profile.id), isNull(posts.replyToId), isNull(posts.deletedAt)))
       .orderBy(desc(posts.createdAt))
-      .limit(limit),
+      .limit(reach),
     db
       .select({ postId: postReposts.postId, at: postReposts.createdAt })
       .from(postReposts)
       .where(eq(postReposts.userId, profile.id))
       .orderBy(desc(postReposts.createdAt))
-      .limit(limit),
+      .limit(reach),
   ]);
 
-  const entries = mergeTimeline<Entry>(
+  return mergeTimeline<Entry>(
     [
       ...own.map((row) => ({ ...row, repostedBy: null })),
       ...reposts.map((row) => ({ ...row, repostedBy: author })),
     ],
-    limit,
+    reach,
+  ).slice(offset);
+}
+
+/**
+ * How many entries the tab holds, as stored. A liked or reposted post that is
+ * hidden from this viewer drops out while hydrating, so the number is an upper
+ * bound and the last page can come up short.
+ */
+async function countProfileEntries(profileId: string, tab: ProfileTab): Promise<number> {
+  if (tab === "favorites") {
+    const [row] = await db
+      .select({ value: count() })
+      .from(postLikes)
+      .where(eq(postLikes.userId, profileId));
+    return row?.value ?? 0;
+  }
+
+  if (tab === "replies") {
+    const [row] = await db
+      .select({ value: count() })
+      .from(posts)
+      .where(and(eq(posts.authorId, profileId), isNotNull(posts.replyToId), isNull(posts.deletedAt)));
+    return row?.value ?? 0;
+  }
+
+  const [[own], [reposts]] = await Promise.all([
+    db
+      .select({ value: count() })
+      .from(posts)
+      .where(and(eq(posts.authorId, profileId), isNull(posts.replyToId), isNull(posts.deletedAt))),
+    db.select({ value: count() }).from(postReposts).where(eq(postReposts.userId, profileId)),
+  ]);
+  return (own?.value ?? 0) + (reposts?.value ?? 0);
+}
+
+export type ProfileFeed = {
+  posts: PostView[];
+  /** 1-based and already pulled back into range. */
+  page: number;
+  pageCount: number;
+};
+
+/**
+ * One page of a profile's tab. Likes are shown to the profile owner alone: a
+ * list of what someone liked says more about them than they chose to publish
+ * (D-090).
+ */
+export async function listProfileFeed(
+  actor: Actor,
+  rawUsername: string,
+  tab: ProfileTab,
+  page = 1,
+  pageSize = PROFILE_PAGE_SIZE,
+): Promise<ProfileFeed> {
+  const profile = await getProfile(actor, rawUsername);
+  if (tab === "favorites" && !profile.isSelf) {
+    throw forbidden("Beğeniler yalnızca profil sahibine görünür.");
+  }
+
+  const [blocked, total] = await Promise.all([
+    blockedIdsFor(actor.id),
+    countProfileEntries(profile.id, tab),
+  ]);
+
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  // An address typed by hand ("?sayfa=99") lands on the last page, not an error
+  const current = Math.min(Math.max(1, Math.trunc(page) || 1), pageCount);
+
+  const entries = await profileEntries(profile, tab, pageSize, (current - 1) * pageSize);
+  return { posts: await hydrate(actor.id, entries, blocked), page: current, pageCount };
+}
+
+/** A profile's tab without the pager, for callers that want one plain list. */
+export async function listProfilePosts(
+  actor: Actor,
+  rawUsername: string,
+  tab: ProfileTab,
+  limit = 50,
+): Promise<PostView[]> {
+  return (await listProfileFeed(actor, rawUsername, tab, 1, limit)).posts;
+}
+
+/** A reply on one of the member's posts, as the profile's side column lists it. */
+export type ProfileComment = {
+  id: string;
+  body: string;
+  createdAt: Date;
+  author: PostAuthor;
+};
+
+/**
+ * The newest replies the community left on this profile's posts (D-150). The
+ * member's own answers stay out: the card is what other people said.
+ */
+export async function listProfileComments(
+  actor: Actor,
+  rawUsername: string,
+  limit = 5,
+): Promise<ProfileComment[]> {
+  const profile = await getProfile(actor, rawUsername);
+  const blocked = await blockedIdsFor(actor.id);
+  const answered = alias(posts, "answered_post");
+
+  const rows = await db
+    .select({
+      id: posts.id,
+      body: posts.body,
+      createdAt: posts.createdAt,
+      username: users.username,
+      penName: users.penName,
+      role: users.role,
+    })
+    .from(posts)
+    .innerJoin(answered, eq(posts.replyToId, answered.id))
+    .innerJoin(users, eq(posts.authorId, users.id))
+    .where(
+      and(
+        eq(answered.authorId, profile.id),
+        isNull(answered.deletedAt),
+        isNull(posts.deletedAt),
+        ne(posts.authorId, profile.id),
+        ...visibleAuthor,
+        ...(blocked.length > 0 ? [notInArray(posts.authorId, blocked)] : []),
+      ),
+    )
+    .orderBy(desc(posts.createdAt))
+    .limit(limit);
+
+  return rows.flatMap((row) =>
+    row.username === null
+      ? []
+      : [
+          {
+            id: row.id,
+            body: row.body,
+            createdAt: row.createdAt,
+            author: { username: row.username, penName: row.penName, role: row.role },
+          },
+        ],
   );
-  return hydrate(actor.id, entries, blocked);
 }
 
 /** A post with the post it answers and its replies, oldest reply first. */

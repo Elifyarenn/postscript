@@ -3641,3 +3641,77 @@
   color: var(--site-muted);
   font-size: 0.85rem;
 }
+
+/* Recent comments on a profile's side column (D-150) */
+
+.ps-site .aside-comments {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.ps-site .aside-comments li {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.ps-site .comment-author {
+  color: var(--site-wine);
+  font-weight: 600;
+}
+
+.ps-site .comment-author:hover {
+  text-decoration: underline;
+}
+
+.ps-site .comment-body {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 0.95rem;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.ps-site .comment-time {
+  color: var(--site-muted);
+}
+
+/* The strip of page numbers the designs draw under a list (D-150) */
+
+.ps-site .site-pager {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 1.5rem;
+  border: 1px solid var(--site-wine);
+  background: var(--site-wine);
+  color: var(--site-paper);
+}
+
+.ps-site .site-pager-cell {
+  min-width: 2.6rem;
+  padding: 0.45rem 0.6rem;
+  border-right: 1px solid color-mix(in srgb, var(--site-paper) 30%, transparent);
+  color: inherit;
+  text-align: center;
+}
+
+.ps-site .site-pager-cell:last-child {
+  border-right: 0;
+}
+
+.ps-site a.site-pager-cell:hover,
+.ps-site .site-pager-cell.is-current {
+  background: var(--site-strip);
+}
+
+.ps-site .site-pager-cell.is-current {
+  font-weight: 700;
+}
+
+.ps-site .site-pager-cell.is-off {
+  opacity: 0.45;
+}
+
+.ps-site .site-pager-cell.is-gap {
+  min-width: 1.8rem;
+}

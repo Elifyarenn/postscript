@@ -5499,3 +5499,53 @@ sayfası hata verir. Uygulanacak komut (panel dizininde):
 env -u NEON_API_KEY pnpm exec neon-env run -- node node_modules/tsx/dist/cli.mjs \
   --tsconfig scripts/tsconfig.json src/db/migrate.ts
 ```
+
+## D-150 — Profil sayfası: yan sütundaki yorumlar gerçek, gönderiler sayfalanıyor
+
+**Durum:** Profil ekranı ("blog.ai") D-113 ve D-116'da kurulmuştu. Tasarımla
+karşılaştırıldığında iki yer eksikti:
+
+- Yan sütundaki **"Recent comments"** kartı yer tutucuydu: her zaman "Henüz
+  yorum yok." yazıyordu, çünkü üyenin gönderilerine gelen yanıtlar hiç
+  toplanmıyordu.
+- Tasarımda listenin altında **sayfa şeridi** var (← 1 2 3 4 5 … 10 →); bizde
+  gönderiler tek seferde (en çok 50) alt alta diziliyordu.
+
+**Karar:**
+
+- **Son yorumlar:** Üyenin gönderilerine gelen en yeni beş yanıt listelenir.
+  - **Üyenin kendi yanıtları kartta yer almaz;** kart "topluluk ne dedi"
+    sorusunun cevabı. Kendi yanıtı zaten "Yanıtlar" sekmesinde duruyor.
+  - Engel iki yönlü çalışır (D-089): engellediğiniz kişinin yanıtı kartta
+    görünmez. Silinmiş yanıt, silinmiş/yasaklı yazar ve kullanıcı adı olmayan
+    hesap da düşer.
+  - Satır yanıtın kendisine gider (`/social/posts/<id>`).
+  - **Yeni veri yok:** yanıtlar zaten herkese açık gönderiler; kart onları
+    yalnızca bir yerde topluyor.
+- **Sayfalama:** Sayfa başına on gönderi, adres `?sayfa=`.
+  - Şerit düz bağlantılardan yapıldı: JavaScript olmadan da çalışır ve her
+    sayfanın kendi adresi olur (paylaşılabilir, geri tuşu doğru çalışır).
+  - Elle yazılan aralık dışı bir sayfa ("?sayfa=99") hata değil, son sayfadır.
+  - Sayaç **üst sınırdır:** beğenilen ya da yeniden paylaşılan bir gönderi o
+    okur için görünmezse listeden düşer, o yüzden son sayfa eksik kalabilir.
+    Uydurma bir sayı göstermemek için sayaç olduğu gibi bırakıldı.
+- **Öne çıkan gönderi** artık hangi sekmede ve hangi sayfada olursanız olun
+  üyenin kendi gönderilerinden seçiliyor; eskiden açık sekmenin listesinden
+  seçiliyordu ve "Yanıtlar" sekmesinde başka bir gönderi öne çıkabiliyordu.
+- **Tasarımdan bilerek ayrılan nokta:** Tasarımda şerit sağ sütunda, "Featured
+  post" kartının altında duruyor. Bizde taşıdığı listenin altında: sağ sütunda
+  dururken sanki öne çıkan gönderiyi sayfalıyormuş gibi görünüyor.
+
+**Hukuk:** Yeni kişisel veri toplanmıyor, yeni bir amaç doğmuyor; aydınlatma
+metninde değişiklik gerekmiyor. Engelli hesapların yanıtları kartta da görünmez.
+
+**Doğrulama:** Demo sunucusunda (3002), okur hesabıyla `kerem_okur` profilinde:
+birinci sayfada 10 gönderi, şerit "← 1 2 →", etkin sayfa 1; "Son yorumlar"
+kartında Ada Y. ve aday_uye'nin üç yanıtı, üyenin kendi yanıtı listede yok.
+"Sayfa 2" bağlantısı adresi `?tab=posts&sayfa=2` yapıyor, 3 gönderi geliyor ve
+etkin sayfa 2 oluyor; geri oku birinci sayfaya (10 gönderi) dönüyor;
+`?sayfa=99` son sayfayı veriyor. Tek yanıtı olan "Yanıtlar" sekmesinde şerit
+hiç çizilmiyor. Yatay taşma yok. Kapı: typecheck, lint, 584 test geçti.
+
+**Push:** Bu commit D-149 ile birlikte bekliyor; üretimde migration 0035
+uygulanmadan `main`'e gitmemeli (bkz. D-149).
