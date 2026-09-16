@@ -17,6 +17,7 @@ import {
   followMember,
   removeBookmark,
   setBio,
+  setInterests,
   setPenName,
   setUsername,
   unblockMember,
@@ -339,6 +340,24 @@ export async function setPenNameAction(
     revalidatePath("/social", "layout");
     revalidatePath("/magazine", "layout");
     return { success: penName ? `Mahlasınız "${penName}" olarak kaydedildi.` : "Mahlasınız kaldırıldı." };
+  });
+}
+
+export async function setInterestsAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireAuth();
+
+    const chosen = formData.getAll("interests").map((value) => String(value));
+    const saved = await setInterests({ ...user }, { interests: chosen });
+
+    revalidatePath("/social", "layout");
+    return {
+      success: saved.length > 0 ? "İlgi alanlarınız kaydedildi." : "İlgi alanlarınız kaldırıldı.",
+    };
   });
 }
 

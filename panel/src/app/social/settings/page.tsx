@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { requireSession } from "@/lib/auth/guard";
 import { readCsrfToken } from "@/lib/csrf";
+import { INTERESTS, MAX_INTERESTS } from "@/lib/interests";
 import { USERNAME_MAX, USERNAME_MIN } from "@/lib/username";
 import { formatDate } from "@/lib/utils";
 import { getMemberSettings, listBlockedMembers } from "@/services/social";
@@ -16,6 +17,7 @@ import {
   clearProfileImageAction,
   setAnonBoxAction,
   setBioAction,
+  setInterestsAction,
   setPenNameAction,
   setProfileImageAction,
   setDirectMessagePolicyAction,
@@ -305,15 +307,35 @@ export default async function SocialSettingsPage({
                   </Link>
                 </div>
 
-                <div className="settings-line">
-                  <span className="settings-line-label">İlgi alanları</span>
-                  <span className="settings-chips">
-                    <span className="settings-chip-empty">Henüz eklenmedi</span>
-                  </span>
-                  {/* Interests are not stored yet; adding them is a new personal data field (D-116) */}
-                  <span className="settings-edit" aria-disabled="true" title="İlgi alanları yakında">
-                    Düzenle <ArrowRight aria-hidden className="size-4" />
-                  </span>
+                <div className="settings-interests">
+                  <PanelForm
+                    action={setInterestsAction}
+                    csrfToken={csrfToken}
+                    submitLabel="Kaydet"
+                    submitClassName="settings-save"
+                    submitContent={saveContent}
+                  >
+                    <fieldset>
+                      <legend className="settings-line-label">İlgi alanları</legend>
+                      <span className="settings-chips">
+                        {INTERESTS.map((interest) => (
+                          <label key={interest.id} className="settings-chip">
+                            <input
+                              type="checkbox"
+                              name="interests"
+                              value={interest.id}
+                              defaultChecked={settings.interests.includes(interest.id)}
+                            />
+                            {interest.label}
+                          </label>
+                        ))}
+                      </span>
+                      <p className="settings-hint">
+                        En fazla {MAX_INTERESTS} tane seçebilirsiniz. Yalnızca siz görürsünüz;
+                        profilinizde gösterilmez.
+                      </p>
+                    </fieldset>
+                  </PanelForm>
                 </div>
 
                 {settings.username && (

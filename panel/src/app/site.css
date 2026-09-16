@@ -2771,6 +2771,9 @@
 @media (min-width: 700px) {
   .ps-site .settings-profile-grid {
     grid-template-columns: 11rem minmax(0, 1fr);
+    /* The picture column is as tall as its own contents, not as tall as the
+       forms beside it; stretching it left a hole under the avatar (D-149) */
+    align-items: start;
   }
 }
 
@@ -3404,6 +3407,7 @@
 /* The profile picture is chosen where it is shown: beside the avatar (D-142) */
 .ps-site .settings-photo {
   display: grid;
+  align-content: start;
   justify-items: start;
   gap: 0.75rem;
 }
@@ -3584,4 +3588,56 @@
 .ps-site .issue-blurb {
   font-size: 1rem;
   line-height: 1.35;
+}
+
+/* ════════════════ Interest chips on the settings (D-149) ════════════════ */
+
+.ps-site .settings-interests {
+  padding: 0.7rem 0 0.9rem;
+  border-bottom: 1px solid var(--site-rule);
+}
+
+.ps-site .settings-interests fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  border: 0;
+  padding: 0;
+}
+
+.ps-site .settings-interests legend {
+  padding: 0;
+}
+
+.ps-site .settings-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.ps-site .settings-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.8rem;
+  border: 1px solid var(--site-rule);
+  border-radius: 8px;
+  color: var(--site-ink);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.ps-site .settings-chip:has(input:checked) {
+  border-color: var(--site-wine);
+  background: var(--site-wine);
+  color: var(--site-paper);
+}
+
+.ps-site .settings-chip input {
+  accent-color: var(--site-wine);
+}
+
+.ps-site .settings-hint {
+  color: var(--site-muted);
+  font-size: 0.85rem;
 }

@@ -5442,3 +5442,60 @@ açılmadan veri taşıyan bir migration uygulanmamalı; eski yedek dallarını 
 sayfa zaten bütün sayıları gösterdiği için oradaki bağlantı "Son yazılar" adıyla
 kaldı; adı ne yaptığını söylüyor, tasarımdaki gibi "Tümünü gör" deseydi kendi
 sayfasına işaret etmiş olurdu.
+
+## D-149 — Ayarlar ekranı: tasarımdaki "Interest" çipleri gerçek oldu
+
+**Durum:** "settings and community.ai" tasarımındaki Profil kartında üç satır
+var: Username, Bio ve **Interest** — beş çip (art, games, books, music,
+fashion) ve "Edit". Bizde kullanıcı adı ve biyografi çalışıyordu; ilgi alanları
+satırı duruyordu ama "yakında" diye devre dışıydı (D-116).
+
+**Karar:**
+
+- **Sabit liste:** İlgi alanları serbest metin değil; `src/lib/interests.ts`
+  içindeki on iki seçenekten seçilir (sanat, edebiyat, müzik, film, dizi, kitap,
+  oyun, moda, bilim, tarih, psikoloji, gündem). Serbest metin olsaydı denetlenmesi
+  gereken yeni bir kullanıcı içeriği alanı doğardı; liste bunu doğurmuyor.
+  Listede olmayan bir değer sessizce atılmaz, reddedilir.
+- **En fazla 5:** Tasarımda beş çip var; profil için de yeterli.
+- **Sıra listeden gelir:** Üye hangi sırayla işaretlerse işaretlesin, çipler her
+  ziyarette aynı sırada durur.
+- **Saklama:** `users.interests` (metin dizisi, boş bırakılabilir); hiç seçim
+  yoksa `null`. Migration 0035.
+- **Şimdilik yalnızca üyenin kendisi görür:** Tasarım çipleri yalnızca ayarlar
+  ekranında çiziyor. Profilde başkalarına göstermek yeni bir yayın kararıdır;
+  ürün sahibi isterse eklenir. Form bunu açıkça yazıyor.
+
+**Tasarımın topluluk yarısı:** Okunamadı. Dosyanın çizim alanında yalnızca
+ayarlar ekranı var (tasarımcı aynı ekranın beş sekme hâlini alt alta koymuş);
+sınır kutusu içeriğin çizim alanının çok dışına taştığını söylüyor ama PDF
+katmanı çizim alanına kırpıldığı için orası boş çıkıyor ve bu dosyanın
+Illustrator verisi `blog.ai`/`dm.ai` gibi açılmıyor. Topluluk ekranları
+D-113/D-116'da kurulan hâliyle kaldı; tasarım dosyası okunabilir hâle gelirse
+yeniden bakılacak.
+
+**Hukuk:** İlgi alanları kişisel veridir; aydınlatma metninin §2 "Profil"
+satırına eklendi ("sabit bir listeden seçtiğiniz ilgi alanları, yalnızca size
+gösterilir"). Yeni bir amaç ya da aktarım yok; profil verisiyle aynı sürede
+silinir.
+
+**Doğrulama:** Demo sunucusunda okur hesabıyla: on iki çip listeleniyor; sanat,
+müzik ve kitap seçilip kaydedildi ("İlgi alanlarınız kaydedildi."), sayfa
+yeniden açıldığında üçü işaretli geliyor. Altı seçenek işaretlenince kayıt
+reddediliyor ("İlgi alanları geçersiz.") ve eski seçim bozulmuyor. Hepsi
+kaldırılınca satır boşalıyor ("İlgi alanlarınız kaldırıldı."). Yatay taşma yok.
+
+**Üretim migration'ı (0035): UYGULANMADI — push bekliyor.** Komut izin
+sisteminde "Production Deploy" gerekçesiyle reddedildi. Yedek hazır:
+migration'ın dokunduğu tablonun profil kolonları salt okunur olarak dışa
+aktarıldı (`prod-users-before-0035.json`, 72 satır); kolon ekleme mevcut
+satırlara dokunmuyor, varsayılanı yok, hepsi `null` başlıyor.
+
+**Bu değişiklik migration uygulanmadan push EDİLMEMELİ.** `getMemberSettings`
+artık `users.interests` kolonunu okuyor; kolon canlıda yokken topluluk ayarları
+sayfası hata verir. Uygulanacak komut (panel dizininde):
+
+```
+env -u NEON_API_KEY pnpm exec neon-env run -- node node_modules/tsx/dist/cli.mjs \
+  --tsconfig scripts/tsconfig.json src/db/migrate.ts
+```

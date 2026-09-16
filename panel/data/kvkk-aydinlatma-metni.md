@@ -24,7 +24,7 @@ ortaklık adına tek başına temsile yetkilidir.
 | İletişim | E-posta adresi, telefon numarası (yalnızca yazar kaydında) |
 | Hesap güvenliği | Şifrenin geri döndürülemez özeti, iki adımlı doğrulama (TOTP) gizli anahtarı, iki adımlı doğrulama kurtarma kodlarının geri döndürülemez özetleri ve kullanılma zamanları, e-posta doğrulama ve şifre sıfırlama bağlantı kayıtları, giriş denemesi kayıtları |
 | İşlem güvenliği | IP adresi, tarayıcı bilgisi (user-agent), oturum açma ve son görülme zamanları; kayıt ve doğrulama e-postası formlarında bot doğrulaması için tarayıcınızdan toplanan teknik sinyaller |
-| Profil | Topluluk kullanıcı adı, kısa biyografi, profil görseli, sosyal medya bağlantıları, yazı alanı |
+| Profil | Topluluk kullanıcı adı, kısa biyografi, profil görseli, sosyal medya bağlantıları, yazı alanı, topluluk ayarlarında sabit bir listeden seçtiğiniz ilgi alanları (yalnızca size gösterilir) |
 | Yazarlık | Yazarlık başvurusu, başvuruya eklenen örnek çalışma ve başvuru notu, editör değerlendirme notları, rol değişikliği kayıtları |
 | Bilgilendirme | Aydınlatma metninin hangi sürümünü ne zaman okuduğunuzu belirttiğiniz (kayıt sırasında ve sonraki sürümlerde); önceki kayıt panel işlem kayıtlarında saklanır |
 | Sözleşme | Yazar sözleşmesi ve eser onayı kayıtları; her onayın tarih-saati, IP adresi, tarayıcı bilgisi, onaylanan metnin SHA-256 özeti ve PDF kopyası |

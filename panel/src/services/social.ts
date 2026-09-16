@@ -26,6 +26,7 @@ import {
 } from "@/db/schema";
 import { writeAudit, type Executor } from "@/lib/audit";
 import type { Actor } from "@/lib/auth/rbac";
+import { INTERESTS, isInterestId, MAX_INTERESTS } from "@/lib/interests";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { slugify } from "@/lib/slug";
 import { normalizeUsername, usernameProblem } from "@/lib/username";
@@ -145,6 +146,7 @@ export async function getMemberSettings(
   dmPolicy: DmPolicy;
   anonBoxEnabled: boolean;
   bio: string | null;
+  interests: string[];
   avatarUrl: string | null;
   headerUrl: string | null;
 }> {
@@ -155,6 +157,7 @@ export async function getMemberSettings(
       dmPolicy: users.dmPolicy,
       anonBoxEnabled: users.anonBoxEnabled,
       bio: users.bio,
+      interests: users.interests,
       avatarMediaId: users.avatarMediaId,
       headerMediaId: users.headerMediaId,
     })
@@ -167,6 +170,7 @@ export async function getMemberSettings(
     dmPolicy: rows[0]?.dmPolicy ?? "following",
     anonBoxEnabled: rows[0]?.anonBoxEnabled ?? false,
     bio: rows[0]?.bio ?? null,
+    interests: rows[0]?.interests ?? [],
     avatarUrl: mediaUrl(rows[0]?.avatarMediaId ?? null),
     headerUrl: mediaUrl(rows[0]?.headerMediaId ?? null),
   };
@@ -269,6 +273,42 @@ export async function setUsername(
 const bioSchema = z.strictObject({
   bio: z.string().trim().max(2000, "Biyografi en fazla 2000 karakter olabilir."),
 });
+
+const interestsSchema = z.strictObject({
+  interests: z
+    .array(z.string().trim())
+    .max(MAX_INTERESTS, `En fazla ${MAX_INTERESTS} ilgi alanı seçebilirsiniz.`),
+});
+
+/**
+ * The interest chips on the community settings (D-149). The member picks from
+ * a fixed list, so anything outside it is refused rather than quietly dropped;
+ * choosing nothing clears the row.
+ */
+export async function setInterests(actor: Actor, rawInput: unknown): Promise<string[]> {
+  assertMayPost(actor);
+
+  const parsed = interestsSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    throw badRequest("İlgi alanları geçersiz.", z.flattenError(parsed.error).fieldErrors);
+  }
+
+  const chosen = [...new Set(parsed.data.interests)];
+  const unknown = chosen.filter((id) => !isInterestId(id));
+  if (unknown.length > 0) {
+    throw badRequest("Listede olmayan bir ilgi alanı seçildi.", {
+      interests: ["Listede olmayan bir ilgi alanı seçildi."],
+    });
+  }
+
+  // The stored order follows the list, so the chips never shuffle between visits
+  const ordered = INTERESTS.map((interest) => interest.id).filter((id) => chosen.includes(id));
+  await db
+    .update(users)
+    .set({ interests: ordered.length > 0 ? ordered : null, updatedAt: new Date() })
+    .where(eq(users.id, actor.id));
+  return ordered;
+}
 
 /**
  * The short bio on the member's community profile (D-136), edited from the

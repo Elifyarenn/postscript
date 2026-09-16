@@ -203,6 +203,8 @@ export const users = pgTable(
     /** The anonymous box is opt-in (D-092): closed until the member opens it. */
     anonBoxEnabled: boolean("anon_box_enabled").notNull().default(false),
     bio: text("bio"),
+    /** The chips the settings design draws; ids from src/lib/interests.ts (D-149). */
+    interests: text("interests").array(),
     avatarMediaId: uuid("avatar_media_id"),
     /** The cover photo across the top of the community profile (D-141). */
     headerMediaId: uuid("header_media_id"),
