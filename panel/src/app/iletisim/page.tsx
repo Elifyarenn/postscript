@@ -1,9 +1,7 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { getAuthContext } from "@/lib/auth/session";
 import { readCsrfToken } from "@/lib/csrf";
 import { buildImprint } from "@/lib/legal";
-import { SOCIAL_LINKS } from "@/lib/site";
 import { turnstileSiteKey } from "@/lib/turnstile";
 import { getSiteSettings } from "@/services/site-settings";
 import { listWriterAreasWithQuota } from "@/services/writer-areas";
@@ -11,7 +9,6 @@ import { PanelForm } from "@/components/form";
 import { SiteShell } from "@/components/site-shell";
 import { SiteBanner } from "@/components/site-ui";
 import { TurnstileWidget } from "@/components/turnstile";
-import { Field, Input, Select, Textarea } from "@/components/ui";
 import { sendContactMessageAction } from "./actions";
 
 export const metadata = { title: "İletişim" };
@@ -19,10 +16,47 @@ export const metadata = { title: "İletişim" };
 // The address and the topics are admin-editable, so the page is read per request
 export const dynamic = "force-dynamic";
 
+/** The handle the design gives for Instagram and X (D-168). */
+const DESIGN_HANDLE = "postscriptmgzn";
+
+/** The small solid star the design sets on the send button. */
+function SendStar() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden>
+      <path d="M12 1.5l3.09 6.6 7.16.86-5.28 4.94 1.4 7.1L12 17.4 5.63 21l1.4-7.1L1.75 8.96l7.16-.86z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function MailIcon() {
+  return (
+    <svg viewBox="0 0 40 34" aria-hidden>
+      <rect x="1" y="3" width="38" height="28" rx="4" fill="currentColor" />
+    </svg>
+  );
+}
+
+function InstagramIcon() {
+  return (
+    <svg viewBox="0 0 40 34" aria-hidden>
+      <rect x="4" y="1" width="32" height="32" rx="9" fill="currentColor" />
+    </svg>
+  );
+}
+
+function XIcon() {
+  return (
+    <svg viewBox="0 0 40 34" aria-hidden>
+      <path d="M5 2h8.5l7.4 10 8.3-10H34L23.2 15.1 35 32h-8.5l-8-11.1L9.2 32H4.4l11.7-14z" fill="currentColor" />
+    </svg>
+  );
+}
+
 /**
- * The contact screen of the designs (D-145): the invitation and the magazine's
- * own addresses on the left, the message form on the right. The form mails the
- * magazine and stores nothing; the statutory details stay on the imprint page.
+ * The contact screen of the designs (D-145, D-168): the invitation and the
+ * magazine's addresses on the left, the message form on the right, in one band
+ * ruled across the paper. The form mails the magazine and stores nothing; the
+ * statutory details stay on the imprint page.
  */
 export default async function ContactPage() {
   const [settings, context, areas] = await Promise.all([
@@ -34,7 +68,6 @@ export default async function ContactPage() {
   const user = context?.user ?? null;
   const csrfToken = (await readCsrfToken()) ?? "";
   const siteKey = turnstileSiteKey();
-  const accounts = SOCIAL_LINKS.flatMap((link) => (link.url ? [{ ...link, url: link.url }] : []));
 
   return (
     <SiteShell user={user} bleed>
@@ -50,23 +83,30 @@ export default async function ContactPage() {
             seviniriz. Dilediğiniz zaman bizimle iletişime geçebilirsiniz.
           </p>
 
-          {email && (
-            <a href={`mailto:${email}`} className="contact-mail">
-              {email}
-            </a>
-          )}
-
-          {accounts.length > 0 && (
-            <ul className="contact-accounts">
-              {accounts.map((link) => (
-                <li key={link.key}>
-                  <a href={link.url} target="_blank" rel="noopener noreferrer">
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )}
+          <ul className="contact-ways">
+            {email && (
+              <li>
+                <MailIcon />
+                <a href={`mailto:${email}`}>{email}</a>
+              </li>
+            )}
+            {/* The design names the accounts; they are not linked until their
+                addresses are confirmed, as in the footer (D-116) */}
+            <li>
+              <InstagramIcon />
+              <span>
+                <span className="sr-only">Instagram: </span>
+                {DESIGN_HANDLE}
+              </span>
+            </li>
+            <li>
+              <XIcon />
+              <span>
+                <span className="sr-only">X: </span>
+                {DESIGN_HANDLE}
+              </span>
+            </li>
+          </ul>
 
           <p className="contact-note">
             İçerik kaldırma başvuruları ve derginin tanıtıcı bilgileri{" "}
@@ -79,15 +119,10 @@ export default async function ContactPage() {
             </Link>{" "}
             bakın.
           </p>
-
-          {/* The writer application lives on the account page (D-037); a visitor signs up first */}
-          <Link href={user ? "/account" : "/register"} className="site-button">
-            Aramıza katıl <ArrowRight aria-hidden />
-          </Link>
         </section>
 
         <section className="contact-form-card" aria-labelledby="contact-form-title">
-          <h2 id="contact-form-title" className="contact-heading fit-line">
+          <h2 id="contact-form-title" className="contact-form-title fit-line">
             Bize mesaj gönderin
           </h2>
 
@@ -95,61 +130,88 @@ export default async function ContactPage() {
             action={sendContactMessageAction}
             csrfToken={csrfToken}
             submitLabel="Gönder"
+            submitClassName="contact-send"
             submitContent={
               <>
-                Gönder <ArrowRight aria-hidden className="size-4" />
+                Gönder <SendStar />
               </>
             }
           >
             <>
-              <Field label="Ad *" htmlFor="contact-name">
-                <Input id="contact-name" name="name" required minLength={2} maxLength={80} autoComplete="name" />
-              </Field>
+              {/* The design writes the labels inside the boxes; screen readers still get a label */}
+              <label htmlFor="contact-name" className="sr-only">
+                Ad
+              </label>
+              <input
+                id="contact-name"
+                name="name"
+                className="contact-field is-first"
+                placeholder="Ad *"
+                required
+                minLength={2}
+                maxLength={80}
+                autoComplete="name"
+              />
 
-              <Field label="E-posta *" htmlFor="contact-email">
-                <Input
-                  id="contact-email"
-                  name="email"
-                  type="email"
-                  required
-                  maxLength={254}
-                  autoComplete="email"
-                />
-              </Field>
+              <label htmlFor="contact-email" className="sr-only">
+                E-posta
+              </label>
+              <input
+                id="contact-email"
+                name="email"
+                type="email"
+                className="contact-field"
+                placeholder="E-posta *"
+                required
+                maxLength={254}
+                autoComplete="email"
+              />
 
-              <Field label="Konu" htmlFor="contact-subject">
-                <Input id="contact-subject" name="subject" maxLength={120} />
-              </Field>
+              <label htmlFor="contact-topic" className="sr-only">
+                Konu
+              </label>
+              <select id="contact-topic" name="topic" className="contact-field" defaultValue="">
+                <option value="">Konu seçin…</option>
+                {areas.map((area) => (
+                  <option key={area.id} value={area.name}>
+                    {area.name}
+                  </option>
+                ))}
+                <option value="Diğer">Diğer</option>
+              </select>
 
-              <Field label="Başlık seçin" htmlFor="contact-topic">
-                <Select id="contact-topic" name="topic" defaultValue="">
-                  <option value="">Bir başlık seçin…</option>
-                  {areas.map((area) => (
-                    <option key={area.id} value={area.name}>
-                      {area.name}
-                    </option>
-                  ))}
-                  <option value="Diğer">Diğer</option>
-                </Select>
-              </Field>
-
-              <Field label="Mesaj *" htmlFor="contact-message">
-                <Textarea id="contact-message" name="message" required minLength={10} maxLength={4000} rows={6} />
-              </Field>
+              <label htmlFor="contact-message" className="sr-only">
+                Mesaj
+              </label>
+              <textarea
+                id="contact-message"
+                name="message"
+                className="contact-field"
+                placeholder="Mesaj *"
+                required
+                minLength={10}
+                maxLength={4000}
+              />
 
               {/* Null until both Turnstile keys are set; the form then works without the widget (D-111) */}
-              {siteKey && <TurnstileWidget siteKey={siteKey} action="contact" />}
-
-              <p className="contact-consent">
-                Gönderdiğiniz ad, e-posta adresi ve mesaj yalnızca size cevap verebilmek için
-                kullanılır ve dergi posta kutusuna iletilir; sitede saklanmaz.{" "}
-                <Link href="/kvkk" className="underline">
-                  Ayrıntılar
-                </Link>
-              </p>
+              {siteKey && (
+                <div className="turnstile-slot">
+                  <TurnstileWidget siteKey={siteKey} action="contact" />
+                </div>
+              )}
             </>
           </PanelForm>
+
+          <p className="contact-consent">
+            Gönderdiğiniz ad, e-posta adresi ve mesaj yalnızca size cevap verebilmek için kullanılır
+            ve dergi posta kutusuna iletilir; sitede saklanmaz.{" "}
+            <Link href="/kvkk" className="underline">
+              Ayrıntılar
+            </Link>
+          </p>
         </section>
+
+        <div className="contact-strip" aria-hidden />
       </div>
     </SiteShell>
   );

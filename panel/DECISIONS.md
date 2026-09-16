@@ -6558,3 +6558,57 @@ Playwright ile 2078 genişlikte kutu ölçüleri tasarımla karşılaştırılı
   kırılıyor. Başlık altı (48→36) ve Yaratıcılar kutusunun üst/alt boşluğu
   (64→44, 38→26) o satırı geri veriyor. Kart başlığı metinden 10 birim geniş:
   "BİZE KATILIR" tasarımdaki gibi tek satır.
+
+## D-168 — İletişim sayfası tasarımın ölçüleriyle
+
+**İstek (ürün sahibi):** "İletişim sayfasını da tasarımla tamamen aynı yap."
+
+**Tasarım nereden okundu:** "contact, about, categories.ai" dosyasında iletişim
+ekranı PDF katmanında yok (D-112, D-145). Bu kez Illustrator'ın kendi verisi
+(zstd ile sıkıştırılmış PostScript, `%AI24_ZStandard_Data`) açıldı:
+
+- **Şekiller** (kutular, çizgiler, renkler) SVG'ye çevrilip çizildi; üç çizim
+  alanı da (Hakkında, Kategoriler, İletişim) görünür oldu. Kutu ölçüleri
+  buradan.
+- **Metinler** Illustrator'ın metin belgesinden (ASCII85) çözüldü: her metnin
+  yazı boyutu ve rengi kesin. Metin çerçevelerinin sayfadaki yeri bu belgede
+  göreli tutulduğu için güvenilir biçimde çıkarılamadı; metinler kutulara göre
+  yerleştirildi.
+
+**Ölçüler (tasarım birimi; sütun 1413 geniş):**
+
+- Başlık bandının 48 altında, sütunun tam genişliğinde, üstü ve altı çizgili
+  555 yüksek bir bant. İki dikey çizgi onu 758 / 590 / 65 genişliğinde üçe
+  böler: davet, form ve boş bir şerit.
+- **Sol:** "GET IN TOUCH" 32.6 (#310004), davet metni 24 (satır 29),
+  ardından simge + adres satırları 21.2: e-posta, Instagram ve X
+  (`postscriptmgzn`). İçerik soldan 90 içeride.
+- **Sağ:** "SEND US A MESSAGE" 24 kalın (#632727). Etiketler kutuların içinde:
+  Ad *, E-posta *, konu seçimi, Mesaj *. Kutular 38 / 38 / 41 yüksek, 5
+  yuvarlak köşe, aralar 32–36; mesaj kutusu 138 yüksek, köşesiz. Altında
+  21 boşlukla tam genişlikte 47 yüksek koyu (#3a0a14) "SEND" düğmesi, 19.7,
+  küçük yıldızla.
+
+**Karar:**
+
+- Hakkında sayfasındaki gibi bant kendi genişliğinin 1413'e oranıyla ölçülür
+  (`--cdu`, `container-type`); her genişlikte tasarımın oranı, 0.7px altına
+  inmez. 960 px altında tek sütun.
+- **Tasarımda olmayan, kalanlar:** Bot doğrulaması (D-111) düğmenin üstünde;
+  kişisel veri notu (D-145, KVKK) ve künye/KVKK yönlendirmesi (5651 s. m. 3)
+  küçük, soluk yazıyla. "Aramıza katıl" düğmesi tasarımda yok, kaldırıldı.
+- **Serbest "Konu" alanı kalktı:** Tasarımda tek satırlık üç kutu var; üçüncüsü
+  "Choose a topic..." seçimi. Konu artık başlık seçimidir (servis `subject`'i
+  zaten isteğe bağlı alıyordu; posta konusu seçilen başlıktan oluşuyor).
+  Aydınlatma metnindeki "konu" hâlâ doğru.
+- **Instagram ve X bağlantı değil:** Tasarım `postscriptmgzn` hesap adını
+  yazıyor; adresler doğrulanmadığı için alt bilgideki gibi yazı olarak
+  gösterilir (D-116). E-posta adresi künyeden gelir (D-145).
+- **Dil:** Türkçe (D-112): "Bize ulaşın", "Bize mesaj gönderin", "Gönder".
+  "CONTACT" bandı (133.9) ortak `SiteBanner` ile 120'de.
+
+**Hukuk:** Toplanan veri azaldı (serbest konu metni yok); aydınlatma metni
+geçerli.
+
+**Doğrulama:** Kapı: typecheck, lint, 66 dosya / 624 test. Canlıda Playwright
+ile kutu ölçüleri.

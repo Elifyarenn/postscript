@@ -3426,19 +3426,37 @@
   letter-spacing: 0.04em;
 }
 
-/* ════════════════ The contact page (D-137) ════════════════ */
+/* ════════════════ The contact page (D-137, D-168) ════════════════ */
 
+/*
+ * Measured on the contact screen of "contact, about, categories" (D-168). A
+ * band ruled above and below runs the paper's width 48 units under the banner
+ * and is 555 tall; two rules split it into the invitation (758 wide), the form
+ * (590) and an empty strip (65). As on the about page the unit is the band's
+ * own width over the design's 1413 (--cdu), so the proportions hold on any
+ * screen and never fall under 0.7px.
+ */
 .ps-site .contact-page {
+  container-type: inline-size;
+  --cdu: max(0.7px, calc(100cqw / 1413));
   display: grid;
-  gap: 1.5rem;
-  padding: 2rem clamp(1rem, 3vw, 2rem) 3rem;
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 1.5rem;
+  border-block: 1px solid var(--site-rule);
 }
 
-/* The design puts the invitation beside the message form (D-145) */
 @media (min-width: 960px) {
   .ps-site .contact-page {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
-    align-items: stretch;
+    grid-template-columns: minmax(0, 758fr) minmax(0, 590fr) minmax(0, 65fr);
+    margin-top: calc(48 * var(--du));
+  }
+
+  .ps-site .contact-form-card {
+    border-left: 1px solid var(--site-rule);
+  }
+
+  .ps-site .contact-strip {
+    border-left: 1px solid var(--site-rule);
   }
 }
 
@@ -3446,69 +3464,223 @@
 .ps-site .contact-form-card {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1.75rem clamp(1.25rem, 3vw, 2rem);
-  border: 1px solid var(--site-rule);
+  min-width: 0;
+}
+
+.ps-site .contact-intro {
+  min-height: calc(555 * var(--cdu));
+  padding: calc(55 * var(--cdu)) calc(40 * var(--cdu)) calc(40 * var(--cdu)) calc(90 * var(--cdu));
 }
 
 .ps-site .contact-heading {
+  color: #310004;
   font-family: var(--font-caps), Georgia, serif;
-  font-size: calc(41 * var(--du));
-  letter-spacing: 0.04em;
+  /* GET IN TOUCH: 32.6 units */
+  font-size: calc(32.6 * var(--cdu));
+  font-weight: 600;
+  line-height: 1.2;
   text-transform: uppercase;
 }
 
 .ps-site .contact-text {
-  font-size: 0.95rem;
-  line-height: 1.6;
+  max-width: calc(560 * var(--cdu));
+  margin-top: calc(18 * var(--cdu));
+  color: var(--site-ink);
+  /* 24 units on a 29 line */
+  font-size: calc(24 * var(--cdu));
+  line-height: calc(29 * var(--cdu));
 }
 
-.ps-site .contact-note {
-  color: var(--site-muted);
-  font-size: 0.85rem;
-  line-height: 1.5;
-}
-
-.ps-site .contact-consent {
-  color: var(--site-muted);
-  font-size: 0.78rem;
-  line-height: 1.5;
-}
-
-.ps-site .contact-intro .site-button {
-  align-self: flex-start;
-}
-
-.ps-site .contact-form-card form {
+/* Mail, Instagram and X, each an icon with the address beside it */
+.ps-site .contact-ways {
   display: grid;
-  gap: 0.9rem;
-}
-
-.ps-site .contact-form-card textarea {
-  min-height: 9rem;
-}
-
-.ps-site .contact-mail {
-  font-size: 1.1rem;
-  text-decoration: underline;
-  overflow-wrap: anywhere;
-}
-
-.ps-site .contact-muted {
-  color: var(--site-muted);
-}
-
-.ps-site .contact-accounts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem 1.2rem;
-  margin: 0;
+  gap: calc(38 * var(--cdu));
+  margin: calc(32 * var(--cdu)) 0 0;
   padding: 0;
   list-style: none;
 }
 
-.ps-site .contact-accounts a {
+.ps-site .contact-ways li {
+  display: flex;
+  align-items: center;
+  gap: calc(34 * var(--cdu));
+  color: var(--site-ink);
+  /* 21.2 units */
+  font-size: calc(21.2 * var(--cdu));
+  overflow-wrap: anywhere;
+}
+
+.ps-site .contact-ways svg {
+  flex-shrink: 0;
+  width: calc(40 * var(--cdu));
+  height: calc(34 * var(--cdu));
+  color: #3a1116;
+}
+
+.ps-site .contact-ways a:hover {
   text-decoration: underline;
+}
+
+.ps-site .contact-note {
+  margin-top: auto;
+  padding-top: calc(32 * var(--cdu));
+  color: var(--site-muted);
+  font-size: calc(17 * var(--cdu));
+  line-height: 1.5;
+}
+
+.ps-site .contact-form-card {
+  padding: calc(40 * var(--cdu)) calc(36 * var(--cdu)) calc(33 * var(--cdu)) calc(39 * var(--cdu));
+}
+
+.ps-site .contact-form-title {
+  color: #632727;
+  /* SEND US A MESSAGE: 24 units */
+  font-size: calc(24 * var(--cdu));
+  font-weight: 700;
+  line-height: calc(30 * var(--cdu));
+  text-transform: uppercase;
+}
+
+.ps-site .contact-form-card form {
+  display: flex;
+  flex-direction: column;
+  margin-top: calc(27 * var(--cdu));
+}
+
+/* The panel form's own spacing gives way to the design's gaps */
+.ps-site .contact-form-card form > * {
+  margin-block: 0;
+  padding-top: 0;
+}
+
+.ps-site .contact-field {
+  width: 100%;
+  height: calc(38 * var(--cdu));
+  min-height: 0;
+  padding: 0 calc(12 * var(--cdu));
+  border: 1px solid var(--site-rule);
+  border-radius: calc(5 * var(--cdu));
+  background: transparent;
+  color: var(--site-ink);
+  font-family: inherit;
+  /* Name *, Email*, Choose a topic…: 21.2 units, never under the 16px phones zoom in on */
+  font-size: max(16px, calc(21.2 * var(--cdu)));
+}
+
+.ps-site .contact-field::placeholder {
+  color: var(--site-ink);
+  opacity: 0.85;
+}
+
+.ps-site .contact-form-card .contact-field {
+  margin-top: calc(32 * var(--cdu));
+}
+
+.ps-site .contact-form-card .contact-field.is-first {
+  margin-top: 0;
+}
+
+.ps-site .contact-form-card select.contact-field {
+  height: calc(41 * var(--cdu));
+  margin-top: calc(35 * var(--cdu));
+}
+
+.ps-site .contact-form-card textarea.contact-field {
+  height: calc(138 * var(--cdu));
+  margin-top: calc(36 * var(--cdu));
+  padding-block: calc(8 * var(--cdu));
+  border-radius: 0;
+  resize: vertical;
+}
+
+.ps-site .contact-form-card .turnstile-slot {
+  margin-top: calc(21 * var(--cdu));
+}
+
+.ps-site .contact-send {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(10 * var(--cdu));
+  width: 100%;
+  height: calc(47 * var(--cdu));
+  margin-top: calc(21 * var(--cdu));
+  border-radius: calc(4 * var(--cdu));
+  background: #3a0a14;
+  color: #dbccbe;
+  /* SEND: 19.7 units */
+  font-size: max(14px, calc(19.7 * var(--cdu)));
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: background-color 0.2s;
+}
+
+.ps-site .contact-send:hover {
+  background: var(--site-wine);
+}
+
+.ps-site .contact-send svg {
+  width: calc(16 * var(--cdu));
+  height: calc(16 * var(--cdu));
+}
+
+.ps-site .contact-consent {
+  margin-top: calc(14 * var(--cdu));
+  color: var(--site-muted);
+  font-size: max(12px, calc(15 * var(--cdu)));
+  line-height: 1.5;
+}
+
+@media (max-width: 959px) {
+  .ps-site .contact-intro,
+  .ps-site .contact-form-card {
+    min-height: 0;
+    padding: 1.5rem clamp(1rem, 4vw, 1.5rem);
+  }
+
+  .ps-site .contact-form-card {
+    border-top: 1px solid var(--site-rule);
+  }
+
+  .ps-site .contact-strip {
+    display: none;
+  }
+
+  .ps-site .contact-heading {
+    font-size: 1.6rem;
+  }
+
+  .ps-site .contact-text,
+  .ps-site .contact-ways li,
+  .ps-site .contact-form-title {
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  .ps-site .contact-ways svg {
+    width: 1.6rem;
+    height: 1.4rem;
+  }
+
+  .ps-site .contact-form-card .contact-field,
+  .ps-site .contact-form-card select.contact-field {
+    height: 2.6rem;
+    margin-top: 1rem;
+  }
+
+  .ps-site .contact-form-card .contact-field.is-first {
+    margin-top: 0;
+  }
+
+  .ps-site .contact-form-card textarea.contact-field {
+    height: 8rem;
+  }
+
+  .ps-site .contact-send {
+    height: 2.8rem;
+  }
 }
 
 /* ════════════════ Community settings: one card at a time (D-136) ════════════════ */
