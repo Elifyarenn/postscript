@@ -5695,7 +5695,7 @@ piksel) bant artık sarmıyor; sekme şeridi gerekirse kendi içinde kayar. Dar
 ekranda eski davranış (alt satıra sarma) korundu, çünkü telefonda tek bant
 sıkışık olurdu.
 
-> **Değişti (D-154):** Şeridin daralıp kendi içinde kayması, sayfa çerçevesi
+> **Değişti (D-155):** Şeridin daralıp kendi içinde kayması, sayfa çerçevesi
 > sütunu 30 piksel daraltınca son sekmeyi sessizce gizlemeye başladı. Bant
 > artık sıkılaştırılmış aralıklarla 1440 piksele sığıyor; sığmadığı yerde
 > kırpmak yerine sarıyor.
@@ -5817,7 +5817,7 @@ sarar, ama hiçbir sekme kesilmez.
 
 **Hukuk:** Yalnızca görünüm; veri işleme değişmedi.
 
-## D-154 — Tasarımdaki sayfa çerçevesi: kâğıdın içinde kıl çizgiler
+## D-155 — Tasarımdaki sayfa çerçevesi: kâğıdın içinde kıl çizgiler
 
 **İstek (ürün sahibi):** "tüm sayfaların kenarında çizgi çerçeveler var
 `postscriptui`'da, onu uygula."
