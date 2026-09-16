@@ -72,15 +72,13 @@ const nextConfig: NextConfig = {
   experimental: {
     // Lets a layout answer 403 with forbidden() instead of redirecting (§13.2)
     authInterrupts: true,
-    // The edit-profile dialog sends both pictures in one save (D-160): two 5 MB
-    // files plus the multipart framing and the text fields. The default 1 MB
-    // refused any photo over 1 MB. Each picture's own 5 MB rule stays in the service.
+    // The same ceiling Vercel puts on a function's request body (D-161), so a
+    // save that works locally cannot fail only in production. The default 1 MB
+    // refused any profile photo over 1 MB; the dialog now shrinks pictures and
+    // keeps both together under 4 MB, leaving room for the multipart framing.
     serverActions: {
-      bodySizeLimit: "11mb",
+      bodySizeLimit: "4.5mb",
     },
-    // src/proxy.ts buffers every request body and cuts it at 10 MB by default,
-    // which would truncate the same two-picture save before the action saw it
-    proxyClientMaxBodySize: "11mb",
   },
   // These data files are read at runtime, so tracing must keep them
   outputFileTracingIncludes: {

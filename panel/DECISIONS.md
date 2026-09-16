@@ -6185,3 +6185,59 @@ biri değiştirilip diğeri kaldırılan fotoğraflarda eski dosyalar kaydetmede
 sonra siliniyor; dokunulmayan fotoğraf yerinde kalıyor; depo yarıda
 çöktüğünde yazılan dosya geri alınıyor; yasaklı üye düzenleyemiyor. Kapı:
 typecheck, lint, 65 dosya / 602 test. Arayüz tarayıcıda denenmedi.
+
+## D-161 — Profil fotoğrafları tarayıcıda küçültülür: Vercel 4,5 MB'tan büyük gövdeyi kabul etmiyor
+
+**Durum:** D-160 yayına alınmadan önce fark edildi. Üretim Vercel'de ve Vercel
+bir fonksiyona gelen istek gövdesini **4,5 MB** ile sınırlıyor; sınırı aşan
+istek action'a hiç ulaşmadan reddediliyor. D-160'ta Next'in sınırı 11 MB'a
+çekilmişti, ama bu Vercel'in sınırını değiştirmiyor. Tipik bir telefon
+fotoğrafı 3-8 MB olduğu için canlıda çoğu fotoğraf yüklenemezdi; iki fotoğraf
+birlikte hiç yüklenemezdi. Ürün sahibi her şeyi canlıda test etmek istiyor.
+
+**Karar:** X'in yaptığı gibi fotoğraf gönderilmeden önce tarayıcıda küçültülür.
+
+- **Plan saf fonksiyon (`planPicture`, `src/lib/profile-limits.ts`):** Karar
+  dosyanın türü, bayt boyutu ve piksel boyutundan verilir; tarayıcı gerektirmez
+  ve birim testi var (`tests/unit/profile-limits.test.ts`).
+  - Uzun kenar sınırı: avatar **1000 px**, kapak **2000 px**. Profilde bundan
+    büyük gösterilmiyor. Oran korunur, küçük görsel büyütülmez.
+  - 1 MB'tan küçük ve sınırı aşmayan dosya olduğu gibi gönderilir; yeniden
+    kodlamak yalnızca kalite kaybettirirdi.
+  - **GIF yeniden çizilmez** (animasyon durur); o yüzden en fazla 4 MB olabilir.
+  - 30 MB'tan büyük kaynak dosya hiç açılmaz: küçük bir telefonu kilitleyebilir.
+  - Tür listesi aynı (JPEG, PNG, GIF, WEBP); HEIC gibi türler reddedilir.
+- **Çizim (`profile-editor.tsx`):** `createImageBitmap` ile
+  `imageOrientation: "from-image"` kullanılır, yani kameranın döndürmesi
+  uygulanır ve dikey fotoğraf yan yatmaz. Çıktı WebP'dir; saydamlığı korur ve
+  daha küçüktür. WebP yazamayan tarayıcı (dönen tür kontrol edilir) JPEG'e
+  düşer; saydam alanlar siyah olmasın diye arkası kâğıt rengiyle doldurulur.
+- **Orijinal dosya gönderilmez:** Dosya alanlarının `name`'i yok. Hazırlanan
+  kopya, action çağrılmadan hemen önce `FormData`'ya konur.
+- **Toplam bütçe 4 MB (`uploadProblem`):** İki fotoğraf birlikte bu sınırı
+  aşarsa pencere göndermeden uyarır. Kalan pay multipart çerçevesi ve 2000
+  karakterlik biyografi için.
+- **Bağlantı hatası çökme yapmaz:** Ağ kesilir ya da sunucu gövdeyi reddederse
+  action fırlatır; pencere bunu yakalar ve "Profil kaydedilemedi…" gösterir.
+- **Hazırlanırken:** "Kaydet" düğmesi "Hazırlanıyor…" gösterir ve kapalıdır.
+  Durum satırı ekran okuyucuya da duyurulur. Hazırlık sürerken pencere
+  kapatılırsa geç gelen sonuç yok sayılır (nesil sayacı).
+- **Sunucu sınırı:** `serverActions.bodySizeLimit` **4,5 MB**'a çekildi.
+  Yerelde çalışan bir kaydetme yalnızca canlıda kırılamaz. D-160'ta eklenen
+  `proxyClientMaxBodySize` kaldırıldı; varsayılan 10 MB zaten üstünde.
+- **Değişmeyen:** Servisin görsel kuralları (tür içerikten, görsel başına
+  5 MB) aynen duruyor. Tarayıcı atlanabilir.
+
+**Hukuk:** Değişiklik yok. Saklanan veri aynı türde ve daha küçük; yeni bir
+işleme ya da aktarım yok. Küçültme cihazda yapılıyor, fotoğraf başka bir
+hizmete gitmiyor.
+
+**Doğrulama:** `tests/unit/profile-limits.test.ts` (9 test): tipik telefon
+fotoğrafı her iki türde doğru boyuta küçülüyor, küçük görsel olduğu gibi
+gidiyor, piksel olarak küçük ama bayt olarak ağır görsel yeniden kodlanıyor,
+GIF dokunulmadan ama bütçe içinde gidiyor, yanlış tür / çok büyük kaynak /
+açılamayan görsel reddediliyor, iki fotoğrafın toplam bütçesi. Üretimin
+migration defteri Neon'dan okundu: 36 kayıt, son zaman damgası yerel
+journal'la aynı (0036); bu yayın için migration gerekmiyor. Kapı: typecheck,
+lint, 66 dosya / 611 test. Canvas ile küçültme tarayıcıda çalıştığı için
+Node testlerinde çalıştırılamadı; canlıda denenecek.

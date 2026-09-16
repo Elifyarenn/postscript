@@ -4108,3 +4108,15 @@ html:has(.profile-editor[open]) {
 .ps-site .profile-editor-confirm-actions .profile-editor-discard:hover {
   background: #7d2323;
 }
+
+/* "Fotoğraf hazırlanıyor…" while a picked picture is shrunk (D-161); always in
+   the page, so a screen reader hears the change, but taking no room when empty */
+.ps-site .profile-editor-status {
+  margin: 0.5rem 1rem 0;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.ps-site .profile-editor-status:empty {
+  margin: 0;
+}
