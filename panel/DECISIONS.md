@@ -5787,40 +5787,17 @@ yayınlanmaz, künyedeki "Konak, İzmir" satırı olduğu gibi kalır.
 **Kod:** Değişiklik yok.
 
 ---
-## D-155 — Tasarımların sayfa çerçevesi: iki dikey çizgi ve alt çizgi
-
-**Not:** Bu CSS değişikliği daha önceki bir oturumda yazıldı, ama karar kaydı
-yazılmadan commit edilmeden kaldı. Yorumları "D-154"e atıf yapıyordu; o numara
-bu arada tebligat kararına verildiği için (D-154) atıflar D-155'e çevrildi.
-
-**Karar:** `postscriptui` tasarımlarının her sayfada çizdiği çerçeve
-`src/app/site.css`'te uygulanır:
-
-- Kâğıt 1446 birim genişliğinde. İki dikey çizgi kenarların 16 birim içinde
-  (%1,1) duruyor. Kenarda değil içeride oldukları için dışlarında bir kâğıt
-  şeridi görünür ve sayfa basılı bir sayfa gibi okunur.
-  - `--site-frame-inset: clamp(0.5rem, 1.1%, 0.95rem)`.
-- Üçüncü çizgi kâğıdın altından 60 birim yukarıda, iki dikeyin arasında.
-  `bottom` içinde yüzde sayfa yüksekliğine göre hesaplanacağı için `vw`
-  kullanıldı (`--site-frame-foot`).
-- Her sayfa, alt çizgiyi taşıyan boş bir kâğıt bandıyla biter
-  (`--site-frame-clear`). Böylece çizgi hiçbir zaman bir kartın veya içeriğin
-  üstünden geçmez. `.site-main-padded`'ın alt boşluğu bu banda taşındı.
-- Eski `box-shadow` kenar çizgileri kaldırıldı; çizgiler `::before`/`::after`
-  ile çiziliyor ve tıklamayı engellemiyor (`pointer-events: none`).
-
-**D-153 ile ilişki:** Bildirimler bandı D-153'te geniş ekranda sarmıyor, sekme
-şeridi kendi içinde kayıyordu. Çerçeve 30 piksel alınca bu son sekmeyi sessizce
-gizledi. Şimdi bant 1440 pikselde ikisini birlikte taşıyacak kadar sıkı
-(sekme dolgusu 0,75rem, harf aralığı 0). Sığmadığı yerde işlem alt satıra
-sarar, ama hiçbir sekme kesilmez.
-
-**Hukuk:** Yalnızca görünüm; veri işleme değişmedi.
-
 ## D-155 — Tasarımdaki sayfa çerçevesi: kâğıdın içinde kıl çizgiler
 
 **İstek (ürün sahibi):** "tüm sayfaların kenarında çizgi çerçeveler var
 `postscriptui`'da, onu uygula."
+
+**Numara ve kayıt notu:** Bu iş commit edilmeden önce D-154 numarası tebligat
+kararına verildi (`88636ac`, aynı çalışma ağacını kullanan başka bir oturum). O
+oturum çerçevenin CSS yorumlarını D-154'ten D-155'e çevirdi ve iş yarım kalmış
+sandığı için kısa bir D-155 özeti yazdı. İş yarım değildi, doğrulanıyordu; o özet
+ortak ağaçtan step 73 commit'ine karıştı ve bu girdiyle birleştirildi. Step
+73'ün commit mesajı hâlâ "D-154" diyor.
 
 **Ölçüm:** Göz kararı değil. Tasarım dosyaları pdf.js ile 1:1 çizildi ve
 pikseller tarandı — yatayda "anon box" ile üyeli ana sayfa, dikeyde "anon box"
