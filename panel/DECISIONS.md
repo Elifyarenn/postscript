@@ -5864,3 +5864,42 @@ ile "bookmarks". Dört dosyada da aynı çerçeve çıktı:
 - Kapı: typecheck, lint, 64 dosya / 594 test.
 
 **Hukuk:** Yalnızca görünüm; yeni veri, yetki ya da metin yok.
+
+## D-156 — Sayfa çerçevesi kapalı bir kutu; altta uzun boşluk yok
+
+**İstek (ürün sahibi):** "tasarımdaki gibi direkt çerçeveleyecek ve altta o
+kadar boşluk olmayacak, köşegenlerden sonra aşağıya çizgi inmeyecek."
+
+**Durum:** D-155'te çerçeve üç ayrı parçaydı: kâğıdın tüm boyunca inen iki
+dikey çizgi, bunlardan bağımsız bir alt çizgi ve içerikle alt bilgi arasında
+91 + 55 piksellik boş bant. Dikey çizgiler alt çizgiyi geçip alt bilgiye kadar
+iniyordu.
+
+**Karar:**
+
+- **Tek, kapalı kutu:** Sol, sağ ve alt kenar tek bir `::before` ile çiziliyor;
+  dikeyler alt çizgide köşe yapıp bitiyor, aşağıya uzamıyor. Üst kenar
+  kâğıdın kendi üst kenarı (koyu şeridin altı). Ayrı alt çizgi (`::after`)
+  kaldırıldı.
+- **Kutunun etrafındaki kâğıt şeridi üç kenarda eşit:** yanlar ve alt aynı
+  değer (`--site-frame-inset`, 1440'ta 12 px).
+- **Altta uzun boşluk yok:** İçerikle kutunun alt çizgisi arası 2rem (32 px),
+  çizginin altında yalnızca 12 px'lik şerit. Eskiden toplam ~146 px'ti.
+- Tasarım dosyasının ölçümünde dikeyler alt çizginin altına iniyordu (D-155);
+  ürün sahibi kapalı kutuyu istedi, karar onundur.
+
+**Yolda yakalanan hata:** İçeri çekme değeri yüzde (`1.1%`) olarak kaldığında,
+aynı değer yanlarda genişliğe, kutunun `bottom`'ında yüksekliğe göre
+çözülüyordu; alt şerit sayfadan sayfaya 10–15 px, içerik boşluğu 27–36 px
+oynadı. Değer görüntü genişliğine bağlandı (`clamp(0.5rem, 0.8vw, 0.95rem)`);
+artık her sayfada aynı.
+
+**Doğrulama:** Demo sunucusunda, 1440 pikselde on sayfada (`/`, `/hakkinda`,
+`/kategoriler`, `/iletisim`, `/magazine`, `/magazine/issues`, `/social`,
+profil, kaydedilenler, bildirimler): kenarlıklar sol/sağ/alt 1 px, üst 0; yan
+12 px, alt şerit 12 px, içerik–çizgi 32 px; kutu hiçbir arka planlı ya da
+kenarlıklı kutunun içinden geçmiyor; yatay taşma yok. İki alt köşenin
+fotoğrafında çizgiler köşede kapanıyor. Bildirim bandı 1100–1920 arasında hâlâ
+tek satır. Kapı: typecheck, lint, 64 dosya / 594 test.
+
+**Hukuk:** Yalnızca görünüm.

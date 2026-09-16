@@ -10,12 +10,12 @@
   --site-strip: #400714;
   --site-ink: #420a14;
   --site-paper: #ded2c7;
-  /* The page frame, as a share of the paper's width (D-155) */
-  --site-frame-inset: clamp(0.5rem, 1.1%, 0.95rem);
-  /* Not a percentage: in `bottom` that would follow the page's height (D-155) */
-  --site-frame-foot: clamp(1.5rem, 4.5vw, 3.4rem);
-  /* The empty paper between the last content and the foot rule (100 units) */
-  --site-frame-clear: clamp(2rem, 6.3vw, 5.7rem);
+  /* The page frame's inset (D-155). Not a percentage: the same value sets the
+     sides and the bottom, and in `bottom` a percentage follows the page's
+     height, which left an uneven strip under the box (D-156) */
+  --site-frame-inset: clamp(0.5rem, 0.8vw, 0.95rem);
+  /* The paper between the last content and the frame's bottom line (D-156) */
+  --site-frame-clear: 2rem;
   --site-rule: #7b3444;
   --site-muted: #75625e;
 
@@ -128,11 +128,11 @@
 }
 
 /*
- * The frame the designs draw on every page (D-155). Measured from the files:
- * the paper is 1446 units wide, the two hairlines sit 16 units inside its
- * edges (1.1%) and a third rule crosses 60 units above the paper's foot
- * (4.15%). The lines are inset, not on the edge, so a strip of paper shows
- * outside them — that strip is what makes it read as a printed page.
+ * The frame the designs draw on every page (D-155, D-156): a closed box set
+ * inside the paper. The sides sit 16 of the paper's 1446 units in (1.1%), and
+ * the bottom line sits the same distance above the paper's foot, so the strip
+ * of paper around the box is even on three sides. The sides stop at the
+ * bottom corners; nothing runs on below them.
  */
 .ps-site .site-column {
   position: relative;
@@ -142,30 +142,20 @@
   margin: 0 auto;
   flex-direction: column;
   padding-inline: var(--site-frame-inset);
-  /* Every page ends in a band of empty paper that carries the foot rule, so
-     the rule can never run through a card, padded page or full-bleed alike */
-  padding-bottom: calc(var(--site-frame-foot) + var(--site-frame-clear));
+  /* Room for the box's bottom line below the content, and the strip under it,
+     so the line never runs through a card, padded page or full-bleed alike */
+  padding-bottom: calc(var(--site-frame-inset) + var(--site-frame-clear));
   background: var(--site-paper);
 }
 
-/* The two verticals run the paper's whole height, as in the designs */
+/* One box: both sides and the bottom line, meeting in closed corners. Its top
+   is the paper's own top edge under the dark strip. */
 .ps-site .site-column::before {
   position: absolute;
   z-index: 1;
-  inset: 0 var(--site-frame-inset);
-  border-inline: 1px solid var(--site-rule);
-  content: "";
-  pointer-events: none;
-}
-
-/* The rule above the footer, between the two verticals */
-.ps-site .site-column::after {
-  position: absolute;
-  z-index: 1;
-  right: var(--site-frame-inset);
-  bottom: var(--site-frame-foot);
-  left: var(--site-frame-inset);
-  border-top: 1px solid var(--site-rule);
+  inset: 0 var(--site-frame-inset) var(--site-frame-inset);
+  border: 1px solid var(--site-rule);
+  border-top: 0;
   content: "";
   pointer-events: none;
 }
