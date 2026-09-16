@@ -27,7 +27,6 @@ import type { RequestMeta } from "./auth";
 type Recipient = {
   id: string;
   username: string;
-  nickname: string | null;
   birthDate: string | null;
   anonBoxEnabled: boolean;
 };
@@ -40,7 +39,6 @@ async function findRecipient(rawUsername: string): Promise<Recipient | null> {
     .select({
       id: users.id,
       username: users.username,
-      nickname: users.nickname,
       birthDate: users.birthDate,
       anonBoxEnabled: users.anonBoxEnabled,
     })
@@ -113,7 +111,7 @@ export async function getAnonComposeState(actor: Actor, rawUsername: string) {
   const problem = await problemFor(me.id, recipient);
 
   return {
-    recipient: { username: recipient.username, nickname: recipient.nickname },
+    recipient: { username: recipient.username },
     canSend: problem === null,
     problem: problem?.message ?? null,
   };

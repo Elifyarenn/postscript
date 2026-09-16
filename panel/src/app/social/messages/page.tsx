@@ -47,13 +47,11 @@ export default async function MessagesPage({
   const talking = new Set(conversations.map((conversation) => conversation.other.username));
   const mutualFollows = mutuals.filter((member) => !talking.has(member.username));
 
-  // The design's search box narrows the column by handle or pen name (D-147)
-  const matches = (candidate: { username: string | null; nickname: string | null }) => {
+  // The design's search box narrows the column by handle (D-147, D-166)
+  const matches = (candidate: { username: string | null }) => {
     if (!query) return true;
     const needle = query.replace(/^@/, "").toLocaleLowerCase("tr");
-    return [candidate.username, candidate.nickname].some((value) =>
-      (value ?? "").toLocaleLowerCase("tr").includes(needle),
-    );
+    return (candidate.username ?? "").toLocaleLowerCase("tr").includes(needle);
   };
   const shownConversations = conversations.filter((conversation) => matches(conversation.other));
   const shownMutuals = mutualFollows.filter((member) => matches(member));

@@ -24,7 +24,7 @@ import {
 import { assertCsrfFromForm } from "@/lib/csrf";
 import { disableTotp, enableTotp, regenerateRecoveryCodes } from "@/services/two-factor";
 import { acknowledgeKvkkNotice } from "@/services/kvkk";
-import { runAction, optionalText, text, type ActionState } from "@/lib/action";
+import { checkbox, runAction, optionalText, text, type ActionState } from "@/lib/action";
 import { badRequest } from "@/lib/errors";
 
 export async function updateProfileAction(
@@ -47,6 +47,7 @@ export async function updateProfileAction(
       {
         displayName: text(formData, "displayName"),
         penName: optionalText(formData, "penName"),
+        penNameFromUsername: checkbox(formData, "penNameFromUsername"),
         bio: optionalText(formData, "bio"),
         phone: optionalText(formData, "phone"),
         birthDate: optionalText(formData, "birthDate"),

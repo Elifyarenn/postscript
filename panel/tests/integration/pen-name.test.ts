@@ -6,7 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
 import { users } from "@/db/schema";
-import { getMemberSettings, setPenName } from "@/services/social";
+import { getMemberSettings, setPenName, setUsername } from "@/services/social";
 import { updateProfile } from "@/services/users";
 import { isAppError } from "@/lib/errors";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
@@ -102,6 +102,36 @@ describe("the account form keeps the pen name rules (D-162)", () => {
 
     const [row] = await db.select().from(users).where(eq(users.id, second.id));
     expect(row?.penName).toBeNull();
+  });
+
+  it("takes the handle as the pen name when the member asks, and keeps it after a handle change (D-166)", async () => {
+    const member = await createUser();
+    await setUsername(actorOf(member), { username: "deniz_su" }, noMeta);
+
+    await updateProfile(
+      actorOf(member),
+      { displayName: member.displayName, penName: "Yazılan ad", penNameFromUsername: true },
+      noMeta,
+    );
+    let [row] = await db.select().from(users).where(eq(users.id, member.id));
+    expect(row?.penName).toBe("deniz_su");
+    expect(row?.penNameSlug).toBe("deniz-su");
+
+    // Copied, not linked: published work keeps its signature
+    await setUsername(actorOf(member), { username: "deniz_yeni" }, noMeta);
+    [row] = await db.select().from(users).where(eq(users.id, member.id));
+    expect(row?.penName).toBe("deniz_su");
+  });
+
+  it("refuses the handle as a pen name when there is no handle yet", async () => {
+    const member = await createUser();
+    const error = await updateProfile(
+      actorOf(member),
+      { displayName: member.displayName, penNameFromUsername: true },
+      noMeta,
+    ).catch((caught: unknown) => caught);
+    expect(isAppError(error) && error.status).toBe(400);
+    expect(isAppError(error) && error.details?.penName).toBeDefined();
   });
 
   it("does not let an old pen name that breaks today's rule block an unrelated change", async () => {

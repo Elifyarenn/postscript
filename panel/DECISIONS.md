@@ -6430,3 +6430,66 @@ götürüyordu:
 Yasal sayfa bağlantıları iki çerçevede de duruyor (D-084).
 
 **Doğrulama:** Kapı: typecheck, lint, 67 dosya / 623 test. Panel sayfalarında `/magazine`, `/social`, `/account` bağlantısı kalmadı (grep); siteden `/admin`, `/editor`, `/writer`e giden tek bağlantı üst şeritteki PANEL.
+
+## D-166 — Toplulukta tek ad kullanıcı adı; mahlas dergide; kullanıcı adı 30 günde bir değişir
+
+**İstek (ürün sahibi):** "Profilde de takma ad yok bak; sadece başta belirlenen
+nickname olacak ve dergide yayınlanacak mahlas olacak. Yazarlar isterlerse
+mahlas ile nickname'i aynı yapabilsin." Ardından: "Kullanıcı adı 30 günde bir
+değiştirilme hakkına sahip olsun."
+
+**Yorum:** "Başta belirlenen nickname" topluluğa girerken seçilen kullanıcı
+adıdır (`users.username`, D-089). D-163'teki ayrı "Takma ad" (`users.nickname`)
+istenen modelde yok: bir üyenin iki değil, yalnızca iki *yerde* birer adı var.
+
+**Karar:**
+
+- **Takma ad kaldırıldı.** "Profili düzenle" penceresindeki alan, servis
+  (`profile-edit.ts`), action, `src/lib/nickname.ts` ve birim testleri silindi.
+  Topluluğun her ekranı (profil başlığı, gönderi ve yanıt yazarı, yeniden
+  paylaşan, listeler, mesajlar, anonim kutu, ayarlar önizlemesi) kullanıcı
+  adını gösterir. `MemberLink` adı iki kez yazmasın diye yalnızca
+  `@kullanıcıadı` yazar. Serbest metin ad için yazılan `readsAsStaff` artık
+  kullanılmadığı için silindi. Servise yine de `nickname` gönderilirse yok
+  sayılır.
+- **Sütun şimdilik duruyor.** `users.nickname` ne okunuyor ne yazılıyor.
+  Silmek veri silen bir migration; üretimde yedek dal ister ve Neon kotası dolu
+  (bkz. üretim notları). D-163 yalnızca birkaç saat canlıda kaldı; girilmiş
+  değerler hiçbir yerde gösterilmiyor. Sütunu düşüren migration, kota açılınca
+  ayrı adımda.
+- **Mahlas = kullanıcı adı seçeneği (Hesabım).** Mahlas alanının altında
+  "Mahlasım kullanıcı adımla aynı olsun (kullanıcıadı)" kutusu; yalnızca
+  kullanıcı adı olan üyeye görünür. İşaretliyse yazılan mahlas yok sayılır,
+  sunucu kullanıcı adını veritabanından okuyup mahlas yapar ve mahlasın
+  bütün kurallarından (`penNameProblem`: adres, başkasında olmama) geçirir.
+  **Kopyalanır, bağlanmaz:** kullanıcı adı sonra değişirse mahlas ve yazar
+  sayfasının adresi değişmez; yayımlanmış yazının imzası üyenin bir topluluk
+  kararıyla kaymaz. Kullanıcı adı yoksa 400. Kutu, mahlas zaten kullanıcı
+  adına eşitse işaretli açılır.
+- **Kullanıcı adı 30 günde bir değişir (`USERNAME_CHANGE_DAYS`).** İlk seçim
+  serbest ve sayılmaz; aynı adı tekrar kaydetmek değişiklik değildir. Var olan
+  bir kullanıcı adı değiştirildiyse sonraki değişiklik 30 gün sonra açılır;
+  erken deneme 409 ve açılacağı tarihi söyler. Ayarlardaki ipucu kuralı ve
+  kilitliyse tarihi gösterir.
+  - **Son değişiklik denetim kaydından okunur.** `social.username_set` her
+    değişikliği önceki ve sonraki adla zaten yazıyor ve silinmiyor. Yeni bir
+    sütun aynı olgunun ikinci kopyası olur ve migration isterdi. İlk seçim
+    (`before.username` boş) sayılmaz. JSON alanı SQL'de değil uygulamada
+    süzülür (D-078: sürücüye duyarlı sorgu yok).
+
+**Hukuk:** Aydınlatma metninin (`data/kvkk-aydinlatma-metni.md`) "Profil"
+satırından D-163'te eklenen "toplulukta görünen takma ad" çıkarıldı. Yeni amaç
+ya da veri yok: mahlas zaten işleniyordu, kullanıcı adının değişiklik tarihi
+zaten denetim kaydında. Canlıdaki metin veritabanındaki sürümden gelir; yeni
+sürüm `[AÇIK ADRES]` dolunca yayımlanacak.
+
+**Doğrulama:**
+- `username.test.ts`: pencere kapalı/açık, açılış tarihi, 30. gün sınırı.
+- `social-graph.test.ts`: ilk seçim serbest, ikinci değişiklik 409 ve ad
+  değişmiyor, aynı ad tekrar kaydedilebiliyor, 31 gün önceki değişiklikten
+  sonra açık.
+- `pen-name.test.ts`: kutu kullanıcı adını mahlas ve adres yapıyor; kullanıcı
+  adı değişince mahlas yerinde; kullanıcı adı yokken 400.
+- `profile-edit.test.ts`: topluluk profili takma ad ve mahlas taşımıyor;
+  gönderilen takma ad yazılmıyor.
+- Kapı: typecheck, lint, 66 dosya / 624 test.

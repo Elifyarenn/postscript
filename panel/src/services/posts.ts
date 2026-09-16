@@ -72,7 +72,7 @@ export const postSchema = z.strictObject({
   communityId: z.uuid().optional().nullable(),
 });
 
-export type PostAuthor = { username: string; nickname: string | null; role: Role };
+export type PostAuthor = { username: string; role: Role };
 
 export type PostView = {
   id: string;
@@ -141,7 +141,6 @@ async function hydrate(
       communitySlug: communities.slug,
       communityName: communities.name,
       username: users.username,
-      nickname: users.nickname,
       role: users.role,
     })
     .from(posts)
@@ -185,9 +184,9 @@ async function hydrate(
       .from(bookmarks)
       .where(and(eq(bookmarks.userId, viewerId), inArray(bookmarks.postId, visibleIds))),
     parentIds.length === 0
-      ? Promise.resolve([] as { id: string; username: string | null; nickname: string | null; role: Role }[])
+      ? Promise.resolve([] as { id: string; username: string | null; role: Role }[])
       : db
-          .select({ id: posts.id, username: users.username, nickname: users.nickname, role: users.role })
+          .select({ id: posts.id, username: users.username, role: users.role })
           .from(posts)
           .innerJoin(users, eq(posts.authorId, users.id))
           .where(and(inArray(posts.id, parentIds), isNull(posts.deletedAt), ...visibleAuthor, ...notBlocked)),
@@ -214,12 +213,12 @@ async function hydrate(
       id: row.id,
       body: row.body,
       createdAt: row.createdAt,
-      author: { username: row.username, nickname: row.nickname, role: row.role },
+      author: { username: row.username, role: row.role },
       replyTo: row.replyToId
         ? {
             id: row.replyToId,
             author: parent?.username
-              ? { username: parent.username, nickname: parent.nickname, role: parent.role }
+              ? { username: parent.username, role: parent.role }
               : null,
           }
         : null,
@@ -465,7 +464,6 @@ export async function listHomeFeed(actor: Actor, limit = 50): Promise<PostView[]
         postId: postReposts.postId,
         at: postReposts.createdAt,
         username: users.username,
-        nickname: users.nickname,
         role: users.role,
       })
       .from(postReposts)
@@ -481,7 +479,7 @@ export async function listHomeFeed(actor: Actor, limit = 50): Promise<PostView[]
       ...reposts.map((row) => ({
         postId: row.postId,
         at: row.at,
-        repostedBy: { username: row.username!, nickname: row.nickname, role: row.role },
+        repostedBy: { username: row.username!, role: row.role },
       })),
     ],
     limit,
@@ -566,18 +564,18 @@ export async function suggestMembers(actor: Actor, limit = 5): Promise<MemberLis
   if (shortlist.length === 0) return [];
 
   const rows = await db
-    .select({ id: users.id, username: users.username, nickname: users.nickname, role: users.role })
+    .select({ id: users.id, username: users.username, role: users.role })
     .from(users)
     .where(and(inArray(users.id, shortlist), ...visibleAuthor));
 
   const byId = new Map(rows.map((row) => [row.id, row]));
   return shortlist
     .map((id) => byId.get(id))
-    .filter((row): row is { id: string; username: string; nickname: string | null; role: Role } =>
+    .filter((row): row is { id: string; username: string; role: Role } =>
       Boolean(row?.username),
     )
     .slice(0, limit)
-    .map(({ username, nickname, role }) => ({ username, nickname, role }));
+    .map(({ username, role }) => ({ username, role }));
 }
 
 export type ProfileTab = "posts" | "replies" | "favorites";
@@ -585,7 +583,7 @@ export type ProfileTab = "posts" | "replies" | "favorites";
 /** How many posts a profile shows at once; the design draws a pager (D-150). */
 export const PROFILE_PAGE_SIZE = 10;
 
-type ProfileOwner = { id: string; username: string; nickname: string | null; role: Role };
+type ProfileOwner = { id: string; username: string; role: Role };
 
 /** One page of a tab's entries, newest first. */
 async function profileEntries(
@@ -616,7 +614,7 @@ async function profileEntries(
     return replies.map((row) => ({ ...row, repostedBy: null }));
   }
 
-  const author: PostAuthor = { username: profile.username, nickname: profile.nickname, role: profile.role };
+  const author: PostAuthor = { username: profile.username, role: profile.role };
   // Two sources become one timeline, so each is read down to the end of the
   // asked-for page and the window is cut only after they are merged
   const reach = limit + offset;
@@ -750,7 +748,6 @@ export async function listProfileComments(
       body: posts.body,
       createdAt: posts.createdAt,
       username: users.username,
-      nickname: users.nickname,
       role: users.role,
     })
     .from(posts)
@@ -777,7 +774,7 @@ export async function listProfileComments(
             id: row.id,
             body: row.body,
             createdAt: row.createdAt,
-            author: { username: row.username, nickname: row.nickname, role: row.role },
+            author: { username: row.username, role: row.role },
           },
         ],
   );

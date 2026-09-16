@@ -5,7 +5,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
-import { articles, bookmarks, follows, notifications, userBlocks, users } from "@/db/schema";
+import { articles, auditLog, bookmarks, follows, notifications, userBlocks, users } from "@/db/schema";
 import {
   blockMember,
   bookmarkArticle,
@@ -17,6 +17,7 @@ import {
   removeBookmark,
   setUsername,
   unblockMember,
+  usernameChangeAvailableAt,
   unfollowMember,
 } from "@/services/social";
 import { addCommunityComment, listCommentsForArticle } from "@/services/community";
@@ -88,6 +89,41 @@ describe("handles", () => {
     expect((await captureError(setUsername(actorOf(other), { username: "admin" }, noMeta))).status).toBe(400);
     expect((await captureError(setUsername(actorOf(other), { username: "a b" }, noMeta))).status).toBe(400);
     expect((await captureError(setUsername(actorOf(other), { username: "LUNAE" }, noMeta))).status).toBe(409);
+  });
+
+  it("lets a held handle change once every 30 days; the first pick is free (D-166)", async () => {
+    const user = await createUser();
+    await setUsername(actorOf(user), { username: "lunae" }, noMeta);
+    // Replacing the first pick is allowed straight away
+    expect(await setUsername(actorOf(user), { username: "lunae_iki" }, noMeta)).toBe("lunae_iki");
+
+    const error = await captureError(setUsername(actorOf(user), { username: "lunae_uc" }, noMeta));
+    expect(error.status).toBe(409);
+    expect(error.details?.username?.[0]).toMatch(/30 günde bir/);
+    expect((await reloadUser(user.id)).username).toBe("lunae_iki");
+    expect(await usernameChangeAvailableAt(actorOf(user))).not.toBeNull();
+
+    // Saving the same handle again is not a change and is never refused
+    expect(await setUsername(actorOf(user), { username: "lunae_iki" }, noMeta)).toBe("lunae_iki");
+  });
+
+  it("opens the handle again 30 days after the last change", async () => {
+    const user = await createUser();
+    await setUsername(actorOf(user), { username: "velvet" }, noMeta);
+    // A change recorded 31 days ago, the way the service records one; the first
+    // pick above is in the trail too and does not count
+    await db.insert(auditLog).values({
+      actorId: user.id,
+      action: "social.username_set",
+      entityType: "users",
+      entityId: user.id,
+      before: { username: "eski_velvet" },
+      after: { username: "velvet" },
+      createdAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000),
+    });
+
+    expect(await usernameChangeAvailableAt(actorOf(user))).toBeNull();
+    expect(await setUsername(actorOf(user), { username: "velvet_yeni" }, noMeta)).toBe("velvet_yeni");
   });
 
   it("refuses an unverified or banned account", async () => {

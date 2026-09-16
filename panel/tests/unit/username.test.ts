@@ -1,5 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { normalizeUsername, usernameProblem } from "@/lib/username";
+import { nextUsernameChangeAt, normalizeUsername, usernameProblem } from "@/lib/username";
+
+describe("the handle change window (D-166)", () => {
+  const now = new Date("2026-09-16T12:00:00Z");
+  const daysAgo = (days: number) => new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+
+  it("is open when the handle was never replaced", () => {
+    expect(nextUsernameChangeAt(null, now)).toBeNull();
+  });
+
+  it("stays closed for 30 days after a change and names the day it opens", () => {
+    expect(nextUsernameChangeAt(daysAgo(1), now)?.toISOString()).toBe("2026-10-15T12:00:00.000Z");
+    expect(nextUsernameChangeAt(daysAgo(29), now)).not.toBeNull();
+  });
+
+  it("opens again once 30 days have passed", () => {
+    expect(nextUsernameChangeAt(daysAgo(30), now)).toBeNull();
+    expect(nextUsernameChangeAt(daysAgo(45), now)).toBeNull();
+  });
+});
 
 describe("community handles (D-089)", () => {
   it("normalises case, whitespace and a leading @", () => {

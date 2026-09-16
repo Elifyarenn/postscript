@@ -1,7 +1,7 @@
 /**
  * The profile edited in one dialog with one save, as X does it (D-160): the
- * community nickname (D-163), the bio and both pictures. The pen name is the
- * magazine's and not part of it (D-162).
+ * bio and both pictures. The community goes by the handle (D-166); the pen
+ * name is the magazine's and not part of it (D-162).
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
@@ -47,7 +47,6 @@ const replace = (buffer = png(), declaredMime = "image/png"): PictureChange => (
 });
 
 const edit = (overrides: Partial<ProfileEdit> = {}): ProfileEdit => ({
-  nickname: "",
   bio: "",
   avatar: KEEP,
   header: KEEP,
@@ -86,21 +85,25 @@ describe("updateProfile (D-160)", () => {
     expect(storage().objects.size).toBe(2);
   });
 
-  it("saves the nickname the community shows, and never hands it the pen name (D-163)", async () => {
+  it("shows the community the handle alone, never the pen name (D-166)", async () => {
     const member = await createUser();
     await setUsername(actorOf(member), { username: "deniz_su" }, noMeta);
     await setPenName(actorOf(member), { penName: "Zeynep K." });
 
-    await updateProfile(actorOf(member), edit({ nickname: "  Deniz   Su " }), noMeta);
-
     const profile = await getProfile(actorOf(member), "deniz_su");
-    expect(profile.nickname).toBe("Deniz Su");
-    // The magazine name stays in the magazine
+    expect(profile.username).toBe("deniz_su");
+    // No second community name, and the magazine name stays in the magazine
+    expect("nickname" in profile).toBe(false);
     expect("penName" in profile).toBe(false);
     expect((await rowOf(member.id)).penName).toBe("Zeynep K.");
+  });
 
-    await updateProfile(actorOf(member), edit({ nickname: "   " }), noMeta);
-    expect((await getProfile(actorOf(member), "deniz_su")).nickname).toBeNull();
+  it("ignores a nickname a caller sends anyway (D-166)", async () => {
+    const member = await createUser();
+    const withNickname = { ...edit({ bio: "x" }), nickname: "Deniz" } as unknown as ProfileEdit;
+
+    await updateProfile(actorOf(member), withNickname, noMeta);
+    expect((await rowOf(member.id)).nickname).toBeNull();
   });
 
   it("never touches the pen name, so saving a photo cannot erase it (D-162)", async () => {
@@ -118,7 +121,7 @@ describe("updateProfile (D-160)", () => {
     const member = await createUser();
     const withPenName = { ...edit({ bio: "x" }), penName: "Başka" } as unknown as ProfileEdit;
 
-    await expect(updateProfile(actorOf(member), withPenName, noMeta)).resolves.toEqual({ nickname: null, bio: "x" });
+    await expect(updateProfile(actorOf(member), withPenName, noMeta)).resolves.toEqual({ bio: "x" });
     const row = await rowOf(member.id);
     expect(row.penName).toBeNull();
     expect(row.penNameSlug).toBeNull();
@@ -133,7 +136,6 @@ describe("updateProfile (D-160)", () => {
       updateProfile(
         actorOf(member),
         edit({
-          nickname: "Postscript Destek",
           bio: "b".repeat(2001),
           avatar: replace(),
           header: replace(pdf, "application/pdf"),
@@ -143,11 +145,10 @@ describe("updateProfile (D-160)", () => {
     );
 
     expect(error.status).toBe(400);
-    expect(Object.keys(error.details ?? {}).sort()).toEqual(["bio", "headerImage", "nickname"]);
+    expect(Object.keys(error.details ?? {}).sort()).toEqual(["bio", "headerImage"]);
 
     // The valid avatar was not saved either
     const row = await rowOf(member.id);
-    expect(row.nickname).toBeNull();
     expect(row.bio).toBe("Eski bio");
     expect(row.avatarMediaId).toBeNull();
     expect(storage().objects.size).toBe(0);

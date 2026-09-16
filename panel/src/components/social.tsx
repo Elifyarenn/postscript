@@ -3,13 +3,12 @@
  * frame's look since D-113: the avatar stand-in, the profile header and tabs,
  * the post card and the member list.
  *
- * A member is shown by nickname or handle, never by display name or pen name:
- * the handle exists so the community does not see a legal name, and the pen
- * name belongs to the magazine (D-163).
+ * A member is shown by handle, never by display name or pen name: the handle
+ * exists so the community does not see a legal name, and the pen name belongs
+ * to the magazine (D-163). There is no second community name (D-166).
  */
 import Link from "next/link";
 import { Bookmark, Heart, Link as LinkIcon, MessageCircle, Repeat2, Star } from "lucide-react";
-import { communityName } from "@/lib/nickname";
 import { formatMonthYear, formatRelativeTime } from "@/lib/relative-time";
 import { cn, formatDateTime } from "@/lib/utils";
 import { ActionButton, PanelForm } from "./form";
@@ -72,22 +71,22 @@ export function Avatar({
   );
 }
 
-/** The community shows the nickname, never the pen name, which is the magazine's (D-163). */
-export function memberName(member: { username: string; nickname: string | null }): string {
-  return communityName(member);
+/** The community shows the handle, never the pen name, which is the magazine's (D-166). */
+export function memberName(member: { username: string }): string {
+  return member.username;
 }
 
 export function MemberLink({
   member,
   className,
 }: {
-  member: { username: string; nickname: string | null };
+  member: { username: string };
   className?: string;
 }) {
+  // The handle is the name, so it is written once
   return (
     <Link href={`/social/u/${member.username}`} className={cn("hover:text-accent", className)}>
-      <span className="member-name font-medium">{memberName(member)}</span>{" "}
-      <span className="text-muted">@{member.username}</span>
+      <span className="member-name font-medium">@{member.username}</span>
     </Link>
   );
 }
@@ -158,7 +157,6 @@ export function ProfileHeader({
                 <ProfileEditor
                   profile={{
                     username: profile.username,
-                    nickname: profile.nickname,
                     bio: profile.bio,
                     avatarUrl: profile.avatarUrl,
                     headerUrl: profile.headerUrl,

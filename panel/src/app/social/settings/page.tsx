@@ -3,9 +3,9 @@ import { ArrowRight } from "lucide-react";
 import { requireSession } from "@/lib/auth/guard";
 import { readCsrfToken } from "@/lib/csrf";
 import { INTERESTS, MAX_INTERESTS } from "@/lib/interests";
-import { USERNAME_MAX, USERNAME_MIN } from "@/lib/username";
+import { USERNAME_CHANGE_DAYS, USERNAME_MAX, USERNAME_MIN } from "@/lib/username";
 import { formatDate } from "@/lib/utils";
-import { getMemberSettings, listBlockedMembers } from "@/services/social";
+import { getMemberSettings, listBlockedMembers, usernameChangeAvailableAt } from "@/services/social";
 import { ActionButton, PanelForm } from "@/components/form";
 import { ProfileEditor } from "@/components/profile-editor";
 import { SiteTitle } from "@/components/site-ui";
@@ -58,11 +58,14 @@ export default async function SocialSettingsPage({
   const label = SECTIONS.find((item) => item.id === section)?.label ?? "Profil";
   const csrfToken = (await readCsrfToken()) ?? "";
 
-  const [settings, blocked, mutes] = await Promise.all([
+  const [settings, blocked, mutes, usernameChangeAt] = await Promise.all([
     getMemberSettings({ ...user }),
     listBlockedMembers({ ...user }),
     countAnonMutes({ ...user }),
+    usernameChangeAvailableAt({ ...user }),
   ]);
+  // Only a handle already held is locked; the first pick is always open (D-166)
+  const usernameLockedUntil = settings.username ? usernameChangeAt : null;
 
   const saveContent = (
     <>
@@ -120,7 +123,7 @@ export default async function SocialSettingsPage({
 
                     <div className="min-w-0">
                       <p className="settings-preview-name">
-                        {settings.nickname ?? settings.username ?? "Kullanıcı adı seçilmedi"}
+                        {settings.username ?? "Kullanıcı adı seçilmedi"}
                       </p>
                       <p className="settings-preview-handle">
                         {settings.username ? `@${settings.username}` : "Kullanıcı adı seçilmedi"}
@@ -132,13 +135,13 @@ export default async function SocialSettingsPage({
 
                 <p className="settings-note">Topluluktaki üyeler profilinizi böyle görür.</p>
 
-                {/* The nickname, the pictures and the bio are edited together, in the
-                    same dialog the profile page opens: one save, as on X (D-160,
-                    D-163). The pen name is the magazine's, on the account page (D-162) */}
+                {/* The pictures and the bio are edited together, in the same dialog
+                    the profile page opens: one save, as on X (D-160). The handle
+                    is the community name (D-166); the pen name is the magazine's,
+                    on the account page (D-162) */}
                 <ProfileEditor
                   profile={{
                     username: settings.username,
-                    nickname: settings.nickname,
                     bio: settings.bio,
                     avatarUrl: settings.avatarUrl,
                     headerUrl: settings.headerUrl,
@@ -160,7 +163,11 @@ export default async function SocialSettingsPage({
                     <Field
                       label="Kullanıcı adı"
                       htmlFor="username"
-                      hint={`${USERNAME_MIN}-${USERNAME_MAX} karakter; küçük harf (a-z), rakam ve alt çizgi.`}
+                      hint={
+                        usernameLockedUntil
+                          ? `${USERNAME_CHANGE_DAYS} günde bir değiştirilebilir. Bir sonraki değişiklik: ${formatDate(usernameLockedUntil)}.`
+                          : `${USERNAME_MIN}-${USERNAME_MAX} karakter; küçük harf (a-z), rakam ve alt çizgi. ${USERNAME_CHANGE_DAYS} günde bir değiştirilebilir.`
+                      }
                     >
                       <Input
                         id="username"

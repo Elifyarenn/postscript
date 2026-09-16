@@ -115,6 +115,7 @@ export default async function AccountPage({
           writerArea={profile.writerArea}
           writerArea2={profile.writerArea2}
           phone={profile.phone}
+          username={profile.username}
         />
 
         <EmailCard

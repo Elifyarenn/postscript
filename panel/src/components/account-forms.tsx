@@ -45,9 +45,12 @@ export function ProfileCard({
   writerArea,
   writerArea2,
   phone,
+  username,
 }: {
   csrfToken: string;
   user: SessionUser;
+  /** The community handle, offered as the pen name when there is one (D-166). */
+  username?: string | null;
   bio: string | null;
   socialLinks: SocialLinks | null;
   /** The writing area chosen at registration, shown read-only (D-051). */
@@ -88,6 +91,21 @@ export function ProfileCard({
                 maxLength={80}
               />
             </Field>
+
+            {username && (
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="penNameFromUsername"
+                  defaultChecked={user.penName === username}
+                  className="mt-1"
+                />
+                <span>
+                  Mahlasım kullanıcı adımla aynı olsun (<strong>{username}</strong>). Kullanıcı adınızı
+                  sonra değiştirirseniz mahlasınız değişmez.
+                </span>
+              </label>
+            )}
 
             <Field label="Kısa biyografi" htmlFor="bio">
               <Textarea id="bio" name="bio" defaultValue={bio ?? ""} maxLength={2000} />

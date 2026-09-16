@@ -43,7 +43,7 @@ describe("listMutualFollows (D-143)", () => {
     await followMember(actorOf(followsMe), "ben");
 
     expect(await listMutualFollows(actorOf(me))).toEqual([
-      { username: "karsilikli", nickname: null, role: "user" },
+      { username: "karsilikli", role: "user" },
     ]);
   });
 

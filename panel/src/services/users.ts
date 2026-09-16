@@ -707,6 +707,8 @@ export async function setBanned(
 export const profileSchema = z.strictObject({
   displayName: z.string().trim().min(2).max(80),
   penName: z.string().trim().max(80).optional().nullable(),
+  /** Take the community handle as the pen name (D-166); the typed pen name is then ignored. */
+  penNameFromUsername: z.boolean().optional(),
   bio: z.string().trim().max(2000).optional().nullable(),
   phone: z
     .string()
@@ -766,7 +768,13 @@ export async function updateProfile(
     birthDate = input.birthDate;
   }
 
-  const penName = input.penName?.trim() || null;
+  // A member may publish under the handle they go by in the community (D-166).
+  // It is copied, not linked: a later handle change must not rename published work.
+  if (input.penNameFromUsername && !current.username) {
+    const message = "Önce topluluk ayarlarından bir kullanıcı adı seçmeniz gerekiyor.";
+    throw badRequest(message, { penName: [message] });
+  }
+  const penName = input.penNameFromUsername ? current.username : input.penName?.trim() || null;
   // The one place a pen name is changed since D-162, so it answers to the same
   // rule as the community did: it must become an address no other member holds.
   // Only a changed name is checked, so an old one cannot block a phone update.

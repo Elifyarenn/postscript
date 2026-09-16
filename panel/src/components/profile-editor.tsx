@@ -3,9 +3,9 @@
 /**
  * "Profili düzenle" the way X does it (D-160): a button on the member's own
  * profile opens one dialog holding the cover photo, the profile picture over
- * it, the nickname (X's "Name", D-163) and the bio, with a single "Kaydet" in
- * its top bar. The pen name is not here: it is the magazine's name for the
- * member, changed on the account page (D-162).
+ * it and the bio, with a single "Kaydet" in its top bar. There is no name
+ * field: the community shows the handle (D-166), and the pen name is the
+ * magazine's, changed on the account page (D-162).
  *
  * - Chosen pictures are prepared in the browser and previewed at once; they are
  *   sent only on "Kaydet" (D-161: shrunk first, so a phone photo fits the
@@ -21,7 +21,6 @@ import { useActionState, useEffect, useId, useRef, useState, type FormEvent } fr
 import Link from "next/link";
 import { Camera, X } from "lucide-react";
 import { updateProfileAction } from "@/app/social/actions";
-import { NICKNAME_MAX } from "@/lib/nickname";
 import {
   MAX_BIO_LENGTH,
   PROFILE_IMAGE_TYPES,
@@ -33,7 +32,6 @@ import type { ActionState } from "./form";
 
 export type EditableProfile = {
   username: string | null;
-  nickname: string | null;
   bio: string | null;
   avatarUrl: string | null;
   headerUrl: string | null;
@@ -133,7 +131,6 @@ export function ProfileEditor({
   // closes cannot land in the next opening
   const generation = useRef(0);
 
-  const [nickname, setNickname] = useState(profile.nickname ?? "");
   const [bio, setBio] = useState(profile.bio ?? "");
   const [pictures, setPictures] = useState<Record<ProfileImageKind, Picture>>({
     avatar: UNCHANGED,
@@ -174,7 +171,6 @@ export function ProfileEditor({
   const busy = pending || preparing > 0;
 
   const isDirty =
-    nickname !== (profile.nickname ?? "") ||
     bio !== (profile.bio ?? "") ||
     pictures.avatar.action !== "keep" ||
     pictures.header.action !== "keep";
@@ -185,7 +181,6 @@ export function ProfileEditor({
   /** Back to what the server holds: used on open and whenever the dialog closes. */
   function resetToSaved() {
     generation.current += 1;
-    setNickname(profile.nickname ?? "");
     setBio(profile.bio ?? "");
     setPictures({ avatar: UNCHANGED, header: UNCHANGED });
     setPreparing(0);
@@ -394,32 +389,6 @@ export function ProfileEditor({
           {pictureError("avatar")}
 
           <div className="profile-editor-fields">
-            <div className="profile-editor-field" data-invalid={Boolean(fieldError("nickname")) || undefined}>
-              <span className="profile-editor-field-top">
-                <label htmlFor={`${id}-nickname`}>Takma ad</label>
-                <span className="profile-editor-count" aria-hidden>
-                  {/* Characters, not UTF-16 units: an emoji counts once, as the service counts it */}
-                  {[...nickname].length}/{NICKNAME_MAX}
-                </span>
-              </span>
-              <input
-                id={`${id}-nickname`}
-                name="nickname"
-                value={nickname}
-                onChange={(event) => setNickname(event.currentTarget.value)}
-                autoComplete="nickname"
-                aria-invalid={Boolean(fieldError("nickname")) || undefined}
-                aria-describedby={`${id}-nickname-hint ${id}-nickname-error`}
-              />
-            </div>
-            <p id={`${id}-nickname-hint`} className="profile-editor-hint">
-              Toplulukta adınızın yerine görünür. Boş bırakırsanız
-              {profile.username ? ` @${profile.username}` : " kullanıcı adınız"} görünür.
-            </p>
-            <p id={`${id}-nickname-error`} className="profile-editor-error">
-              {fieldError("nickname")}
-            </p>
-
             <div className="profile-editor-field" data-invalid={Boolean(fieldError("bio")) || undefined}>
               <span className="profile-editor-field-top">
                 <label htmlFor={`${id}-bio`}>Biyografi</label>

@@ -6,7 +6,6 @@ import { media, users } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import type { Actor } from "@/lib/auth/rbac";
 import { badRequest, isAppError } from "@/lib/errors";
-import { nicknameProblem, normalizeNickname } from "@/lib/nickname";
 import { MAX_BIO_LENGTH } from "@/lib/profile-limits";
 import { buildStorageKey, getStorage } from "@/lib/storage";
 import { assertMayPost } from "./community";
@@ -20,13 +19,14 @@ import type { RequestMeta } from "./auth";
 
 /**
  * The profile edited the way X edits it (D-160): one dialog, one save. The
- * nickname, the bio and both pictures arrive together and are kept together:
- * either every change lands or none does.
+ * bio and both pictures arrive together and are kept together: either every
+ * change lands or none does.
  *
- * The nickname is the community's name for the member, X's "Name" (D-163).
- * The pen name is the magazine's and not part of it (D-162): it is changed on
- * the account page, this save never reads or writes it, and a member saving a
- * new photo cannot lose it.
+ * There is no separate community name: the member goes by the handle chosen
+ * in the settings (D-166), so the dialog has no name field. The pen name is
+ * the magazine's and not part of it (D-162): it is changed on the account
+ * page, this save never reads or writes it, and a member saving a new photo
+ * cannot lose it.
  *
  * Every check runs before anything is written, and every problem is reported
  * at once. The new files go to storage first; the database changes in one
@@ -40,7 +40,6 @@ export type PictureChange =
   | { action: "replace"; buffer: Buffer; fileName: string; declaredMime: string };
 
 export type ProfileEdit = {
-  nickname: string;
   bio: string;
   avatar: PictureChange;
   header: PictureChange;
@@ -59,7 +58,7 @@ export async function updateProfile(
   actor: Actor,
   input: ProfileEdit,
   meta: RequestMeta,
-): Promise<{ nickname: string | null; bio: string | null }> {
+): Promise<{ bio: string | null }> {
   assertMayPost(actor);
 
   const fieldErrors: Record<string, string[]> = {};
@@ -68,10 +67,6 @@ export async function updateProfile(
   const parsed = profileTextSchema.safeParse({ bio: input.bio });
   if (!parsed.success) Object.assign(fieldErrors, z.flattenError(parsed.error).fieldErrors);
   const bio = parsed.success ? parsed.data.bio || null : null;
-
-  const nickname = normalizeNickname(input.nickname);
-  const nicknameIssue = nicknameProblem(nickname);
-  if (nicknameIssue) fieldErrors.nickname = [nicknameIssue];
 
   const detectedMime: Partial<Record<ProfileImageKind, string>> = {};
   for (const kind of KINDS) {
@@ -165,7 +160,7 @@ export async function updateProfile(
 
       await tx
         .update(users)
-        .set({ nickname, bio, ...pictures, updatedAt: new Date() })
+        .set({ bio, ...pictures, updatedAt: new Date() })
         .where(eq(users.id, actor.id));
 
       return outgoing;
@@ -182,5 +177,5 @@ export async function updateProfile(
   // try above: the new files are in use from here on and must never be cleaned up ---
   for (const mediaId of replaced) await discard(mediaId);
 
-  return { nickname, bio };
+  return { bio };
 }

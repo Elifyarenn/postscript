@@ -9,6 +9,21 @@
 export const USERNAME_MIN = 3;
 export const USERNAME_MAX = 20;
 
+/** A handle can be changed once in this many days; picking the first one is free (D-166). */
+export const USERNAME_CHANGE_DAYS = 30;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * When the member may change the handle again, or null when they may now.
+ * `lastChangedAt` is the last time an existing handle was replaced.
+ */
+export function nextUsernameChangeAt(lastChangedAt: Date | null, now = new Date()): Date | null {
+  if (!lastChangedAt) return null;
+  const next = new Date(lastChangedAt.getTime() + USERNAME_CHANGE_DAYS * DAY_MS);
+  return next > now ? next : null;
+}
+
 const USERNAME_PATTERN = /^[a-z0-9_]+$/;
 
 /** Handles that would let someone pass as the magazine or its staff. */
@@ -55,20 +70,3 @@ export function usernameProblem(normalized: string): string | null {
   return null;
 }
 
-/**
- * Whether a display name reads as the magazine or its staff (D-163). The
- * nickname is free text, so it is folded first: Turkish letters to their plain
- * form, case dropped, everything but letters and digits removed. "Post Script",
- * "YÖNETİM" and "Editör Ayşe" are all caught; a whole word must match, so
- * "Yazarlık tutkunu" is not.
- */
-export function readsAsStaff(name: string): boolean {
-  const folded = name
-    .toLocaleLowerCase("tr-TR")
-    .replace(/ı/g, "i")
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "");
-  const words = folded.split(/[^a-z0-9]+/).filter(Boolean);
-  if (words.length === 0) return false;
-  return RESERVED.has(words.join("")) || words.some((word) => RESERVED.has(word));
-}

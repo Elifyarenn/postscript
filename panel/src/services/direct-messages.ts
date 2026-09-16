@@ -43,7 +43,6 @@ export const DIRECT_MESSAGES_PER_MINUTE = 20;
 type Participant = {
   id: string;
   username: string | null;
-  nickname: string | null;
   role: Role;
   bio: string | null;
   birthDate: string | null;
@@ -55,7 +54,6 @@ type Participant = {
 const participantColumns = {
   id: users.id,
   username: users.username,
-  nickname: users.nickname,
   role: users.role,
   bio: users.bio,
   birthDate: users.birthDate,
@@ -258,7 +256,7 @@ export async function sendDirectMessage(
 export type ConversationMessage = { id: string; body: string; createdAt: Date; isOwn: boolean };
 
 export type ConversationView = {
-  other: { id: string; username: string; nickname: string | null; role: Role; bio: string | null };
+  other: { id: string; username: string; role: Role; bio: string | null };
   conversationId: string | null;
   messages: ConversationMessage[];
   canSend: boolean;
@@ -315,7 +313,7 @@ export async function openConversation(actor: Actor, rawUsername: string): Promi
   }
 
   return {
-    other: { id: other.id, username: other.username, nickname: other.nickname, role: other.role, bio: other.bio },
+    other: { id: other.id, username: other.username, role: other.role, bio: other.bio },
     conversationId: conversation?.id ?? null,
     messages,
     canSend: state.canSend,
@@ -326,7 +324,7 @@ export async function openConversation(actor: Actor, rawUsername: string): Promi
 
 export type ConversationSummary = {
   conversationId: string;
-  other: { username: string | null; nickname: string | null; role: Role };
+  other: { username: string | null; role: Role };
   lastMessage: { body: string; createdAt: Date; isOwn: boolean };
   unread: number;
 };
@@ -355,7 +353,7 @@ export async function listConversations(actor: Actor, limit = 50): Promise<Conve
 
   const [others, states, blockers] = await Promise.all([
     db
-      .select({ id: users.id, username: users.username, nickname: users.nickname, role: users.role })
+      .select({ id: users.id, username: users.username, role: users.role })
       .from(users)
       .where(inArray(users.id, otherIds)),
     db
@@ -411,7 +409,7 @@ export async function listConversations(actor: Actor, limit = 50): Promise<Conve
       const other = otherById.get(otherId);
       return {
         conversationId: row.id,
-        other: { username: other?.username ?? null, nickname: other?.nickname ?? null, role: other?.role ?? "user" },
+        other: { username: other?.username ?? null, role: other?.role ?? "user" },
         lastMessage: { body: last.body, createdAt: last.createdAt, isOwn: last.senderId === me.id },
         unread: unread?.value ?? 0,
       };

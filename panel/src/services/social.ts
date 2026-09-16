@@ -16,6 +16,7 @@ import { z } from "zod";
 import { db } from "@/db/client";
 import {
   articles,
+  auditLog,
   bookmarks,
   follows,
   userBlocks,
@@ -30,7 +31,8 @@ import { INTERESTS, isInterestId, MAX_INTERESTS } from "@/lib/interests";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { MAX_BIO_LENGTH, MAX_PEN_NAME_LENGTH } from "@/lib/profile-limits";
 import { slugify } from "@/lib/slug";
-import { normalizeUsername, usernameProblem } from "@/lib/username";
+import { formatDate } from "@/lib/utils";
+import { nextUsernameChangeAt, normalizeUsername, USERNAME_CHANGE_DAYS, usernameProblem } from "@/lib/username";
 import { assertMayPost } from "./community";
 import { notify } from "./notifications";
 import type { RequestMeta } from "./auth";
@@ -39,8 +41,7 @@ import type { RequestMeta } from "./auth";
 export type Member = {
   id: string;
   username: string;
-  /** The community name (D-163); the pen name is the magazine's and never shown here. */
-  nickname: string | null;
+  /** The handle is the community name (D-166); the pen name is the magazine's and never shown here. */
   role: Role;
 };
 
@@ -52,7 +53,7 @@ export async function requireMember(actor: Actor): Promise<Member> {
   assertMayPost(actor);
 
   const rows = await db
-    .select({ id: users.id, username: users.username, nickname: users.nickname, role: users.role })
+    .select({ id: users.id, username: users.username, role: users.role })
     .from(users)
     .where(and(eq(users.id, actor.id), isNull(users.deletedAt)))
     .limit(1);
@@ -74,7 +75,6 @@ async function findReachableMember(rawUsername: string) {
     .select({
       id: users.id,
       username: users.username,
-      nickname: users.nickname,
       bio: users.bio,
       role: users.role,
       createdAt: users.createdAt,
@@ -144,7 +144,6 @@ export async function getMemberSettings(
   actor: Actor,
 ): Promise<{
   username: string | null;
-  nickname: string | null;
   penName: string | null;
   dmPolicy: DmPolicy;
   anonBoxEnabled: boolean;
@@ -156,7 +155,6 @@ export async function getMemberSettings(
   const rows = await db
     .select({
       username: users.username,
-      nickname: users.nickname,
       penName: users.penName,
       dmPolicy: users.dmPolicy,
       anonBoxEnabled: users.anonBoxEnabled,
@@ -170,7 +168,6 @@ export async function getMemberSettings(
     .limit(1);
   return {
     username: rows[0]?.username ?? null,
-    nickname: rows[0]?.nickname ?? null,
     penName: rows[0]?.penName ?? null,
     dmPolicy: rows[0]?.dmPolicy ?? "following",
     anonBoxEnabled: rows[0]?.anonBoxEnabled ?? false,
@@ -241,7 +238,42 @@ export async function setPenName(actor: Actor, rawInput: unknown): Promise<strin
   return penName;
 }
 
-/** Picks or changes the handle. Returns the stored, normalised form. */
+/**
+ * The last time the member replaced a handle they already had, within the
+ * change window. Read from the audit trail, which records every handle change
+ * with its before and after and is never deleted, so no second record of the
+ * same fact is kept. The first pick (before: null) does not count.
+ */
+async function lastUsernameChangeAt(userId: string): Promise<Date | null> {
+  const since = new Date(Date.now() - USERNAME_CHANGE_DAYS * 24 * 60 * 60 * 1000);
+  const rows = await db
+    .select({ before: auditLog.before, createdAt: auditLog.createdAt })
+    .from(auditLog)
+    .where(and(eq(auditLog.action, "social.username_set"), eq(auditLog.entityId, userId)))
+    .orderBy(desc(auditLog.createdAt))
+    .limit(20);
+  // Filtered here rather than in SQL: a JSON path in the query is the driver-sensitive kind (D-078)
+  const change = rows.find(
+    (row) =>
+      row.createdAt >= since &&
+      typeof row.before === "object" &&
+      row.before !== null &&
+      (row.before as { username?: unknown }).username != null,
+  );
+  return change?.createdAt ?? null;
+}
+
+/** When the member may change the handle again; null when they may now (D-166). */
+export async function usernameChangeAvailableAt(actor: Actor): Promise<Date | null> {
+  return nextUsernameChangeAt(await lastUsernameChangeAt(actor.id));
+}
+
+/**
+ * Picks or changes the handle. Returns the stored, normalised form. A handle
+ * already held can be replaced once every 30 days (D-166): it is how members
+ * find each other and how moderation traces an account, so it must not shift
+ * from week to week.
+ */
 export async function setUsername(
   actor: Actor,
   rawInput: unknown,
@@ -260,6 +292,14 @@ export async function setUsername(
 
   const { username: current } = await getMemberSettings(actor);
   if (current === username) return username;
+
+  if (current !== null) {
+    const availableAt = await usernameChangeAvailableAt(actor);
+    if (availableAt) {
+      const message = `Kullanıcı adınızı ${USERNAME_CHANGE_DAYS} günde bir değiştirebilirsiniz. Bir sonraki değişiklik: ${formatDate(availableAt)}.`;
+      throw conflict(message, { username: [message] });
+    }
+  }
 
   const taken = await db
     .select({ id: users.id })
@@ -398,7 +438,6 @@ export async function getProfile(viewer: Actor, rawUsername: string): Promise<Pr
   return {
     id: target.id,
     username: target.username,
-    nickname: target.nickname,
     role: target.role,
     bio: target.bio,
     anonBoxEnabled: target.anonBoxEnabled,
@@ -415,7 +454,7 @@ export async function getProfile(viewer: Actor, rawUsername: string): Promise<Pr
   };
 }
 
-export type MemberListItem = Pick<Member, "username" | "nickname" | "role">;
+export type MemberListItem = Pick<Member, "username" | "role">;
 
 async function listGraph(
   viewer: Actor,
@@ -431,7 +470,7 @@ async function listGraph(
       : [follows.followerId, follows.followeeId];
 
   const rows = await db
-    .select({ username: users.username, nickname: users.nickname, role: users.role })
+    .select({ username: users.username, role: users.role })
     .from(follows)
     .innerJoin(users, eq(other, users.id))
     .where(and(eq(anchor, profile.id), isNull(users.deletedAt), eq(users.isBanned, false)))
@@ -456,7 +495,7 @@ export async function listMutualFollows(actor: Actor, limit = 20): Promise<Membe
     .where(eq(follows.followeeId, me.id));
 
   const rows = await db
-    .select({ username: users.username, nickname: users.nickname, role: users.role })
+    .select({ username: users.username, role: users.role })
     .from(follows)
     .innerJoin(users, eq(users.id, follows.followeeId))
     .where(
@@ -483,7 +522,7 @@ export async function listMutualFollows(actor: Actor, limit = 20): Promise<Membe
     .limit(limit);
 
   return rows.flatMap((row) =>
-    row.username ? [{ username: row.username, nickname: row.nickname, role: row.role }] : [],
+    row.username ? [{ username: row.username, role: row.role }] : [],
   );
 }
 
@@ -588,14 +627,14 @@ export async function unblockMember(actor: Actor, rawUsername: string): Promise<
 
 export async function listBlockedMembers(actor: Actor) {
   const rows = await db
-    .select({ username: users.username, nickname: users.nickname, blockedAt: userBlocks.createdAt })
+    .select({ username: users.username, blockedAt: userBlocks.createdAt })
     .from(userBlocks)
     .innerJoin(users, eq(userBlocks.blockedId, users.id))
     .where(and(eq(userBlocks.blockerId, actor.id), isNull(users.deletedAt)))
     .orderBy(desc(userBlocks.createdAt));
 
   return rows.filter(
-    (row): row is { username: string; nickname: string | null; blockedAt: Date } =>
+    (row): row is { username: string; blockedAt: Date } =>
       row.username !== null,
   );
 }
