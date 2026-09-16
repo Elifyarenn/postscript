@@ -132,18 +132,19 @@ export function categoryImageKey(name: string, index: number): CategoryImageKey 
  * the same picture key, so an area whose name matches nothing still gets the
  * line that belongs to its picture.
  */
+// "\n" is where the categories design breaks the line (D-169)
 const CATEGORY_SUBTITLES: Record<CategoryImageKey, string> = {
-  art: "resim, edebiyat, şiir ve dahası",
-  science: "atom, nörobilim, yapay zekâ ve dahası",
-  psychology: "ruh hali, duygular, burç, ilişkiler ve dahası",
-  lifestyle: "moda, sağlık, güzellik ve dahası",
-  pop: "müzik, ünlüler, dans, dedikodu ve dahası",
-  books: "film, dizi, kitap ve dahası",
-  thought: "felsefe, kavram, düşünceler ve dahası",
-  feminism: "ekonomi, topluluk, gündem ve dahası",
-  history: "tarih, mimari, tarihi eser ve dahası",
-  author: "anlatı, deneyim, yazar köşesi ve dahası",
-  gossip: "dedikodu, itiraf, quiz ve dahası",
+  art: "resim, edebiyat,\nşiir ve dahası",
+  science: "atom, nörobilim,\nyapay zekâ ve dahası",
+  psychology: "ruh hali, duygular,\nburç, ilişkiler ve dahası",
+  lifestyle: "moda, sağlık,\ngüzellik ve dahası",
+  pop: "müzik, ünlüler, dans,\ndedikodu ve dahası",
+  books: "film, dizi, kitap\nve dahası",
+  thought: "felsefe, kavram,\ndüşünceler ve dahası",
+  feminism: "ekonomi, topluluk,\ngündem ve dahası",
+  history: "tarih, mimari,\ntarihi eser ve dahası",
+  author: "anlatı, deneyim,\nyazar köşesi ve dahası",
+  gossip: "dedikodu, itiraf,\nquiz ve dahası",
 };
 
 /** The design's line of example topics for a writing area. */

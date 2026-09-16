@@ -6620,3 +6620,38 @@ ile kutu ölçüleri.
   Veri notu künye yönlendirmesiyle birleşip sol sütunun altına küçük yazıyla
   taşındı. Davet metni tasarımdaki üç satıra sığsın diye ölçüsü sütun
   genişliği (628).
+
+## D-169 — Kategoriler sayfası tasarımın ölçüleriyle
+
+**İstek (ürün sahibi):** "Kategoriler sayfasını da tasarımla tamamen aynı yap."
+
+**Kaynak:** "contact, about, categories.ai" içindeki kategoriler çizim alanı;
+D-168'deki yöntemle Illustrator verisinden şekiller (kutular) ve metin belgesinden
+boyut ve renkler okundu.
+
+**Ölçüler (tasarım birimi; sütun 1413):**
+
+- Başlık bandının 25 altında dört sütun; kart 340×460, aralar 20; alttaki
+  boşluk 22. Tasarım 8 kartı çizim alanında, kalan 3'ünü altında aynı ızgarada
+  gösteriyor.
+- Kart: ince çerçeve; fotoğraf yanlardan ve üstten 18 içeride, 305×222. Ad 28
+  (#632727), konular 21.2 iki satır, en altta düz yazı "EXPLORE →" 17.7
+  (#632727), çerçeve dibinin 30 üstünde. Önceki koyu düğme tasarımda yok.
+- Konu satırları tasarımdaki yerinden iki satıra bölünüyor ("resim, edebiyat, /
+  şiir ve dahası"); metinler `\n` ile tutulup `pre-line` ile yazılıyor.
+
+**Karar:**
+
+- Hakkında ve İletişim gibi ızgara kendi genişliğiyle ölçülür
+  (`--gdu = max(0.7px, 100cqw / 1413)`); kartlar her genişlikte tasarımın
+  biçiminde. 1000 px altında iki sütun (720'lik ölçüyle), 560 px altında tek
+  sütun (380'lik ölçüyle), ki yazı okunur kalsın.
+- Ana sayfadaki kategori şeridi aynı `CategoryCard`'ı kullanıyor; yeni ölçüler
+  yalnızca `.category-grid` içinde, şerit değişmedi.
+- "Keşfet", "Kategoriler", "Seni harekete geçireni bul" Türkçe (D-112); bant
+  ortak `SiteBanner` ile.
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:** `site.test.ts` yeni satır kırılımlarıyla. Kapı: typecheck, lint,
+66 dosya / 624 test. Canlıda Playwright ile kart ölçüleri.

@@ -29,7 +29,7 @@ export default async function CategoriesPage() {
                   name={area.name}
                   index={index}
                   detailed
-                  sizes="(min-width: 1100px) 18rem, (min-width: 640px) 45vw, 90vw"
+                  sizes="(min-width: 1000px) 22vw, (min-width: 560px) 45vw, 90vw"
                 />
               </li>
             ))}

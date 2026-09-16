@@ -62,7 +62,7 @@ export function CategoryCard({
       {detailed ? (
         // A span, not a button: the whole card is already the link (D-146)
         <span className="category-explore">
-          Keşfet <ArrowRight aria-hidden className="size-4" />
+          Keşfet <ArrowRight aria-hidden />
         </span>
       ) : (
         <Swoosh className="category-swoosh" />

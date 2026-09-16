@@ -132,10 +132,10 @@ describe("issue 01 playlist songs (D-131)", () => {
 
 describe("categorySubtitle (D-146)", () => {
   it("gives each area the line of topics the design writes under its name", () => {
-    expect(categorySubtitle("Sanat & Edebiyat", 0)).toBe("resim, edebiyat, şiir ve dahası");
-    expect(categorySubtitle("Bilim & Teknoloji", 0)).toBe("atom, nörobilim, yapay zekâ ve dahası");
-    expect(categorySubtitle("Film, Dizi & Kitap", 0)).toBe("film, dizi, kitap ve dahası");
-    expect(categorySubtitle("Yazar Köşesi: P.S.", 0)).toBe("anlatı, deneyim, yazar köşesi ve dahası");
+    expect(categorySubtitle("Sanat & Edebiyat", 0)).toBe("resim, edebiyat,\nşiir ve dahası");
+    expect(categorySubtitle("Bilim & Teknoloji", 0)).toBe("atom, nörobilim,\nyapay zekâ ve dahası");
+    expect(categorySubtitle("Film, Dizi & Kitap", 0)).toBe("film, dizi, kitap\nve dahası");
+    expect(categorySubtitle("Yazar Köşesi: P.S.", 0)).toBe("anlatı, deneyim,\nyazar köşesi ve dahası");
   });
 
   it("falls back to the line that belongs to the picture a strange name was given", () => {
