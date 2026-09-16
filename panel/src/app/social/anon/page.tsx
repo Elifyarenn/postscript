@@ -37,7 +37,7 @@ export default async function AnonInboxPage() {
   return (
     <div className="anon-page">
       <header className="anon-banner">
-        <h1>Anonim kutu</h1>
+        <h1 className="fit-line">Anonim kutu</h1>
         <p>Adını söylemeden sana söylenenler.</p>
         <Sparkle />
       </header>

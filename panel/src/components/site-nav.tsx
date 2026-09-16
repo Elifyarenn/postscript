@@ -21,7 +21,7 @@ const MEMBER_ICONS = {
 export function SiteMainNav() {
   const pathname = usePathname();
   return (
-    <nav className="site-nav" aria-label="Ana menü">
+    <nav className="site-nav fit-line" aria-label="Ana menü">
       {SITE_NAV.map((item) => (
         <Link
           key={item.href}
@@ -39,7 +39,7 @@ export function SiteMemberNav({ items }: { items: MemberNavItem[] }) {
   const pathname = usePathname();
   return (
     <nav className="site-member-nav" aria-label="Üye menüsü">
-      <ul>
+      <ul className="fit-line">
         {items.map((item) => {
           const Icon = MEMBER_ICONS[item.icon];
           return (

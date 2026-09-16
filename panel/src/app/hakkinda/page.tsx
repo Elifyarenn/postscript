@@ -65,7 +65,7 @@ export default async function AboutPage({
       <SiteBanner title="Hakkında" subtitle="Bizimle ilgili her şey" />
 
       <div className="about-grid">
-        <nav className="about-tabs" aria-label="Hakkında bölümleri">
+        <nav className="about-tabs fit-line" aria-label="Hakkında bölümleri">
           {SECTIONS.map((item) => (
             <Link
               key={item.key}
@@ -161,7 +161,7 @@ export default async function AboutPage({
             başvurusu yapabilirsin. Aramıza katıl!
           </p>
           {/* The writer application lives on the account page (D-037); a visitor signs up first */}
-          <Link href={user ? "/account" : "/register"} className="site-button">
+          <Link href={user ? "/account" : "/register"} className="site-button fit-line">
             Aramıza katıl <ArrowRight aria-hidden />
           </Link>
         </aside>
@@ -173,7 +173,7 @@ export default async function AboutPage({
             bir topluluğuz.
           </p>
           {/* The writers are met and followed in the community (D-135) */}
-          <Link href="/social" className="site-button">
+          <Link href="/social" className="site-button fit-line">
             Tanış <ArrowRight aria-hidden />
           </Link>
         </aside>

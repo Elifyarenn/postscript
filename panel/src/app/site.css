@@ -1361,6 +1361,8 @@
 
 .ps-site .anon-form form {
   display: grid;
+  /* An auto track grows to the send button's one-line length (D-157) */
+  grid-template-columns: minmax(0, 1fr);
   justify-items: center;
   gap: 1.25rem;
 }
@@ -3765,4 +3767,39 @@
 
 .ps-site .site-pager-cell.is-gap {
   min-width: 1.8rem;
+}
+
+/* ════════════════ One line, scaled to fit (D-157) ════════════════ */
+
+/*
+ * Menus, tab rows, buttons and titles marked `fit-line` never scroll, never
+ * get cut and never break onto a second line: `FitLines` shrinks each one
+ * with `zoom` until it fits. Until that script runs they clip, so the page
+ * is never pushed sideways.
+ */
+.ps-site .fit-line {
+  /* Inside a grid or flex parent the default min-width is the full one-line
+     length, which widened whole columns past the screen instead of letting
+     the line shrink and be scaled */
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: nowrap;
+  overflow-x: clip;
+  overflow-y: visible;
+  white-space: nowrap;
+}
+
+/* The box holding a line gets the same leave: a grid or flex item otherwise
+   claims the line's full one-line length and widens its whole column */
+.ps-site :has(> .fit-line) {
+  min-width: 0;
+  /* A centred grid item is as wide as its content; this keeps it in its cell */
+  max-width: 100%;
+}
+
+/* The parts overflow the line instead of shrinking or scrolling inside it,
+   so the line measures its whole length */
+.ps-site .fit-line > * {
+  flex-shrink: 0;
+  overflow-x: visible;
 }

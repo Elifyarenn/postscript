@@ -5903,3 +5903,77 @@ fotoğrafında çizgiler köşede kapanıyor. Bildirim bandı 1100–1920 arası
 tek satır. Kapı: typecheck, lint, 64 dosya / 594 test.
 
 **Hukuk:** Yalnızca görünüm.
+
+## D-157 — Menüler, sekmeler, düğmeler ve başlıklar her ekranda tek satır
+
+**İstek (ürün sahibi):** "yazılar sığmadığında scroll eklenmesin ya da kesilip
+yazı alt satıra geçmesin, hiçbir boyutta; ekran boyutuna göre boyutu
+ayarlansın, her yazı tek satır tek görünüm olsun."
+
+**Durum (tarama, 16 sayfa × 320–1920 arası 7 genişlik):**
+
+- **Kayıyordu:** üst şerit (≤390), ana menü (≤600 ve üyeyken 1440), üye menüsü
+  şeridi (≤760), bildirim, profil ve ayar sekmeleri (≤600).
+- **Alt satıra geçiyordu:** Hakkında'daki "Tasarım ve illüstrasyon" sekmesi ve
+  "Aramıza katıl" düğmesi (≥1024), "Anonim olarak gönder" düğmesi ve "Bize mesaj
+  gönderin" başlığı (320–390), bildirim bandındaki işlem (<1100).
+- **Sayfa yana taşıyordu (320):** kategoriler ve sayılar afişleri, kaydedilenler
+  başlığı, sayı kartındaki "Başlangıçlar" kelimesi.
+
+**Karar:**
+
+- Bu öğeler `fit-line` sınıfıyla işaretlendi. `src/components/fit-lines.tsx`
+  her birini ölçer; sığmıyorsa bütün satırı CSS `zoom` ile tam sığacak kadar
+  orantılı küçültür (yazı, iç boşluk ve ikonlar birlikte). Hiçbir şey
+  büyütülmez. Pencere boyutu, sayfa içeriği (rozet sayısı, istemci tarafı
+  gezinme) ya da yazı tipi değişince yeniden ölçer.
+- İşaretliler: üst şerit, ana menü, üye menüsü, bildirim bandı (sekmeler ve
+  işlem tek parça), profil ve ayar sekmeleri, Hakkında sekmeleri ve düğmeleri,
+  sayfa başlıkları (`SiteTitle`, `SiteBanner`, anonim kutu), iletişim
+  başlıkları, anonim gönder düğmesi, sayı kartındaki sayı adı satırı.
+- JavaScript çalışmadan önce `fit-line` taşmak yerine kırpar; sayfa hiçbir an
+  yana itilmez.
+- **Kapsam dışı, bilerek:** Cümleler ve paragraflar (yazı gövdesi, bildirim
+  cümlesi, gönderi metni, yazı başlıkları) normal biçimde satır atlar; onları tek
+  satıra zorlamak okunamaz hâle getirirdi. Ana sayfanın kategori rayı yazı değil,
+  resimli kart kaydırıcısı; kaydırmalı kaldı. Paneller (admin/editör/yazar) bu
+  kuralın dışında.
+
+**Yolda yakalanan hatalar:**
+
+1. Grid ya da flex içindeki tek satırlık bir öğe, varsayılan `min-width: auto`
+   yüzünden küçülmek yerine sütunu kendi tam uzunluğuna genişletti (ayarlarda
+   sütun 579 px, telefonda sayfa 283 px taşıyordu). `fit-line`'a ve onu tutan
+   doğrudan kapsayıcıya `min-width: 0` verildi.
+2. Ortalanmış bir grid öğesi içeriği kadar geniş olduğu için anonim kutudaki
+   gönder satırı 391 px'e çıktı ve düğmenin `max-width: 100%`'ü o değere göre
+   çözüldü. Kapsayıcıya `max-width: 100%`, anonim formun grid izine
+   `minmax(0, 1fr)` verildi.
+3. Sayılar sayfasındaki 13 px'lik taşmayı ne bir öğe kutusu ne süsleme yapıyordu;
+   kart başlığındaki "Başlangıçlar" kelimesi kutusunun dışına akıyordu. Sayı adı
+   satırı da `fit-line` oldu.
+
+**Bedeli — okunurluk:** Kural gereği telefonda uzun şeritler çok küçülüyor.
+Ölçülen en küçük yazı boyutları:
+
+| Öğe | 390 px telefon | 320 px telefon |
+|---|---|---|
+| Üst şerit | ≈9,1 px | ≈7,5 px |
+| Ana menü | ≈7,8 px | ≈6,2 px |
+| Üye menüsü | ≈6,4 px | ≈5,3 px |
+| Bildirim bandı | ≈5,6 px | ≈4,5 px |
+
+Başlıklar ve düğmeler rahat okunuyor (320'de sayfa başlıkları ≈27 px, gönder
+düğmesi ≈15 px). Menü şeritleri ürün sahibinin görmesi için not edildi;
+gerekirse telefonda daha kısa etiket ya da yalnız ikon gibi bir çözüm ayrı karar
+ister.
+
+**Doğrulama:** Demo sunucusunda, 16 sayfada (`/`, `/hakkinda`, `/kategoriler`,
+`/iletisim`, `/magazine`, `/magazine/issues`, `/social`, keşfet, topluluklar,
+profil, kaydedilenler, bildirimler, mesajlar, ayarlar, anonim kutu ve yazma
+ekranı), 320, 390, 600, 760, 1024, 1440 ve 1920 genişliklerinde: yatay kayan
+şerit yok (kategori rayı hariç), satırları metin düğümlerinden sayılan kısa
+arayüz yazılarında ikinci satır yok, hiçbir genişlikte sayfa taşması yok. Kapı:
+typecheck, lint, 64 dosya / 594 test.
+
+**Hukuk:** Yalnızca görünüm.

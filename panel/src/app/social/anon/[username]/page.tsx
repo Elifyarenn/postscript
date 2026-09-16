@@ -56,7 +56,7 @@ export default async function AnonComposePage({
   return (
     <div className="anon-page">
       <header className="anon-banner">
-        <h1>Anonim kutu</h1>
+        <h1 className="fit-line">Anonim kutu</h1>
         <p>Adını söylemeden söylemek istediklerin.</p>
         <Sparkle />
       </header>
@@ -82,7 +82,7 @@ export default async function AnonComposePage({
             action={sendAnonMessageAction}
             csrfToken={csrfToken}
             submitLabel="Anonim olarak gönder"
-            submitClassName="anon-send"
+            submitClassName="anon-send fit-line"
             submitContent={
               <>
                 <Sparkle /> Anonim olarak gönder <ArrowRight aria-hidden />

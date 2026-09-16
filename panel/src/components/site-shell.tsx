@@ -23,6 +23,7 @@ import { unreadAnonCount } from "@/services/anon-box";
 import { unreadConversationCount } from "@/services/direct-messages";
 import { unreadNotificationCount } from "@/services/notifications";
 import { getMemberSettings } from "@/services/social";
+import { FitLines } from "./fit-lines";
 import { KvkkNotice } from "./kvkk-notice";
 import { SiteMainNav, SiteMemberNav } from "./site-nav";
 import { SocialIcon, Stars, Wordmark } from "./site-ui";
@@ -73,8 +74,9 @@ export async function SiteShell({
 
   return (
     <div className={cn("ps-site", bodyFont.variable, capsFont.variable, italicFont.variable)}>
+      <FitLines />
       <div className="site-topbar">
-        <div className="site-topbar-inner">
+        <div className="site-topbar-inner fit-line">
           <Link href="/magazine/issues" className="topbar-cell">
             Yeni sayı! <Stars />
           </Link>

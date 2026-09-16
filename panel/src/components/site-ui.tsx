@@ -96,7 +96,7 @@ export function Swoosh({ className }: { className?: string }) {
 export function SiteTitle({ children, description }: { children: ReactNode; description?: ReactNode }) {
   return (
     <header className="site-title-block">
-      <h1 className="site-title">
+      <h1 className="site-title fit-line">
         {children}
         <Sparkle className="site-title-star" />
       </h1>
@@ -121,7 +121,7 @@ export function SiteBanner({
   return (
     <section className="site-banner">
       <div>
-        <h1 className="site-banner-title">{title}</h1>
+        <h1 className="site-banner-title fit-line">{title}</h1>
         {subtitle && <p className="site-banner-subtitle">{subtitle}</p>}
         {children}
       </div>

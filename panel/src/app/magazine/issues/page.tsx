@@ -58,7 +58,7 @@ export default async function IssuesPage() {
                   </span>
                   <div className="issue-text">
                     <p className="issue-title">
-                      POSTSCRIPT: <span>Yakında</span>
+                      POSTSCRIPT: <span className="fit-line">Yakında</span>
                     </p>
                   </div>
                 </li>
@@ -76,7 +76,7 @@ export default async function IssuesPage() {
                   {index === 0 && <p className="issue-new">Yeni!</p>}
                   <h3 className="issue-title">
                     <Link href={`/magazine/issues/${issue.number}`}>
-                      POSTSCRIPT: <span>{issue.title}</span>
+                      POSTSCRIPT: <span className="fit-line">{issue.title}</span>
                     </Link>
                   </h3>
                   {issue.blurb ? (

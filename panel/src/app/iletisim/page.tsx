@@ -42,7 +42,7 @@ export default async function ContactPage() {
 
       <div className="contact-page">
         <section className="contact-intro" aria-labelledby="contact-intro-title">
-          <h2 id="contact-intro-title" className="contact-heading">
+          <h2 id="contact-intro-title" className="contact-heading fit-line">
             Bize ulaşın
           </h2>
           <p className="contact-text">
@@ -87,7 +87,7 @@ export default async function ContactPage() {
         </section>
 
         <section className="contact-form-card" aria-labelledby="contact-form-title">
-          <h2 id="contact-form-title" className="contact-heading">
+          <h2 id="contact-form-title" className="contact-heading fit-line">
             Bize mesaj gönderin
           </h2>
 

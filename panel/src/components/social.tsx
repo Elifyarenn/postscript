@@ -251,7 +251,7 @@ export function ProfileTabs({
   isSelf: boolean;
 }) {
   return (
-    <nav className="profile-tabs" aria-label="Profil sekmeleri">
+    <nav className="profile-tabs fit-line" aria-label="Profil sekmeleri">
       {PROFILE_TABS.filter(([key]) => key !== "favorites" || isSelf).map(([key, label]) => (
         <Link
           key={key}

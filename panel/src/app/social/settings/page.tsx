@@ -78,7 +78,7 @@ export default async function SocialSettingsPage({
       <SiteTitle>Ayarlar</SiteTitle>
 
       <section className="settings-block" aria-labelledby="settings-title">
-        <nav className="settings-tabs" aria-label="Ayar bölümleri">
+        <nav className="settings-tabs fit-line" aria-label="Ayar bölümleri">
           {SECTIONS.map((item) => (
             <Link
               key={item.id}

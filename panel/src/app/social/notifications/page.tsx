@@ -48,7 +48,7 @@ export default async function NotificationsPage({
     <>
       <SiteTitle>Bildirimler</SiteTitle>
 
-      <div className="notice-bar">
+      <div className="notice-bar fit-line">
         <nav className="site-tabs" aria-label="Bildirim türleri">
           {NOTIFICATION_TABS.map((item) => (
             <Link
