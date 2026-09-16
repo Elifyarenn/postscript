@@ -1,5 +1,4 @@
 import { getAuthContext } from "@/lib/auth/session";
-import { listCategoryCounts } from "@/services/public";
 import { listWriterAreasWithQuota } from "@/services/writer-areas";
 import { CategoryCard } from "@/components/category-card";
 import { SiteShell } from "@/components/site-shell";
@@ -8,21 +7,16 @@ import { SiteBanner } from "@/components/site-ui";
 export const metadata = { title: "Kategoriler" };
 
 /**
- * Every writing area on one page (D-134), in the admin's order, with its photo
- * and how many articles it has. Public like the front page; the articles
- * behind each card still ask for a session.
+ * Every writing area on one page (D-134), drawn as the designs draw it (D-146):
+ * the photo, the name, the topics it covers and an invitation to look. Public
+ * like the front page; the articles behind each card still ask for a session.
  */
 export default async function CategoriesPage() {
-  const [context, areas, counts] = await Promise.all([
-    getAuthContext(),
-    listWriterAreasWithQuota(),
-    listCategoryCounts(),
-  ]);
-  const countFor = new Map(counts.map((row) => [row.category, row.count]));
+  const [context, areas] = await Promise.all([getAuthContext(), listWriterAreasWithQuota()]);
 
   return (
     <SiteShell user={context?.user ?? null} bleed>
-      <SiteBanner title="Kategoriler" subtitle="Dergideki tüm yazı alanları" />
+      <SiteBanner title="Kategoriler" subtitle="Seni harekete geçireni bul" />
 
       <section className="categories-page" aria-label="Tüm kategoriler">
         {areas.length === 0 ? (
@@ -34,7 +28,7 @@ export default async function CategoriesPage() {
                 <CategoryCard
                   name={area.name}
                   index={index}
-                  count={countFor.get(area.name) ?? 0}
+                  detailed
                   sizes="(min-width: 1100px) 18rem, (min-width: 640px) 45vw, 90vw"
                 />
               </li>

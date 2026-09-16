@@ -5326,3 +5326,39 @@ push et" dendi.
   yazılmıyor, yalnızca dergi posta kutusuna gidiyor.
 - **Kapanış koşulu:** Tebligat adresi gelince tam metin yeni sürüm olarak
   yayınlanır; o zaman fark kapanır (D-125, D-132).
+
+## D-146 — Kategoriler sayfası tasarımdaki hâliyle
+
+**Durum:** `/kategoriler` D-134'te kurulmuştu: fotoğraf, ad ve yayımlanmış yazı
+sayısı. Tasarımda ("contact, about, categories.ai") kartlar farklı: adın altında
+o alanın konuları yazıyor ve her kartta bir "EXPLORE" düğmesi var; sayfa başlığı
+"CATEGORIES / FIND WHAT MOVES YOU". Ürün sahibi sayfanın tasarımla aynı olmasını
+istedi.
+
+**Tasarımdan okunanlar:** Kategoriler ekranı da çizim alanının dışında; metinler
+Illustrator verisinden çıkarıldı. On bir kategori, on bir konu satırı ve on bir
+"EXPLORE" var. Konu satırları içeriklerinden kategorilere eşlendi (örneğin
+"resim, edebiyat, şiir ve dahası" → Sanat & Edebiyat).
+
+**Karar:**
+
+- **Başlık:** "Kategoriler / Seni harekete geçireni bul".
+- **Kart:** Fotoğraf, ad, tasarımdaki konu satırı ve "Keşfet" düğmesi.
+  - Konu satırı `categorySubtitle` ile fotoğrafla aynı anahtardan gelir; admin
+    yeni bir alan açar ve adı hiçbir kelimeye uymazsa, fotoğrafıyla aynı satırı
+    alır.
+  - "Keşfet" bir düğme değil, kartın içinde yazı: kartın tamamı zaten bağlantı.
+- **Yazı sayısı kaldırıldı:** Tasarımda yok. Sayfa artık sayıları sorgulamıyor.
+- **Ana sayfadaki şerit** eskisi gibi kaldı: orada kartlar küçük ve tasarımda
+  konu satırı yok.
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama (D-146):**
+
+- typecheck ve lint temiz; 60 dosyada 574 test geçti.
+- `tests/unit/site.test.ts`: konu satırları doğru kategoriye bağlanıyor; tanımsız
+  bir ad, fotoğrafıyla aynı satırı alıyor.
+- **Yerel tarayıcı (1440 px ve 390 px):** Başlık "Kategoriler / Seni harekete
+  geçireni bul"; 11 kartın her birinde ad, konu satırı ve "Keşfet" var; yazı
+  sayısı hiçbir kartta yok; kartların yüksekliği eşit; yatay taşma yok.

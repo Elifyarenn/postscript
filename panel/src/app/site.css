@@ -3507,3 +3507,39 @@
 .ps-site .dm-mutuals li.is-active {
   background: var(--site-rule);
 }
+
+/* ════════════════ Category cards as the design draws them (D-146) ════════════════ */
+
+.ps-site .category-topics {
+  color: var(--site-muted);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.ps-site .category-explore {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: auto;
+  padding: 0.45rem 0.9rem;
+  align-self: flex-start;
+  background: var(--site-strip);
+  color: var(--site-paper);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ps-site .category-card:hover .category-explore {
+  background: var(--site-wine);
+}
+
+/* The cards stand in a row of equal height, so their invitations line up */
+.ps-site .category-grid > li {
+  display: flex;
+}
+
+.ps-site .category-grid .category-card {
+  flex: 1;
+  gap: 0.6rem;
+}

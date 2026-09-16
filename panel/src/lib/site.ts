@@ -127,6 +127,30 @@ export function categoryImageKey(name: string, index: number): CategoryImageKey 
   return CATEGORY_IMAGE_ORDER[Math.abs(index) % CATEGORY_IMAGE_ORDER.length] ?? "art";
 }
 
+/**
+ * The topics written under a category's name in the designs (D-146), keyed by
+ * the same picture key, so an area whose name matches nothing still gets the
+ * line that belongs to its picture.
+ */
+const CATEGORY_SUBTITLES: Record<CategoryImageKey, string> = {
+  art: "resim, edebiyat, şiir ve dahası",
+  science: "atom, nörobilim, yapay zekâ ve dahası",
+  psychology: "ruh hali, duygular, burç, ilişkiler ve dahası",
+  lifestyle: "moda, sağlık, güzellik ve dahası",
+  pop: "müzik, ünlüler, dans, dedikodu ve dahası",
+  books: "film, dizi, kitap ve dahası",
+  thought: "felsefe, kavram, düşünceler ve dahası",
+  feminism: "ekonomi, topluluk, gündem ve dahası",
+  history: "tarih, mimari, tarihi eser ve dahası",
+  author: "anlatı, deneyim, yazar köşesi ve dahası",
+  gossip: "dedikodu, itiraf, quiz ve dahası",
+};
+
+/** The design's line of example topics for a writing area. */
+export function categorySubtitle(name: string, index: number): string {
+  return CATEGORY_SUBTITLES[categoryImageKey(name, index)];
+}
+
 /** "SAYI 01": issue numbers are shown with two digits, as on the cover. */
 export function formatIssueNumber(issueNumber: number): string {
   return String(issueNumber).padStart(2, "0");

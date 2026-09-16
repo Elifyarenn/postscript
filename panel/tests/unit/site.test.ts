@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { issueExtrasFor } from "@/lib/issue-extras";
-import { categoryImageKey, formatIssueNumber, isNavActive, memberNav, SOCIAL_LINKS } from "@/lib/site";
+import {
+  categoryImageKey,
+  categorySubtitle,
+  formatIssueNumber,
+  isNavActive,
+  memberNav,
+  SOCIAL_LINKS,
+} from "@/lib/site";
 
 describe("isNavActive (D-112)", () => {
   it("lights the front page only on the front page", () => {
@@ -120,5 +127,18 @@ describe("issue 01 playlist songs (D-131)", () => {
       expect(track.artist.length).toBeGreaterThan(0);
       expect(/^\d{1,2}:[0-5]\d$/.test(track.duration)).toBe(true);
     }
+  });
+});
+
+describe("categorySubtitle (D-146)", () => {
+  it("gives each area the line of topics the design writes under its name", () => {
+    expect(categorySubtitle("Sanat & Edebiyat", 0)).toBe("resim, edebiyat, şiir ve dahası");
+    expect(categorySubtitle("Bilim & Teknoloji", 0)).toBe("atom, nörobilim, yapay zekâ ve dahası");
+    expect(categorySubtitle("Film, Dizi & Kitap", 0)).toBe("film, dizi, kitap ve dahası");
+    expect(categorySubtitle("Yazar Köşesi: P.S.", 0)).toBe("anlatı, deneyim, yazar köşesi ve dahası");
+  });
+
+  it("falls back to the line that belongs to the picture a strange name was given", () => {
+    expect(categorySubtitle("Gezi", 0)).toBe(categorySubtitle("Sanat & Edebiyat", 0));
   });
 });
