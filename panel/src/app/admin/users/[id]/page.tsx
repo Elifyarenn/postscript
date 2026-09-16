@@ -39,6 +39,7 @@ import {
   setEditorDutiesAction,
   setEditorStatusAction,
   setHybridWriterRoleAction,
+  setIllustratorAction,
   setWriterAreasAction,
   setWriterStatusAction,
 } from "../../actions";
@@ -212,6 +213,34 @@ export default async function AdminUserDetailPage({
               </div>
             ))}
           </dl>
+        </Card>
+
+        <Card>
+          <h2 className="mb-1 font-serif text-lg">Çizer</h2>
+          <p className="mb-4 text-sm text-muted">
+            Çizer, dergiye görsel üreten hesaptır. Ayrı bir rol değildir: hesabın rolü
+            değişmez, bu yüzden bir yazar aynı zamanda çizer olabilir. İşaret kendi
+            başına hiçbir panele giriş vermez; yalnızca Çizerler listesinde ve Hakkında
+            sayfasında görünür.
+          </p>
+          <PanelForm
+            action={setIllustratorAction}
+            csrfToken={csrfToken}
+            submitLabel={target.isIllustrator ? "Çizer işaretini kaldır" : "Çizer olarak işaretle"}
+            submitVariant="secondary"
+          >
+            <>
+              <input type="hidden" name="userId" value={target.id} />
+              <input
+                type="hidden"
+                name="illustrator"
+                value={target.isIllustrator ? "hayir" : "evet"}
+              />
+              <p className="text-sm">
+                Şu an: {target.isIllustrator ? "Çizer olarak işaretli." : "Çizer değil."}
+              </p>
+            </>
+          </PanelForm>
         </Card>
 
         {target.role === "writer" && (

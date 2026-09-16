@@ -238,6 +238,13 @@ export const users = pgTable(
     phone: text("phone"),
 
     role: roleEnum("role").notNull().default("user"),
+
+    /**
+     * Marks an account as an illustrator (D-151). Deliberately not a role: the
+     * magazine has people who write and draw alike, and `role` holds one
+     * value. The mark grants no panel of its own.
+     */
+    isIllustrator: boolean("is_illustrator").notNull().default(false),
     writerStatus: writerStatusEnum("writer_status"),
     /** Belongs to editors only; admins and writers leave it null (D-039). */
     editorStatus: editorStatusEnum("editor_status"),

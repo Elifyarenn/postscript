@@ -153,6 +153,10 @@ function segmentCondition(segment: UserSegment): SQL | undefined {
       );
     case "editors":
       return eq(users.role, "editor");
+    // A çizer carries a mark rather than a role (D-151), so the list is
+    // everyone marked — a writer who also draws included
+    case "illustrators":
+      return eq(users.isIllustrator, true);
     case "readers":
       return eq(users.role, "user");
     default:
@@ -246,9 +250,6 @@ export async function listUsers(
   if (!canManageUsers(actor)) throw forbidden();
 
   const segment = filters.segment ?? "all";
-  // There is no illustrator role yet (D-087): the list is empty by definition,
-  // not because a query happened to find nobody
-  if (segment === "illustrators") return [];
 
   const conditions: SQL[] = [isNull(users.deletedAt)];
   const bySegment = segmentCondition(segment);
@@ -280,6 +281,7 @@ export async function listUsers(
       writerArea2: users.writerArea2,
       createdAt: users.createdAt,
       isMainEditor: users.isMainEditor,
+      isIllustrator: users.isIllustrator,
       totpEnabledAt: users.totpEnabledAt,
       kvkkConsentAt: users.kvkkConsentAt,
       kvkkConsentVersion: users.kvkkConsentVersion,
@@ -526,6 +528,46 @@ export async function setEditorStatus(
     entityId: target.id,
     before: { editorStatus: target.editorStatus },
     after: { editorStatus: status },
+    ip: meta.ip,
+  });
+
+  return updated!;
+}
+
+/**
+ * Marks an account as an illustrator, or takes the mark back (D-151).
+ *
+ * This is not a role change. `role` is untouched, so no `role_changes` row is
+ * written and the account gains no panel: a çizer who is nothing else keeps a
+ * reader's account, and a writer may carry the mark as well. The audit log
+ * records who changed it.
+ */
+export async function setIllustrator(
+  actor: Actor,
+  targetUserId: string,
+  isIllustrator: boolean,
+  meta: RequestMeta,
+): Promise<User> {
+  if (!canManageUsers(actor)) throw forbidden("Çizer işareti yalnızca admin yetkisidir.");
+
+  const target = await findUserById(targetUserId);
+  if (target.isIllustrator === isIllustrator) {
+    throw conflict(isIllustrator ? "Kullanıcı zaten çizer." : "Kullanıcı zaten çizer değil.");
+  }
+
+  const [updated] = await db
+    .update(users)
+    .set({ isIllustrator, updatedAt: new Date() })
+    .where(eq(users.id, target.id))
+    .returning();
+
+  await writeAudit({
+    actorId: actor.id,
+    action: "user.illustrator_changed",
+    entityType: "users",
+    entityId: target.id,
+    before: { isIllustrator: target.isIllustrator },
+    after: { isIllustrator },
     ip: meta.ip,
   });
 

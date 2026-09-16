@@ -32,7 +32,8 @@ type ColumnId =
   | "verified"
   | "age"
   | "kvkk"
-  | "application";
+  | "application"
+  | "illustrator";
 
 type Column = { label: string; className?: string; cell: (row: UserListRow) => ReactNode };
 
@@ -165,6 +166,11 @@ const COLUMNS: Record<ColumnId, Column> = {
         <span className="text-warning">yok</span>
       ),
   },
+  illustrator: {
+    label: "Çizer",
+    className: "text-xs whitespace-nowrap",
+    cell: (row) => (row.isIllustrator ? <StatusBadge status="illustrator" /> : "—"),
+  },
   application: {
     label: "Yazar başvurusu",
     cell: (row) =>
@@ -175,7 +181,7 @@ const COLUMNS: Record<ColumnId, Column> = {
 /** The columns each list offers, and the ones shown before the admin picks. */
 const SEGMENT_COLUMNS: Record<UserSegment, { available: ColumnId[]; defaults: ColumnId[] }> = {
   all: {
-    available: ["name", "email", "role", "status", "areas", "birthDate", "createdAt"],
+    available: ["name", "email", "role", "illustrator", "status", "areas", "birthDate", "createdAt"],
     defaults: ["name", "email", "role", "status", "areas", "createdAt"],
   },
   writers: {
@@ -186,10 +192,10 @@ const SEGMENT_COLUMNS: Record<UserSegment, { available: ColumnId[]; defaults: Co
     available: ["name", "email", "editorStatus", "editorAreas", "mainEditor", "twoFactor", "createdAt"],
     defaults: ["name", "email", "editorStatus", "editorAreas", "mainEditor", "twoFactor", "createdAt"],
   },
-  // The page shows an empty state until an illustrator role exists (D-087)
+  // A çizer may be a yazar as well, so this list shows the role too (D-151)
   illustrators: {
-    available: ["name", "email", "createdAt"],
-    defaults: ["name", "email", "createdAt"],
+    available: ["name", "email", "role", "status", "areas", "createdAt"],
+    defaults: ["name", "email", "role", "createdAt"],
   },
   readers: {
     available: ["name", "email", "verified", "age", "birthDate", "kvkk", "application", "status", "createdAt"],

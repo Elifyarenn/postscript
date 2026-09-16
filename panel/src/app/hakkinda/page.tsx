@@ -51,9 +51,13 @@ export default async function AboutPage({
   const [context, params] = await Promise.all([getAuthContext(), searchParams]);
   const section = parseSection(params.bolum);
   const staff =
-    section === "yazarlar" || section === "editorler"
-      ? await listPublicStaff(section === "yazarlar" ? "writer" : "editor")
-      : [];
+    section === "yazarlar"
+      ? await listPublicStaff("writer")
+      : section === "editorler"
+        ? await listPublicStaff("editor")
+        : section === "tasarim"
+          ? await listPublicStaff("illustrator")
+          : [];
   const user = context?.user ?? null;
 
   return (
@@ -140,7 +144,12 @@ export default async function AboutPage({
             <>
               <h2 id="about-heading">Tasarım ve illüstrasyon</h2>
               <p>Derginin görsel dünyasını Tuanna Demir tasarladı.</p>
-              <p>İllüstratörlerimiz ve çizerlerimiz çok yakında bu sayfada.</p>
+              <h3>Çizerler</h3>
+              <StaffList members={staff} empty="Çizerlerimiz çok yakında burada listelenecek." />
+              <p className="mt-6 text-sm text-muted">
+                Çizerlerimiz de dergide mahlaslarıyla, mahlası olmayanlar topluluk adlarıyla yer
+                alır. Bir çizer aynı zamanda yazar olabilir; ikisi ayrı ayrı sayılır.
+              </p>
             </>
           )}
         </section>

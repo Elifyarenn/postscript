@@ -17,6 +17,7 @@ import {
   setBanned,
   setBirthDateAsAdmin,
   setEditorStatus,
+  setIllustrator,
   setWriterStatus,
 } from "@/services/users";
 import { createVersionFromTemplate, publishAgreementVersion } from "@/services/agreements";
@@ -140,6 +141,26 @@ export async function setEditorStatusAction(
     revalidatePath(`/admin/users/${targetId}`);
     revalidatePath("/admin/users");
     return { success: "Editör durumu güncellendi." };
+  });
+}
+
+export async function setIllustratorAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
+
+    const targetId = text(formData, "userId");
+    await setIllustrator({ ...user }, targetId, text(formData, "illustrator") === "evet", meta);
+
+    revalidatePath(`/admin/users/${targetId}`);
+    revalidatePath("/admin/users/illustrators");
+    // The about page lists the çizers by name (D-151)
+    revalidatePath("/hakkinda");
+    return { success: "Çizer işareti güncellendi." };
   });
 }
 

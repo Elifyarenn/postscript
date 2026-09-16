@@ -343,7 +343,9 @@ export type PublicStaffMember = { name: string; href: string };
  * leaves this function. A banned, suspended, deleted or anonymised account, or
  * one with no public name at all, is left out.
  */
-export async function listPublicStaff(role: "writer" | "editor"): Promise<PublicStaffMember[]> {
+export async function listPublicStaff(
+  kind: "writer" | "editor" | "illustrator",
+): Promise<PublicStaffMember[]> {
   const rows = await db
     .select({
       penName: users.penName,
@@ -355,7 +357,9 @@ export async function listPublicStaff(role: "writer" | "editor"): Promise<Public
     .from(users)
     .where(
       and(
-        eq(users.role, role),
+        // A çizer carries a mark, not a role: someone may write and draw at
+        // once, and `role` holds a single value (D-151)
+        kind === "illustrator" ? eq(users.isIllustrator, true) : eq(users.role, kind),
         eq(users.isBanned, false),
         isNull(users.deletedAt),
         isNull(users.anonymizedAt),
@@ -363,8 +367,14 @@ export async function listPublicStaff(role: "writer" | "editor"): Promise<Public
     );
 
   const members = rows.flatMap((row): PublicStaffMember[] => {
-    const status = role === "writer" ? row.writerStatus : row.editorStatus;
-    if (status === "suspended") return [];
+    // A suspended duty takes the name out of the list that duty feeds
+    const suspended =
+      kind === "writer"
+        ? row.writerStatus === "suspended"
+        : kind === "editor"
+          ? row.editorStatus === "suspended"
+          : row.writerStatus === "suspended" || row.editorStatus === "suspended";
+    if (suspended) return [];
     if (row.penName && row.penNameSlug) {
       return [{ name: row.penName, href: `/magazine/authors/${row.penNameSlug}` }];
     }

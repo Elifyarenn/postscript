@@ -1,7 +1,7 @@
 import { guardPanel } from "@/lib/auth/guard";
 import { listUsers } from "@/services/users";
 import { UsersTable } from "@/components/users-table";
-import { Alert, Card, EmptyState, Field, Input, PageHeader, Select } from "@/components/ui";
+import { Alert, Card, Field, Input, PageHeader, Select } from "@/components/ui";
 import { roleEnum, type Role } from "@/db/schema";
 import { USER_SEGMENT_META, type UserSegment } from "@/lib/user-segments";
 
@@ -41,51 +41,38 @@ export async function UsersListPage({
           </Alert>
         )}
 
-        {segment === "illustrators" ? (
-          // There is no illustrator role yet (D-087)
-          <Card>
-            <EmptyState>Henüz çizer yok.</EmptyState>
-          </Card>
-        ) : (
-          <>
-            <Card>
-              <form method="get" className="grid gap-3 sm:grid-cols-3">
-                <Field label="Ara" htmlFor="q">
-                  <Input
-                    id="q"
-                    name="q"
-                    defaultValue={filters.q ?? ""}
-                    placeholder="Ad veya e-posta"
-                  />
-                </Field>
+        <Card>
+          <form method="get" className="grid gap-3 sm:grid-cols-3">
+            <Field label="Ara" htmlFor="q">
+              <Input id="q" name="q" defaultValue={filters.q ?? ""} placeholder="Ad veya e-posta" />
+            </Field>
 
-                {segment === "all" && (
-                  <Field label="Rol" htmlFor="role">
-                    <Select id="role" name="role" defaultValue={filters.role ?? ""}>
-                      <option value="">Tümü</option>
-                      {roleEnum.enumValues.map((value) => (
-                        <option key={value} value={value}>
-                          {value}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                )}
+            {segment === "all" && (
+              <Field label="Rol" htmlFor="role">
+                <Select id="role" name="role" defaultValue={filters.role ?? ""}>
+                  <option value="">Tümü</option>
+                  {roleEnum.enumValues.map((value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
 
-                <div className="flex items-end">
-                  <button
-                    type="submit"
-                    className="rounded-md border border-line bg-surface px-3.5 py-2 text-sm hover:bg-paper"
-                  >
-                    Uygula
-                  </button>
-                </div>
-              </form>
-            </Card>
+            <div className="flex items-end">
+              <button
+                type="submit"
+                className="rounded-md border border-line bg-surface px-3.5 py-2 text-sm hover:bg-paper"
+              >
+                Uygula
+              </button>
+            </div>
+          </form>
+        </Card>
 
-            <UsersTable rows={rows} segment={segment} />
-          </>
-        )}
+        {/* The çizer list is a real query now (D-151); the table says when it is empty */}
+        <UsersTable rows={rows} segment={segment} />
       </div>
     </>
   );

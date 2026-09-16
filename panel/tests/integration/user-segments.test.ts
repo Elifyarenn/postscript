@@ -5,10 +5,10 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { db, type Database } from "@/db/client";
 import { articles, editorCategories, writerApplications, writerAreas } from "@/db/schema";
-import { getUserOverview, listUsers } from "@/services/users";
+import { getUserOverview, listUsers, setIllustrator } from "@/services/users";
 import { isAppError } from "@/lib/errors";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
-import { actorOf, createUser } from "../helpers/factories";
+import { actorOf, createUser, noMeta } from "../helpers/factories";
 
 let database: Database;
 
@@ -62,9 +62,22 @@ describe("listUsers segments", () => {
     expect(namesOf(await listUsers(actor, { segment: "readers" }))).toEqual(["Okur"]);
   });
 
-  it("returns no illustrators, because the role does not exist yet", async () => {
-    const { admin } = await seedAccounts();
+  it("lists whoever carries the çizer mark, a writer who also draws included", async () => {
+    const { admin, reader, writer } = await seedAccounts();
     expect(await listUsers(actorOf(admin), { segment: "illustrators" })).toEqual([]);
+
+    await setIllustrator(actorOf(admin), reader.id, true, noMeta);
+    await setIllustrator(actorOf(admin), writer.id, true, noMeta);
+
+    expect(namesOf(await listUsers(actorOf(admin), { segment: "illustrators" }))).toEqual([
+      "Okur",
+      "Yazar",
+    ]);
+    // The mark moves nobody out of the list their role puts them in (D-151)
+    expect(namesOf(await listUsers(actorOf(admin), { segment: "writers" }))).toEqual([
+      "Editör Yazar",
+      "Yazar",
+    ]);
   });
 
   it("counts a writer's live articles and the published ones", async () => {

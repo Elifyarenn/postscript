@@ -5550,3 +5550,61 @@ etkin sayfa 2 oluyor; geri oku birinci sayfaya (10 gönderi) dönüyor;
 hiç çizilmiyor. Yatay taşma yok. Kapı: typecheck, lint, 584 test geçti.
 
 **Push:** 0035 üretime uygulandıktan sonra D-149 ile birlikte push edildi.
+
+## D-151 — Çizer: rol değil, hesaba konan bir işaret
+
+**İstek (ürün sahibi):** "panelde çizer alanı oluştur çizerlerde ekstra bir panel
+olmayacak sadece çizer olacak hem yazar hem çizer olanlar olacak."
+
+**Durum:** D-087'de `/admin/users/illustrators` sayfası açılmış ama "Henüz çizer
+yok." diye boş bırakılmıştı; gerekçe, `role` enum'unda çizer olmamasıydı.
+`/hakkinda` sayfasında da "İllüstratörlerimiz ve çizerlerimiz çok yakında bu
+sayfada." yazıyordu.
+
+**Karar:**
+
+- **Çizer bir rol değildir, bir işarettir** (`users.is_illustrator`, varsayılan
+  `false`). Gerekçe doğrudan istekten geliyor: "hem yazar hem çizer olanlar
+  olacak". `role` tek değer tutar; çizer role eklenseydi bir yazar aynı anda
+  çizer olamazdı.
+- **İşaret hiçbir yetki vermez.** `rbac` dosyalarına tek satır eklenmedi: yalnız
+  çizer olan hesap okur hesabı olarak kalır ve hiçbir panele giremez; yazar olan
+  yazar panelini eskisi gibi kullanır. "Çizerlerde ekstra bir panel olmayacak"
+  şartı böyle sağlanıyor.
+- **Rol değişikliği sayılmaz:** `role` değişmediği için `role_changes` kaydı
+  yazılmaz; işaretin açılıp kapanması `audit_log`'a `user.illustrator_changed`
+  olarak düşer (D-015'teki ekle-yalnızca kural geçerli).
+- **Nerede görünür:**
+  - `/admin/users/illustrators` artık gerçek bir sorgu: işareti taşıyan herkes.
+    Liste rolü de gösterir, böylece "hem yazar hem çizer" olan ayırt edilir.
+  - Admin kullanıcı ekranında **Çizer** kartı: işaretle / işareti kaldır.
+    Yalnızca admin; editör yapamaz.
+  - "Hepsi" listesinde seçilebilir bir **Çizer** sütunu var.
+  - `/hakkinda` → "Tasarım ve illüstrasyon" bölümü çizerleri listeler. Yazarlar
+    ve editörler gibi: mahlas varsa mahlas, yoksa topluluk adı; gerçek ad asla.
+    Yasaklı, silinmiş, anonimleştirilmiş ya da görevi askıya alınmış hesap ve
+    hiç genel adı olmayan hesap listelenmez.
+- **Bilerek yapılmayanlar:** Yazıya çizer künyesi (hangi görseli kim çizdi)
+  eklenmedi; çizer başvurusu ve çizer sözleşmesi yok. İkisi de yeni karar ister.
+
+**Hukuk:**
+
+- **KVKK:** Aydınlatma metnine iki satır eklendi — §2'de "Yazarlık" kaleminin
+  içine hesabın çizer olarak işaretlenmiş olması, §4'e "Çizer olarak işaretlenmiş
+  hesapların Hakkında sayfasında mahlas veya topluluk adıyla listelenmesi"
+  amacı. Metin koddan geri kalmasın diye aynı adımda güncellendi (D-083).
+- **FSEK:** Bu işaret bir ruhsat değildir. Bir çizerin eseri dergide
+  yayımlanacaksa, yazarlarda olduğu gibi imzalı bir ruhsat gerekir; çizer
+  sözleşmesi henüz yok. İşaret yalnızca "bu hesap dergiye çizer" der; tek
+  başına hiçbir görselin yayımlanmasına izin vermez.
+
+**Migration:** 0036 (`users.is_illustrator`). **Üretime uygulanmadı.** D-079
+gereği bu commit, migration canlıya uygulanmadan push edilmemeli: `listUsers`
+ve `listPublicStaff` kolonu okuyor, kolon yokken admin kullanıcı listeleri ve
+Hakkında sayfası hata verir.
+
+**Doğrulama:** typecheck, lint ve 63 dosya / 589 test geçti. Yeni testler:
+işaret rolü değiştirmiyor ve denetim kaydı bırakıyor; bir yazar işareti
+taşıyabiliyor; aynı işaret ikinci kez konunca 409, admin olmayanda 403; çizer
+listesi mahlasla geliyor, yasaklı ve askıdaki hesap listeye girmiyor; çizer
+işareti kimseyi yazar listesinden çıkarmıyor.

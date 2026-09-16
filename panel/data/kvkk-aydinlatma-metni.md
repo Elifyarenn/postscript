@@ -25,7 +25,7 @@ ortaklık adına tek başına temsile yetkilidir.
 | Hesap güvenliği | Şifrenin geri döndürülemez özeti, iki adımlı doğrulama (TOTP) gizli anahtarı, iki adımlı doğrulama kurtarma kodlarının geri döndürülemez özetleri ve kullanılma zamanları, e-posta doğrulama ve şifre sıfırlama bağlantı kayıtları, giriş denemesi kayıtları |
 | İşlem güvenliği | IP adresi, tarayıcı bilgisi (user-agent), oturum açma ve son görülme zamanları; kayıt ve doğrulama e-postası formlarında bot doğrulaması için tarayıcınızdan toplanan teknik sinyaller |
 | Profil | Topluluk kullanıcı adı, kısa biyografi, profil görseli, sosyal medya bağlantıları, yazı alanı, topluluk ayarlarında sabit bir listeden seçtiğiniz ilgi alanları (yalnızca size gösterilir) |
-| Yazarlık | Yazarlık başvurusu, başvuruya eklenen örnek çalışma ve başvuru notu, editör değerlendirme notları, rol değişikliği kayıtları |
+| Yazarlık | Yazarlık başvurusu, başvuruya eklenen örnek çalışma ve başvuru notu, editör değerlendirme notları, rol değişikliği kayıtları, hesabınızın dergiye çizen bir hesap (çizer) olarak işaretlenmiş olması |
 | Bilgilendirme | Aydınlatma metninin hangi sürümünü ne zaman okuduğunuzu belirttiğiniz (kayıt sırasında ve sonraki sürümlerde); önceki kayıt panel işlem kayıtlarında saklanır |
 | Sözleşme | Yazar sözleşmesi ve eser onayı kayıtları; her onayın tarih-saati, IP adresi, tarayıcı bilgisi, onaylanan metnin SHA-256 özeti ve PDF kopyası |
 | İçerik | Dergiye gönderilen eserler ve sürümleri, yazı üzerindeki editör notları |
@@ -74,6 +74,7 @@ saklanmaz**.
 | Anonim kutu işlevinin sunulması; anonim mesajın göndereninin, bildirim ve yetkili merci talebi hâlinde belirlenebilmesi için hesapla ilişkilendirilerek saklanması | (c) Sözleşmenin ifası, (ç) Hukuki yükümlülük — 5651 sayılı Kanun m. 5, (f) Meşru menfaat |
 | Yazar sözleşmesinin ve eser bazlı kullanım ruhsatlarının kurulması ve ispatı | (c) Sözleşmenin ifası, (e) Bir hakkın tesisi, kullanılması ve korunması |
 | Yazar profilinin ve eserin dergide yayımlanması, künyede ad veya mahlas belirtilmesi | (c) Sözleşmenin ifası |
+| Çizer olarak işaretlenmiş hesapların Hakkında sayfasında mahlas veya topluluk adıyla listelenmesi | (c) Sözleşmenin ifası |
 | Yorum ve topluluk sohbeti işlevlerinin sunulması | (c) Sözleşmenin ifası |
 | Topluluk profilinin gösterilmesi; gönderi, yanıt, beğeni, yeniden paylaşım, takip, engelleme, kaydetme ve bildirim işlevlerinin sunulması | (c) Sözleşmenin ifası |
 | İçerik bildirimlerinin alınması, incelenmesi ve 5651 sayılı Kanun kapsamındaki içerik kaldırma yükümlülüğünün yerine getirilmesi | (ç) Veri sorumlusunun hukuki yükümlülüğü, (f) Meşru menfaat |

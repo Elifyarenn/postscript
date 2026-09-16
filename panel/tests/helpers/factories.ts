@@ -23,6 +23,8 @@ export type UserOverrides = {
   isBanned?: boolean;
   password?: string;
   displayName?: string;
+  /** The çizer mark (D-151); independent of the role. */
+  isIllustrator?: boolean;
 };
 
 /** An adult, verified, consented account: the shape that passes the §6 checks. */
@@ -44,6 +46,7 @@ export async function createUser(overrides: UserOverrides = {}): Promise<User> {
       kvkkConsentVersion: overrides.kvkkConsent === false ? null : 1,
       birthDate: overrides.birthDate === undefined ? "1995-05-05" : overrides.birthDate,
       isBanned: overrides.isBanned ?? false,
+      isIllustrator: overrides.isIllustrator ?? false,
     })
     .returning();
 

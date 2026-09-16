@@ -190,6 +190,8 @@ export const STATUS_LABELS: Record<string, string> = {
   suspended: "Askıda",
   user: "Kullanıcı",
   writer: "Yazar",
+  // Not a role but a second hat a writer may also wear (D-151)
+  illustrator: "Çizer",
   editor: "Editör",
   admin: "Yönetici",
   not_run: "Kontrol edilmedi",
@@ -212,6 +214,7 @@ const BADGE_TONES: Record<string, string> = {
   clean: "bg-accent-soft text-accent border-accent/30",
   pending_admin_approval: "bg-accent-soft text-accent border-accent/30",
   editor_writer: "bg-accent-soft text-accent border-accent/30",
+  illustrator: "bg-accent-soft text-accent border-accent/30",
   withdrawn: "bg-danger-soft text-danger border-danger/30",
   declined: "bg-danger-soft text-danger border-danger/30",
   revoked: "bg-danger-soft text-danger border-danger/30",

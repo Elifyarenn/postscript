@@ -38,7 +38,7 @@ export const USER_SEGMENT_META: Record<
     href: "/admin/users/illustrators",
     navLabel: "Çizerler",
     title: "Çizerler",
-    description: "Dergiye görsel üreten hesaplar.",
+    description: "Dergiye görsel üreten hesaplar. Hem yazan hem çizen hesaplar da burada.",
     countNoun: "çizer",
   },
   readers: {
@@ -66,6 +66,8 @@ export type UserListRow = {
   writerArea2: string | null;
   createdAt: Date;
   isMainEditor: boolean;
+  /** Whether the account also draws for the magazine (D-151). */
+  isIllustrator: boolean;
   /** Only whether 2FA is on; the secret never leaves the service. */
   totpEnabled: boolean;
   kvkkConsentAt: Date | null;
