@@ -1027,6 +1027,22 @@
   border-block: 1px solid var(--site-rule);
 }
 
+/*
+ * The design draws the tabs and "mark all as read" as one band. They overflow
+ * a wide column by a hair, and wrapping dropped the action onto its own line,
+ * so on a wide screen the strip is allowed to shrink (it scrolls by itself)
+ * instead of the band breaking. A phone keeps the wrap (D-153).
+ */
+@media (min-width: 900px) {
+  .ps-site .notice-bar {
+    flex-wrap: nowrap;
+  }
+
+  .ps-site .notice-bar .site-tabs {
+    min-width: 0;
+  }
+}
+
 .ps-site .notice-mark {
   color: var(--site-ink);
   font-size: 0.85rem;

@@ -5650,3 +5650,85 @@ olan alan-editör eşlemesini okuyor. Aydınlatma metninde değişiklik gerekmiy
 kuralın beş hâlini sabitliyor: alanı tutan editör, büyük/küçük harf ve boşluk
 farkıyla aynı alan, editörü olmayan alan, bilinmeyen alan adı, kategorisi
 olmayan yazı ve ana editör aşaması (atanmamış hâli dahil).
+
+Ekran da görüldü: demo sunucusunda editör hesabıyla (ikinci faktör dahil)
+`/editor/articles` başlıkları "Başlık · Yazar · Kategori · Editör · Durum ·
+Güncelleme" ve seed'in "Sanat & Edebiyat" alanına atadığı editör üç yazının da
+satırında "Deniz Editör" olarak çıkıyor. Yatay taşma yok.
+
+**Not — demo veritabanı:** Bu doğrulama sırasında scratchpad'deki pglite demo
+veritabanı bozuktu (`58P01: could not open file`, önce `auth_attempts`, sonra
+sistem kataloğu). Onarılamadı; bozuk kopya kenara alınıp veritabanı sıfırdan
+kuruldu (`db:migrate` + `SEED_DEMO_USERS=1` seed + demo sosyal veri). Ders:
+sunucu pglite dizininde tek yazardır, kapatılmadan o dizine yazan bir betik
+çalıştırılmamalı.
+
+## D-153 — `postscriptui` taraması: on tasarım dosyasının tamamı ekranlarla karşılaştırıldı
+
+**İstek (ürün sahibi):** "`postscriptui` tasarımın olabildiğince yaklaştığından
+emin ol."
+
+**Yöntem:** Her tasarım dosyası karşılık geldiği ekranla eşleştirildi, ekranların
+demo sunucusunda **gerçek veriyle** fotoğrafı çekildi (1440 piksel) ve tasarım
+render'ıyla yan yana kondu. Daha önce hiçbir kararda adı geçmeyen üç dosya ilk
+kez bu adımda karşılaştırıldı: **anon box, bookmarks, notifications**.
+
+**Eşleme:**
+
+| Tasarım | Ekran | Kararlar |
+|---|---|---|
+| postscript ana sayfa kullanıcı olmayan | `/` (üyesiz) | D-112 |
+| postscript ana sayfa kullanıcı olan | `/` (üyeli) | D-112, D-113 |
+| contact, about, categories | `/hakkinda`, `/iletisim`, `/kategoriler` | D-112, D-135, D-145, D-146 |
+| magazines | `/magazine/issues` | D-114, D-116, D-148 |
+| blog | `/social/u/<kullanıcı>` | D-113, D-116, D-150 |
+| dm | `/social/messages` | D-113, D-116, D-147 |
+| settings and community | `/social/settings` | D-113, D-116, D-136, D-149 |
+| anon box | `/social/anon/<kullanıcı>` ve `/social/anon` | D-092, D-113, D-116 |
+| bookmarks | `/social/bookmarks` | D-113, D-116 |
+| notifications | `/social/notifications` | D-113, D-116, bu karar |
+
+**Bulunan ve düzeltilen tek fark:** Bildirimler ekranında tasarım, sekmeleri ve
+"mark all as read" işlemini **tek bir bant** olarak çiziyor. Bizde şerit kâğıt
+sütununu kıl payı aştığı için işlem alt satıra düşüyordu. Geniş ekranda (≥900
+piksel) bant artık sarmıyor; sekme şeridi gerekirse kendi içinde kayar. Dar
+ekranda eski davranış (alt satıra sarma) korundu, çünkü telefonda tek bant
+sıkışık olurdu.
+
+**Bilerek duran sapmalar (hepsi gerekçeli):**
+
+- **Kaydedilenler:** Tasarımda kart panosu dörtlü dizilir; bizde kâğıt sütunu
+  daha dar olduğu için 1440 pikselde üç kart yan yana gelir. Sabit dört sütun
+  denenmedi, çünkü aynısı sayılar sayfasında kart metnini harf harf bölmüştü
+  (D-148); ızgara kart genişliğine göre doluyor.
+- **Anonim kutu:** Tasarımın kapanış metni yazıların "bize" gönderileceğini ve
+  dergide yayımlanacağını söylüyor. Bizde anonim mesaj **tek bir üyeye** gider
+  (D-092). Dergiye anonim gönderi ayrı bir ürün kararıdır ve yayımlama,
+  moderasyon ve FSEK tarafı düşünülmeden açılmaz.
+- **Bildirimler:** "Bahsetmeler" sekmesi tasarımda olduğu için duruyor ama
+  bahsetme özelliği yok; sekme "Henüz bahsetme yok." der (D-116). Ayrıca
+  "Tümünü okundu işaretle" yalnızca okunmamış bildirim varken çıkar; tasarım
+  her zaman çiziyor, ama işlevsiz bir düğme göstermek istemedik.
+- **Sayılar:** Tasarımdaki kalp ve beğeni sayısı yok (D-148).
+- **Profil:** Sayfa şeridi sağ sütunda değil, taşıdığı listenin altında (D-150).
+- **Mesajlar:** "Çevrimiçi" satırı ve okundu tikleri yok (D-091, D-147).
+- **Ayarlar:** "settings and community.ai" dosyasının topluluk yarısı hâlâ
+  okunamıyor (çizim alanı dışında, Illustrator verisi açılmıyor) — D-149.
+
+**Eski bir kaydın düzeltmesi:** D-113 bildirim sekmelerini "Tümü, Takipçiler,
+Beğeniler, Yanıtlar ve Dergi" diye anlatıyor ve tasarımdaki "Mentions"ın
+karşılığı olmadığını söylüyordu. Kod o günden beri değişmiş: sekmeler bugün
+tasarımdaki beşin karşılığı (Tümü, Takipçiler, Beğeniler, Yorumlar,
+Bahsetmeler) ve "Dergi" sekmesi yok; üyeden gelmeyen bildirimler yalnızca
+"Tümü" altında görünür (`notificationTab`). Kural değil gerçek doğru kabul
+edildi (CLAUDE.md, oturum hijyeni).
+
+**Doğrulama:** Demo sunucusunda okur hesabıyla, ekranlar gerçek veriyle
+görüldü: anonim kutu yazma ekranı (afiş, aynı yer tutucu metin, alıntı satırı,
+yıldızlı ayraç, "Anonim olarak gönder →", kapanış kutusu), kaydedilenler (iki
+kayıtlı gönderi; yazı panosu boş çerçevesiyle duruyor), bildirimler (iki
+bildirim satırı: kare avatar, kalın `@kullanıcı`, göreli zaman, okunmadı
+noktası, altında çizgili dolgu satırları). Bant düzeltmesi ölçüldü: 1440'ta
+sekmeler ve işlem aynı y'de (261) ve beş sekme de görünür; 760'ta işlem alt
+satıra sarıyor. Hiçbir ekranda yatay taşma yok. Kapı: typecheck, lint, 64 dosya
+/ 594 test.
