@@ -13,14 +13,15 @@ export const metadata = { title: "Mesajlar" };
 export default async function MessagesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ to?: string }>;
+  searchParams: Promise<{ to?: string; ara?: string }>;
 }) {
   const { user } = await requireSession();
 
   // The "new message" box is a plain GET form: opening a conversation changes nothing
-  const { to } = await searchParams;
+  const { to, ara } = await searchParams;
   const target = to ? normalizeUsername(to) : "";
   if (target) redirect(`/social/messages/${encodeURIComponent(target)}`);
+  const query = (ara ?? "").trim().slice(0, 40);
 
   const { username } = await getMemberSettings({ ...user });
   if (!username) {
@@ -46,9 +47,24 @@ export default async function MessagesPage({
   const talking = new Set(conversations.map((conversation) => conversation.other.username));
   const mutualFollows = mutuals.filter((member) => !talking.has(member.username));
 
+  // The design's search box narrows the column by handle or pen name (D-147)
+  const matches = (candidate: { username: string | null; penName: string | null }) => {
+    if (!query) return true;
+    const needle = query.replace(/^@/, "").toLocaleLowerCase("tr");
+    return [candidate.username, candidate.penName].some((value) =>
+      (value ?? "").toLocaleLowerCase("tr").includes(needle),
+    );
+  };
+  const shownConversations = conversations.filter((conversation) => matches(conversation.other));
+  const shownMutuals = mutualFollows.filter((member) => matches(member));
+
   return (
     <div className="dm-layout">
-      <ConversationColumn conversations={conversations} mutualFollows={mutualFollows} />
+      <ConversationColumn
+        conversations={shownConversations}
+        mutualFollows={shownMutuals}
+        query={query}
+      />
 
       <section className="dm-chat dm-chat-empty" aria-label="Konuşma">
         <Sparkle />

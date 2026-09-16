@@ -5362,3 +5362,36 @@ Illustrator verisinden çıkarıldı. On bir kategori, on bir konu satırı ve o
 - **Yerel tarayıcı (1440 px ve 390 px):** Başlık "Kategoriler / Seni harekete
   geçireni bul"; 11 kartın her birinde ad, konu satırı ve "Keşfet" var; yazı
   sayısı hiçbir kartta yok; kartların yüksekliği eşit; yatay taşma yok.
+
+## D-147 — Mesajlar ekranı: konuşmalarda arama ve tasarımdaki üçüncü hızlı işlem
+
+**Durum:** "dm.ai" tasarımıyla karşılaştırıldığında ekran zaten üç sütundu: liste,
+sohbet ve karşı tarafın paneli (D-113, D-116). İki fark kalmıştı:
+
+- Sol sütundaki kutu tasarımda "Search conversations…" iken bizde yalnızca yeni
+  konuşma açan bir kutuydu.
+- Tasarımın "Quick Actions" bölümünde üç işlem var: Block, Report, Delete
+  Conversation. Bizde Bildir yoktu.
+
+**Karar:**
+
+- **Arama:** Kutu artık konuşmalarda arıyor (`?ara=`). Kullanıcı adı ve mahlas
+  üzerinden, Türkçe küçük harfe göre eşleşir; hem konuşmalar hem
+  "Takipleştikleriniz" listesi süzülür.
+  - Arama bir GET formu; hiçbir şeyi değiştirmez.
+  - Aranan adla konuşma yoksa, aynı adla yeni konuşma açan bir bağlantı çıkar.
+    Eski "to=" adresi de çalışmaya devam ediyor.
+- **Bildir:** Hızlı işlemlere eklendi; mevcut bildirim akışına gider (D-084).
+  Engelle ve konuşmayı sil eskisi gibi.
+- **Tasarımdan bilerek ayrılan iki nokta:** "online" satırı ve okundu tikleri
+  yok (D-091). Kimin ne zaman çevrimiçi olduğu ya da mesajı okuduğu, gönderenin
+  göreceği bir bilgi değil.
+
+**Hukuk:** Yeni veri yok; arama okurun kendi konuşmalarını süzüyor.
+
+**Doğrulama:** Demo sunucusunda (3002) okur hesabıyla: liste ekranında arama
+kutusu "Konuşmalarda ara…", altında konuşmalar ve "Takipleştikleriniz";
+`?ara=ada` konuşmayı ve takipleşilen üyeyi süzüyor, `?ara=bulunmayan` boş liste
+ile "Bu adla yeni konuşma aç" bağlantısını veriyor. Konuşma ekranı üç sütun;
+hızlı işlemler: Engelle, Konuşmayı sil, Bildir (`/social/report?type=member&id=…`).
+Yatay taşma yok.

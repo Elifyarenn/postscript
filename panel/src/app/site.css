@@ -3543,3 +3543,34 @@
   flex: 1;
   gap: 0.6rem;
 }
+
+/* ════════════════ Searching conversations (D-147) ════════════════ */
+
+.ps-site .dm-search-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.6rem;
+  margin: -0.5rem 1.1rem 0.9rem;
+  color: var(--site-muted);
+  font-size: 0.8rem;
+}
+
+.ps-site .dm-search-hint a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--site-wine);
+  text-decoration: underline;
+}
+
+.ps-site .dm-report {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--site-ink);
+}
+
+.ps-site .dm-report:hover {
+  color: var(--site-wine);
+}

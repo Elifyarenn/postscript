@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Ban, Ellipsis, FaceSlightlySmiling, Info, Paperclip, Phone, Send, X } from "lucide-react";
+import { Ban, Ellipsis, FaceSlightlySmiling, Flag, Info, Paperclip, Phone, Send, X } from "lucide-react";
 import { requireSession } from "@/lib/auth/guard";
 import { readCsrfToken } from "@/lib/csrf";
 import { isAppError } from "@/lib/errors";
@@ -197,6 +197,14 @@ export default async function ConversationPage({
                   }
                 />
               )}
+              {/* The design's third quick action; reporting is where it already lives (D-084) */}
+              <Link
+                href={`/social/report?type=member&id=${other.id}`}
+                className="dm-action dm-report"
+              >
+                <Flag aria-hidden className="size-4" />
+                Bildir
+              </Link>
             </div>
             <p className="dm-info-empty mt-3">
               Özel mesajları yöneticiler okuyamaz. Bir mesajı bildirirseniz yalnızca o mesajın metni

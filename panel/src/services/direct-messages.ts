@@ -258,7 +258,7 @@ export async function sendDirectMessage(
 export type ConversationMessage = { id: string; body: string; createdAt: Date; isOwn: boolean };
 
 export type ConversationView = {
-  other: { username: string; penName: string | null; role: Role; bio: string | null };
+  other: { id: string; username: string; penName: string | null; role: Role; bio: string | null };
   conversationId: string | null;
   messages: ConversationMessage[];
   canSend: boolean;
@@ -315,7 +315,7 @@ export async function openConversation(actor: Actor, rawUsername: string): Promi
   }
 
   return {
-    other: { username: other.username, penName: other.penName, role: other.role, bio: other.bio },
+    other: { id: other.id, username: other.username, penName: other.penName, role: other.role, bio: other.bio },
     conversationId: conversation?.id ?? null,
     messages,
     canSend: state.canSend,
