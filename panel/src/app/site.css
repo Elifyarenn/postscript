@@ -856,11 +856,17 @@
 
 /*
  * Measured on the "contact, about, categories" design (D-167). Every length is
- * in design units (--du, D-158), so the page keeps the drawing's proportions at
- * any width: the four boxes are 227 / 547 / 237 / 237 wide with 15, 101 and 27
- * between them, all 798 tall.
+ * in design units, so the page keeps the drawing's proportions: the four boxes
+ * are 227 / 547 / 237 / 237 wide with 15, 101 and 27 between them, all 798 tall.
+ *
+ * The unit here is the grid's own width over the design's 1391 (--adu), not the
+ * page's (--du): the paper column stops growing at 1320 pixels while the page
+ * unit does not, so text sized by the page would outgrow its boxes on a wide
+ * screen. Like --du it never drops below 0.7px, for legibility.
  */
 .ps-site .about-grid {
+  container-type: inline-size;
+  --adu: max(0.7px, calc(100cqw / 1391));
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem;
@@ -872,9 +878,12 @@
     grid-template-columns:
       minmax(0, 227fr) minmax(0, 15fr) minmax(0, 547fr) minmax(0, 101fr)
       minmax(0, 237fr) minmax(0, 27fr) minmax(0, 237fr);
-    grid-auto-rows: minmax(calc(798 * var(--du)), auto);
     gap: 0;
     padding: calc(24 * var(--du)) calc(9 * var(--du)) calc(73 * var(--du));
+  }
+
+  .ps-site .about-grid > * {
+    min-height: calc(798 * var(--adu));
   }
 
   .ps-site .about-tabs {
@@ -897,8 +906,8 @@
 .ps-site .about-tabs {
   display: flex;
   flex-direction: column;
-  gap: calc(19 * var(--du));
-  padding: calc(55 * var(--du)) calc(6 * var(--du)) calc(40 * var(--du));
+  gap: calc(19 * var(--adu));
+  padding: calc(55 * var(--adu)) calc(6 * var(--adu)) calc(40 * var(--adu));
   background: var(--site-strip);
 }
 
@@ -907,11 +916,11 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: calc(88 * var(--du));
-  padding: calc(8 * var(--du)) calc(10 * var(--du));
+  min-height: calc(88 * var(--adu));
+  padding: calc(8 * var(--adu)) calc(10 * var(--adu));
   color: var(--site-paper);
   /* OUR STORY, WRITERS …: 26.4 units */
-  font-size: calc(26.4 * var(--du));
+  font-size: calc(26.4 * var(--adu));
   font-weight: 600;
   line-height: 1.21;
   text-align: center;
@@ -929,9 +938,9 @@
 
 /* The thin eight-point star under the tabs */
 .ps-site .about-tabs-star {
-  width: calc(96 * var(--du));
-  height: calc(120 * var(--du));
-  margin: calc(56 * var(--du)) auto 0;
+  width: calc(96 * var(--adu));
+  height: calc(120 * var(--adu));
+  margin: calc(56 * var(--adu)) auto 0;
   color: var(--site-paper);
 }
 
@@ -939,25 +948,25 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding: calc(22 * var(--du)) calc(22 * var(--du)) calc(35 * var(--du)) calc(30 * var(--du));
+  padding: calc(22 * var(--adu)) calc(22 * var(--adu)) calc(35 * var(--adu)) calc(30 * var(--adu));
   border: 1px solid var(--site-rule);
 }
 
 .ps-site .about-panel h2 {
-  margin-bottom: calc(48 * var(--du));
+  margin-bottom: calc(48 * var(--adu));
   color: var(--site-ink);
   font-family: var(--font-caps), Georgia, serif;
   /* OUR STORY: 49.5 units */
-  font-size: calc(49.5 * var(--du));
+  font-size: calc(49.5 * var(--adu));
   font-weight: 600;
   line-height: 1.2;
   text-transform: uppercase;
 }
 
 .ps-site .about-panel h3 {
-  margin: calc(27 * var(--du)) 0 calc(14 * var(--du));
+  margin: calc(27 * var(--adu)) 0 calc(14 * var(--adu));
   color: var(--site-wine);
-  font-size: calc(29.3 * var(--du));
+  font-size: calc(29.3 * var(--adu));
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -965,27 +974,27 @@
 .ps-site .about-panel p {
   color: var(--site-ink);
   /* body copy: 19.5 units on a 26.2 line */
-  font-size: calc(19.5 * var(--du));
-  line-height: calc(26.2 * var(--du));
+  font-size: calc(19.5 * var(--adu));
+  line-height: calc(26.2 * var(--adu));
 }
 
 .ps-site .about-panel p + p {
-  margin-top: calc(27 * var(--du));
+  margin-top: calc(27 * var(--adu));
 }
 
 .ps-site .about-panel .about-note {
-  margin-top: calc(24 * var(--du));
+  margin-top: calc(24 * var(--adu));
   color: var(--site-muted);
 }
 
 .ps-site .about-creators {
-  margin: calc(64 * var(--du)) calc(-5 * var(--du)) 0 calc(-7 * var(--du));
-  padding: calc(14 * var(--du)) calc(24 * var(--du)) calc(38 * var(--du)) calc(33 * var(--du));
+  margin: calc(64 * var(--adu)) calc(-5 * var(--adu)) 0 calc(-7 * var(--adu));
+  padding: calc(14 * var(--adu)) calc(24 * var(--adu)) calc(38 * var(--adu)) calc(33 * var(--adu));
   border: 1px solid var(--site-rule);
 }
 
 .ps-site .about-panel .about-creators h3 {
-  margin: 0 0 calc(22 * var(--du));
+  margin: 0 0 calc(22 * var(--adu));
   line-height: 1.2;
   text-align: center;
 }
@@ -993,12 +1002,12 @@
 .ps-site .about-creators li {
   color: var(--site-ink);
   /* the names: 19.7–21.3 units on a 28 line */
-  font-size: calc(20.5 * var(--du));
-  line-height: calc(28 * var(--du));
+  font-size: calc(20.5 * var(--adu));
+  line-height: calc(28 * var(--adu));
 }
 
 .ps-site .about-creators li + li {
-  margin-top: calc(27 * var(--du));
+  margin-top: calc(27 * var(--adu));
 }
 
 /*
@@ -1007,11 +1016,11 @@
  */
 .ps-site .about-writers {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(calc(200 * var(--du)), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(calc(200 * var(--adu)), 1fr));
   align-content: start;
-  gap: calc(12 * var(--du));
-  max-height: calc(470 * var(--du));
-  padding-right: calc(8 * var(--du));
+  gap: calc(12 * var(--adu));
+  max-height: calc(470 * var(--adu));
+  padding-right: calc(8 * var(--adu));
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-color: var(--site-rule) transparent;
@@ -1020,10 +1029,10 @@
 
 .ps-site .about-writers a {
   display: block;
-  padding: calc(12 * var(--du)) calc(16 * var(--du));
+  padding: calc(12 * var(--adu)) calc(16 * var(--adu));
   border: 1px solid var(--site-rule);
   color: var(--site-ink);
-  font-size: calc(19.5 * var(--du));
+  font-size: calc(19.5 * var(--adu));
   overflow-wrap: anywhere;
 }
 
@@ -1035,17 +1044,17 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding: calc(145 * var(--du)) calc(24 * var(--du)) calc(190 * var(--du));
+  padding: calc(145 * var(--adu)) calc(24 * var(--adu)) calc(190 * var(--adu));
   border: 1px solid var(--site-rule);
 }
 
 .ps-site .about-card h3 {
   /* Two lines tall either way, so both cards' copy starts on the same line */
   min-height: 2.4em;
-  margin-bottom: calc(24 * var(--du));
+  margin-bottom: calc(24 * var(--adu));
   color: var(--site-wine);
   /* YOU WANNA JOIN US?, WRITERS: 29.3 units */
-  font-size: calc(29.3 * var(--du));
+  font-size: calc(29.3 * var(--adu));
   font-weight: 700;
   line-height: 1.2;
   text-align: center;
@@ -1054,25 +1063,25 @@
 
 .ps-site .about-card p {
   color: var(--site-ink);
-  font-size: calc(19.5 * var(--du));
-  line-height: calc(26.2 * var(--du));
+  font-size: calc(19.5 * var(--adu));
+  line-height: calc(26.2 * var(--adu));
 }
 
 .ps-site .about-card .site-button {
   align-self: center;
   justify-content: center;
-  min-width: calc(146 * var(--du));
-  min-height: calc(60 * var(--du));
+  min-width: calc(146 * var(--adu));
+  min-height: calc(60 * var(--adu));
   margin-top: auto;
-  padding: 0 calc(18 * var(--du));
-  border-radius: calc(4 * var(--du));
+  padding: 0 calc(18 * var(--adu));
+  border-radius: calc(4 * var(--adu));
   /* JOIN US, MEET US: 19.7 units */
-  font-size: calc(19.7 * var(--du));
+  font-size: calc(19.7 * var(--adu));
 }
 
 .ps-site .about-card .site-button svg {
-  width: calc(22 * var(--du));
-  height: calc(22 * var(--du));
+  width: calc(22 * var(--adu));
+  height: calc(22 * var(--adu));
 }
 
 @media (max-width: 999px) {

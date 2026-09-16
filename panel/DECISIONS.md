@@ -6543,3 +6543,13 @@ yazarlar listesi vs. çok uzun uzarsa scroll yap." Kaynak:
 **Doğrulama:** Canlıda test (bkz. yerel sunucu açılmıyor): yayından sonra
 Playwright ile 2078 genişlikte kutu ölçüleri tasarımla karşılaştırılır.
 - Kapı: typecheck, lint, 66 dosya / 624 test.
+
+**Düzeltme (aynı gün, canlı ölçümden sonra):**
+- Yazı ve kutular sayfa birimiyle (`--du`) ölçülünce, en fazla 1320 px olan
+  kâğıt sütunu geniş ekranda büyümüyor ama yazı büyüyordu; kutular tasarımın
+  798 yüksekliğini aşıp 875'e uzadı. Hakkında ızgarası artık kendi
+  genişliğinin tasarımdaki 1391'e oranıyla ölçülüyor (`container-type`,
+  `--adu = max(0.7px, 100cqw / 1391)`): her genişlikte tasarımın oranı.
+- Türkçe başlık dört satıra taşıyordu: "Bize katılır mısın?" (tasarımda iki
+  satır "YOU WANNA JOIN US?"), düğme "Katıl" ("JOIN US"). Sekme "Tasarımcı /
+  ve / çizerler": "Tasarımcılar" 227 birimlik şeride sığmıyordu.

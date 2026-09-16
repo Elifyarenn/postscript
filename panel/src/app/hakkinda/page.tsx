@@ -12,7 +12,7 @@ const SECTIONS = [
   { key: "hikayemiz", label: ["Hikâyemiz"] },
   { key: "yazarlar", label: ["Yazarlar"] },
   { key: "editorler", label: ["Editörler"] },
-  { key: "tasarim", label: ["Tasarımcılar", "ve", "çizerler"] },
+  { key: "tasarim", label: ["Tasarımcı", "ve", "çizerler"] },
 ] as const;
 
 type SectionKey = (typeof SECTIONS)[number]["key"];
@@ -168,7 +168,7 @@ export default async function AboutPage({
 
           {section === "tasarim" && (
             <>
-              <h2 id="about-heading">Tasarımcılar ve çizerler</h2>
+              <h2 id="about-heading">Tasarımcı ve çizerler</h2>
               <p>Derginin görsel dünyasını Tuanna Demir tasarladı.</p>
               <h3>Çizerler</h3>
               <StaffList members={staff} empty="Çizerlerimiz çok yakında burada listelenecek." />
@@ -181,14 +181,14 @@ export default async function AboutPage({
         </section>
 
         <aside className="about-card" aria-labelledby="about-join">
-          <h3 id="about-join">Bize katılmak ister misin?</h3>
+          <h3 id="about-join">Bize katılır mısın?</h3>
           <p>
             Bize katılmak ve hayallerinin peşinde koşan bir yazar, editör ya da çizer/ tasarımcı mı
             olmak istiyorsun? Aramıza katıl!
           </p>
           {/* The writer application lives on the account page (D-037); a visitor signs up first */}
           <Link href={user ? "/account" : "/register"} className="site-button fit-line">
-            Aramıza katıl <ArrowRight aria-hidden />
+            Katıl <ArrowRight aria-hidden />
           </Link>
         </aside>
 
