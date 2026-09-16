@@ -38,15 +38,6 @@ import { runAction, text, checkbox, type ActionState } from "@/lib/action";
 import { clearAttempts } from "@/lib/rate-limit";
 import { isProduction } from "@/lib/env";
 import { hasRole } from "@/lib/auth/rbac";
-import type { Role } from "@/db/schema";
-
-/** Where a signed-in user belongs, by role. */
-function homeFor(role: Role): string {
-  if (role === "admin") return "/admin";
-  if (role === "editor") return "/editor";
-  if (role === "writer") return "/writer";
-  return "/magazine";
-}
 
 /**
  * The standard reader/user registration (/register). The service always
@@ -233,9 +224,10 @@ export async function verifyEmailAction(
     // Someone who followed the link in the same browser goes straight in;
     // anyone else is sent to sign in with a confirmed address
     const context = await getAuthContext();
-    // ?verified=1 is what prints the welcome banner on the far side
+    // ?verified=1 is what prints the welcome banner on the far side. Every role
+    // lands in the magazine, not a panel: the PANEL button is the way in (D-165)
     destination =
-      context?.user.id === user.id ? `${homeFor(user.role)}?verified=1` : "/login?verified=1";
+      context?.user.id === user.id ? "/magazine?verified=1" : "/login?verified=1";
   });
 
   if (destination) redirect(destination);
@@ -255,9 +247,10 @@ export async function confirmEmailChangeAction(
     // `confirmEmailChange` drops the sessions itself (D-073)
     const user = await confirmEmailChange(text(formData, "token"), meta);
 
-    // Whoever is still signed in on this browser goes straight home
+    // Whoever is still signed in goes back to the account page, where the
+    // banner is, rather than into a panel (D-165)
     const context = await getAuthContext();
-    destination = context?.user.id === user.id ? `${homeFor(user.role)}?emailChanged=1` : "/login";
+    destination = context?.user.id === user.id ? "/account?emailChanged=1" : "/login";
   });
 
   if (destination) redirect(destination);

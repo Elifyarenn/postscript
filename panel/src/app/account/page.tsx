@@ -4,7 +4,7 @@ import { users } from "@/db/schema";
 import { requireSession } from "@/lib/auth/guard";
 import { listSessions } from "@/lib/auth/session";
 import { readCsrfToken } from "@/lib/csrf";
-import { navForRole, PanelShell } from "@/components/shell";
+import { SiteShell } from "@/components/site-shell";
 import { ActionButton } from "@/components/form";
 import { Alert, Card, PageHeader } from "@/components/ui";
 import {
@@ -26,8 +26,10 @@ import { cancelDeletionAction, requestDeletionAction } from "./actions";
 export const metadata = { title: "Hesabım" };
 
 /**
- * The home of a plain registered reader: profile, password, sessions.
+ * Every member's account: profile, password, sessions.
  * There is no self-service route from here to the writer role by design (§3).
+ * It sits in the magazine's frame for every role: the site's PROFİL button must
+ * not drop a staff member into the panel (D-165).
  */
 export default async function AccountPage({
   searchParams,
@@ -60,12 +62,8 @@ export default async function AccountPage({
     latestApplication(profile.id),
   ]);
 
-  // Every role can open this page, so the sidebar has to be the one that role
-  // came from; otherwise an admin loses the panel navigation on the way here.
-  const nav = navForRole(context.user.role);
-
   return (
-    <PanelShell user={context.user} area={nav.area} groups={nav.groups}>
+    <SiteShell user={context.user}>
       <PageHeader
         title="Hesabım"
         description="Profil bilgileriniz, şifreniz ve açık oturumlarınız."
@@ -184,6 +182,6 @@ export default async function AccountPage({
           )}
         </Card>
       </div>
-    </PanelShell>
+    </SiteShell>
   );
 }

@@ -6389,3 +6389,44 @@ bırakıldıktan sonra okur hesabıyla ölçüldü:
 commit edilmemiş işi vardı ("nickname", migration 0037, D-163). Testler o hâliyle
 birlikte geçti. Bu adımın commit'i yalnızca yukarıdaki dosyaları ve bu kararın
 satırlarını içerir; D-163 ve ilgili değişiklikler o işin sahibine bırakıldı.
+
+## D-165 — Panel yönetim içindir; ona giden tek düğme PANEL
+
+**İstek (ürün sahibi):** "Panele giden tek düğme panel düğmesi olmalı;
+toplulukla paneli ayırman lazım, panel yönetim için."
+
+**Durum:** Sitenin üst şeridindeki PANEL düğmesi dışında üç yol daha panele
+götürüyordu:
+
+- **PROFİL (`/account`)** panel çerçevesinde (`PanelShell`) açılıyor ve
+  `navForRole` ile rolün panel menüsünü çiziyordu; bir yönetici PROFİL'e
+  basınca yönetim menüsünün ortasına düşüyordu. Yazar sözleşmesini imzalama
+  sayfası (`/writer-application/contract`) da öyleydi.
+- **E-posta doğrulama ve e-posta değişikliği onayı** üyeyi rolüne göre
+  `/admin`, `/editor` veya `/writer`'a yönlendiriyordu (`homeFor`).
+- **Panel menüleri** ters yönde "Dergi", "Topluluk" ve "Hesabım"
+  bağlantıları taşıyordu; panel başlığındaki ad da Hesabım'a gidiyordu.
+
+**Karar:**
+
+- **Hesabım ve sözleşme imzalama site çerçevesinde (`SiteShell`).** Her rol
+  için aynı; topluluk sayfalarının kullandığı bileşenlerle (`Card`, `Alert`,
+  `PageHeader`) çizildiği için görünüm düzenlemesi gerekmedi. Kullanılmayan
+  `navForRole`, `READER_NAV` ve `socialNav` silindi.
+- **Doğrulama sonrası dergiye, e-posta değişikliği sonrası Hesabım'a.**
+  Karşılama bandı zaten orada. Girişin kendisi D-086'dan beri ana sayfaya
+  iniyordu; değişmedi. Personel için iki adımlı doğrulama kurulum yönlendirmesi
+  (`/account?twoFactor=1`) de değişmedi.
+- **Panel menülerinde siteye bağlantı yok.** Yönetici menüsünden "Hesabım",
+  "Dergi", "Topluluk"; editör menüsünden "Hesabım" ve "Okuma" grubu; yazar
+  menüsünden "Dergi" ve "Topluluk" çıktı. "Topluluk yönetimi" bir yönetim işi
+  olduğu için kaldı. Panel başlığındaki ad artık bağlantı değil. Panelden
+  çıkış yolu başlıktaki "Ana sayfa" düğmesi.
+- **Kalanlar bilerek dokunulmadı:** Sözleşme imzalandıktan sonra yazar
+  paneline yönlendirme (düğme değil, yazarlığın başladığı an); yazar
+  panelindeki "Profil ve güvenlik" sayfası (panelin kendi sayfası).
+
+**Hukuk:** Değişiklik yok; yalnızca sayfaların çerçevesi ve bağlantılar.
+Yasal sayfa bağlantıları iki çerçevede de duruyor (D-084).
+
+**Doğrulama:** Kapı: typecheck, lint, 67 dosya / 623 test. Panel sayfalarında `/magazine`, `/social`, `/account` bağlantısı kalmadı (grep); siteden `/admin`, `/editor`, `/writer`e giden tek bağlantı üst şeritteki PANEL.

@@ -6,7 +6,7 @@ import { getCurrentAgreement, renderAgreementForWriter } from "@/services/agreem
 import { AgreementRenderError } from "@/lib/agreement/render";
 import { readCsrfToken } from "@/lib/csrf";
 import { renderMarkdown } from "@/lib/markdown";
-import { navForRole, PanelShell } from "@/components/shell";
+import { SiteShell } from "@/components/site-shell";
 import { Alert, Card, PageHeader } from "@/components/ui";
 import { AgreementAcceptForm } from "@/app/writer/agreement/accept-form";
 import { signApplicationContractAction } from "../actions";
@@ -38,8 +38,6 @@ export default async function WriterApplicationContractPage({
         .limit(1)
     : [];
   const application = applicationRows[0] ?? null;
-
-  const nav = navForRole(context.user.role);
 
   let error: string | null = null;
   if (!application) {
@@ -76,7 +74,7 @@ export default async function WriterApplicationContractPage({
   }
 
   return (
-    <PanelShell user={context.user} area={nav.area} groups={nav.groups}>
+    <SiteShell user={context.user}>
       <PageHeader
         title="Yazar sözleşmesi"
         description="Başvurunuz onaylandı; yazar olmanın son adımı bu sözleşmeyi imzalamak."
@@ -106,6 +104,6 @@ export default async function WriterApplicationContractPage({
           </Card>
         ) : null}
       </div>
-    </PanelShell>
+    </SiteShell>
   );
 }

@@ -1,9 +1,9 @@
 /**
  * The sidebar of each area, defined once.
  *
- * `/account` is reachable from every role, so it has to render the navigation
- * the signed-in role expects rather than the reader's; sharing the lists here
- * is what keeps the two from drifting apart.
+ * The panels are for running the magazine and nothing else (D-165): no link
+ * here leads to the magazine, the community or the account page. Those live in
+ * the site frame, and the site's PANEL button is the one way back in.
  *
  * The admin sidebar is grouped into logical sections (general, management,
  * content, legal, quick links). The actual sidebar UI lives in `sidebar.tsx`
@@ -46,7 +46,6 @@ export const ADMIN_NAV: NavGroup[] = [
     label: "Genel",
     items: [
       { href: "/admin", label: "Genel bakış" },
-      { href: "/account", label: "Hesabım" },
     ],
   },
   {
@@ -70,8 +69,6 @@ export const ADMIN_NAV: NavGroup[] = [
     items: [
       { href: "/admin/announcements", label: "Duyurular" },
       { href: "/admin/community", label: "Topluluk yönetimi" },
-      { href: "/magazine", label: "Dergi" },
-      { href: "/social", label: "Topluluk" },
     ],
   },
   {
@@ -104,7 +101,6 @@ export const EDITOR_NAV: NavGroup[] = [
     label: "Genel",
     items: [
       { href: "/editor", label: "Genel bakış" },
-      { href: "/account", label: "Hesabım" },
     ],
   },
   {
@@ -114,67 +110,7 @@ export const EDITOR_NAV: NavGroup[] = [
       { href: "/editor/media", label: "Medya kütüphanesi" },
     ],
   },
-  {
-    label: "Okuma",
-    items: [
-      { href: "/magazine", label: "Dergi" },
-      { href: "/social", label: "Topluluk" },
-    ],
-  },
 ];
-
-export const READER_NAV: NavGroup[] = [
-  {
-    items: [
-      { href: "/magazine", label: "Dergi" },
-      { href: "/magazine/issues", label: "Sayılar" },
-      { href: "/social", label: "Topluluk" },
-      { href: "/account", label: "Hesabım" },
-    ],
-  },
-];
-
-export type SocialNavState = {
-  /** Null until the member picks a handle; the profile link needs one. */
-  username: string | null;
-  notifications?: number;
-  /** Conversations with unread messages. */
-  messages?: number;
-  /** Unread messages in the anonymous box. */
-  anon?: number;
-};
-
-/**
- * The community sidebar (D-089). Every role sees the same one: in the
- * community a writer or an admin is a member like any other.
- */
-export function socialNav(state: SocialNavState): NavGroup[] {
-  return [
-    {
-      label: "Topluluk",
-      items: [
-        { href: "/social", label: "Akış" },
-        { href: "/social/explore", label: "Keşfet" },
-        { href: "/social/communities", label: "Topluluklar" },
-        { href: "/social/messages", label: "Mesajlar", badge: state.messages },
-        { href: "/social/anon", label: "Anonim kutu", badge: state.anon },
-        ...(state.username
-          ? [{ href: `/social/u/${state.username}`, label: "Profilim" }]
-          : []),
-        { href: "/social/notifications", label: "Bildirimler", badge: state.notifications },
-        { href: "/social/bookmarks", label: "Kaydedilenler" },
-        { href: "/social/settings", label: "Topluluk ayarları" },
-      ],
-    },
-    {
-      label: "Okuma",
-      items: [
-        { href: "/magazine", label: "Dergi" },
-        { href: "/account", label: "Hesabım" },
-      ],
-    },
-  ];
-}
 
 /** `locked` only greys the links out; each page checks the rule itself. */
 export function writerNav(locked: boolean): NavGroup[] {
@@ -188,19 +124,9 @@ export function writerNav(locked: boolean): NavGroup[] {
         { href: "/writer/approvals", label: "Eser Onayları", disabled: locked },
         { href: "/writer/articles", label: "Yazılarım", disabled: locked },
         { href: "/writer/profile", label: "Profil ve güvenlik" },
-        { href: "/magazine", label: "Dergi" },
-        { href: "/social", label: "Topluluk" },
       ],
     },
   ];
-}
-
-/** The area a signed-in user belongs in, used by pages every role can open. */
-export function navForRole(role: SessionUser["role"]): { area: string; groups: NavGroup[] } {
-  if (role === "admin") return { area: "yönetim", groups: ADMIN_NAV };
-  if (role === "editor") return { area: "editör paneli", groups: EDITOR_NAV };
-  if (role === "writer") return { area: "yazar paneli", groups: writerNav(false) };
-  return { area: "dergi", groups: READER_NAV };
 }
 
 /**
@@ -247,14 +173,8 @@ export async function PanelShell({
 
           <div className="flex flex-wrap items-center justify-end gap-2.5 text-sm">
             <PanelModeSwitch user={user} />
-            {/* The top-right profile button: every role gets home → account */}
-            <Link
-              href="/account"
-              title="Hesabım"
-              className="font-medium hover:text-accent"
-            >
-              {user.displayName}
-            </Link>
+            {/* Only a name: the account page is the site's, not the panel's (D-165) */}
+            <span className="font-medium">{user.displayName}</span>
             {/* A hybrid editor holds both duties and is titled "Editor & Yazar" (D-060) */}
             {user.role === "editor" && user.writerStatus !== null ? (
               <StatusBadge status="editor_writer" />
