@@ -5732,3 +5732,51 @@ noktası, altında çizgili dolgu satırları). Bant düzeltmesi ölçüldü: 14
 sekmeler ve işlem aynı y'de (261) ve beş sekme de görünür; 760'ta işlem alt
 satıra sarıyor. Hiçbir ekranda yatay taşma yok. Kapı: typecheck, lint, 64 dosya
 / 594 test.
+
+---
+## D-154 — Tebligat UETS'e alınır; D-085'teki "5651 adres ister" ifadesi düzeltildi
+
+**İstek (ürün sahibi):** Fiziksel adres yok; tebligat adresi yerine UETS
+kullanılabilir mi?
+
+**Karar:** Resmî tebligat UETS (Tebligat Kanunu m. 7/a) üzerinden alınır.
+Künyeye ve aydınlatma metnine ev adresi yazılmaz. Okuyucu başvurusu için
+fiziksel adresin yerine bir KEP adresi alınması öneriliyor. Adres/KEP gelene
+kadar `[AÇIK ADRES]` yer tutucusu durur ve tam metin yeni sürüm olarak
+yayınlanmaz (D-125 kapanış koşulu değişmedi, yalnızca doldurulacak değer
+değişebilir).
+
+**Eski bir kaydın düzeltmesi:** D-085 "5651 m. 3 gerçek kişi içerik
+sağlayıcıdan ikametgâh veya işyeri adresi ister" diyordu. Yönetmelik metni
+(İnternet Ortamında Yapılan Yayınların Düzenlenmesine Dair Usul ve Esaslar
+Hakkında Yönetmelik, RG 30.11.2007) okundu:
+
+- Tanıtıcı bilgileri sayan m. 5, **"ticari veya ekonomik amaçlı"** içerik
+  sağlayıcılara yöneliktir. Kâr amacı gütmeyen içerik sağlayıcı için ayrı hüküm
+  yok; postscript kapsam dışında kalıyor olabilir.
+- İstenen bilgi "tebligat adresi" değil, **"yerleşim yeri"**.
+- Künyedeki adres tebligat için değil tanıtıcı bilgi olarak isteniyor; bu yüzden
+  UETS o satırın yerini tutmaz, yalnızca resmî tebligatı karşılar.
+
+**Neden UETS tek başına yetmez:** UETS'e yalnızca tebligat çıkarmaya yetkili
+merciler gönderim yapar. Okuyucu, KVKK başvurusunu (Başvuru Usul ve Esasları
+Tebliği) yazılı olarak, KEP, güvenli elektronik imza, mobil imza veya kayıtlı
+e-posta ile iletir; UETS bu yollardan biri değildir. Aydınlatma metni §
+"Başvuru" şu an yazılı yol için `[AÇIK ADRES]` gösteriyor. KEP adresi bu yolu
+fiziksel adres olmadan karşılar.
+
+**Hukukçu görüşü gerekiyor:**
+
+1. Kâr amacı gütmeyen bir dergi olarak Yönetmelik m. 5 kapsamı dışında mıyız?
+   Yorumlar nedeniyle yer sağlayıcı sayılıyorsak "ticari veya ekonomik amaçlı"
+   niteliği yer sağlayıcıya da uygulanıyor mu?
+2. Aydınlatma metninde veri sorumlusunun kimliği için posta adresi yerine KEP
+   adresi (+ UETS + e-posta) yeterli mi; yazılı başvuru yolu metinden
+   çıkarılabilir mi?
+3. 5187 kapsamında internet haber sitesi sayılırsak künye yükümlülüğü ayrıca
+   değerlendirilmeli (CLAUDE.md, hukuki uyum).
+
+Görüş gelene kadar muhafazakâr olan uygulanır: metin yeni sürüm olarak
+yayınlanmaz, künyedeki "Konak, İzmir" satırı olduğu gibi kalır.
+
+**Kod:** Değişiklik yok.
