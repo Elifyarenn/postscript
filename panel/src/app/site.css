@@ -10,6 +10,12 @@
   --site-strip: #400714;
   --site-ink: #420a14;
   --site-paper: #ded2c7;
+  /* The page frame, as a share of the paper's width (D-155) */
+  --site-frame-inset: clamp(0.5rem, 1.1%, 0.95rem);
+  /* Not a percentage: in `bottom` that would follow the page's height (D-155) */
+  --site-frame-foot: clamp(1.5rem, 4.5vw, 3.4rem);
+  /* The empty paper between the last content and the foot rule (100 units) */
+  --site-frame-clear: clamp(2rem, 6.3vw, 5.7rem);
   --site-rule: #7b3444;
   --site-muted: #75625e;
 
@@ -121,16 +127,47 @@
   flex: 1;
 }
 
+/*
+ * The frame the designs draw on every page (D-155). Measured from the files:
+ * the paper is 1446 units wide, the two hairlines sit 16 units inside its
+ * edges (1.1%) and a third rule crosses 60 units above the paper's foot
+ * (4.15%). The lines are inset, not on the edge, so a strip of paper shows
+ * outside them — that strip is what makes it read as a printed page.
+ */
 .ps-site .site-column {
+  position: relative;
   display: flex;
   min-height: 100%;
   max-width: 1320px;
   margin: 0 auto;
   flex-direction: column;
+  padding-inline: var(--site-frame-inset);
+  /* Every page ends in a band of empty paper that carries the foot rule, so
+     the rule can never run through a card, padded page or full-bleed alike */
+  padding-bottom: calc(var(--site-frame-foot) + var(--site-frame-clear));
   background: var(--site-paper);
-  box-shadow:
-    inset 1px 0 0 var(--site-rule),
-    inset -1px 0 0 var(--site-rule);
+}
+
+/* The two verticals run the paper's whole height, as in the designs */
+.ps-site .site-column::before {
+  position: absolute;
+  z-index: 1;
+  inset: 0 var(--site-frame-inset);
+  border-inline: 1px solid var(--site-rule);
+  content: "";
+  pointer-events: none;
+}
+
+/* The rule above the footer, between the two verticals */
+.ps-site .site-column::after {
+  position: absolute;
+  z-index: 1;
+  right: var(--site-frame-inset);
+  bottom: var(--site-frame-foot);
+  left: var(--site-frame-inset);
+  border-top: 1px solid var(--site-rule);
+  content: "";
+  pointer-events: none;
 }
 
 .ps-site .site-header {
@@ -237,7 +274,7 @@
 }
 
 .ps-site .site-main-padded {
-  padding: 2rem clamp(1rem, 3vw, 2.5rem) 3rem;
+  padding: 2rem clamp(1rem, 3vw, 2.5rem) 0;
 }
 
 /* ════════════════ Member menu ════════════════ */
@@ -1028,18 +1065,26 @@
 }
 
 /*
- * The design draws the tabs and "mark all as read" as one band. They overflow
- * a wide column by a hair, and wrapping dropped the action onto its own line,
- * so on a wide screen the strip is allowed to shrink (it scrolls by itself)
- * instead of the band breaking. A phone keeps the wrap (D-153).
+ * The design draws the tabs and "mark all as read" as one band (D-153). The
+ * band is set tight enough to hold both at 1440 pixels, with the member menu
+ * beside the paper and the page frame's inset (D-155). Where it still does not
+ * fit it wraps — the action drops below the tabs — but no tab is ever cut.
+ * The first try let the strip shrink and scroll instead; once the frame took
+ * its 30 pixels, that quietly hid the last tab.
  */
 @media (min-width: 900px) {
   .ps-site .notice-bar {
-    flex-wrap: nowrap;
+    column-gap: 0.75rem;
   }
 
-  .ps-site .notice-bar .site-tabs {
-    min-width: 0;
+  .ps-site .notice-bar .site-tabs a {
+    padding-inline: 0.75rem;
+    letter-spacing: 0;
+  }
+
+  .ps-site .notice-mark {
+    letter-spacing: 0;
+    white-space: nowrap;
   }
 }
 

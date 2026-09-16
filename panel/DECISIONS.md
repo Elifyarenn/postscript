@@ -5695,6 +5695,11 @@ piksel) bant artık sarmıyor; sekme şeridi gerekirse kendi içinde kayar. Dar
 ekranda eski davranış (alt satıra sarma) korundu, çünkü telefonda tek bant
 sıkışık olurdu.
 
+> **Değişti (D-154):** Şeridin daralıp kendi içinde kayması, sayfa çerçevesi
+> sütunu 30 piksel daraltınca son sekmeyi sessizce gizlemeye başladı. Bant
+> artık sıkılaştırılmış aralıklarla 1440 piksele sığıyor; sığmadığı yerde
+> kırpmak yerine sarıyor.
+
 **Bilerek duran sapmalar (hepsi gerekçeli):**
 
 - **Kaydedilenler:** Tasarımda kart panosu dörtlü dizilir; bizde kâğıt sütunu
@@ -5780,3 +5785,105 @@ Görüş gelene kadar muhafazakâr olan uygulanır: metin yeni sürüm olarak
 yayınlanmaz, künyedeki "Konak, İzmir" satırı olduğu gibi kalır.
 
 **Kod:** Değişiklik yok.
+
+---
+## D-155 — Tasarımların sayfa çerçevesi: iki dikey çizgi ve alt çizgi
+
+**Not:** Bu CSS değişikliği daha önceki bir oturumda yazıldı, ama karar kaydı
+yazılmadan commit edilmeden kaldı. Yorumları "D-154"e atıf yapıyordu; o numara
+bu arada tebligat kararına verildiği için (D-154) atıflar D-155'e çevrildi.
+
+**Karar:** `postscriptui` tasarımlarının her sayfada çizdiği çerçeve
+`src/app/site.css`'te uygulanır:
+
+- Kâğıt 1446 birim genişliğinde. İki dikey çizgi kenarların 16 birim içinde
+  (%1,1) duruyor. Kenarda değil içeride oldukları için dışlarında bir kâğıt
+  şeridi görünür ve sayfa basılı bir sayfa gibi okunur.
+  - `--site-frame-inset: clamp(0.5rem, 1.1%, 0.95rem)`.
+- Üçüncü çizgi kâğıdın altından 60 birim yukarıda, iki dikeyin arasında.
+  `bottom` içinde yüzde sayfa yüksekliğine göre hesaplanacağı için `vw`
+  kullanıldı (`--site-frame-foot`).
+- Her sayfa, alt çizgiyi taşıyan boş bir kâğıt bandıyla biter
+  (`--site-frame-clear`). Böylece çizgi hiçbir zaman bir kartın veya içeriğin
+  üstünden geçmez. `.site-main-padded`'ın alt boşluğu bu banda taşındı.
+- Eski `box-shadow` kenar çizgileri kaldırıldı; çizgiler `::before`/`::after`
+  ile çiziliyor ve tıklamayı engellemiyor (`pointer-events: none`).
+
+**D-153 ile ilişki:** Bildirimler bandı D-153'te geniş ekranda sarmıyor, sekme
+şeridi kendi içinde kayıyordu. Çerçeve 30 piksel alınca bu son sekmeyi sessizce
+gizledi. Şimdi bant 1440 pikselde ikisini birlikte taşıyacak kadar sıkı
+(sekme dolgusu 0,75rem, harf aralığı 0). Sığmadığı yerde işlem alt satıra
+sarar, ama hiçbir sekme kesilmez.
+
+**Hukuk:** Yalnızca görünüm; veri işleme değişmedi.
+
+## D-154 — Tasarımdaki sayfa çerçevesi: kâğıdın içinde kıl çizgiler
+
+**İstek (ürün sahibi):** "tüm sayfaların kenarında çizgi çerçeveler var
+`postscriptui`'da, onu uygula."
+
+**Ölçüm:** Göz kararı değil. Tasarım dosyaları pdf.js ile 1:1 çizildi ve
+pikseller tarandı — yatayda "anon box" ile üyeli ana sayfa, dikeyde "anon box"
+ile "bookmarks". Dört dosyada da aynı çerçeve çıktı:
+
+- Kâğıt 1446 birim genişliğinde. **İki dikey kıl çizgi kenardan 16 birim
+  içeride** (%1,1) ve kâğıdın tüm boyunca iniyor. Çizginin dışında ince bir
+  kâğıt şeridi kalıyor; sayfayı basılı sayfa gibi okutan o şerit.
+- **Kâğıdın kendi kenarında çizgi yok.** Bizde çizgiler tam kenardaydı
+  (`box-shadow`); tasarımla asıl fark buydu.
+- Üstte başlık altı çizgisi (y=162) — zaten vardı.
+- **Altta üçüncü bir çizgi**: kâğıdın bittiği yerden 60 birim yukarıda (%4,15),
+  iki dikeyin arasında. İçerik bu çizginin 100 birim üstünde bitiyor; çizgi
+  boş kâğıtta duruyor.
+- Tam-kanama içerik de çerçeveye uyuyor: ana sayfanın kapak fotoğrafı kâğıt
+  kenarından değil, dikey çizginin hizasından başlıyor.
+
+**Karar:**
+
+- Çerçeve `SiteShell`'in kâğıt sütununda (`.site-column`) çiziliyor; o yüzden
+  dergi ve topluluk tarafındaki **her sayfa** otomatik alıyor.
+  - İki dikey `::before`, alt çizgi `::after`. Kâğıt `padding-inline` ile
+    çizgilerin içine çekildi; başlık çizgisi de böylece iki dikeyin arasında
+    kalıyor.
+  - Oranlar CSS değişkeni: `--site-frame-inset` (%1,1), `--site-frame-foot`
+    (alt çizgi), `--site-frame-clear` (içerikle alt çizgi arası).
+- **Alt bant kâğıdın kendisinde:** Her sayfa, alt çizgiyi taşıyan boş bir kâğıt
+  bandıyla bitiyor. `.site-main-padded`'ın alt boşluğu sıfırlandı, yoksa dolgulu
+  sayfalarda iki boşluk üst üste binerdi, tam-kanama sayfalarda hiç olmazdı.
+- **Kapsam dışı:** Admin, editör ve yazar panelleri (`PanelShell`) — çalışma
+  aracı, dergi değil (D-112). `/kunye` de bu kabukta değil.
+
+**Yolda yakalanan üç hata:**
+
+1. `bottom: %4,15` beklendiği gibi çalışmadı: `bottom`'daki yüzde kapsayıcının
+   **yüksekliğinden** çözülür, çizgi sayfanın uzunluğuyla kayıyordu (760'ta
+   %7,16 ölçüldü). Değer görüntü genişliğine bağlandı.
+2. İlk hâlde alt çizgi **10 sayfanın 7'sinde içerikten geçiyordu** (Hakkında
+   sekmeleri, iletişim formu kartı, sayılar ızgarası, profildeki sayfa şeridi):
+   içerik kâğıdın altından 3rem önce bitiyor, çizgi 3,4rem yukarıda duruyordu.
+   Yukarıdaki boş bant bunun çözümü.
+3. **Bildirim bandı gerilemesi:** Çerçeve sütunu 30 piksel daraltınca D-153'teki
+   "şerit daralıp kendi içinde kaysın" yaklaşımı son sekmeyi ("Bahsetmeler")
+   kesmeye, düğmeyi iki satıra bölmeye başladı. Kırpılmış içerik sarmaktan
+   kötü olduğu için yaklaşım değiştirildi: bandın aralıkları sıkılaştırıldı
+   (sekme iç boşluğu 0,75rem, harf aralığı 0) ki 1440'a sığsın; sığmadığı yerde
+   bant **sarar, hiçbir sekmeyi kesmez**. Hesap: 1440'ta üye menüsüyle kâğıt
+   950 px, bant 850 px; sekmeler 573 + düğme 254 + boşluk 12 = 839 px.
+
+**Doğrulama:** Demo sunucusunda ölçüldü.
+
+- Çerçeve, 1440'ta: dikey çizgiler kenardan 15 px (%1,15; tasarım %1,11), alt
+  çizgi kâğıt sonundan 54–55 px (tasarımdaki 60 birim = 55 px), içerikle alt
+  çizgi arası 91 px (tasarımdaki 100 birim = 91 px). 760'ta içeri çekme %1,1.
+- On sayfada (`/`, `/hakkinda`, `/kategoriler`, `/iletisim`, `/magazine`,
+  `/magazine/issues`, `/social`, profil, kaydedilenler, bildirimler) alt çizgi
+  hiçbir arka planlı ya da kenarlıklı kutunun içinden geçmiyor.
+- On altı sayfada kırpılmış şerit yok. Tek istisna ana sayfanın kategori rayı;
+  o bilerek kaydırmalı (`overflow-x: auto`, scroll-snap).
+- Bildirim bandı: 1100, 1440, 1680 ve 1920'de tek bant, beş sekme tam görünür,
+  düğme tek satır. 760'ta düğme alta sarar, sekme kesilmez. 390'da (telefon)
+  sekme şeridi kendi içinde kayar — bu D-113'ten beri telefondaki davranış.
+- Hiçbir genişlikte yatay sayfa taşması yok.
+- Kapı: typecheck, lint, 64 dosya / 594 test.
+
+**Hukuk:** Yalnızca görünüm; yeni veri, yetki ya da metin yok.
