@@ -854,34 +854,69 @@
 
 /* ════════════════ About ════════════════ */
 
+/*
+ * Measured on the "contact, about, categories" design (D-167). Every length is
+ * in design units (--du, D-158), so the page keeps the drawing's proportions at
+ * any width: the four boxes are 227 / 547 / 237 / 237 wide with 15, 101 and 27
+ * between them, all 798 tall.
+ */
 .ps-site .about-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem;
   padding: 1.5rem clamp(1rem, 3vw, 1.5rem) 3rem;
 }
 
 @media (min-width: 1000px) {
   .ps-site .about-grid {
-    grid-template-columns: 13rem minmax(0, 1fr) 11.5rem 11.5rem;
+    grid-template-columns:
+      minmax(0, 227fr) minmax(0, 15fr) minmax(0, 547fr) minmax(0, 101fr)
+      minmax(0, 237fr) minmax(0, 27fr) minmax(0, 237fr);
+    grid-auto-rows: minmax(calc(798 * var(--du)), auto);
+    gap: 0;
+    padding: calc(24 * var(--du)) calc(9 * var(--du)) calc(73 * var(--du));
+  }
+
+  .ps-site .about-tabs {
+    grid-column: 1;
+  }
+
+  .ps-site .about-panel {
+    grid-column: 3;
+  }
+
+  .ps-site .about-card:nth-of-type(1) {
+    grid-column: 5;
+  }
+
+  .ps-site .about-card:nth-of-type(2) {
+    grid-column: 7;
   }
 }
 
 .ps-site .about-tabs {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  padding: 2.5rem 0.4rem 1.5rem;
+  gap: calc(19 * var(--du));
+  padding: calc(55 * var(--du)) calc(6 * var(--du)) calc(40 * var(--du));
   background: var(--site-strip);
 }
 
 .ps-site .about-tabs a {
-  padding: 1.1rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(88 * var(--du));
+  padding: calc(8 * var(--du)) calc(10 * var(--du));
   color: var(--site-paper);
-  font-size: 1.05rem;
-  font-weight: 700;
+  /* OUR STORY, WRITERS …: 26.4 units */
+  font-size: calc(26.4 * var(--du));
+  font-weight: 600;
+  line-height: 1.21;
   text-align: center;
   text-transform: uppercase;
+  transition: background-color 0.2s;
 }
 
 .ps-site .about-tabs a:hover {
@@ -892,61 +927,104 @@
   background: var(--site-wine);
 }
 
-.ps-site .about-tabs .site-sparkle {
-  width: 3.5rem;
-  height: auto;
-  margin: 2rem auto 0;
+/* The thin eight-point star under the tabs */
+.ps-site .about-tabs-star {
+  width: calc(96 * var(--du));
+  height: calc(120 * var(--du));
+  margin: calc(56 * var(--du)) auto 0;
   color: var(--site-paper);
 }
 
 .ps-site .about-panel {
-  padding: 1.6rem;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: calc(22 * var(--du)) calc(22 * var(--du)) calc(35 * var(--du)) calc(30 * var(--du));
   border: 1px solid var(--site-rule);
 }
 
 .ps-site .about-panel h2 {
-  margin-bottom: 1.5rem;
+  margin-bottom: calc(48 * var(--du));
   color: var(--site-ink);
   font-family: var(--font-caps), Georgia, serif;
-  /* 33.1 units */
-  font-size: calc(33.1 * var(--du));
+  /* OUR STORY: 49.5 units */
+  font-size: calc(49.5 * var(--du));
   font-weight: 600;
+  line-height: 1.2;
   text-transform: uppercase;
+}
+
+.ps-site .about-panel h3 {
+  margin: calc(27 * var(--du)) 0 calc(14 * var(--du));
+  color: var(--site-wine);
+  font-size: calc(29.3 * var(--du));
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.ps-site .about-panel p {
+  color: var(--site-ink);
+  /* body copy: 19.5 units on a 26.2 line */
+  font-size: calc(19.5 * var(--du));
+  line-height: calc(26.2 * var(--du));
 }
 
 .ps-site .about-panel p + p {
-  margin-top: 1rem;
+  margin-top: calc(27 * var(--du));
+}
+
+.ps-site .about-panel .about-note {
+  margin-top: calc(24 * var(--du));
+  color: var(--site-muted);
 }
 
 .ps-site .about-creators {
-  margin-top: 2rem;
-  padding: 1rem 1.5rem 1.25rem;
+  margin: calc(64 * var(--du)) calc(-5 * var(--du)) 0 calc(-7 * var(--du));
+  padding: calc(14 * var(--du)) calc(24 * var(--du)) calc(38 * var(--du)) calc(33 * var(--du));
   border: 1px solid var(--site-rule);
 }
 
-.ps-site .about-creators h3 {
-  margin-bottom: 0.75rem;
-  color: var(--site-wine);
-  font-size: 1.3rem;
-  font-weight: 700;
+.ps-site .about-panel .about-creators h3 {
+  margin: 0 0 calc(22 * var(--du));
+  line-height: 1.2;
   text-align: center;
-  text-transform: uppercase;
+}
+
+.ps-site .about-creators li {
+  color: var(--site-ink);
+  /* the names: 19.7–21.3 units on a 28 line */
+  font-size: calc(20.5 * var(--du));
+  line-height: calc(28 * var(--du));
 }
 
 .ps-site .about-creators li + li {
-  margin-top: 0.9rem;
+  margin-top: calc(27 * var(--du));
 }
 
+/*
+ * The writers, editors and illustrators. However many there are, the panel
+ * keeps the design's height and the list scrolls inside it (D-167).
+ */
 .ps-site .about-writers {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(calc(200 * var(--du)), 1fr));
+  align-content: start;
+  gap: calc(12 * var(--du));
+  max-height: calc(470 * var(--du));
+  padding-right: calc(8 * var(--du));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--site-rule) transparent;
+  scrollbar-width: thin;
 }
 
 .ps-site .about-writers a {
   display: block;
-  padding: 0.75rem 1rem;
+  padding: calc(12 * var(--du)) calc(16 * var(--du));
   border: 1px solid var(--site-rule);
+  color: var(--site-ink);
+  font-size: calc(19.5 * var(--du));
+  overflow-wrap: anywhere;
 }
 
 .ps-site .about-writers a:hover {
@@ -956,23 +1034,67 @@
 .ps-site .about-card {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 1rem;
-  padding: 1.5rem 1.2rem;
+  min-width: 0;
+  padding: calc(145 * var(--du)) calc(24 * var(--du)) calc(190 * var(--du));
   border: 1px solid var(--site-rule);
 }
 
 .ps-site .about-card h3 {
+  /* Two lines tall either way, so both cards' copy starts on the same line */
+  min-height: 2.4em;
+  margin-bottom: calc(24 * var(--du));
   color: var(--site-wine);
-  font-size: 1.25rem;
+  /* YOU WANNA JOIN US?, WRITERS: 29.3 units */
+  font-size: calc(29.3 * var(--du));
   font-weight: 700;
   line-height: 1.2;
+  text-align: center;
   text-transform: uppercase;
+}
+
+.ps-site .about-card p {
+  color: var(--site-ink);
+  font-size: calc(19.5 * var(--du));
+  line-height: calc(26.2 * var(--du));
 }
 
 .ps-site .about-card .site-button {
   align-self: center;
-  margin-top: 1.5rem;
+  justify-content: center;
+  min-width: calc(146 * var(--du));
+  min-height: calc(60 * var(--du));
+  margin-top: auto;
+  padding: 0 calc(18 * var(--du));
+  border-radius: calc(4 * var(--du));
+  /* JOIN US, MEET US: 19.7 units */
+  font-size: calc(19.7 * var(--du));
+}
+
+.ps-site .about-card .site-button svg {
+  width: calc(22 * var(--du));
+  height: calc(22 * var(--du));
+}
+
+@media (max-width: 999px) {
+  .ps-site .about-tabs-star {
+    display: none;
+  }
+
+  .ps-site .about-card {
+    padding: 1.5rem 1.2rem;
+  }
+
+  .ps-site .about-card h3 {
+    min-height: 0;
+  }
+
+  .ps-site .about-card .site-button {
+    margin-top: 1.5rem;
+  }
+
+  .ps-site .about-writers {
+    max-height: 26rem;
+  }
 }
 
 /* ════════════════ Responsive ════════════════ */

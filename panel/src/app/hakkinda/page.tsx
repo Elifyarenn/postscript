@@ -3,15 +3,16 @@ import { ArrowRight } from "lucide-react";
 import { getAuthContext } from "@/lib/auth/session";
 import { listPublicStaff, type PublicStaffMember } from "@/services/public";
 import { SiteShell } from "@/components/site-shell";
-import { SiteBanner, Sparkle } from "@/components/site-ui";
+import { SiteBanner } from "@/components/site-ui";
 
 export const metadata = { title: "Hakkında" };
 
+// The design sets "DESIGNER AND ILLUSTRATORS" on three lines; the lines are kept (D-167)
 const SECTIONS = [
-  { key: "hikayemiz", label: "Hikâyemiz" },
-  { key: "yazarlar", label: "Yazarlar" },
-  { key: "editorler", label: "Editörler" },
-  { key: "tasarim", label: "Tasarım ve illüstrasyon" },
+  { key: "hikayemiz", label: ["Hikâyemiz"] },
+  { key: "yazarlar", label: ["Yazarlar"] },
+  { key: "editorler", label: ["Editörler"] },
+  { key: "tasarim", label: ["Tasarımcılar", "ve", "çizerler"] },
 ] as const;
 
 type SectionKey = (typeof SECTIONS)[number]["key"];
@@ -20,7 +21,24 @@ function parseSection(value: string | undefined): SectionKey {
   return SECTIONS.find((section) => section.key === value)?.key ?? "hikayemiz";
 }
 
-/** A list of writers or editors by their public names (D-135). */
+/** The thin eight-point star drawn under the tabs. */
+function TabsStar() {
+  return (
+    <svg viewBox="0 0 96 120" aria-hidden className="about-tabs-star">
+      <g stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <line x1="48" y1="1" x2="48" y2="119" />
+        <line x1="1" y1="60" x2="95" y2="60" />
+        <line x1="20" y1="32" x2="76" y2="88" />
+        <line x1="76" y1="32" x2="20" y2="88" />
+      </g>
+    </svg>
+  );
+}
+
+/**
+ * A list of writers or editors by their public names (D-135). It scrolls
+ * inside the panel once it outgrows it (D-167).
+ */
 function StaffList({ members, empty }: { members: PublicStaffMember[]; empty: string }) {
   if (members.length === 0) return <p>{empty}</p>;
   return (
@@ -65,17 +83,19 @@ export default async function AboutPage({
       <SiteBanner title="Hakkında" subtitle="Bizimle ilgili her şey" />
 
       <div className="about-grid">
-        <nav className="about-tabs fit-line" aria-label="Hakkında bölümleri">
+        <nav className="about-tabs" aria-label="Hakkında bölümleri">
           {SECTIONS.map((item) => (
             <Link
               key={item.key}
               href={sectionHref(item.key)}
               aria-current={item.key === section ? "page" : undefined}
             >
-              {item.label}
+              {item.label.map((line) => (
+                <span key={line}>{line}</span>
+              ))}
             </Link>
           ))}
-          <Sparkle />
+          <TabsStar />
         </nav>
 
         <section className="about-panel" aria-labelledby="about-heading">
@@ -90,9 +110,15 @@ export default async function AboutPage({
               </p>
               <p>
                 Her şey küçük bir fikirle başladı: Kafanızda yaşayan şeylerin nihayet bir yuva
-                bulabileceği bir yer. Şimdi ise büyüyen bir dünya ve siz de bunun bir parçasısınız.
+                bulabileceği bir yer.
+                <br />
+                Şimdi ise büyüyen bir dünya ve siz de bunun bir parçasısınız.
               </p>
-              <p>Çünkü bazı şeyler mutlaka yazıya dökülmelidir.</p>
+              <p>
+                Çünkü bazı şeyler
+                <br />
+                mutlaka yazıya dökülmelidir.
+              </p>
 
               <div className="about-creators">
                 <h3>Yaratıcılar</h3>
@@ -116,7 +142,7 @@ export default async function AboutPage({
             <>
               <h2 id="about-heading">Yazarlar</h2>
               <StaffList members={staff} empty="Yazarlarımız çok yakında burada listelenecek." />
-              <p className="mt-6 text-sm text-muted">
+              <p className="about-note">
                 Yazarlarımız dergide mahlaslarıyla, mahlası olmayanlar topluluk adlarıyla yer alır.
               </p>
             </>
@@ -126,7 +152,7 @@ export default async function AboutPage({
             <>
               <h2 id="about-heading">Editörler</h2>
               <StaffList members={staff} empty="Editörlerimiz çok yakında burada listelenecek." />
-              <p>
+              <p className="about-note">
                 Her yazı, kendi alanının editörü tarafından okunur, gerekirse yazarıyla birlikte
                 yeniden elden geçirilir ve yayına öyle hazırlanır.
               </p>
@@ -142,11 +168,11 @@ export default async function AboutPage({
 
           {section === "tasarim" && (
             <>
-              <h2 id="about-heading">Tasarım ve illüstrasyon</h2>
+              <h2 id="about-heading">Tasarımcılar ve çizerler</h2>
               <p>Derginin görsel dünyasını Tuanna Demir tasarladı.</p>
               <h3>Çizerler</h3>
               <StaffList members={staff} empty="Çizerlerimiz çok yakında burada listelenecek." />
-              <p className="mt-6 text-sm text-muted">
+              <p className="about-note">
                 Çizerlerimiz de dergide mahlaslarıyla, mahlası olmayanlar topluluk adlarıyla yer
                 alır. Bir çizer aynı zamanda yazar olabilir; ikisi ayrı ayrı sayılır.
               </p>
@@ -157,8 +183,8 @@ export default async function AboutPage({
         <aside className="about-card" aria-labelledby="about-join">
           <h3 id="about-join">Bize katılmak ister misin?</h3>
           <p>
-            Hayallerinin peşinde koşan bir yazar olmak mı istiyorsun? Hesabım sayfasından yazar
-            başvurusu yapabilirsin. Aramıza katıl!
+            Bize katılmak ve hayallerinin peşinde koşan bir yazar, editör ya da çizer/ tasarımcı mı
+            olmak istiyorsun? Aramıza katıl!
           </p>
           {/* The writer application lives on the account page (D-037); a visitor signs up first */}
           <Link href={user ? "/account" : "/register"} className="site-button fit-line">

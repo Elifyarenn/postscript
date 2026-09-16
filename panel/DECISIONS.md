@@ -6493,3 +6493,53 @@ sürüm `[AÇIK ADRES]` dolunca yayımlanacak.
 - `profile-edit.test.ts`: topluluk profili takma ad ve mahlas taşımıyor;
   gönderilen takma ad yazılmıyor.
 - Kapı: typecheck, lint, 66 dosya / 624 test.
+
+## D-167 — Hakkında sayfası tasarımın ölçüleriyle; uzun listeler panelin içinde kayar
+
+**İstek (ürün sahibi):** "Hakkında kısmında tasarımı tamamen aynı yap ve
+yazarlar listesi vs. çok uzun uzarsa scroll yap." Kaynak:
+`postscriptui/contact, about, categories.ai`.
+
+**Ölçüm:** Tasarım pdf.js ile çizilip metin katmanından okundu (sayfa
+2057×1658 birim; `--du` bir tasarım birimi, D-158).
+
+| Öğe | Tasarım | Önce |
+|---|---|---|
+| Kutular (sekmeler / hikâye / kart / kart) | 227 / 547 / 237 / 237 genişlik, aralar 15 / 101 / 27, hepsi 798 yüksek | 13rem / esnek / 11.5rem / 11.5rem, eşit aralar |
+| "OUR STORY" başlığı | 49.5 | 33.1 |
+| Sekme yazısı | 26.4, vurgulu şerit 88 yüksek, merkezler 107 arayla | 21.5 |
+| Kart başlığı / "CREATORS" | 29.3 | 25.6 |
+| Gövde metni | 19.5, satır 26.2 | 20.5 |
+| Kart düğmesi | 146×60, 19.7, kartın alt üçte birinde | içerik altında |
+| Sekme altı yıldız | ince çizgili sekiz kollu yıldız | dolu parıltı |
+
+**Karar:**
+
+- **Izgara tasarımın oranlarıyla.** Masaüstünde (≥1000 px) yedi sütunlu ızgara:
+  kutular ve aralar tasarımdaki genişliklerin `fr` oranları; satır en az 798
+  birim. Bütün boşluklar ve yazı boyutları `--du` cinsinden, böylece her
+  genişlikte aynı oran. Telefonda tek sütun, eski davranış.
+- **Kartlar:** Başlık iki satırlık yer kaplar (tasarımda iki kartın metni aynı
+  satırdan başlıyor); düğme alttan sabit uzaklıkta. Birinci kartın metni
+  tasarımdaki gibi: "Bize katılmak ve hayallerinin peşinde koşan bir yazar,
+  editör ya da çizer/ tasarımcı mı olmak istiyorsun? Aramıza katıl!"
+- **Sekmeler:** Tasarımda "DESIGNER AND ILLUSTRATORS" üç satır; sekme
+  "Tasarımcılar / ve / çizerler" olarak üç satır yazılır. Bu yüzden sekme
+  şeridi tek satıra sığdırma (`fit-line`, D-157) dışında: kırılım tasarımın
+  kendisi. Yıldız tasarımdaki ince çizgili sekiz kollu yıldız.
+- **Hikâye metni** tasarımdaki satır kırılımlarıyla ("Şimdi ise…" ve "mutlaka
+  yazıya dökülmelidir." ayrı satırda).
+- **Uzun listeler kayar.** Yazarlar, editörler ve çizerler listesi panelin
+  tasarım yüksekliğini aşarsa sayfa uzamaz; liste kendi içinde dikey kayar
+  (`max-height` 470 birim, telefonda 26rem; ince, bordo kaydırma çubuğu).
+  D-157'deki "kaydırma çubuğu yok" kuralı tek satırlık arayüz metni içindi;
+  bu istek onun istisnası.
+- **Dil:** Başlıklar ve sekmeler D-112'den beri Türkçe; tasarımın İngilizce
+  metinleri çevrilmiş hâliyle kaldı. "ABOUT" bandı (125.8) ortak `SiteBanner`
+  ile 120'de; diğer sayfaları etkilememesi için değiştirilmedi.
+
+**Hukuk:** Değişiklik yok; görünüm ve tanıtım metni.
+
+**Doğrulama:** Canlıda test (bkz. yerel sunucu açılmıyor): yayından sonra
+Playwright ile 2078 genişlikte kutu ölçüleri tasarımla karşılaştırılır.
+- Kapı: typecheck, lint, 66 dosya / 624 test.
