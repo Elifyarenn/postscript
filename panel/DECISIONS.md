@@ -5608,3 +5608,42 @@ işaret rolü değiştirmiyor ve denetim kaydı bırakıyor; bir yazar işareti
 taşıyabiliyor; aynı işaret ikinci kez konunca 409, admin olmayanda 403; çizer
 listesi mahlasla geliyor, yasaklı ve askıdaki hesap listeye girmiyor; çizer
 işareti kimseyi yazar listesinden çıkarmıyor.
+
+## D-152 — "Kategoriye düşen yazılar" listesinde yazının hangi editöre gittiği
+
+**İstek (ürün sahibi):** "kategoriye düşen yazılar kısmında yazının hangi
+editöre gittiği de gözüksün."
+
+**Durum:** `/editor/articles` ekranı (başlığı zaten "Kategoriye düşen yazılar")
+başlık, yazar, kategori, durum ve güncelleme sütunlarını gösteriyordu. Yazının
+hangi editörün kuyruğuna düştüğü ekranda hiç yazmıyordu; bilgi vardı ama
+yalnızca alan atama ekranında duruyordu.
+
+**Karar:**
+
+- Tabloya **Editör** sütunu eklendi. Yönlendirme kuralı D-059'dan geliyor:
+  yazının kategorisi bir yazı alanıdır, bir alanın tek editörü vardır, o yüzden
+  alanı tutan editör yazının düştüğü editördür.
+- **Ana editör aşaması ayrı yazılır.** `pending_admin_approval` durumundaki bir
+  yazı artık kategori editöründe değil, ana editörün masasındadır; sütun o
+  yazılarda ana editörün adını ve "· ana editör" notunu gösterir. Ana editör
+  atanmamışsa bunu açıkça söyler.
+- **Boşluklar gizlenmiyor:** Kategorisi olmayan yazıda "—", kategorisi bir
+  alana denk gelmeyen ya da alanı tutan editörü olmayan yazıda uyarı renginde
+  "Atanmamış" yazar. İkisi de gerçek bir eksiktir; liste bunu saklamamalı.
+- **Kural tablo hücresinde değil**, saf bir fonksiyonda
+  (`src/lib/article-editor.ts` → `editorForArticle`). Böylece veritabanı
+  olmadan test edilebiliyor ve ileride başka bir ekran aynı cevabı vermek
+  isterse tek yerden alır. Alan adı Türkçe küçük harfe göre eşleşir
+  ("PSİKOLOJİ" ile "Psikoloji" aynı alandır).
+- **Editörün görünen adı yazılır, mahlası değil.** Panel bir çalışma aracıdır,
+  dergi değil; mahlas okura gösterilen addır (D-135).
+
+**Yetki ve veri:** Yeni veri toplanmıyor, yeni yetki verilmiyor. Liste zaten
+editörün kendi kapsamındaki yazıları gösteriyor (D-059); sütun yalnızca var
+olan alan-editör eşlemesini okuyor. Aydınlatma metninde değişiklik gerekmiyor.
+
+**Doğrulama:** typecheck, lint ve 64 dosya / 594 test geçti. Yeni birim testleri
+kuralın beş hâlini sabitliyor: alanı tutan editör, büyük/küçük harf ve boşluk
+farkıyla aynı alan, editörü olmayan alan, bilinmeyen alan adı, kategorisi
+olmayan yazı ve ana editör aşaması (atanmamış hâli dahil).

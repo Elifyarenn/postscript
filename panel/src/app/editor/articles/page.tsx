@@ -5,7 +5,12 @@ import { users } from "@/db/schema";
 import { guardPanel } from "@/lib/auth/guard";
 import { listArticles } from "@/services/articles";
 import { listIssues } from "@/services/issues";
-import { getEditorAssignment } from "@/services/editor-categories";
+import {
+  getEditorAssignment,
+  getMainEditorName,
+  listEditorAreasWithHolders,
+} from "@/services/editor-categories";
+import { editorForArticle, type ArticleEditor } from "@/lib/article-editor";
 import { readCsrfToken } from "@/lib/csrf";
 import { PanelForm } from "@/components/form";
 import {
@@ -28,6 +33,26 @@ import { createArticleAction } from "../actions";
 
 export const metadata = { title: "Kategoriye düşen yazılar" };
 
+/** The "Editör" cell: whose desk the article is on right now (D-152). */
+function EditorCell({ routed }: { routed: ArticleEditor }) {
+  switch (routed.kind) {
+    case "editor":
+      return <>{routed.name}</>;
+    case "main":
+      return routed.name ? (
+        <>
+          {routed.name} <span className="text-muted">· ana editör</span>
+        </>
+      ) : (
+        <span className="text-warning">Ana editör atanmamış</span>
+      );
+    case "unassigned":
+      return <span className="text-warning">Atanmamış</span>;
+    default:
+      return <>—</>;
+  }
+}
+
 export default async function EditorArticlesPage({
   searchParams,
 }: {
@@ -44,7 +69,7 @@ export default async function EditorArticlesPage({
     ? (filters.status as ArticleStatus)
     : undefined;
 
-  const [articles, issues, writers] = await Promise.all([
+  const [articles, issues, writers, areas, mainEditorName] = await Promise.all([
     listArticles(actor, {
       status,
       issueId: filters.issueId,
@@ -59,6 +84,9 @@ export default async function EditorArticlesPage({
       .from(users)
       .where(and(inArray(users.role, ["writer", "editor", "admin"]), isNull(users.deletedAt)))
       .orderBy(users.displayName),
+    // Which editor holds which area, so the list can say where a yazı went
+    listEditorAreasWithHolders(),
+    getMainEditorName(),
   ]);
 
   return (
@@ -141,6 +169,7 @@ export default async function EditorArticlesPage({
                   <Th>Başlık</Th>
                   <Th>Yazar</Th>
                   <Th>Kategori</Th>
+                  <Th>Editör</Th>
                   <Th>Durum</Th>
                   <Th>Güncelleme</Th>
                 </tr>
@@ -158,6 +187,9 @@ export default async function EditorArticlesPage({
                     </Td>
                     <Td className="text-xs">{article.authorName ?? "—"}</Td>
                     <Td className="text-xs">{article.category ?? "—"}</Td>
+                    <Td className="text-xs">
+                      <EditorCell routed={editorForArticle(article, areas, mainEditorName)} />
+                    </Td>
                     <Td>
                       <StatusBadge status={article.status} />
                     </Td>
