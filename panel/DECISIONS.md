@@ -5598,10 +5598,13 @@ sayfada." yazıyordu.
   sözleşmesi henüz yok. İşaret yalnızca "bu hesap dergiye çizer" der; tek
   başına hiçbir görselin yayımlanmasına izin vermez.
 
-**Migration:** 0036 (`users.is_illustrator`). **Üretime uygulanmadı.** D-079
-gereği bu commit, migration canlıya uygulanmadan push edilmemeli: `listUsers`
-ve `listPublicStaff` kolonu okuyor, kolon yokken admin kullanıcı listeleri ve
-Hakkında sayfası hata verir.
+**Migration:** 0036 (`users.is_illustrator`). **Üretime uygulandı
+(2026-09-16);** üretim defteri **36**. Uygulandıktan sonra kolon canlıdan
+okundu: `boolean`, null olamaz, varsayılanı `false`, işaretli hesap yok. Kolon
+olmadan push edilemezdi — `listUsers` ve `listPublicStaff` onu okuyor, yoksa
+admin kullanıcı listeleri ve Hakkında sayfası hata verirdi. Yedek dal yine
+açılamadı (ücretsiz planda kota dolu); varsayılanı olan ve mevcut satırlara
+dokunmayan bir kolon eklemesi olduğu için veri riski yoktu.
 
 **Doğrulama:** typecheck, lint ve 63 dosya / 589 test geçti. Yeni testler:
 işaret rolü değiştirmiyor ve denetim kaydı bırakıyor; bir yazar işareti
