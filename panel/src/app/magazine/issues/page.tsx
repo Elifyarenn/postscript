@@ -36,7 +36,7 @@ export default async function IssuesPage() {
 
       <section id="one-cikan-sayilar" className="issues-section" aria-labelledby="issues-title">
         <div className="issues-head">
-          <h2 id="issues-title" className="site-caps-title">
+          <h2 id="issues-title" className="site-caps-title fit-line">
             Öne çıkan sayılar
           </h2>
           <span className="issues-rule" aria-hidden>

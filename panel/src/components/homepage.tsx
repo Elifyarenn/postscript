@@ -117,7 +117,7 @@ export function HomePage({
 
       <section className="home-section" id="kategoriler" aria-labelledby="home-categories-title">
         <div className="site-section-head">
-          <h2 id="home-categories-title" className="site-caps-title">
+          <h2 id="home-categories-title" className="site-caps-title fit-line">
             Kategoriler
           </h2>
           <Link href="/kategoriler" className="site-more">

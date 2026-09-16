@@ -6033,3 +6033,66 @@ metin kodlaması bozuk olsa bile boyut doğru. Sayfalar 2057–2078 birim geniş
 - Kapı: typecheck, lint, 64 dosya / 594 test.
 
 **Hukuk:** Yalnızca görünüm.
+
+## D-159 — Bütün yazılar tek ölçekte: birbirine tasarımdaki oranla
+
+**İstek (ürün sahibi):** "tüm yazıları birbirine orantıla; mesela Obsession'ı
+küçültmüşsün ama altındaki yazı olduğu gibi kalınca daha büyük durmuş."
+
+**Durum:** D-158'de iki ayrı ölçek vardı. Büyük başlıklar ekranla tamamen
+orantılıydı; öteki yazılar ya 16 pikselde sabit kalıyor ya da kendi
+`clamp(…vw…)` ölçeğini kullanıyordu. Kapak başlığı küçüldü ama altındaki tema
+satırı ve "Hemen oku" düğmesi eski boyutta kaldı, o yüzden oran bozuldu.
+
+**Ölçüm:** Kapak bölgesindeki bütün metin parçaları tasarımın PDF katmanından
+konumlarıyla okundu ve görüntüyle eşleştirildi. Birimler tasarımın 2078 birimlik
+sayfasına göre:
+
+| Yazı | Birim |
+|---|---|
+| ISSUE 01 | 23,6 |
+| OBSESSION | 126,3 |
+| THE THINGS WE CANT LET GO | 17,7 |
+| READ NOW ! | 25,3 |
+| Sağdaki kategori listesi | 19,8 |
+| LATEST | 63,1 |
+| VIEW ALL | 18,7 |
+
+**Karar:**
+
+- **Tek ölçek:** `--du` (bir tasarım birimi) kökte, `html:has(.ps-site)`
+  üzerinde tanımlı: `max(0.7px, 100vw / 2078)`. Kök yazı boyutu `20,5 × --du`,
+  yani 1rem tasarımın gövde metni. Tasarımda boyutu okunan her yazı doğrudan
+  birimle yazıldı: kapak yazıları, bölüm başlıkları (ana sayfada 63,1, diğer
+  sayfalarda 50), "Tümünü gör", afiş alt başlıkları, profil adı ve sayıları,
+  mesajlar başlığı, üst menü (14,3) ve üye menüsü (24,4). Geri kalan her rem
+  tabanlı yazı kökle birlikte ölçekleniyor.
+- **Alt sınır herkese birden:** Birim 0,7 pikselin altına inmiyor ama bu sınır
+  bütün yazılara aynı anda uygulanıyor. Böylece hiçbir genişlikte bir başlık
+  küçülürken altındaki satır sabit kalmıyor.
+- **Tasarımda ölçülemeyenler** (kapak numarası, afiş alıntısı, "Artwork of the
+  issue" etiketi, iletişim başlığı) bugünkü görünümlerinin birim karşılığına
+  çevrildi; onlar da artık aynı ölçekte.
+- **Bölüm başlıkları da tek satır (D-157):** Alt sınırla "KATEGORİLER" 320
+  pikselde ekrana sığmıyordu (26 px taşma); başlık `fit-line` oldu.
+- **Form alanları 16 pikselin altına inmez:** telefonlar daha küçük alanlarda
+  odaklanınca sayfayı yakınlaştırıyor.
+
+**Görünür sonuç:** Gövde yazısı tasarımın oranına indi: 1440 pikselde 16'dan
+≈14,3 piksele, 1920'de ≈18,9 piksel. Üst menü tasarımdaki gibi küçük: 1440'ta
+≈10 piksel.
+
+**Bilinen sınır:** Tasarımın telefon sürümü yok. Birim alt sınırda durduğu için
+telefonda kapak başlığı da 88 piksel. Kısa bir sayı adı ("Eşik") sığıyor ve
+oranlar korunuyor. Uzun bir ad ("Obsession") dar ekranda tek satır kuralıyla
+küçültülür; o durumda yalnızca telefonda başlık alt satıra göre daha küçük
+görünür.
+
+**Doğrulama:** Demo sunucusunda ana sayfa ölçüldü. 390, 1024, 1440 ve 1920
+pikselde oranlar tasarımla birebir: başlık/tema 7,14, başlık/sayı satırı 5,35,
+başlık/düğme 4,99, başlık/kategori listesi 6,38, bölüm başlığı/"Tümünü gör"
+3,37. 16 sayfa × 320–1920 arası 7 genişlikte kayan şerit yok (kategori rayı
+hariç), kısa arayüz yazılarında ikinci satır yok, sayfa taşması yok. Kapı:
+typecheck, lint, 64 dosya / 594 test.
+
+**Hukuk:** Yalnızca görünüm.

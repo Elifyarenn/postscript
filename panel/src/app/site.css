@@ -16,8 +16,6 @@
   --site-frame-inset: clamp(0.5rem, 0.8vw, 0.95rem);
   /* The paper between the last content and the frame's bottom line (D-156) */
   --site-frame-clear: 2rem;
-  /* One unit of the designs, which are 2078 units wide (D-158) */
-  --du: calc(100vw / 2078);
   --site-rule: #7b3444;
   --site-muted: #75625e;
 
@@ -210,7 +208,7 @@
   max-width: 100%;
   gap: 1.3rem;
   overflow-x: auto;
-  font-size: 0.8rem;
+  font-size: calc(14.3 * var(--du));
   letter-spacing: 0.06em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -288,7 +286,7 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.7rem 1rem;
-  font-size: 0.9rem;
+  font-size: calc(24.4 * var(--du));
   letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -468,7 +466,7 @@
 .ps-site .site-banner-subtitle {
   margin-top: 1.2rem;
   /* 33.1–34.7 units */
-  font-size: 1.48rem;
+  font-size: calc(34 * var(--du));
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -497,7 +495,7 @@
   color: var(--site-ink);
   font-family: var(--font-caps), Georgia, serif;
   /* section titles: 49.5–51.6 units */
-  font-size: 2.17rem;
+  font-size: calc(50 * var(--du));
   font-weight: 600;
   letter-spacing: -0.01em;
   line-height: 1;
@@ -508,7 +506,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.9rem;
+  font-size: calc(18.7 * var(--du));
   letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -551,7 +549,7 @@
   padding: 0.55rem 2.2rem;
   border: 1px solid currentColor;
   font-family: var(--font-italic), Georgia, serif;
-  font-size: clamp(1.1rem, 2vw, 1.5rem);
+  font-size: calc(25.3 * var(--du));
   font-style: italic;
   text-transform: uppercase;
   transition: background-color 0.2s, color 0.2s;
@@ -597,7 +595,7 @@
 .ps-site .hero-issue {
   margin-left: clamp(0rem, 16vw, 16rem);
   /* 25.3 units */
-  font-size: 1.1rem;
+  font-size: calc(23.6 * var(--du));
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -616,7 +614,7 @@
 
 .ps-site .hero-theme {
   margin-bottom: 1.6rem;
-  font-size: clamp(0.85rem, 1.5vw, 1.1rem);
+  font-size: calc(17.7 * var(--du));
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -638,7 +636,7 @@
   display: grid;
   gap: 0.9rem;
   /* 19.8 units */
-  font-size: 0.86rem;
+  font-size: calc(19.8 * var(--du));
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -742,7 +740,7 @@
 .ps-site .extra-label {
   margin-top: auto;
   font-family: var(--font-italic), Georgia, serif;
-  font-size: clamp(1.4rem, 2.4vw, 2.1rem);
+  font-size: calc(48 * var(--du));
   font-style: italic;
   line-height: 1;
   text-align: right;
@@ -911,7 +909,7 @@
   color: var(--site-ink);
   font-family: var(--font-caps), Georgia, serif;
   /* 33.1 units */
-  font-size: 1.44rem;
+  font-size: calc(33.1 * var(--du));
   font-weight: 600;
   text-transform: uppercase;
 }
@@ -1340,7 +1338,7 @@
 .ps-site .anon-banner p {
   margin-top: 0.5rem;
   /* 34.7 units */
-  font-size: 1.51rem;
+  font-size: calc(34.7 * var(--du));
 }
 
 .ps-site .anon-banner .site-sparkle {
@@ -1525,7 +1523,7 @@
   color: var(--site-wine);
   font-family: var(--font-caps), Georgia, serif;
   /* 39 units */
-  font-size: 1.7rem;
+  font-size: calc(39 * var(--du));
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -1887,7 +1885,7 @@
 
 .ps-site .profile-name {
   /* 33.9 units */
-  font-size: 1.47rem;
+  font-size: calc(33.9 * var(--du));
   font-weight: 700;
 }
 
@@ -1936,7 +1934,7 @@
 .ps-site .profile-stats strong {
   color: var(--site-wine);
   /* 29.1 units */
-  font-size: 1.27rem;
+  font-size: calc(29.1 * var(--du));
 }
 
 .ps-site .profile-stats span {
@@ -2173,7 +2171,7 @@
 .ps-site .banner-quote {
   max-width: 11rem;
   font-family: var(--font-italic), Georgia, serif;
-  font-size: clamp(1.3rem, 2.4vw, 2rem);
+  font-size: calc(46 * var(--du));
   font-style: italic;
   line-height: 1.15;
   text-align: right;
@@ -2240,7 +2238,7 @@
   background: var(--site-night);
   color: var(--site-paper);
   font-family: var(--font-italic), Georgia, serif;
-  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-size: calc(92 * var(--du));
   font-style: italic;
   transition: background-color 0.2s;
 }
@@ -2338,7 +2336,7 @@
   .ps-site .site-frame.has-member .site-member-nav li a {
     gap: 1.1rem;
     padding: 1.05rem 1.5rem;
-    font-size: 1.2rem;
+    font-size: calc(24.4 * var(--du));
   }
 
   .ps-site .site-frame.has-member .member-icon {
@@ -3112,7 +3110,7 @@
   .ps-site .site-frame.has-member .site-member-nav li a {
     gap: clamp(0.7rem, 0.9vw, 1.1rem);
     padding: clamp(0.8rem, 0.9vw, 1.05rem) clamp(0.9rem, 1.1vw, 1.5rem);
-    font-size: clamp(0.95rem, 1vw, 1.2rem);
+    font-size: calc(24.4 * var(--du));
   }
 
   .ps-site .site-frame.has-member .member-icon {
@@ -3137,7 +3135,7 @@
 
   .ps-site .site-frame.has-member .site-nav {
     gap: clamp(0.8rem, 1vw, 1.3rem);
-    font-size: clamp(0.72rem, 0.8vw, 0.8rem);
+    font-size: calc(14.3 * var(--du));
   }
 
   .ps-site .site-frame.has-member .site-search input {
@@ -3364,7 +3362,7 @@
 
 .ps-site .contact-heading {
   font-family: var(--font-caps), Georgia, serif;
-  font-size: clamp(1.3rem, 2.4vw, 1.8rem);
+  font-size: calc(41 * var(--du));
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -3822,12 +3820,25 @@
 /* ════════════════ Type scale from the designs (D-158) ════════════════ */
 
 /*
- * One rem is 23 design units, so text sized in rem keeps the design's
- * proportions and grows with the screen. It never drops below today's 16
- * pixels: the designs have no phone version, and a proportional body text
- * would be about 4 pixels on a phone (and phones zoom into inputs under 16).
- * Display lines use `--du` directly and stay proportional at every width.
+ * One scale for every text (D-158, D-159). `--du` is one unit of the designs,
+ * which are 2078 units wide: text given in units keeps the design's size, and
+ * one rem is the design's body text (20.5 units), so everything else moves
+ * with it. Below the design's width the unit stops at 0.7 px — for all text at
+ * once, so a title never shrinks while the line under it stays put. The designs
+ * have no phone version; below the floor, lines that do not fit are scaled by
+ * `FitLines` (D-157).
  */
 html:has(.ps-site) {
-  font-size: max(16px, calc(23 * 100vw / 2078));
+  --du: max(0.7px, calc(100vw / 2078));
+  font-size: calc(20.5 * var(--du));
+}
+
+/* LATEST on the front page is heavier than the other section titles */
+.ps-site .home-section .site-caps-title {
+  font-size: calc(63.1 * var(--du));
+}
+
+/* Phones zoom into a form field under 16 px on focus */
+.ps-site :is(input, textarea, select) {
+  font-size: max(16px, 1em);
 }

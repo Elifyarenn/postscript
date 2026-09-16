@@ -36,7 +36,7 @@ export default async function IssuePage({ params }: { params: Promise<{ number: 
 
       <section className="issues-section" aria-labelledby="contents-title">
         <div className="site-section-head">
-          <h2 id="contents-title" className="site-caps-title">
+          <h2 id="contents-title" className="site-caps-title fit-line">
             İçindekiler
           </h2>
           <Link href="/magazine/issues" className="site-more">
