@@ -5485,15 +5485,17 @@ yeniden açıldığında üçü işaretli geliyor. Altı seçenek işaretlenince
 reddediliyor ("İlgi alanları geçersiz.") ve eski seçim bozulmuyor. Hepsi
 kaldırılınca satır boşalıyor ("İlgi alanlarınız kaldırıldı."). Yatay taşma yok.
 
-**Üretim migration'ı (0035): UYGULANMADI — push bekliyor.** Komut izin
-sisteminde "Production Deploy" gerekçesiyle reddedildi. Yedek hazır:
-migration'ın dokunduğu tablonun profil kolonları salt okunur olarak dışa
-aktarıldı (`prod-users-before-0035.json`, 72 satır); kolon ekleme mevcut
-satırlara dokunmuyor, varsayılanı yok, hepsi `null` başlıyor.
+**Üretim migration'ı (0035): UYGULANDI (2026-09-16).** Komut önce izin
+sisteminde "Production Deploy" gerekçesiyle reddedildi; ürün sahibi kendisi
+çalıştırdı. Neon OAuth anahtarının süresi dolduğu için önce `neon auth`
+gerekti. Yedek: migration'ın dokunduğu tablonun profil kolonları salt okunur
+olarak dışa aktarıldı (`prod-users-before-0035.json`, 72 satır); kolon ekleme
+mevcut satırlara dokunmuyor, varsayılanı yok, hepsi `null` başlıyor.
 
-**Bu değişiklik migration uygulanmadan push EDİLMEMELİ.** `getMemberSettings`
-artık `users.interests` kolonunu okuyor; kolon canlıda yokken topluluk ayarları
-sayfası hata verir. Uygulanacak komut (panel dizininde):
+Uygulandıktan sonra üretimden okundu: `users.interests` yerinde (ARRAY, null
+olabilir), üretim defteri **35**, dolu satır yok. Kolon canlıda olmadan bu
+değişiklik push edilemezdi: `getMemberSettings` artık o kolonu okuyor, yoksa
+topluluk ayarları sayfası hata verirdi. Çalıştırılan komut (panel dizininde):
 
 ```
 env -u NEON_API_KEY pnpm exec neon-env run -- node node_modules/tsx/dist/cli.mjs \
@@ -5547,5 +5549,4 @@ etkin sayfa 2 oluyor; geri oku birinci sayfaya (10 gönderi) dönüyor;
 `?sayfa=99` son sayfayı veriyor. Tek yanıtı olan "Yanıtlar" sekmesinde şerit
 hiç çizilmiyor. Yatay taşma yok. Kapı: typecheck, lint, 584 test geçti.
 
-**Push:** Bu commit D-149 ile birlikte bekliyor; üretimde migration 0035
-uygulanmadan `main`'e gitmemeli (bkz. D-149).
+**Push:** 0035 üretime uygulandıktan sonra D-149 ile birlikte push edildi.
