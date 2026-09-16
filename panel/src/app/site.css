@@ -1063,12 +1063,8 @@
 }
 
 /*
- * The design draws the tabs and "mark all as read" as one band (D-153). The
- * band is set tight enough to hold both at 1440 pixels, with the member menu
- * beside the paper and the page frame's inset (D-155). Where it still does not
- * fit it wraps — the action drops below the tabs — but no tab is ever cut.
- * The first try let the strip shrink and scroll instead; once the frame took
- * its 30 pixels, that quietly hid the last tab.
+ * The tab band (D-153, D-155). The design also drew "mark all as read" on it;
+ * the owner took that out, since opening the page reads the list (D-164).
  */
 @media (min-width: 900px) {
   .ps-site .notice-bar {
@@ -1079,19 +1075,6 @@
     padding-inline: 0.75rem;
     letter-spacing: 0;
   }
-
-  .ps-site .notice-mark {
-    letter-spacing: 0;
-    white-space: nowrap;
-  }
-}
-
-.ps-site .notice-mark {
-  color: var(--site-ink);
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
 .ps-site .notice-item {

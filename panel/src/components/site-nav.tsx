@@ -42,16 +42,17 @@ export function SiteMemberNav({ items }: { items: MemberNavItem[] }) {
       <ul className="fit-line">
         {items.map((item) => {
           const Icon = MEMBER_ICONS[item.icon];
+          const active = isNavActive(pathname, item.href);
+          // On the notifications page the list is being read, so its count goes
+          // at once rather than after the refresh that follows (D-164)
+          const badge = item.icon === "notifications" && active ? 0 : item.badge;
           return (
             <li key={item.href}>
-              <Link
-                href={item.href}
-                aria-current={isNavActive(pathname, item.href) ? "page" : undefined}
-              >
+              <Link href={item.href} aria-current={active ? "page" : undefined}>
                 <Icon aria-hidden className="member-icon" strokeWidth={1.5} />
                 <span>{item.label}</span>
-                {item.badge ? (
-                  <span className="member-badge">{item.badge > 99 ? "99+" : item.badge}</span>
+                {badge ? (
+                  <span className="member-badge">{badge > 99 ? "99+" : badge}</span>
                 ) : null}
               </Link>
             </li>

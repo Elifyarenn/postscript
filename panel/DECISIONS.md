@@ -6345,3 +6345,47 @@ profili mahlas taşımıyor, mahlas yerinde kalıyor; resmî görünen takma ad 
 hatalarla birlikte tek seferde dönüyor ve hiçbir şey yazılmıyor.
 `mutual-follows.test.ts` takma ada güncellendi. Kapı: typecheck, lint,
 67 dosya / 623 test.
+
+## D-164 — Bildirimler sayfasını açmak onları okumaktır
+
+**İstek (ürün sahibi):** "Bildirimlere girdiğinde zaten ekranda bildirimleri
+görüyor; okunması için tümünü okundu işaretle butonuna gerek yok, onu kaldır.
+Bildirimler sayfası açılınca bildirim sayı göstergesi gitsin."
+
+**Karar:**
+
+- **"Tümünü okundu işaretle" düğmesi kaldırıldı.** Tasarımda "Mark all as read"
+  vardı (D-153, D-155); ürün sahibi çıkardı. Bant artık yalnızca sekmelerden
+  oluşuyor.
+- **Sayfaya gelmek okumak sayılır.** Sayfa açılınca
+  `src/components/notifications-seen.tsx` var olan
+  `markNotificationsReadAction`'ı bir kez çağırır (CSRF jetonuyla), ardından
+  sayfayı yeniler. Böylece üye menüsündeki sayı her ekranda gider.
+- **Sayfa sunucuda çizilirken okundu yapılmaz.** Bağlantı ön yüklemesi
+  (prefetch) üyenin bildirimlerini onun adına okumuş saymasın diye işaretleme
+  tarayıcıda, sayfa gerçekten açıldığında olur. Mutasyon server action'da
+  kalır (CLAUDE.md).
+- **Rozet anında gider:** Bildirimler sayfasındayken üye menüsü rozeti
+  yenilemeyi beklemeden gizler.
+- **Yeni noktası bu ziyaret boyunca kalır:** Liste açılır açılmaz okunduğu hâlde,
+  gelinen andaki okunmamış bildirimler işaretli görünmeye devam eder; hangisinin
+  yeni olduğu anlaşılsın. Bir sonraki ziyarette nokta yoktur.
+
+**Hukuk:** Yeni veri yok; okunma zamanı (`read_at`) zaten tutuluyordu, yalnızca
+ne zaman yazıldığı değişti.
+
+**Doğrulama:** Demo sunucusunda, yazar hesabıyla okura iki yeni beğeni
+bırakıldıktan sonra okur hesabıyla ölçüldü:
+
+- Akışta rozet "4". 2,5 saniye bekleyip sayfa yeniden yüklenince de "4"; bağlantı
+  ön yüklemesi bildirimleri okumuş saymıyor.
+- Bildirimler açılınca rozet yok, "okundu" düğmesi yok, 4 okunmamış noktası
+  görünür. Yenilemeden sonra da rozet yok, noktalar duruyor.
+- Kaydedilenler'e geçince rozet yok (okunma kaydedildi).
+- İkinci ziyarette 4 bildirim var, okunmamış noktası yok.
+- Kapı: typecheck, lint, 67 dosya / 623 test.
+
+**Not — ortak çalışma ağacı:** Kapı çalışırken ağaçta başka bir oturumun
+commit edilmemiş işi vardı ("nickname", migration 0037, D-163). Testler o hâliyle
+birlikte geçti. Bu adımın commit'i yalnızca yukarıdaki dosyaları ve bu kararın
+satırlarını içerir; D-163 ve ilgili değişiklikler o işin sahibine bırakıldı.

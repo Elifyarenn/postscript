@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { Bell, Check } from "lucide-react";
+import { Bell } from "lucide-react";
 import { requireSession } from "@/lib/auth/guard";
-import { readCsrfToken } from "@/lib/csrf";
+import { CSRF_FIELD, readCsrfToken } from "@/lib/csrf";
 import {
   isSitePath,
   NOTIFICATION_TABS,
@@ -12,9 +12,8 @@ import {
 import { formatRelativeTime } from "@/lib/relative-time";
 import { cn, formatDateTime } from "@/lib/utils";
 import { listNotifications } from "@/services/notifications";
-import { ActionButton } from "@/components/form";
+import { NotificationsSeen, UnreadDot } from "@/components/notifications-seen";
 import { SiteTitle } from "@/components/site-ui";
-import { markNotificationsReadAction } from "../actions";
 
 export const metadata = { title: "Bildirimler" };
 
@@ -29,7 +28,10 @@ const EMPTY_TEXT = {
   bahsetme: "Henüz bahsetme yok.",
 } as const;
 
-/** The member's notifications, sorted into the design's tabs (D-113, D-116). */
+/**
+ * The member's notifications, sorted into the design's tabs (D-113, D-116).
+ * Being here is reading them: the list is marked read on arrival (D-164).
+ */
 export default async function NotificationsPage({
   searchParams,
 }: {
@@ -47,6 +49,7 @@ export default async function NotificationsPage({
   return (
     <>
       <SiteTitle>Bildirimler</SiteTitle>
+      <NotificationsSeen csrfToken={csrfToken} csrfField={CSRF_FIELD} hasUnread={hasUnread} />
 
       <div className="notice-bar fit-line">
         <nav className="site-tabs" aria-label="Bildirim türleri">
@@ -60,21 +63,6 @@ export default async function NotificationsPage({
             </Link>
           ))}
         </nav>
-        {hasUnread && (
-          <ActionButton
-            action={markNotificationsReadAction}
-            csrfToken={csrfToken}
-            label="Tümünü okundu işaretle"
-            variant="ghost"
-            className="notice-mark"
-            display={
-              <>
-                <Check aria-hidden className="size-4" />
-                Tümünü okundu işaretle
-              </>
-            }
-          />
-        )}
       </div>
 
       <ul className="notice-list">
@@ -110,9 +98,7 @@ export default async function NotificationsPage({
               >
                 {formatRelativeTime(item.createdAt)}
               </time>
-              <span className={unread ? "notice-dot" : "notice-dot is-read"}>
-                {unread && <span className="sr-only">Okunmadı</span>}
-              </span>
+              <UnreadDot unread={unread} />
             </li>
           );
         })}
