@@ -5395,3 +5395,50 @@ kutusu "Konuşmalarda ara…", altında konuşmalar ve "Takipleştikleriniz";
 ile "Bu adla yeni konuşma aç" bağlantısını veriyor. Konuşma ekranı üç sütun;
 hızlı işlemler: Engelle, Konuşmayı sil, Bildir (`/social/report?type=member&id=…`).
 Yatay taşma yok.
+
+## D-148 — Sayılar sayfası "magazines" tasarımındaki hâliyle
+
+**Durum:** `/magazine/issues` D-114 ve D-116'da kurulmuştu. Tasarım
+("magazines.ai") ile karşılaştırıldığında üç fark kaldı:
+
+- Tasarımda kartlar **üçlü** dizilir; bizde geniş ekranda iki kart yan yana
+  geliyordu.
+- Tasarımda sayının adının altında **bir paragraf** var ("Some people stay in
+  your mind forever…"); bizde yalnızca tema vardı.
+- Tasarımda tarih tek başına yazıyor ("Oct 1.2026"); bizde "Sayı 01 · 1 Ekim
+  2026" yazıyordu, yani numara hem kapakta hem satırda tekrar ediyordu.
+
+**Karar:**
+
+- **Tanıtım yazısı:** `issues` tablosuna `blurb` kolonu eklendi (boş
+  bırakılabilir, en çok 600 karakter). Panelde sayı formuna "Tanıtım yazısı"
+  kutusu kondu; yazan yönetici, çünkü sayı yönetimi yöneticinindir (D-059).
+  Kart bu paragrafı gösterir; yoksa eskisi gibi temayı gösterir.
+- **Üçlü dizi:** Izgara zaten kart genişliğine göre doluyor (`auto-fill`,
+  en az 22rem); kâğıt sütunu tasarımdaki kadar genişleyince üçüncü kart kendi
+  kendine yan yana geliyor. Sabit `repeat(3, 1fr)` denendi ve geri alındı: 1440
+  pikselde kart metni ~130 piksele düşüp "POSTSCRIPT: BAŞLANGIÇLAR" harf harf
+  bölünüyordu. Tasarımdaki üçlü sıra geniş ekranda görünür, dar ekranda ikili
+  kalır.
+- **Tarih:** Kartta yalnızca yayın tarihi yazıyor; numara zaten kapakta.
+- **Kalan bilerek sapma:** Tasarımda her kartta kalp ve "100" beğeni sayısı var.
+  Sayı beğenme özelliği yok (D-116); kimin neyi beğendiği kişisel veridir ve
+  ayrı bir tablo, saklama süresi ve aydınlatma metni satırı gerektirir. Kalp
+  sayısız duruyor, sayfa uydurma sayı göstermiyor.
+
+**Hukuk:** Yeni kişisel veri yok; `blurb` derginin kendi metni. Aydınlatma
+metninde değişiklik gerekmiyor.
+
+**Üretim migration'ı (0034, D-079 gereği push'tan önce):** Uygulandı; üretim
+defteri artık **34**. Neon ücretsiz planında dal ve snapshot kotası dolu olduğu
+için alışılmış yedek dalı açılamadı ("branches limit exceeded", "snapshots limit
+exceeded"). Onun yerine migration'ın dokunduğu tek tablo salt okunur olarak dışa
+aktarıldı (`prod-issues-before-0034.json`): üretimde **hiç sayı kaydı yok** (0
+satır), yani kolon ekleme boş bir tabloya yazıldı ve veri riski yoktu. Kota
+açılmadan veri taşıyan bir migration uygulanmamalı; eski yedek dallarını silmek
+ürün sahibinin işi.
+
+**Bir sapma daha:** Tasarımda bölüm başlığının sağında "VIEW ALL" yazıyor. Bu
+sayfa zaten bütün sayıları gösterdiği için oradaki bağlantı "Son yazılar" adıyla
+kaldı; adı ne yaptığını söylüyor, tasarımdaki gibi "Tümünü gör" deseydi kendi
+sayfasına işaret etmiş olurdu.

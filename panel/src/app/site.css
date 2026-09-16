@@ -3574,3 +3574,14 @@
 .ps-site .dm-report:hover {
   color: var(--site-wine);
 }
+
+/* ════════════════ Issue cards as the magazines design draws them (D-148) ════════════════ */
+
+/* The design lays three cards across. The grid already fills by card width, so
+   the third card arrives on its own once the paper column is wide enough; a
+   fixed three-column rule squeezed the issue names into single letters. */
+
+.ps-site .issue-blurb {
+  font-size: 1rem;
+  line-height: 1.35;
+}

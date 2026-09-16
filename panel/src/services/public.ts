@@ -98,6 +98,7 @@ export async function listPublishedIssues() {
       number: issues.number,
       title: issues.title,
       theme: issues.theme,
+      blurb: issues.blurb,
       publishedAt: issues.publishedAt,
       coverKey: media.storageKey,
     })

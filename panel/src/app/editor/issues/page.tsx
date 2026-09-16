@@ -11,6 +11,7 @@ import {
   PageHeader,
   Select,
   StatusBadge,
+  Textarea,
 } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
 import { IssueOrder } from "./issue-order";
@@ -69,6 +70,11 @@ export default async function EditorIssuesPage() {
                   <Input id="plannedPublishDate" name="plannedPublishDate" type="date" />
                 </Field>
               </div>
+
+              {/* The paragraph the magazines design prints on the issue card (D-148) */}
+              <Field label="Tanıtım yazısı" htmlFor="blurb">
+                <Textarea id="blurb" name="blurb" rows={3} maxLength={600} />
+              </Field>
           </PanelForm>
         </Card>
 
@@ -124,6 +130,16 @@ export default async function EditorIssuesPage() {
                             id={`theme-${issue.id}`}
                             name="theme"
                             defaultValue={issue.theme ?? ""}
+                          />
+                        </Field>
+
+                        <Field label="Tanıtım yazısı" htmlFor={`blurb-${issue.id}`}>
+                          <Textarea
+                            id={`blurb-${issue.id}`}
+                            name="blurb"
+                            rows={3}
+                            maxLength={600}
+                            defaultValue={issue.blurb ?? ""}
                           />
                         </Field>
 

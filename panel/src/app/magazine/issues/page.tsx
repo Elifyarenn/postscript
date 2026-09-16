@@ -12,10 +12,11 @@ export const metadata = { title: "Sayılar" };
 const PLACEHOLDER_SLOTS = [1, 2, 3];
 
 /**
- * Every published issue, newest first, as the "magazines" design (D-114).
- * Covers are a solid block with the issue number: the design leaves them
- * empty too, and no cover is uploaded yet. Issues cannot be liked yet, so the
- * heart is drawn without a count (D-116).
+ * Every published issue, newest first, as the "magazines" design (D-114,
+ * D-148): the cover, the name, the issue's paragraph and its date, three
+ * cards across. Covers are a solid block with the issue number: the design
+ * leaves them empty too, and no cover is uploaded yet. Issues cannot be liked
+ * yet, so the heart is drawn without a count (D-116).
  */
 export default async function IssuesPage() {
   await requireSession();
@@ -78,10 +79,16 @@ export default async function IssuesPage() {
                       POSTSCRIPT: <span>{issue.title}</span>
                     </Link>
                   </h3>
-                  {issue.theme && <p className="issue-theme">{issue.theme}</p>}
+                  {issue.blurb ? (
+                    <p className="issue-blurb">{issue.blurb}</p>
+                  ) : (
+                    issue.theme && <p className="issue-theme">{issue.theme}</p>
+                  )}
+                  {/* The design prints the date alone; the cover already carries the number */}
                   <p className="issue-date">
-                    Sayı {formatIssueNumber(issue.number)}
-                    {issue.publishedAt && <> · {formatDate(issue.publishedAt)}</>}
+                    {issue.publishedAt
+                      ? formatDate(issue.publishedAt)
+                      : `Sayı ${formatIssueNumber(issue.number)}`}
                   </p>
                   <p className="issue-likes" title="Sayı beğenme yakında">
                     <Heart aria-hidden className="size-4" />

@@ -19,6 +19,7 @@ export const issueInputSchema = z.strictObject({
   number: z.number().int().positive(),
   title: z.string().trim().min(2).max(200),
   theme: z.string().trim().max(200).optional().nullable(),
+  blurb: z.string().trim().max(600).optional().nullable(),
   coverMediaId: z.uuid().optional().nullable(),
   plannedPublishDate: z
     .string()
@@ -72,6 +73,7 @@ export async function createIssue(
       number: parsed.data.number,
       title: parsed.data.title,
       theme: parsed.data.theme ?? null,
+      blurb: parsed.data.blurb ?? null,
       coverMediaId: parsed.data.coverMediaId ?? null,
       plannedPublishDate: parsed.data.plannedPublishDate ?? null,
       status: "planning",
@@ -111,6 +113,7 @@ export async function updateIssue(
       number: parsed.data.number,
       title: parsed.data.title,
       theme: parsed.data.theme ?? null,
+      blurb: parsed.data.blurb ?? null,
       coverMediaId: parsed.data.coverMediaId ?? null,
       plannedPublishDate: parsed.data.plannedPublishDate ?? null,
       updatedAt: new Date(),

@@ -715,6 +715,8 @@ export const issues = pgTable(
     number: integer("number").notNull(),
     title: text("title").notNull(),
     theme: text("theme"),
+    /** The paragraph the magazines design prints under an issue's name (D-148). */
+    blurb: text("blurb"),
     coverMediaId: uuid("cover_media_id").references(() => media.id, { onDelete: "set null" }),
     status: issueStatusEnum("status").notNull().default("planning"),
     plannedPublishDate: date("planned_publish_date"),

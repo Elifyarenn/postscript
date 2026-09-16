@@ -232,6 +232,13 @@
       "when": 1789515811261,
       "tag": "0033_brown_sentry",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1789519290226,
+      "tag": "0034_demonic_the_fury",
+      "breakpoints": true
     }
   ]
 }
