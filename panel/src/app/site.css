@@ -2829,32 +2829,6 @@
   font-weight: 700;
 }
 
-.ps-site .settings-profile-grid {
-  display: grid;
-  gap: 1.5rem;
-}
-
-@media (min-width: 700px) {
-  .ps-site .settings-profile-grid {
-    grid-template-columns: 11rem minmax(0, 1fr);
-    /* The picture column is as tall as its own contents, not as tall as the
-       forms beside it; stretching it left a hole under the avatar (D-149) */
-    align-items: start;
-  }
-}
-
-.ps-site .settings-avatar {
-  display: grid;
-  width: 11rem;
-  aspect-ratio: 1;
-  place-items: center;
-  background: var(--site-strip);
-  color: var(--site-paper);
-  font-family: var(--font-caps), Georgia, serif;
-  font-size: 4rem;
-  text-transform: uppercase;
-}
-
 .ps-site .settings-line,
 .ps-site .settings-inline form {
   display: grid;
@@ -3432,20 +3406,6 @@
   gap: 1.25rem;
 }
 
-.ps-site .settings-bio form {
-  display: grid;
-  gap: 0.6rem;
-}
-
-.ps-site .settings-bio textarea {
-  width: 100%;
-  min-height: 6.5rem;
-}
-
-.ps-site .settings-bio .settings-save {
-  justify-self: start;
-}
-
 /* ════════════════ Profile picture and cover photo (D-141) ════════════════ */
 
 .ps-site .profile-cover {
@@ -3461,27 +3421,6 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.ps-site .settings-avatar-image {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-/* The profile picture is chosen where it is shown: beside the avatar (D-142) */
-.ps-site .settings-photo {
-  display: grid;
-  align-content: start;
-  justify-items: start;
-  gap: 0.75rem;
-}
-
-.ps-site .settings-cover {
-  display: grid;
-  justify-items: start;
-  gap: 0.6rem;
 }
 
 /* The preview: the profile as the other members see it (D-142) */
@@ -3841,4 +3780,331 @@ html:has(.ps-site) {
 /* Phones zoom into a form field under 16 px on focus */
 .ps-site :is(input, textarea, select) {
   font-size: max(16px, 1em);
+}
+
+/* ════════════════ Edit profile in one dialog, as on X (D-160) ════════════════ */
+
+/* A modal dialog should not leave the page behind it scrolling */
+html:has(.profile-editor[open]) {
+  overflow: hidden;
+}
+
+.ps-site .settings-edit-profile {
+  margin-top: 1rem;
+}
+
+.ps-site .profile-editor {
+  width: min(38rem, calc(100vw - 2rem));
+  max-width: none;
+  max-height: min(56rem, calc(100dvh - 3rem));
+  margin: auto;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--site-rule);
+  border-radius: 1rem;
+  background: var(--site-paper);
+  color: var(--site-ink);
+}
+
+.ps-site .profile-editor::backdrop {
+  background: rgb(54 11 19 / 0.55);
+}
+
+/* On a phone X gives the editor the whole screen */
+@media (max-width: 699px) {
+  .ps-site .profile-editor {
+    width: 100vw;
+    height: 100dvh;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+  }
+}
+
+.ps-site .profile-editor-form {
+  padding-bottom: 1.5rem;
+}
+
+/* The bar stays put while a long bio scrolls, so "Kaydet" is always in reach */
+.ps-site .profile-editor-bar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 1rem;
+  /* --site-paper at 92%, so the pictures blur under it */
+  background: rgb(222 210 199 / 0.92);
+  backdrop-filter: blur(10px);
+}
+
+.ps-site .profile-editor-title {
+  overflow: hidden;
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ps-site .profile-editor-close {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--site-ink);
+}
+
+.ps-site .profile-editor-close:hover {
+  background: rgb(66 10 20 / 0.08);
+}
+
+.ps-site .profile-editor-save {
+  padding: 0.45rem 1.2rem;
+  border-radius: 999px;
+  background: var(--site-ink);
+  color: var(--site-paper);
+  font-weight: 700;
+}
+
+.ps-site .profile-editor-save:hover {
+  background: var(--site-wine);
+}
+
+.ps-site .profile-editor-save:disabled,
+.ps-site .profile-editor-close:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.ps-site .profile-editor button:focus-visible {
+  outline: 2px solid var(--site-wine);
+  outline-offset: 2px;
+}
+
+.ps-site .profile-editor-alert {
+  margin: 0 1rem 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--color-danger);
+  border-radius: 0.5rem;
+  color: var(--color-danger);
+  font-size: 0.95rem;
+}
+
+.ps-site .profile-editor-cover {
+  position: relative;
+  display: grid;
+  aspect-ratio: 3 / 1;
+  place-items: center;
+  overflow: hidden;
+  background: var(--site-strip);
+}
+
+.ps-site .profile-editor-cover img,
+.ps-site .profile-editor-avatar-circle img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ps-site .profile-editor-photo-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 0.75rem;
+}
+
+/* X's dark round buttons: readable on a bright photo and on the empty strip */
+.ps-site .profile-editor-photo-action {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border-radius: 50%;
+  background: rgb(20 4 8 / 0.6);
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.ps-site .profile-editor-photo-action:hover {
+  background: rgb(20 4 8 / 0.78);
+}
+
+/* The file input hides inside its label, so the label carries the focus ring */
+.ps-site .profile-editor-photo-action:has(input:focus-visible),
+.ps-site .profile-editor .profile-editor-photo-action:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--site-ink);
+}
+
+.ps-site .profile-editor-avatar {
+  position: relative;
+  z-index: 2;
+  padding: 0 1rem;
+}
+
+/* The picture sits half over the cover, as it does on the profile */
+.ps-site .profile-editor-avatar-circle {
+  position: relative;
+  display: grid;
+  width: 7.5rem;
+  height: 7.5rem;
+  margin-top: -3.75rem;
+  place-items: center;
+  overflow: hidden;
+  border: 4px solid var(--site-paper);
+  border-radius: 50%;
+  background: #5a1a24;
+  color: var(--site-paper);
+  font-size: 3rem;
+  text-transform: uppercase;
+}
+
+.ps-site .profile-editor-avatar-circle > * {
+  grid-area: 1 / 1;
+}
+
+.ps-site .profile-editor-fields {
+  display: grid;
+  padding: 1rem 1rem 0;
+}
+
+/* X's outlined field: the label and the count inside the box, the count on the right */
+.ps-site .profile-editor-field {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.45rem 0.75rem 0.55rem;
+  border: 1px solid var(--site-rule);
+  border-radius: 0.35rem;
+}
+
+.ps-site .profile-editor-field:focus-within {
+  border-color: var(--site-wine);
+  box-shadow: 0 0 0 1px var(--site-wine);
+}
+
+.ps-site .profile-editor-field[data-invalid] {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 1px var(--color-danger);
+}
+
+.ps-site .profile-editor-field-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.85rem;
+}
+
+.ps-site .profile-editor-field:focus-within label {
+  color: var(--site-wine);
+}
+
+/* The count shows while the field is in use, as on X */
+.ps-site .profile-editor-count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.ps-site .profile-editor-field:focus-within .profile-editor-count {
+  opacity: 1;
+}
+
+/* The box draws the focus, so the bare field inside it needs none of its own */
+.ps-site .profile-editor-field :is(input, textarea) {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--site-ink);
+  font-size: max(16px, 1.05rem);
+  resize: vertical;
+}
+
+.ps-site .profile-editor-field :is(input, textarea):focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.ps-site .profile-editor-hint {
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.ps-site .profile-editor-error {
+  margin: 0.3rem 0 0.9rem;
+  color: var(--color-danger);
+  font-size: 0.9rem;
+}
+
+.ps-site .profile-editor-fields .profile-editor-error:empty {
+  margin: 0 0 0.9rem;
+}
+
+/* A picture's problem sits under the pictures, clear of the overlapping avatar */
+.ps-site .profile-editor-form > .profile-editor-error {
+  margin: 0.5rem 1rem 0;
+}
+
+.ps-site .profile-editor-form > .profile-editor-error:empty {
+  display: none;
+}
+
+.ps-site .profile-editor-confirm {
+  width: min(20rem, calc(100vw - 2rem));
+  margin: auto;
+  padding: 1.5rem;
+  border: 0;
+  border-radius: 1rem;
+  background: var(--site-paper);
+  color: var(--site-ink);
+}
+
+.ps-site .profile-editor-confirm::backdrop {
+  background: rgb(54 11 19 / 0.4);
+}
+
+.ps-site .profile-editor-confirm h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.ps-site .profile-editor-confirm p {
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.ps-site .profile-editor-confirm-actions {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+}
+
+.ps-site .profile-editor-confirm-actions button {
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--site-rule);
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.ps-site .profile-editor-confirm-actions button:hover {
+  background: rgb(66 10 20 / 0.08);
+}
+
+.ps-site .profile-editor-confirm-actions .profile-editor-discard {
+  border-color: var(--color-danger);
+  background: var(--color-danger);
+  color: #fff;
+}
+
+.ps-site .profile-editor-confirm-actions .profile-editor-discard:hover {
+  background: #7d2323;
 }

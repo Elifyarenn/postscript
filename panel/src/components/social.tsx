@@ -11,6 +11,7 @@ import { Bookmark, Heart, Link as LinkIcon, MessageCircle, Repeat2, Star } from 
 import { formatMonthYear, formatRelativeTime } from "@/lib/relative-time";
 import { cn, formatDateTime } from "@/lib/utils";
 import { ActionButton, PanelForm } from "./form";
+import { ProfileEditor } from "./profile-editor";
 import { Sparkle } from "./site-ui";
 import { Field, StatusBadge, Textarea } from "./ui";
 import {
@@ -150,10 +151,18 @@ export function ProfileHeader({
           <div className="profile-actions">
             {profile.isSelf ? (
               <>
-                {/* The profile is edited in the community; the panel is for administration (D-144) */}
-                <Link href="/social/settings" className="profile-link">
-                  Profili düzenle
-                </Link>
+                {/* Edited where it is seen, in one dialog with one save, as on X (D-160) */}
+                <ProfileEditor
+                  profile={{
+                    username: profile.username,
+                    penName: profile.penName,
+                    bio: profile.bio,
+                    avatarUrl: profile.avatarUrl,
+                    headerUrl: profile.headerUrl,
+                  }}
+                  csrfToken={csrfToken}
+                  triggerClassName="profile-link"
+                />
                 <Link href="/account" className="profile-link">
                   Hesabım
                 </Link>

@@ -7,19 +7,16 @@ import { USERNAME_MAX, USERNAME_MIN } from "@/lib/username";
 import { formatDate } from "@/lib/utils";
 import { getMemberSettings, listBlockedMembers } from "@/services/social";
 import { ActionButton, PanelForm } from "@/components/form";
+import { ProfileEditor } from "@/components/profile-editor";
 import { SiteTitle } from "@/components/site-ui";
-import { EmptyState, Field, Input, Select, Textarea } from "@/components/ui";
+import { EmptyState, Field, Input, Select } from "@/components/ui";
 import { MemberLink } from "@/components/social";
 import { DM_POLICIES, DM_POLICY_LABELS } from "@/lib/direct-messages";
 import { countAnonMutes } from "@/services/anon-box";
 import {
   clearAnonMutesAction,
-  clearProfileImageAction,
   setAnonBoxAction,
-  setBioAction,
   setInterestsAction,
-  setPenNameAction,
-  setProfileImageAction,
   setDirectMessagePolicyAction,
   setUsernameAction,
   unblockAction,
@@ -134,60 +131,23 @@ export default async function SocialSettingsPage({
                 </div>
 
                 <p className="settings-note">Topluluktaki üyeler profilinizi böyle görür.</p>
+
+                {/* The pictures, the pen name and the bio are edited together, in the
+                    same dialog the profile page opens: one save, as on X (D-160) */}
+                <ProfileEditor
+                  profile={{
+                    username: settings.username,
+                    penName: settings.penName,
+                    bio: settings.bio,
+                    avatarUrl: settings.avatarUrl,
+                    headerUrl: settings.headerUrl,
+                  }}
+                  csrfToken={csrfToken}
+                  triggerClassName="site-button settings-edit-profile"
+                />
               </section>
 
-              <div className="settings-profile-grid">
-                <div className="settings-photo">
-                  <span className="settings-avatar" aria-hidden>
-                    {settings.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- served by our own media route, not optimised
-                      <img src={settings.avatarUrl} alt="" className="settings-avatar-image" />
-                    ) : (
-                      (settings.username ?? "?").charAt(0)
-                    )}
-                  </span>
-
-                  <PanelForm
-                    action={setProfileImageAction}
-                    csrfToken={csrfToken}
-                    submitLabel="Yükle"
-                    submitClassName="settings-save"
-                    submitContent={
-                      <>
-                        Yükle <ArrowRight aria-hidden className="size-4" />
-                      </>
-                    }
-                  >
-                    <>
-                      <input type="hidden" name="kind" value="avatar" />
-                      <Field
-                        label="Profil fotoğrafı"
-                        htmlFor="avatarImage"
-                        hint="JPEG, PNG, GIF veya WEBP; en fazla 5 MB."
-                      >
-                        <Input
-                          id="avatarImage"
-                          name="avatarImage"
-                          type="file"
-                          required
-                          accept="image/jpeg,image/png,image/gif,image/webp"
-                        />
-                      </Field>
-                    </>
-                  </PanelForm>
-
-                  {settings.avatarUrl && (
-                    <ActionButton
-                      action={clearProfileImageAction}
-                      csrfToken={csrfToken}
-                      label="Profil fotoğrafını kaldır"
-                      fields={{ kind: "avatar" }}
-                      confirmMessage="Profil fotoğrafınız kaldırılsın mı?"
-                    />
-                  )}
-                </div>
-
-                <div className="settings-profile-forms min-w-0">
+              <div className="settings-profile-forms min-w-0">
                 <div className="settings-inline">
                   <PanelForm
                     action={setUsernameAction}
@@ -208,89 +168,6 @@ export default async function SocialSettingsPage({
                         required
                         minLength={USERNAME_MIN}
                         maxLength={USERNAME_MAX + 1}
-                        autoComplete="off"
-                      />
-                    </Field>
-                  </PanelForm>
-                </div>
-
-                <div className="settings-cover">
-                  <PanelForm
-                    action={setProfileImageAction}
-                    csrfToken={csrfToken}
-                    submitLabel="Yükle"
-                    submitClassName="settings-save"
-                    submitContent={
-                      <>
-                        Yükle <ArrowRight aria-hidden className="size-4" />
-                      </>
-                    }
-                  >
-                    <>
-                      <input type="hidden" name="kind" value="header" />
-                      <Field
-                        label="Kapak fotoğrafı"
-                        htmlFor="headerImage"
-                        hint="Profilinizin üstünde geniş bir şerit olarak görünür. JPEG, PNG, GIF veya WEBP; en fazla 5 MB."
-                      >
-                        <Input
-                          id="headerImage"
-                          name="headerImage"
-                          type="file"
-                          required
-                          accept="image/jpeg,image/png,image/gif,image/webp"
-                        />
-                      </Field>
-                    </>
-                  </PanelForm>
-
-                  {settings.headerUrl && (
-                    <ActionButton
-                      action={clearProfileImageAction}
-                      csrfToken={csrfToken}
-                      label="Kapak fotoğrafını kaldır"
-                      fields={{ kind: "header" }}
-                      confirmMessage="Kapak fotoğrafınız kaldırılsın mı?"
-                    />
-                  )}
-                </div>
-
-                <div className="settings-bio">
-                  <PanelForm
-                    action={setBioAction}
-                    csrfToken={csrfToken}
-                    submitLabel="Kaydet"
-                    submitClassName="settings-save"
-                    submitContent={saveContent}
-                  >
-                    <Field
-                      label="Biyografi"
-                      htmlFor="bio"
-                      hint="Topluluk profilinizde görünür; en fazla 2000 karakter. Boş bırakırsanız silinir."
-                    >
-                      <Textarea id="bio" name="bio" defaultValue={settings.bio ?? ""} maxLength={2000} rows={4} />
-                    </Field>
-                  </PanelForm>
-                </div>
-
-                <div className="settings-inline">
-                  <PanelForm
-                    action={setPenNameAction}
-                    csrfToken={csrfToken}
-                    submitLabel="Kaydet"
-                    submitClassName="settings-save"
-                    submitContent={saveContent}
-                  >
-                    <Field
-                      label="Mahlas"
-                      htmlFor="penName"
-                      hint="Profilinizde ve yazılarınızda görünen ad. Boş bırakırsanız kullanıcı adınız görünür."
-                    >
-                      <Input
-                        id="penName"
-                        name="penName"
-                        defaultValue={settings.penName ?? ""}
-                        maxLength={80}
                         autoComplete="off"
                       />
                     </Field>
@@ -354,7 +231,6 @@ export default async function SocialSettingsPage({
                   biyografinizi, rolünüzü, katılım tarihinizi ve takip sayılarınızı görür. Ad
                   soyadınız, e-posta adresiniz ve doğum tarihiniz profilde gösterilmez.
                 </p>
-                </div>
               </div>
             </>
           )}

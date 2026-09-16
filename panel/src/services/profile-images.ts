@@ -5,6 +5,7 @@ import { media, users } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import type { Actor } from "@/lib/auth/rbac";
 import { badRequest } from "@/lib/errors";
+import { MAX_PROFILE_IMAGE_BYTES } from "@/lib/profile-limits";
 import { buildStorageKey, getStorage } from "@/lib/storage";
 import { assertMayPost } from "./community";
 import { assertUploadAcceptable } from "./media";
@@ -17,12 +18,28 @@ import type { RequestMeta } from "./auth";
  * own work by definition. The files sit in the same object storage, are
  * served only to signed-in members, and go when the account goes.
  */
-export const MAX_PROFILE_IMAGE_BYTES = 5 * 1024 * 1024;
+export { MAX_PROFILE_IMAGE_BYTES };
 
 export type ProfileImageKind = "avatar" | "header";
 
 const COLUMN = { avatar: users.avatarMediaId, header: users.headerMediaId } as const;
-const LABEL = { avatar: "Profil fotoğrafı", header: "Kapak fotoğrafı" } as const;
+export const PROFILE_IMAGE_LABEL = { avatar: "Profil fotoğrafı", header: "Kapak fotoğrafı" } as const;
+const LABEL = PROFILE_IMAGE_LABEL;
+
+/**
+ * What a profile picture must pass before anything is stored: an image by its
+ * content rather than its name, within the profile's own limit. Returns the
+ * detected type. The one-save edit uses it too (D-160), so both refuse the same
+ * files with the same words.
+ */
+export function assertProfileImage(buffer: Buffer, declaredMime: string): string {
+  const detected = assertUploadAcceptable(buffer, declaredMime);
+  if (detected.kind !== "image") throw badRequest("Yalnızca görsel yükleyebilirsiniz.");
+  if (buffer.length > MAX_PROFILE_IMAGE_BYTES) {
+    throw badRequest("Görsel çok büyük. Sınır: 5 MB.");
+  }
+  return detected.mime;
+}
 
 async function currentMediaId(userId: string, kind: ProfileImageKind): Promise<string | null> {
   const rows = await db
@@ -35,7 +52,7 @@ async function currentMediaId(userId: string, kind: ProfileImageKind): Promise<s
 }
 
 /** Drops the old picture from the library and from storage; a profile keeps one of each. */
-async function discard(mediaId: string | null): Promise<void> {
+export async function discard(mediaId: string | null): Promise<void> {
   if (!mediaId) return;
   const rows = await db.select().from(media).where(eq(media.id, mediaId)).limit(1);
   const row = rows[0];
@@ -51,11 +68,7 @@ export async function setProfileImage(
 ): Promise<string> {
   assertMayPost(actor);
 
-  const detected = assertUploadAcceptable(input.buffer, input.declaredMime);
-  if (detected.kind !== "image") throw badRequest("Yalnızca görsel yükleyebilirsiniz.");
-  if (input.buffer.length > MAX_PROFILE_IMAGE_BYTES) {
-    throw badRequest("Görsel çok büyük. Sınır: 5 MB.");
-  }
+  const detected = { mime: assertProfileImage(input.buffer, input.declaredMime) };
 
   const storageKey = buildStorageKey(`profile/${input.kind}`, input.fileName);
   await getStorage().put({

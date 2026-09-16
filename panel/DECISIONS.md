@@ -6096,3 +6096,92 @@ hariç), kısa arayüz yazılarında ikinci satır yok, sayfa taşması yok. Kap
 typecheck, lint, 64 dosya / 594 test.
 
 **Hukuk:** Yalnızca görünüm.
+
+## D-160 — Profil X'teki gibi düzenlenir: tek pencere, tek Kaydet
+
+**İstek (ürün sahibi):** "Profil düzenleme mantığını tamamen X app gibi yapar mısın."
+
+**Durum:** Profil, topluluk ayarlarının Profil bölümünde alan alan
+düzenleniyordu (D-141, D-142, D-144): profil fotoğrafı yükle/kaldır, kapak
+fotoğrafı yükle/kaldır, mahlas ve biyografi için ayrı ayrı formlar, her birinin
+kendi "Kaydet"i. Profil sayfasındaki "Profili düzenle" yalnızca bu ayarlara
+giden bir bağlantıydı. Ayrıca `next.config.ts`'te `serverActions.bodySizeLimit`
+yoktu; varsayılan 1 MB olduğu için 1 MB'tan büyük bir profil fotoğrafı, servis
+5 MB'a izin verdiği hâlde action'a hiç ulaşmıyordu.
+
+**Karar:**
+
+- **Tek pencere (`src/components/profile-editor.tsx`):** Kendi profilindeki
+  "Profili düzenle" bir diyalog açar. Üst çubukta kapat (X), başlık ve tek
+  "Kaydet"; altında kapak şeridi, kapağın üstüne yarı binen profil fotoğrafı,
+  mahlas ve biyografi. Her fotoğrafın üstünde X'teki gibi yuvarlak "seç"
+  (kamera) ve "kaldır" (X) düğmeleri var. Aynı diyalog ayarların Profil
+  bölümündeki önizlemenin altından da açılır.
+- **Önizleme:** Seçilen fotoğraf hemen pencerede görünür (blob URL; CSP
+  `img-src` zaten `blob:` içeriyordu), ama yalnızca "Kaydet"le gönderilir.
+- **Kaydetmeden kapatma:** Değişiklik varsa X'teki "Değişiklikler silinsin mi?"
+  sorulur (ikinci bir modal diyalog; Esc yalnızca onu kapatır). Değişiklik
+  yoksa pencere doğrudan kapanır; değişiklik yokken "Kaydet" de istek atmadan
+  kapatır.
+- **Ya hepsi ya hiçbiri (`src/services/profile-edit.ts`, `updateProfile`):**
+  - Önce bütün kontroller, hiçbir yazmadan önce: metin uzunlukları, mahlasın
+    adrese dönüşmesi ve başka üyede olmaması, iki fotoğrafın türü ve boyutu.
+  - Bütün sorunlar tek seferde döner (`fieldErrors`: `penName`, `bio`,
+    `avatarImage`, `headerImage`); pencere her birini kendi alanının altında
+    gösterir. Tek sorun alınmış bir mahlassa 409, diğer durumlarda 400.
+  - Yeni dosyalar depoya yazılır, sonra bütün sütunlar ve medya satırları tek
+    transaction'da değişir. Kaydetme yarıda kalırsa depoya yazılan yeni
+    dosyalar geri silinir.
+  - Değiştirilen ve kaldırılan eski dosyalar yalnızca transaction başarıyla
+    bittikten sonra silinir; başarısız bir kaydetme, profili silinmiş bir
+    görsele işaret eder hâlde bırakamaz.
+  - Denetim kaydı eskisiyle aynı: `user.profile_image_set` /
+    `user.profile_image_cleared`, transaction'ın içinde.
+- **Kurallar tek yerde kaldı:** Görsel kontrolü `assertProfileImage`
+  (`profile-images.ts`), mahlas kontrolü `penNameProblem` (`social.ts`) olarak
+  ayrıldı; tek alanlık servisler (`setPenName`, `setBio`, `setProfileImage`,
+  `clearProfileImage`) ve yeni servis aynı fonksiyonları kullanır. Sınırlar
+  `src/lib/profile-limits.ts`'te; pencere de aynı sayıları kullanır, böylece
+  hatalı dosya uzun bir yüklemeden önce yakalanır. Servis her kontrolü yeniden
+  yapar.
+- **Kaldırılanlar:** Artık hiçbir ekranın çağırmadığı dört action
+  (`setPenNameAction`, `setBioAction`, `setProfileImageAction`,
+  `clearProfileImageAction`) silindi; yerlerine `updateProfileAction` geldi.
+  Kullanılmayan action da çağrılabilen bir uç noktadır. Tek alanlık servisler
+  testleriyle birlikte duruyor.
+- **Gövde sınırı:** `experimental.serverActions.bodySizeLimit` ve
+  `experimental.proxyClientMaxBodySize` 11 MB: iki 5 MB fotoğraf, multipart
+  ek yükü ve metin alanları. `src/proxy.ts` her isteği tamponladığı için
+  ikincisi de gerekiyor; varsayılan 10 MB aynı kaydetmeyi keserdi. Fotoğraf
+  başına 5 MB kuralı serviste aynen duruyor.
+- **Ayarlarda kalanlar:** Kullanıcı adı ve ilgi alanları. X'te de kullanıcı
+  adı profil penceresinde değil, ayarlardadır; ilgi alanları yalnızca üyenin
+  kendisine görünür (D-149).
+
+**Bilinçli olarak X'ten farklı bırakılanlar (muhafazakâr seçenek):**
+
+- **"Ad" değil "Mahlas":** X'te alanın adı "Name". Burada profilde görünen ad
+  mahlastır ve topluluk gerçek adı hiç görmez (D-089). Alana "Ad" demek üyeyi
+  gerçek adını yazmaya yöneltebilirdi.
+- **Konum, web sitesi, doğum tarihi yok:** X'in penceresinde var. Konum ve web
+  sitesi yeni kişisel veri ve denetlenmesi gereken yeni kullanıcı içeriği olur
+  (aydınlatma metni, kaldırma yolu); doğum tarihi ise hiçbir zaman profilde
+  gösterilmez ve kullanıcı için değiştirilemez. Ürün sahibi isterse ayrı bir
+  kararla eklenir.
+- **Biyografi 2000 karakter kaldı:** X'te 160. Sınırı düşürmek mevcut uzun
+  biyografileri geçersiz kılardı.
+- **Kırpma adımı yok:** X fotoğrafı seçtikten sonra kırpma ekranı açar. Bunun
+  için kütüphane gerekir; kapak ve avatar zaten `object-fit: cover` ile
+  ortalanıyor.
+
+**Hukuk:** Yeni kişisel veri yok; profil fotoğrafı, kapak fotoğrafı, mahlas ve
+biyografi aydınlatma metninde zaten var. Değişen yalnızca bunların birlikte
+kaydedilmesi.
+
+**Doğrulama:** `tests/integration/profile-edit.test.ts` (8 test): dört alan tek
+çağrıda kaydediliyor; tek bir alan hatalıysa hiçbir şey yazılmıyor ve bütün
+sorunlar birlikte dönüyor; alınmış mahlas tek sorunsa 409; sınır aşımları;
+biri değiştirilip diğeri kaldırılan fotoğraflarda eski dosyalar kaydetmeden
+sonra siliniyor; dokunulmayan fotoğraf yerinde kalıyor; depo yarıda
+çöktüğünde yazılan dosya geri alınıyor; yasaklı üye düzenleyemiyor. Kapı:
+typecheck, lint, 65 dosya / 602 test. Arayüz tarayıcıda denenmedi.

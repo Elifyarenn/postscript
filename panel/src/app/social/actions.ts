@@ -16,9 +16,7 @@ import {
   bookmarkArticle,
   followMember,
   removeBookmark,
-  setBio,
   setInterests,
-  setPenName,
   setUsername,
   unblockMember,
   unfollowMember,
@@ -48,7 +46,7 @@ import {
   setAnonBoxEnabled,
 } from "@/services/anon-box";
 import { joinCommunity, leaveCommunity } from "@/services/communities";
-import { clearProfileImage, setProfileImage, type ProfileImageKind } from "@/services/profile-images";
+import { updateProfile, type PictureChange } from "@/services/profile-edit";
 
 /* ------------------------------------------------------------------ */
 /* Communities (D-093)                                                 */
@@ -326,23 +324,6 @@ export async function setUsernameAction(
   });
 }
 
-export async function setPenNameAction(
-  _state: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  return runAction(async () => {
-    await assertCsrfFromForm(formData);
-    const { user } = await requireAuth();
-
-    const penName = await setPenName({ ...user }, { penName: text(formData, "penName") });
-
-    // The pen name is the name on the profile, on posts and on published work
-    revalidatePath("/social", "layout");
-    revalidatePath("/magazine", "layout");
-    return { success: penName ? `Mahlasınız "${penName}" olarak kaydedildi.` : "Mahlasınız kaldırıldı." };
-  });
-}
-
 export async function setInterestsAction(
   _state: ActionState,
   formData: FormData,
@@ -361,24 +342,33 @@ export async function setInterestsAction(
   });
 }
 
-export async function setBioAction(_state: ActionState, formData: FormData): Promise<ActionState> {
-  return runAction(async () => {
-    await assertCsrfFromForm(formData);
-    const { user } = await requireAuth();
+/**
+ * What the dialog asked for one picture: leave it, remove it, or replace it with
+ * the chosen file. Anything else in `…Action` means leave it.
+ */
+async function pictureChange(formData: FormData, kind: "avatar" | "header"): Promise<PictureChange> {
+  const requested = text(formData, `${kind}Action`);
+  if (requested === "remove") return { action: "remove" };
+  if (requested !== "replace") return { action: "keep" };
 
-    await setBio({ ...user }, { bio: text(formData, "bio") });
-
-    // The bio shows on the member's own profile page
-    revalidatePath("/social", "layout");
-    return { success: "Biyografiniz kaydedildi." };
-  });
+  const field = `${kind}Image`;
+  const file = formData.get(field);
+  if (!(file instanceof File) || file.size === 0) {
+    throw badRequest("Görsel seçilmedi.", { [field]: ["Görsel seçilmedi."] });
+  }
+  return {
+    action: "replace",
+    buffer: Buffer.from(await file.arrayBuffer()),
+    fileName: file.name,
+    declaredMime: file.type,
+  };
 }
 
-function profileImageKind(formData: FormData): ProfileImageKind {
-  return text(formData, "kind") === "header" ? "header" : "avatar";
-}
-
-export async function setProfileImageAction(
+/**
+ * The edit-profile dialog's single save (D-160): pen name, bio and both
+ * pictures in one request, kept or refused together by the service.
+ */
+export async function updateProfileAction(
   _state: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -387,44 +377,21 @@ export async function setProfileImageAction(
     const { user } = await requireAuth();
     const meta = await requestMetadata();
 
-    const kind = profileImageKind(formData);
-    const file = formData.get(kind === "header" ? "headerImage" : "avatarImage");
-    if (!(file instanceof File) || file.size === 0) throw badRequest("Görsel seçilmedi.");
-
-    await setProfileImage(
+    await updateProfile(
       { ...user },
       {
-        kind,
-        buffer: Buffer.from(await file.arrayBuffer()),
-        fileName: file.name,
-        declaredMime: file.type,
+        penName: text(formData, "penName"),
+        bio: text(formData, "bio"),
+        avatar: await pictureChange(formData, "avatar"),
+        header: await pictureChange(formData, "header"),
       },
       meta,
     );
 
+    // The pen name is the name on the profile, on posts and on published work
     revalidatePath("/social", "layout");
-    return {
-      success: kind === "header" ? "Kapak fotoğrafınız kaydedildi." : "Profil fotoğrafınız kaydedildi.",
-    };
-  });
-}
-
-export async function clearProfileImageAction(
-  _state: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  return runAction(async () => {
-    await assertCsrfFromForm(formData);
-    const { user } = await requireAuth();
-    const meta = await requestMetadata();
-
-    const kind = profileImageKind(formData);
-    await clearProfileImage({ ...user }, kind, meta);
-
-    revalidatePath("/social", "layout");
-    return {
-      success: kind === "header" ? "Kapak fotoğrafınız kaldırıldı." : "Profil fotoğrafınız kaldırıldı.",
-    };
+    revalidatePath("/magazine", "layout");
+    return { success: "Profiliniz kaydedildi." };
   });
 }
 

@@ -72,6 +72,15 @@ const nextConfig: NextConfig = {
   experimental: {
     // Lets a layout answer 403 with forbidden() instead of redirecting (§13.2)
     authInterrupts: true,
+    // The edit-profile dialog sends both pictures in one save (D-160): two 5 MB
+    // files plus the multipart framing and the text fields. The default 1 MB
+    // refused any photo over 1 MB. Each picture's own 5 MB rule stays in the service.
+    serverActions: {
+      bodySizeLimit: "11mb",
+    },
+    // src/proxy.ts buffers every request body and cuts it at 10 MB by default,
+    // which would truncate the same two-picture save before the action saw it
+    proxyClientMaxBodySize: "11mb",
   },
   // These data files are read at runtime, so tracing must keep them
   outputFileTracingIncludes: {

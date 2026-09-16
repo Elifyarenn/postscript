@@ -28,6 +28,7 @@ import { writeAudit, type Executor } from "@/lib/audit";
 import type { Actor } from "@/lib/auth/rbac";
 import { INTERESTS, isInterestId, MAX_INTERESTS } from "@/lib/interests";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
+import { MAX_BIO_LENGTH, MAX_PEN_NAME_LENGTH } from "@/lib/profile-limits";
 import { slugify } from "@/lib/slug";
 import { normalizeUsername, usernameProblem } from "@/lib/username";
 import { assertMayPost } from "./community";
@@ -177,8 +178,33 @@ export async function getMemberSettings(
 }
 
 const penNameSchema = z.strictObject({
-  penName: z.string().trim().max(80, "Mahlas en fazla 80 karakter olabilir."),
+  penName: z
+    .string()
+    .trim()
+    .max(MAX_PEN_NAME_LENGTH, `Mahlas en fazla ${MAX_PEN_NAME_LENGTH} karakter olabilir.`),
 });
+
+export const PEN_NAME_TAKEN = "Bu mahlas alınmış.";
+
+/**
+ * Why a pen name cannot be used, or null when it can. It has to turn into an
+ * address, so it needs a letter or a digit, and that address belongs to one
+ * member. Shared by the single-field save and the one-save edit (D-160).
+ */
+export async function penNameProblem(actorId: string, penName: string | null): Promise<string | null> {
+  if (!penName) return null;
+
+  const slug = slugify(penName);
+  if (!slug) return "Mahlas en az bir harf ya da rakam içermeli.";
+
+  // The slug is the author page's address, so two members cannot share one
+  const taken = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(eq(users.penNameSlug, slug), isNull(users.deletedAt), ne(users.id, actorId)))
+    .limit(1);
+  return taken[0] ? PEN_NAME_TAKEN : null;
+}
 
 /**
  * The pen name shown on the profile and on published work (D-144). Edited in
@@ -195,24 +221,13 @@ export async function setPenName(actor: Actor, rawInput: unknown): Promise<strin
   }
 
   const penName = parsed.data.penName || null;
+  const problem = await penNameProblem(actor.id, penName);
+  if (problem) {
+    // Taken is a clash with someone else's data, not a malformed request
+    const details = { penName: [problem] };
+    throw problem === PEN_NAME_TAKEN ? conflict(problem, details) : badRequest(problem, details);
+  }
   const slug = penName ? slugify(penName) : null;
-  if (penName && !slug) {
-    throw badRequest("Mahlas en az bir harf ya da rakam içermeli.", {
-      penName: ["Mahlas en az bir harf ya da rakam içermeli."],
-    });
-  }
-
-  if (slug) {
-    // The slug is the author page's address, so two members cannot share one
-    const taken = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(and(eq(users.penNameSlug, slug), isNull(users.deletedAt), ne(users.id, actor.id)))
-      .limit(1);
-    if (taken[0]) {
-      throw conflict("Bu mahlas alınmış.", { penName: ["Bu mahlas alınmış."] });
-    }
-  }
 
   await db
     .update(users)
@@ -271,7 +286,7 @@ export async function setUsername(
 }
 
 const bioSchema = z.strictObject({
-  bio: z.string().trim().max(2000, "Biyografi en fazla 2000 karakter olabilir."),
+  bio: z.string().trim().max(MAX_BIO_LENGTH, `Biyografi en fazla ${MAX_BIO_LENGTH} karakter olabilir.`),
 });
 
 const interestsSchema = z.strictObject({
