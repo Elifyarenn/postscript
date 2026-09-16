@@ -6241,3 +6241,41 @@ migration defteri Neon'dan okundu: 36 kayıt, son zaman damgası yerel
 journal'la aynı (0036); bu yayın için migration gerekmiyor. Kapı: typecheck,
 lint, 66 dosya / 611 test. Canvas ile küçültme tarayıcıda çalıştığı için
 Node testlerinde çalıştırılamadı; canlıda denenecek.
+
+## D-162 — Mahlas "Profili düzenle" penceresinden çıkarıldı
+
+**İstek (ürün sahibi):** "mahlası kaldır" — D-160'taki pencere canlıya alındıktan
+hemen sonra.
+
+**Yorum:** Kaldırılan, pencere içindeki **Mahlas alanı**; mahlas kavramı değil.
+Mahlas panelde 25 dosyada okunuyor: yayımlanan yazının künyesi, yazar sayfasının
+adresi (`pen_name_slug`), sözleşme ve eser onayındaki "ad veya mahlas" seçimi.
+Kavramı kaldırmak hukuki yükü olan ayrı bir karardır ve istenmedi.
+
+**Karar:**
+
+- **Pencere:** Mahlas alanı, sayacı ve açıklaması kalktı. Biyografinin altında
+  "Mahlasınızı Hesabım sayfasından değiştirebilirsiniz." bağlantısı var; alanı
+  arayan bulsun diye. X'in penceresindeki "Name" karşılığı artık yok; gerekçesi
+  zaten D-160'ta yazılıydı: topluluk ekranları gerçek adı göstermez.
+- **Servis mahlasa dokunmaz (`updateProfile`, `profile-edit.ts`):** Mahlası ne
+  okur ne yazar. Yalnızca arayüzden silinseydi, pencere boş mahlas göndermeye
+  devam edecek ve her kaydetmede **üyenin mevcut mahlasını silecekti**. Çağıran
+  yine de `penName` gönderirse yok sayılır. Action `penName` okumuyor ve dergi
+  önbelleğini (`/magazine`) artık tazelemiyor.
+- **Mahlasın tek yeri Hesabım (`users.updateProfile`):** Bu form mahlası hiçbir
+  kural uygulamadan kaydediyordu: harf şartı yoktu, başka üyede olup
+  olmadığına bakılmıyordu. Artık topluluktakiyle aynı kuralı (`penNameProblem`)
+  uyguluyor: alınmışsa 409, adrese dönüşmüyorsa 400. Kural **yalnızca değişen**
+  mahlasa uygulanır; kural gelmeden önce kaydedilmiş uygunsuz bir mahlas, üyenin
+  telefonunu ya da adını güncellemesini engellemez.
+- **Ayarlar → Profil önizlemesi** mahlası göstermeye devam ediyor; görünüm
+  değişmedi, yalnızca düzenlendiği yer.
+
+**Hukuk:** Değişiklik yok. Aynı veri, aynı amaç; yalnızca düzenlendiği ekran.
+
+**Doğrulama:** `profile-edit.test.ts` pencereden kaydetmenin mahlası silmediğini
+ve gönderilen `penName`'in yok sayıldığını doğruluyor. `pen-name.test.ts`'e
+Hesabım formu için üç test eklendi: mahlas adresiyle kaydediliyor; alınmış
+mahlas 409, harfsiz mahlas 400; kuraldan önce kaydedilmiş uygunsuz mahlas
+başka bir güncellemeyi engellemiyor. Kapı: typecheck, lint, 66 dosya / 615 test.

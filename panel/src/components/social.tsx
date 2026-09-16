@@ -155,7 +155,6 @@ export function ProfileHeader({
                 <ProfileEditor
                   profile={{
                     username: profile.username,
-                    penName: profile.penName,
                     bio: profile.bio,
                     avatarUrl: profile.avatarUrl,
                     headerUrl: profile.headerUrl,

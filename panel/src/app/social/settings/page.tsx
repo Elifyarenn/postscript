@@ -132,12 +132,12 @@ export default async function SocialSettingsPage({
 
                 <p className="settings-note">Topluluktaki üyeler profilinizi böyle görür.</p>
 
-                {/* The pictures, the pen name and the bio are edited together, in the
-                    same dialog the profile page opens: one save, as on X (D-160) */}
+                {/* The pictures and the bio are edited together, in the same dialog
+                    the profile page opens: one save, as on X (D-160). The pen
+                    name lives on the account page (D-162) */}
                 <ProfileEditor
                   profile={{
                     username: settings.username,
-                    penName: settings.penName,
                     bio: settings.bio,
                     avatarUrl: settings.avatarUrl,
                     headerUrl: settings.headerUrl,

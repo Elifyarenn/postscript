@@ -56,6 +56,7 @@ import { sendMail } from "@/lib/mail/transport";
 import { slugify } from "@/lib/slug";
 import * as templates from "@emails/templates";
 import { removeProfileImages } from "./profile-images";
+import { PEN_NAME_TAKEN, penNameProblem } from "./social";
 import type { RequestMeta } from "./auth";
 
 /* ------------------------------------------------------------------ */
@@ -766,6 +767,16 @@ export async function updateProfile(
   }
 
   const penName = input.penName?.trim() || null;
+  // The one place a pen name is changed since D-162, so it answers to the same
+  // rule as the community did: it must become an address no other member holds.
+  // Only a changed name is checked, so an old one cannot block a phone update.
+  if (penName !== current.penName) {
+    const problem = await penNameProblem(actor.id, penName);
+    if (problem) {
+      const details = { penName: [problem] };
+      throw problem === PEN_NAME_TAKEN ? conflict(problem, details) : badRequest(problem, details);
+    }
+  }
 
   const phone =
     input.phone !== undefined && input.phone !== null

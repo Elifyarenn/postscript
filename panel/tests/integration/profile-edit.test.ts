@@ -1,5 +1,6 @@
 /**
- * The profile edited in one dialog with one save, as X does it (D-160).
+ * The profile edited in one dialog with one save, as X does it (D-160); the pen
+ * name is no longer part of it (D-162).
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
@@ -45,7 +46,6 @@ const replace = (buffer = png(), declaredMime = "image/png"): PictureChange => (
 });
 
 const edit = (overrides: Partial<ProfileEdit> = {}): ProfileEdit => ({
-  penName: "",
   bio: "",
   avatar: KEEP,
   header: KEEP,
@@ -66,82 +66,77 @@ async function failure(promise: Promise<unknown>) {
 }
 
 describe("updateProfile (D-160)", () => {
-  it("saves the pen name, the bio and both pictures in one call", async () => {
+  it("saves the bio and both pictures in one call", async () => {
     const member = await createUser();
     await setUsername(actorOf(member), { username: "kerem_okur" }, noMeta);
 
     await updateProfile(
       actorOf(member),
-      edit({ penName: "  Kerem  ", bio: "  Kitap kurdu.  ", avatar: replace(), header: replace() }),
+      edit({ bio: "  Kitap kurdu.  ", avatar: replace(), header: replace() }),
       noMeta,
     );
 
     const profile = await getProfile(actorOf(member), "kerem_okur");
-    expect(profile.penName).toBe("Kerem");
     expect(profile.bio).toBe("Kitap kurdu.");
     expect(profile.avatarUrl).toMatch(/^\/api\/media\//);
     expect(profile.headerUrl).toMatch(/^\/api\/media\//);
     expect(profile.avatarUrl).not.toBe(profile.headerUrl);
-
-    const row = await rowOf(member.id);
-    expect(row.penNameSlug).toBe("kerem");
     expect(storage().objects.size).toBe(2);
   });
 
-  it("writes nothing when one field is wrong, and reports every problem at once", async () => {
-    const other = await createUser();
-    await setPenName(actorOf(other), { penName: "Kerem" });
-
+  it("never touches the pen name, so saving a photo cannot erase it (D-162)", async () => {
     const member = await createUser();
-    await updateProfile(actorOf(member), edit({ penName: "Eski", bio: "Eski bio" }), noMeta);
+    await setPenName(actorOf(member), { penName: "Zeynep K." });
+
+    await updateProfile(actorOf(member), edit({ bio: "Yeni", avatar: replace() }), noMeta);
+
+    const row = await rowOf(member.id);
+    expect(row.penName).toBe("Zeynep K.");
+    expect(row.penNameSlug).toBe("zeynep-k");
+  });
+
+  it("ignores a pen name a caller sends anyway: it reads only the fields it owns", async () => {
+    const member = await createUser();
+    const withPenName = { ...edit({ bio: "x" }), penName: "Başka" } as unknown as ProfileEdit;
+
+    await expect(updateProfile(actorOf(member), withPenName, noMeta)).resolves.toEqual({ bio: "x" });
+    const row = await rowOf(member.id);
+    expect(row.penName).toBeNull();
+    expect(row.penNameSlug).toBeNull();
+  });
+
+  it("writes nothing when one field is wrong, and reports every problem at once", async () => {
+    const member = await createUser();
+    await updateProfile(actorOf(member), edit({ bio: "Eski bio" }), noMeta);
 
     const pdf = Buffer.concat([Buffer.from("%PDF-1.7"), Buffer.alloc(32)]);
     const error = await failure(
       updateProfile(
         actorOf(member),
-        edit({
-          penName: "Kerem",
-          bio: "Yeni bio",
-          avatar: replace(),
-          header: replace(pdf, "application/pdf"),
-        }),
+        edit({ bio: "b".repeat(2001), avatar: replace(), header: replace(pdf, "application/pdf") }),
         noMeta,
       ),
     );
 
     expect(error.status).toBe(400);
-    expect(Object.keys(error.details ?? {}).sort()).toEqual(["headerImage", "penName"]);
+    expect(Object.keys(error.details ?? {}).sort()).toEqual(["bio", "headerImage"]);
 
-    // The valid bio and the valid avatar were not saved either
+    // The valid avatar was not saved either
     const row = await rowOf(member.id);
-    expect(row.penName).toBe("Eski");
     expect(row.bio).toBe("Eski bio");
     expect(row.avatarMediaId).toBeNull();
     expect(storage().objects.size).toBe(0);
     expect(await db.select().from(media)).toHaveLength(0);
   });
 
-  it("answers 409 when the only problem is a pen name another member holds", async () => {
-    const other = await createUser();
-    await setPenName(actorOf(other), { penName: "Kerem" });
-    const member = await createUser();
-
-    const error = await failure(updateProfile(actorOf(member), edit({ penName: "kerem" }), noMeta));
-    expect(error.status).toBe(409);
-  });
-
-  it("refuses text over the limits and a picture over 5 MB", async () => {
+  it("refuses a picture over 5 MB", async () => {
     const member = await createUser();
 
     const error = await failure(
-      updateProfile(
-        actorOf(member),
-        edit({ penName: "a".repeat(81), bio: "b".repeat(2001), avatar: replace(png(MAX_PROFILE_IMAGE_BYTES + 1)) }),
-        noMeta,
-      ),
+      updateProfile(actorOf(member), edit({ avatar: replace(png(MAX_PROFILE_IMAGE_BYTES + 1)) }), noMeta),
     );
     expect(error.status).toBe(400);
-    expect(Object.keys(error.details ?? {}).sort()).toEqual(["avatarImage", "bio", "penName"]);
+    expect(Object.keys(error.details ?? {})).toEqual(["avatarImage"]);
     expect(storage().objects.size).toBe(0);
   });
 
@@ -176,18 +171,16 @@ describe("updateProfile (D-160)", () => {
     expect(actions.filter((action) => action === "user.profile_image_cleared")).toHaveLength(1);
   });
 
-  it("keeps the pictures when they are left alone, and clears empty text", async () => {
+  it("keeps the pictures when they are left alone, and clears an empty bio", async () => {
     const member = await createUser();
-    await updateProfile(actorOf(member), edit({ penName: "Mahlas", bio: "Bir şey", avatar: replace() }), noMeta);
+    await updateProfile(actorOf(member), edit({ bio: "Bir şey", avatar: replace() }), noMeta);
     const { avatarUrl } = await getMemberSettings(actorOf(member));
 
-    await updateProfile(actorOf(member), edit({ penName: "   ", bio: "" }), noMeta);
+    await updateProfile(actorOf(member), edit({ bio: "   " }), noMeta);
 
     const settings = await getMemberSettings(actorOf(member));
-    expect(settings.penName).toBeNull();
     expect(settings.bio).toBeNull();
     expect(settings.avatarUrl).toBe(avatarUrl);
-    expect((await rowOf(member.id)).penNameSlug).toBeNull();
   });
 
   it("takes back the files it stored when the save fails halfway", async () => {

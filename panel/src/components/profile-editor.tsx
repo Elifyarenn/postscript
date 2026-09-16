@@ -3,7 +3,8 @@
 /**
  * "Profili düzenle" the way X does it (D-160): a button on the member's own
  * profile opens one dialog holding the cover photo, the profile picture over
- * it, the pen name and the bio, with a single "Kaydet" in its top bar.
+ * it and the bio, with a single "Kaydet" in its top bar. The pen name is not
+ * here: it names published work, so it is changed on the account page (D-162).
  *
  * - Chosen pictures are prepared in the browser and previewed at once; they are
  *   sent only on "Kaydet" (D-161: shrunk first, so a phone photo fits the
@@ -16,11 +17,11 @@
  * behind it inert without a library (the project adds none for this).
  */
 import { useActionState, useEffect, useId, useRef, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { Camera, X } from "lucide-react";
 import { updateProfileAction } from "@/app/social/actions";
 import {
   MAX_BIO_LENGTH,
-  MAX_PEN_NAME_LENGTH,
   PROFILE_IMAGE_TYPES,
   planPicture,
   uploadProblem,
@@ -30,7 +31,6 @@ import type { ActionState } from "./form";
 
 export type EditableProfile = {
   username: string | null;
-  penName: string | null;
   bio: string | null;
   avatarUrl: string | null;
   headerUrl: string | null;
@@ -130,7 +130,6 @@ export function ProfileEditor({
   // closes cannot land in the next opening
   const generation = useRef(0);
 
-  const [penName, setPenName] = useState(profile.penName ?? "");
   const [bio, setBio] = useState(profile.bio ?? "");
   const [pictures, setPictures] = useState<Record<ProfileImageKind, Picture>>({
     avatar: UNCHANGED,
@@ -171,7 +170,6 @@ export function ProfileEditor({
   const busy = pending || preparing > 0;
 
   const isDirty =
-    penName !== (profile.penName ?? "") ||
     bio !== (profile.bio ?? "") ||
     pictures.avatar.action !== "keep" ||
     pictures.header.action !== "keep";
@@ -182,7 +180,6 @@ export function ProfileEditor({
   /** Back to what the server holds: used on open and whenever the dialog closes. */
   function resetToSaved() {
     generation.current += 1;
-    setPenName(profile.penName ?? "");
     setBio(profile.bio ?? "");
     setPictures({ avatar: UNCHANGED, header: UNCHANGED });
     setPreparing(0);
@@ -391,32 +388,6 @@ export function ProfileEditor({
           {pictureError("avatar")}
 
           <div className="profile-editor-fields">
-            <div className="profile-editor-field" data-invalid={Boolean(fieldError("penName")) || undefined}>
-              <span className="profile-editor-field-top">
-                <label htmlFor={`${id}-penName`}>Mahlas</label>
-                <span className="profile-editor-count" aria-hidden>
-                  {penName.length}/{MAX_PEN_NAME_LENGTH}
-                </span>
-              </span>
-              <input
-                id={`${id}-penName`}
-                name="penName"
-                value={penName}
-                onChange={(event) => setPenName(event.currentTarget.value)}
-                maxLength={MAX_PEN_NAME_LENGTH}
-                autoComplete="off"
-                aria-invalid={Boolean(fieldError("penName")) || undefined}
-                aria-describedby={`${id}-penName-hint ${id}-penName-error`}
-              />
-            </div>
-            <p id={`${id}-penName-hint`} className="profile-editor-hint">
-              Profilinizde ve yazılarınızda görünen ad. Boş bırakırsanız
-              {profile.username ? ` @${profile.username}` : " kullanıcı adınız"} görünür.
-            </p>
-            <p id={`${id}-penName-error`} className="profile-editor-error">
-              {fieldError("penName")}
-            </p>
-
             <div className="profile-editor-field" data-invalid={Boolean(fieldError("bio")) || undefined}>
               <span className="profile-editor-field-top">
                 <label htmlFor={`${id}-bio`}>Biyografi</label>
@@ -437,6 +408,15 @@ export function ProfileEditor({
             </div>
             <p id={`${id}-bio-error`} className="profile-editor-error">
               {fieldError("bio")}
+            </p>
+
+            {/* Where the name went, so nobody hunts for it here (D-162) */}
+            <p className="profile-editor-hint">
+              Mahlasınızı{" "}
+              <Link href="/account" className="underline">
+                Hesabım
+              </Link>{" "}
+              sayfasından değiştirebilirsiniz.
             </p>
           </div>
         </form>
