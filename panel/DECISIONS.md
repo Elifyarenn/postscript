@@ -7617,3 +7617,24 @@ düzgün, kâküller kalın ve bitişikti.
 
 **Doğrulama:** Kapı: typecheck, lint, test, build. Görsel: 16 modelin dört
 dokuda ve sekiz örnek avatarın render edilmiş tabakaları.
+
+
+## D-197 — Perçemler ayrımdan yana savrulur
+
+**İstek (ürün sahibi):** "Perçemler uyumsuz oluyor, dümdüz iniyor hep."
+
+**Durum:** D-196'daki kâkül yelpazelerinde kökler alın boyunca yayılıyor,
+uçlar da neredeyse köklerin altına düşüyordu; her tutam dikey bir şerit gibi
+iniyor, saçın geri kalanının akışına katılmıyordu.
+
+**Karar:** Kâkül tutamlarının kökleri **ayrım noktasında toplanır**, uçları
+şakaklara doğru **yana savrulur** ve tutamın ortası dışa doğru kavislenir
+(`bend` 34–66, önceden 6–26). Böylece perçem, saçın taç kısmından gelen
+akışın devamı gibi okunur. Küt kâkül (`blunt`) düz inmeye devam eder — kesim
+zaten öyledir — ama her şerit hafifçe kavislidir. Yana taranmış modelde
+(`swept`) perçem tek ayrımdan alnın karşı tarafına kadar taranır.
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test, build. Görsel: 16 modelin dört
+dokuda render edilmiş tabakası.
