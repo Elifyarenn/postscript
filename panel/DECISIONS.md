@@ -7638,3 +7638,26 @@ zaten öyledir — ama her şerit hafifçe kavislidir. Yana taranmış modelde
 
 **Doğrulama:** Kapı: typecheck, lint, test, build. Görsel: 16 modelin dört
 dokuda render edilmiş tabakası.
+
+
+## D-198 — Kâkül uçları kıvrılır (tutamlara uç kıvrımı)
+
+**İstek (ürün sahibi):** Canlıda bakıldıktan sonra: "perçem hâlâ olmamış,
+kâküller çok düz."
+
+**Durum:** D-197 tutamların **ortasını** yana kavislendiriyordu; uç, kirişe
+geri dönüp düz bir sivri uçla bitiyordu. Tutam bu yüzden hâlâ "asılmış şerit"
+gibi okunuyordu; referansta uçlar virgül gibi kıvrılıyor.
+
+**Karar:** Tutam tanımına yedinci bir değer eklendi: `hook`. Tutamın son
+üçte biri (`hook · t³`) bir yöne kıvrılır; kök düz kalır, uç döner. Kâküllerde
+`hook`, kavisin tersi yönde verilir (uçlar yanağa/içe doğru kıvrılır), böylece
+tutam C değil virgül şeklinde biter. `mirrorLock` kıvrımı da aynalar.
+
+Kâkül yelpazelerinin kavisi (`bend`) artırıldı ve hepsine `hook` verildi; küt
+kâkülde ikisi de küçük tutuldu, çünkü o kesim düz iner.
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test, build. Görsel: 16 modelin dört
+dokuda ve sekiz örnek avatarın render edilmiş tabakaları.

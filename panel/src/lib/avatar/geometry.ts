@@ -278,7 +278,21 @@ export function textureStrands(guides: readonly (readonly Point[])[], texture: T
  * middle bows sideways. Hair styles are lists of these (D-195), which is what
  * gives the drawing separate, overlapping locks instead of one helmet shape.
  */
-export type Lock = readonly [rootX: number, rootY: number, tipX: number, tipY: number, width: number, bend: number];
+export type Lock = readonly [
+  rootX: number,
+  rootY: number,
+  tipX: number,
+  tipY: number,
+  width: number,
+  /** How far the middle of the lock bows sideways. */
+  bend: number,
+  /**
+   * How far the last third curls to one side. A lock with a hook ends like a
+   * comma instead of a straight taper, which is what makes a fringe look
+   * combed rather than hung (D-198).
+   */
+  hook?: number,
+];
 
 /** How each texture bends a lock along its length and how it ends. */
 const LOCK_TEXTURE: Record<Texture, { waves: number; amplitude: number; tipWidth: number }> = {
@@ -291,7 +305,7 @@ const LOCK_TEXTURE: Record<Texture, { waves: number; amplitude: number; tipWidth
 type LockSpine = { points: Point[]; normals: Point[]; widths: number[] };
 
 function lockSpine(lock: Lock, texture: Texture): LockSpine {
-  const [rx, ry, tx, ty, width, bend] = lock;
+  const [rx, ry, tx, ty, width, bend, hook = 0] = lock;
   const length = Math.hypot(tx - rx, ty - ry) || 1;
   const nx = -(ty - ry) / length;
   const ny = (tx - rx) / length;
@@ -304,7 +318,7 @@ function lockSpine(lock: Lock, texture: Texture): LockSpine {
     const t = step / steps;
     // The wave grows towards the tip: the root sits flat against the head
     const wave = shape.amplitude * Math.sin(t * Math.PI * 2 * shape.waves) * t;
-    const offset = bend * 4 * t * (1 - t) + wave;
+    const offset = bend * 4 * t * (1 - t) + hook * t * t * t + wave;
     points.push([rx + (tx - rx) * t + nx * offset, ry + (ty - ry) * t + ny * offset]);
     widths.push(width * (shape.tipWidth + (1 - shape.tipWidth) * (1 - t) ** 0.9));
   }
@@ -341,5 +355,5 @@ export function lockStrand(lock: Lock, texture: Texture): string {
 
 /** A lock seen in the mirror, for symmetric styles. */
 export function mirrorLock(lock: Lock, centre = 512): Lock {
-  return [centre * 2 - lock[0], lock[1], centre * 2 - lock[2], lock[3], lock[4], -lock[5]];
+  return [centre * 2 - lock[0], lock[1], centre * 2 - lock[2], lock[3], lock[4], -lock[5], -(lock[6] ?? 0)];
 }

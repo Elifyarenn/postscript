@@ -75,6 +75,8 @@ type Fan = {
   width: [number, number];
   /** How far the middle of the first → last lock bows sideways. */
   bend: [number, number];
+  /** How far the first → last lock curls at its tip; see `Lock`. */
+  hook?: [number, number];
   /** How much a tip may fall short or overshoot, in canvas units. */
   vary?: number;
   /** Also draws the fan mirrored to the other side of the face. */
@@ -100,6 +102,7 @@ function fan(spec: Fan, seed: number): Lock[] {
       lerp(spec.tip[0][1], spec.tip[1][1], t) + drift,
       lerp(spec.width[0], spec.width[1], t) * (0.85 + random() * 0.3),
       lerp(spec.bend[0], spec.bend[1], t),
+      spec.hook ? lerp(spec.hook[0], spec.hook[1], t) * (0.8 + random() * 0.4) : 0,
     ]);
   }
   return spec.mirror ? [...locks, ...locks.map((lock) => mirrorLock(lock))] : locks;
@@ -174,39 +177,35 @@ const TUFTS: Fan[] = [
 /** A fringe of separate strands with gaps between them. */
 const FRINGE = {
   messy: [
-    // Roots gather at the parting, tips swing out to the temples: the fringe
-    // sweeps sideways instead of hanging straight down
-    { root: [[506, 232], [470, 256]], tip: [[398, 508], [300, 430]], count: 5, width: [54, 38], bend: [54, 64], vary: 34 },
-    { root: [[518, 232], [554, 256]], tip: [[626, 508], [724, 430]], count: 5, width: [54, 38], bend: [-54, -64], vary: 34 },
-    { root: [[498, 244], [470, 268]], tip: [[506, 476], [420, 496]], count: 3, width: [40, 32], bend: [34, 44], vary: 30 },
-    { root: [[526, 244], [554, 268]], tip: [[518, 476], [604, 496]], count: 3, width: [40, 32], bend: [-34, -44], vary: 30 },
+    { root: [[506, 230], [468, 254]], tip: [[404, 516], [302, 436]], count: 5, width: [56, 38], bend: [58, 68], hook: [-54, -62], vary: 34 },
+    { root: [[518, 230], [556, 254]], tip: [[620, 516], [722, 436]], count: 5, width: [56, 38], bend: [-58, -68], hook: [54, 62], vary: 34 },
+    { root: [[498, 242], [468, 266]], tip: [[500, 482], [416, 500]], count: 3, width: [42, 32], bend: [40, 48], hook: [-40, -46], vary: 30 },
+    { root: [[526, 242], [556, 266]], tip: [[524, 482], [608, 500]], count: 3, width: [42, 32], bend: [-40, -48], hook: [40, 46], vary: 30 },
   ] as Fan[],
   short: [
-    { root: [[506, 244], [474, 264]], tip: [[418, 448], [326, 402]], count: 4, width: [48, 36], bend: [44, 54], vary: 24 },
-    { root: [[518, 244], [550, 264]], tip: [[606, 448], [698, 402]], count: 4, width: [48, 36], bend: [-44, -54], vary: 24 },
-    { root: [[498, 250], [526, 250]], tip: [[470, 436], [554, 436]], count: 2, width: [36, 36], bend: [30, -30], vary: 22 },
+    { root: [[506, 242], [472, 262]], tip: [[424, 456], [328, 408]], count: 4, width: [50, 36], bend: [48, 58], hook: [-44, -50], vary: 24 },
+    { root: [[518, 242], [552, 262]], tip: [[600, 456], [696, 408]], count: 4, width: [50, 36], bend: [-48, -58], hook: [44, 50], vary: 24 },
+    { root: [[498, 248], [526, 248]], tip: [[466, 442], [558, 442]], count: 2, width: [36, 36], bend: [34, -34], hook: [-30, 30], vary: 22 },
   ] as Fan[],
   swept: [
-    // Combed from a side parting right across the forehead
-    { root: [[430, 234], [446, 262]], tip: [[712, 402], [640, 494]], count: 6, width: [58, 40], bend: [62, 50], vary: 28 },
-    { root: [[420, 252], [404, 292]], tip: [[338, 442], [302, 496]], count: 3, width: [40, 30], bend: [-28, -34], vary: 20 },
+    { root: [[430, 232], [444, 260]], tip: [[716, 410], [644, 500]], count: 6, width: [60, 40], bend: [66, 54], hook: [-46, -54], vary: 28 },
+    { root: [[420, 250], [404, 292]], tip: [[336, 450], [300, 504]], count: 3, width: [42, 30], bend: [-32, -38], hook: [30, 34], vary: 20 },
   ] as Fan[],
   curtain: [
-    // Curtain bangs: a long C from the middle parting down past the cheek
-    { root: [[504, 228], [478, 250]], tip: [[344, 486], [296, 570]], count: 4, width: [60, 42], bend: [66, 58], vary: 30, mirror: true },
-    { root: [[500, 244], [484, 268]], tip: [[406, 452], [368, 512]], count: 2, width: [40, 32], bend: [44, 40], vary: 24, mirror: true },
+    { root: [[504, 226], [476, 248]], tip: [[348, 492], [300, 578]], count: 4, width: [62, 42], bend: [70, 62], hook: [-58, -64], vary: 30, mirror: true },
+    { root: [[500, 242], [482, 266]], tip: [[408, 458], [370, 520]], count: 2, width: [42, 32], bend: [48, 44], hook: [-44, -48], vary: 24, mirror: true },
   ] as Fan[],
   blunt: [
-    // A blunt fringe does fall straight, but each strand still curves a little
-    { root: [[512, 248], [386, 276]], tip: [[494, 472], [330, 448]], count: 6, width: [58, 48], bend: [18, 26], vary: 14 },
-    { root: [[512, 248], [638, 276]], tip: [[530, 472], [694, 448]], count: 6, width: [58, 48], bend: [-18, -26], vary: 14 },
+    // A blunt fringe is cut straight, so it only curls a little at the ends
+    { root: [[512, 246], [386, 274]], tip: [[494, 478], [328, 452]], count: 6, width: [58, 48], bend: [22, 30], hook: [-16, -22], vary: 14 },
+    { root: [[512, 246], [638, 274]], tip: [[530, 478], [696, 452]], count: 6, width: [58, 48], bend: [-22, -30], hook: [16, 22], vary: 14 },
   ] as Fan[],
   wispy: [
-    { root: [[532, 244], [566, 266]], tip: [[606, 396], [688, 452]], count: 3, width: [34, 24], bend: [-38, -46], vary: 22 },
-    { root: [[492, 244], [458, 266]], tip: [[418, 396], [336, 452]], count: 3, width: [34, 24], bend: [38, 46], vary: 22 },
+    { root: [[532, 242], [566, 264]], tip: [[612, 400], [696, 458]], count: 3, width: [36, 24], bend: [-44, -52], hook: [40, 46], vary: 22 },
+    { root: [[492, 242], [458, 264]], tip: [[412, 400], [328, 458]], count: 3, width: [36, 24], bend: [44, 52], hook: [-40, -46], vary: 22 },
   ] as Fan[],
   slick: [
-    { root: [[492, 250], [464, 276]], tip: [[398, 386], [350, 438]], count: 2, width: [32, 24], bend: [40, 46], vary: 16, mirror: true },
+    { root: [[492, 248], [462, 274]], tip: [[392, 392], [344, 446]], count: 2, width: [34, 24], bend: [46, 52], hook: [-38, -44], vary: 16, mirror: true },
   ] as Fan[],
 };
 
