@@ -39,6 +39,11 @@ export type PlaylistTrack = {
 };
 
 export type IssueExtras = {
+  /**
+   * When the issue comes out, with Turkey's offset (D-192). The issues page
+   * counts down to it until the issue is published.
+   */
+  release?: { at: string; title: string };
   /** In the design's order, left to right; the rail opens at the first one (D-121). */
   cards?: IssueCard[];
   playlist?: {
@@ -61,6 +66,8 @@ export type IssueExtras = {
 
 const ISSUE_EXTRAS: Record<number, IssueExtras> = {
   1: {
+    // The owner's date: 1 October, 17.00 Turkey time (D-192)
+    release: { at: "2026-10-01T17:00:00+03:00", title: "Obsession" },
     // Texts are the designer's, read from the Illustrator file's own text
     // layer, including the cards placed outside its artboard (D-120)
     cards: [

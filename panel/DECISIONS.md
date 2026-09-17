@@ -7353,3 +7353,32 @@ yolu yok.
 **Hukuk:** Değişiklik yok.
 
 **Doğrulama:** Kapı: typecheck, lint, test. Canlıda sayfa kaynağında meta etiketi.
+
+## D-192 — Sayılar sayfasında Obsession için geri sayım
+
+**İstek (ürün sahibi):** "Sayılar kısmında 1 Ekim saat 17.00'a Obsession sayısı
+için sayaç kur."
+
+**Karar:**
+
+- `issue-extras.ts`'e sayı başına `release: { at, title }`; Sayı 01 için
+  `2026-10-01T17:00:00+03:00`, "Obsession". Saat Türkiye saatiyle ve ofsetiyle
+  yazılı; okurun cihazı hangi saat diliminde olursa olsun aynı an.
+- Sayılar sayfasında (`/magazine/issues`) bandın hemen altında sayaç: "Sayı 01",
+  büyük "OBSESSION", Gün / Saat / Dakika / Saniye kutuları (gece bordosu), altında
+  "1 Ekim 17.00'de yayında".
+- `IssueCountdown` tarayıcıda saniyede bir sayar. Sunucu ile okurun saati farklı
+  olabileceği için sayılar yalnızca tarayıcıda çizilir (ilk anda "––"); tarih
+  yazısı sunucuda çizilir, ekran okuyucu her saniye okumasın diye kutular
+  `aria-hidden`.
+- Süre dolduğunda sayı henüz yayımlanmamışsa kutuların yerine "Çok yakında"
+  yazar (D-187). Sayı 01 yayımlanınca sayaç kendiliğinden kalkar; sayfada artık
+  sayının kendi kartı vardır.
+- Hesap `countdownParts` saf fonksiyonunda, tarih yazısı `formatReleaseMoment`
+  (Europe/Istanbul).
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:** `countdown.test.ts`: gün/saat/dakika/saniye bölme, sıfırda durma,
+Türkiye saatiyle "1 Ekim 17.00", Sayı 01'in tarihi. Kapı: typecheck, lint, test.
+Canlıda Sayılar sayfası.

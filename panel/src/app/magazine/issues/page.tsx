@@ -3,10 +3,16 @@ import { ArrowRight, Heart } from "lucide-react";
 import { requireSession } from "@/lib/auth/guard";
 import { listPublishedIssues } from "@/services/public";
 import { SiteBanner, Sparkle } from "@/components/site-ui";
+import { IssueCountdown } from "@/components/issue-countdown";
+import { formatReleaseMoment } from "@/lib/countdown";
+import { issueExtrasFor } from "@/lib/issue-extras";
 import { formatIssueNumber } from "@/lib/site";
 import { formatDate } from "@/lib/utils";
 
 export const metadata = { title: "Sayılar" };
+
+/** The issue the countdown is for (D-192). */
+const UPCOMING_ISSUE = 1;
 
 /** Empty cards drawn while nothing is published, so the page keeps the design's grid (D-116). */
 const PLACEHOLDER_SLOTS = [1, 2, 3];
@@ -21,6 +27,10 @@ const PLACEHOLDER_SLOTS = [1, 2, 3];
 export default async function IssuesPage() {
   await requireSession();
   const issues = await listPublishedIssues();
+  // The countdown stays until the issue is published, then the issue's own card takes over
+  const release = issues.some((issue) => issue.number === UPCOMING_ISSUE)
+    ? null
+    : (issueExtrasFor(UPCOMING_ISSUE)?.release ?? null);
 
   return (
     <>
@@ -33,6 +43,15 @@ export default async function IssuesPage() {
           Tüm sayıları keşfet!
         </a>
       </SiteBanner>
+
+      {release && (
+        <IssueCountdown
+          releaseAt={release.at}
+          issueLabel={`Sayı ${formatIssueNumber(UPCOMING_ISSUE)}`}
+          title={release.title}
+          momentText={formatReleaseMoment(release.at)}
+        />
+      )}
 
       <section id="one-cikan-sayilar" className="issues-section" aria-labelledby="issues-title">
         <div className="issues-head">
