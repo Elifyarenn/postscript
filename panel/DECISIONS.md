@@ -7022,3 +7022,41 @@ yerine D-112'deki açık lisanslı yazı tipi kullanılıyor.
 
 **Doğrulama:** Simgeler başsız tarayıcıda çizdirilip tasarım kırpımıyla
 karşılaştırıldı. Kapı: typecheck, lint, test.
+
+## D-182 — Doğum tarihi olmayan gönderene doğru sebep söylenir
+
+**Şikâyet (ürün sahibi):** "Mesaj atma kısmı 18 yaş sınırı veriyor ama mesaj
+atacağım kişi zaten yazar, 18 yaşında."
+
+**Sebep:** Uyarı ("Özel mesajlaşma 18 yaşını doldurmuş üyelere açıktır")
+alıcı için değil **gönderen** için çıkıyordu; alıcı reşit değilse başka,
+sebep söylemeyen bir cümle gösterilir (D-091). Canlıdaki iki admin hesabı
+`create-admin` betiğiyle açılmış ve betik doğum tarihi yazmıyor
+([[fixed-admin-accounts]]); Hesabım sayfasında doğum tarihi alanı boştu (canlıda
+bakıldı). Doğum tarihi boş olan hesap yaşı bilinmediği için reşit sayılmaz; bu
+doğru bir kural, ama mesaj sebebi gizliyordu: kişi kendini 18 yaşından küçük
+sanılmış zannediyordu.
+
+**Karar:**
+
+- **Kural değişmedi:** Yaşı bilinmeyen hesap özel mesaj ve anonim mesaj
+  gönderemez (muhafazakâr olan; reşit olmayanla yetişkini ayıran tek bilgi
+  doğum tarihi).
+- `directMessageProblem` ve `anonMessageProblem` bağlamına
+  `senderBirthDateMissing` eklendi. Gönderenin doğum tarihi yoksa mesaj:
+  "Hesabınızda doğum tarihi yok. Mesaj göndermek için önce Hesabım sayfasından
+  doğum tarihinizi girin." Doğum tarihi olan ama 18 yaşından küçük gönderen
+  eski cümleyi görür. Alıcı tarafındaki cümleler değişmedi (alıcının yaşı
+  sızdırılmaz).
+- Ürün sahibi kendi doğum tarihini verdi ("05.01.2008 olarak gir"); Hesabım
+  sayfasından onun oturumuyla girildi ve kilitlendi (5 Ocak 2008; 2026-09-17'de
+  18 yaşında). Diğer admin hesabının doğum tarihi hâlâ boş olabilir; kendisi
+  Hesabım'dan girer.
+- `create-admin` betiğine doğum tarihi eklenmedi: yeni admin açılmayacak ve
+  kişisel veriyi kişinin kendisi girmeli.
+
+**Hukuk:** İşlenen veri değişmedi; doğum tarihi aydınlatma metninde zaten var.
+
+**Doğrulama:** `direct-messages.test.ts` ve `anon-box.test.ts`: doğum tarihi
+olmayan gönderen "doğum tarihi" cümlesini görür, 18 geçmez. Kapı: typecheck,
+lint, test.

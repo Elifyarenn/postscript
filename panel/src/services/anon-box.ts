@@ -83,6 +83,7 @@ async function problemFor(senderId: string, recipient: Recipient): Promise<AnonP
 
   return anonMessageProblem({
     senderAdult: adult(sender[0]?.birthDate ?? null),
+    senderBirthDateMissing: (sender[0]?.birthDate ?? null) === null,
     recipientAdult: adult(recipient.birthDate),
     boxEnabled: recipient.anonBoxEnabled,
     blocked: blockedOut,

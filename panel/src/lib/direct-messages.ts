@@ -17,6 +17,11 @@ export const DM_POLICY_LABELS: Record<DmPolicy, string> = {
 
 export type DirectMessageContext = {
   senderAdult: boolean;
+  /**
+   * The sender's account has no birth date, so their age is unknown and they
+   * count as not adult. Said plainly, since it is theirs to fix (D-182).
+   */
+  senderBirthDateMissing?: boolean;
   recipientAdult: boolean;
   blocked: boolean;
   recipientPolicy: DmPolicy;
@@ -25,9 +30,13 @@ export type DirectMessageContext = {
   recipientHasWritten: boolean;
 };
 
+export const SENDER_BIRTH_DATE_MISSING =
+  "Hesabınızda doğum tarihi yok. Mesaj göndermek için önce Hesabım sayfasından doğum tarihinizi girin.";
+
 /** Null when the message may go; otherwise the reason, worded for the sender. */
 export function directMessageProblem(context: DirectMessageContext): string | null {
   if (context.blocked) return "Bu hesapla mesajlaşılamıyor.";
+  if (context.senderBirthDateMissing) return SENDER_BIRTH_DATE_MISSING;
   if (!context.senderAdult) return "Özel mesajlaşma 18 yaşını doldurmuş üyelere açıktır.";
   // Worded without the reason: the sender must not learn the recipient is a minor
   if (!context.recipientAdult) return "Bu üyeye özel mesaj gönderilemiyor.";

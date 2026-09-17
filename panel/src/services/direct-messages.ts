@@ -145,6 +145,7 @@ async function messagingState(
 
   const problem = directMessageProblem({
     senderAdult: adult(myBirthDate),
+    senderBirthDateMissing: myBirthDate === null,
     recipientAdult: adult(other.birthDate),
     blocked: blockedOut || blockedIn,
     recipientPolicy: other.dmPolicy,

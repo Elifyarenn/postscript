@@ -21,6 +21,12 @@ describe("private message rule (D-091)", () => {
     expect(directMessageProblem({ ...open, recipientAdult: false, recipientHasWritten: true })).not.toBeNull();
   });
 
+  it("tells a sender without a birth date to add one, rather than calling them a minor (D-182)", () => {
+    const missing = directMessageProblem({ ...open, senderAdult: false, senderBirthDateMissing: true });
+    expect(missing).toMatch(/doğum tarihi/);
+    expect(missing).not.toMatch(/18/);
+  });
+
   it("does not tell the sender that the recipient is a minor", () => {
     expect(directMessageProblem({ ...open, recipientAdult: false })).not.toMatch(/18/);
   });

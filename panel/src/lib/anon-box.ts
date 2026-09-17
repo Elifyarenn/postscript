@@ -6,6 +6,8 @@
  * never tell which one it was.
  */
 
+import { SENDER_BIRTH_DATE_MISSING } from "./direct-messages";
+
 export const MAX_ANON_MESSAGE_LENGTH = 500;
 
 /** A day's worth to one person; enough for a question, too few to harass. */
@@ -14,6 +16,8 @@ export const ANON_PER_SENDER_PER_DAY = 20;
 
 export type AnonContext = {
   senderAdult: boolean;
+  /** No birth date on the sender's account: the age is unknown (D-182). */
+  senderBirthDateMissing?: boolean;
   recipientAdult: boolean;
   boxEnabled: boolean;
   blocked: boolean;
@@ -27,6 +31,9 @@ export type AnonProblem = { status: 403 | 429; message: string };
 export const ANON_BOX_CLOSED = "Bu üyenin anonim kutusu mesaj almıyor.";
 
 export function anonMessageProblem(context: AnonContext): AnonProblem | null {
+  if (context.senderBirthDateMissing) {
+    return { status: 403, message: SENDER_BIRTH_DATE_MISSING };
+  }
   if (!context.senderAdult) {
     return { status: 403, message: "Anonim mesaj göndermek 18 yaşını doldurmuş üyelere açıktır." };
   }

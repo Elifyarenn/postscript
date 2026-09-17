@@ -33,6 +33,12 @@ describe("anonymous box rule (D-092)", () => {
     }
   });
 
+  it("asks a sender without a birth date for one (D-182)", () => {
+    const problem = anonMessageProblem({ ...open, senderAdult: false, senderBirthDateMissing: true });
+    expect(problem?.status).toBe(403);
+    expect(problem?.message).toMatch(/doğum tarihi/);
+  });
+
   it("keeps minors from sending", () => {
     expect(anonMessageProblem({ ...open, senderAdult: false })?.status).toBe(403);
   });
