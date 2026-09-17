@@ -20,6 +20,7 @@ import {
 } from "@/lib/avatar/registry";
 import { LAYER_ORDER, renderAvatarLayers, renderAvatarSvg } from "@/lib/avatar/render";
 import { HISTORY_LIMIT, historyReducer, type History } from "@/lib/avatar/history";
+import { isImageHair } from "@/lib/avatar/assets/hair-images";
 import { crc32, uniqueEntryNames, zipToBuffer } from "@/lib/zip";
 import { canCreateTeamAvatar, canManageTeamAvatars, type Actor } from "@/lib/auth/rbac";
 
@@ -219,6 +220,29 @@ describe("renderAvatarSvg", () => {
     const svg = renderAvatarSvg(DEFAULT_AVATAR_CONFIG, { view: "hair", size: 180, omit: ["eyes", "mouth"] });
     expect(svg).toContain('viewBox="92 20 840 840" width="180" height="180"');
     expect(svg).not.toContain('data-layer="eyes"');
+  });
+});
+
+describe("picture-based hair (D-200)", () => {
+  const config = avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "imageSample" });
+
+  it("draws its files through the caller's resolver", () => {
+    const svg = renderAvatarSvg(config, { imageHref: (file) => `inline:${file}` });
+    expect(svg).toContain('<image href="inline:sample-front.png"');
+    expect(svg).toContain('<image href="inline:sample-back.png"');
+  });
+
+  it("serves them from the public folder by default", () => {
+    expect(renderAvatarSvg(config)).toContain('href="/avatar-hair/sample-front.png"');
+  });
+
+  it("knows which styles carry their own colour", () => {
+    expect(isImageHair("imageSample")).toBe(true);
+    expect(isImageHair("messy")).toBe(false);
+  });
+
+  it("leaves the drawn styles free of pictures", () => {
+    expect(renderAvatarSvg(DEFAULT_AVATAR_CONFIG)).not.toContain("<image");
   });
 });
 

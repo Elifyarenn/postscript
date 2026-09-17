@@ -7704,3 +7704,43 @@ teyidi kaydedilmeli.
 
 **Doğrulama:** Kapı: typecheck, lint, test, build. Görsel: altı modelin dört
 dokuda render edilmiş karşılaştırma tablosu.
+
+
+## D-200 — Hazır görselden saç desteği; vektör saça ayrım ve kaçak teller
+
+**İstek (ürün sahibi):** "İkisini de yap": (1) saçın hazır görsellerle de
+çalışabildiği bir altyapı, (2) vektör saçların referanslara daha da
+yaklaştırılması. Filigran silme isteği reddedildi (D-199); altyapı, lisansı
+belli dosyalar geldiğinde hazır olsun diye kuruldu.
+
+**Karar:**
+
+- **Görsel saç.** Bir saç modeli artık bir çift PNG olabilir: biri kafanın
+  arkasına, biri alnın üzerine. `assets/hair-images.ts` içindeki `IMAGE_HAIR`
+  listesine kimlik, ad ve dosya adları yazılır; kayıt defteri bu modelleri
+  çizilmiş modellerin arkasına ekler, geri kalan her şey (önizleme, küçük
+  görsel, PNG, ZIP, admin tablosu) değişmeden çalışır.
+  - Dosyalar `public/avatar-hair/` altında durur ve **bitmiş tuvale** çizilir
+    (kafa dönüşümü uygulanmaz), çünkü bir saç seti avatarın üzerine çizilir.
+  - Tarayıcı dosyayı `public/`ten okur; sunucu tarafındaki çizici ağdan dosya
+    çekemediği için PNG üretiminde dosya base64 olarak gömülür
+    (`png.ts`, süreç başına bir kez okunur). Dosya adı yalnızca kayıt
+    defterinden gelir, istekten değil; yine de `path.basename` ile sınırlanır.
+  - Görsel saçta renk dosyadan gelir; oluşturucu o modelde "renk seçimi
+    uygulanmaz" notunu gösterir.
+  - Yolu uçtan uca göstermek için **kendi çizdiğimiz** saç (perdeli, dalgalı)
+    PNG'ye alınıp `sample-front.png` / `sample-back.png` olarak eklendi ve
+    "Görsel saç (örnek)" adıyla katalogda duruyor. Lisans sorunu yok, çizim
+    bizim. Gerçek bir set geldiğinde bu kayıt silinebilir.
+- **Vektör saç.** Referans sayfalarındaki üç ayrıntı eklendi: ortadan ayrık
+  modellerde **ayrım tepesi** (alnın üstünde küçük V), siluetin kenarında
+  **ince kaçak teller**, ve kâküller kaşlara kadar biraz **uzatıldı**.
+
+**Hukuk:** Depoya üçüncü taraf görseli girmedi. Yeni bir görsel eklenmeden
+önce kaynağı ve lisansı bu dosyaya yazılmalı; `hair-images.ts`'in başındaki
+yönerge de bunu söylüyor.
+
+**Doğrulama:** `team-avatar.test.ts`: görsel saç dosyalarının çağıranın
+çözücüsünden geçmesi, varsayılanın `public/` yolu olması, `isImageHair`,
+çizilmiş modellerde hiç `<image>` bulunmaması. Kapı: typecheck, lint, test,
+build.

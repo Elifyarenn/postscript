@@ -40,6 +40,7 @@ import { avatarDataUri, renderAvatarLayers, thumbOmit } from "@/lib/avatar/rende
 import { historyReducer } from "@/lib/avatar/history";
 import { mix, shade } from "@/lib/avatar/geometry";
 import { SKIN_TONES } from "@/lib/avatar/assets/face";
+import { isImageHair } from "@/lib/avatar/assets/hair-images";
 import { bodyFont, noteFont } from "@/lib/fonts";
 import type { ActionState } from "./form";
 import styles from "./team-avatar-builder.module.css";
@@ -399,9 +400,16 @@ export function TeamAvatarBuilder({
                   const field: Field = FIELDS[key];
                   // A frame colour means nothing without a frame
                   if (key === "glassesColor" && config.glasses === "none") return null;
+                  // A ready-made hair picture carries its own colour (D-200)
+                  const fixedByPicture = key === "hairColor" && isImageHair(config.hairStyle);
                   return (
                     <fieldset key={key} className={styles.colors}>
                       <legend className={styles.colorsLabel}>{field.label}</legend>
+                      {fixedByPicture && (
+                        <p className={styles.hint}>
+                          Bu saç modeli hazır bir görsel; rengi görselden gelir, seçtiğiniz renk uygulanmaz.
+                        </p>
+                      )}
                       <div className={styles.swatches}>
                         {field.options.map((option) => (
                           <button

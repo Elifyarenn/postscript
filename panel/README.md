@@ -433,6 +433,24 @@ indirir. **Yeni bir parça eklemek:** ilgili `assets/` listesine bir kayıt
 (kimlik, ad, katman çizimleri); gerekiyorsa `registry.ts`'te bir alan ve
 kategorisi.
 
+**Hazır görselden saç (D-200).** Bir saç modeli çizim yerine PNG dosyası da
+olabilir; çizerin verdiği ya da lisansı satın alınmış setler böyle eklenir:
+
+1. Dosyalar `public/avatar-hair/` altına konur: saydam PNG, kare, tercihen
+   1024×1024 ve **bitmiş bir avatarın üzerine** çizilmiş olmalı (saç kafaya
+   oturmuş hâlde). Şablon üretmek için: `renderAvatarLayers` ile bir avatarın
+   `frontHair`/`backHair` katmanları PNG'ye alınır — `public/avatar-hair/sample-*.png`
+   böyle üretildi.
+2. `src/lib/avatar/assets/hair-images.ts` içindeki `IMAGE_HAIR` listesine bir
+   kayıt eklenir: kimlik, Türkçe ad, ön dosya, varsa arka dosya.
+3. Görsellerin kaynağı ve lisansı `DECISIONS.md`'ye yazılır. Lisansı belirsiz
+   görsel yayına alınmaz (FSEK; D-115, D-199).
+
+Görsel saçta renk dosyadan gelir; oluşturucu o modelde "renk seçimi
+uygulanmaz" notunu gösterir. Tarayıcı dosyayı `public/`ten okur, sunucu PNG
+üretirken dosyayı gömer (`src/lib/avatar/png.ts`), çünkü sunucu tarafındaki
+çizici ağdan dosya çekemez.
+
 ---
 
 ## Zamanlanmış işler

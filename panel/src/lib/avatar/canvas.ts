@@ -112,6 +112,11 @@ export type DrawContext = {
   texture: "straight" | "wavy" | "curly" | "coily";
   /** Ids of the other chosen parts a drawing may adapt to (a cap hides a bun, say). */
   selected: ReadonlySet<string>;
+  /**
+   * Where a picture file (a ready-made hair set) is loaded from: a URL in the
+   * browser, an inline data URI on the server, where nothing can fetch (D-200).
+   */
+  imageHref: (file: string) => string;
   /** A clip-path or gradient id unique within the current layer. */
   id: (name: string) => string;
   /** Registers a `<defs>` entry for the current layer. */

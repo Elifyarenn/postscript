@@ -14,6 +14,7 @@
 import { buildPalette, CANVAS, LAYER_ORDER, type DrawContext, type LayerName } from "./canvas";
 import { EAR_BASE_X, facePathFor } from "./assets/face";
 import type { Asset, ColorOption } from "./assets/types";
+import { HAIR_IMAGE_DIR } from "./assets/hair-images";
 import { FIELDS, THUMBS, type AvatarConfig, type Field, type FieldKey, type ThumbView } from "./registry";
 
 export { LAYER_ORDER, type LayerName };
@@ -39,7 +40,10 @@ function chosenAssets(config: AvatarConfig): Asset[] {
 
 type Prepared = { assets: Asset[]; base: Omit<DrawContext, "id" | "def"> };
 
-function prepare(config: AvatarConfig): Prepared {
+/** In the browser the files are served from `public/`; the server inlines them. */
+const publicHref = (file: string) => `/${HAIR_IMAGE_DIR}/${file}`;
+
+function prepare(config: AvatarConfig, imageHref: (file: string) => string): Prepared {
   const lip = colorOf("lipColor", config);
   const face = facePathFor(config.face);
   return {
@@ -58,6 +62,7 @@ function prepare(config: AvatarConfig): Prepared {
       earShift: face.right[4]![0] - EAR_BASE_X,
       texture: config.hairTexture,
       selected: new Set([...config.extras, ...config.piercings]),
+      imageHref,
     },
   };
 }
@@ -81,6 +86,8 @@ export type RenderOptions = {
   size?: number;
   /** Layers to leave out, e.g. the face details on a hair thumbnail. */
   omit?: readonly LayerName[];
+  /** Overrides where picture files are loaded from; the server inlines them. */
+  imageHref?: (file: string) => string;
 };
 
 function openSvg(options: RenderOptions): string {
@@ -93,7 +100,7 @@ const STYLE = `stroke-linecap="round" stroke-linejoin="round"`;
 
 /** The whole avatar as one SVG: the PNG's source and every thumbnail. */
 export function renderAvatarSvg(config: AvatarConfig, options: RenderOptions = {}): string {
-  const prepared = prepare(config);
+  const prepared = prepare(config, options.imageHref ?? publicHref);
   const omit = new Set(options.omit ?? []);
   const parts = LAYER_ORDER.filter((layer) => !omit.has(layer)).map((layer) => ({ layer, ...drawLayer(prepared, layer) }));
   return (
@@ -110,7 +117,7 @@ export function renderAvatarSvg(config: AvatarConfig, options: RenderOptions = {
  * so the stack can live in one document.
  */
 export function renderAvatarLayers(config: AvatarConfig, size = CANVAS): { layer: LayerName; svg: string }[] {
-  const prepared = prepare(config);
+  const prepared = prepare(config, publicHref);
   return LAYER_ORDER.map((layer) => ({ layer, ...drawLayer(prepared, layer) }))
     .filter((part) => part.body !== "")
     .map((part) => ({

@@ -178,8 +178,8 @@ const TUFTS: Fan[] = [
 /** A fringe of separate strands with gaps between them. */
 const FRINGE = {
   messy: [
-    { root: [[506, 230], [468, 254]], tip: [[404, 516], [302, 436]], count: 5, width: [56, 38], bend: [58, 68], hook: [-54, -62], vary: 34 },
-    { root: [[518, 230], [556, 254]], tip: [[620, 516], [722, 436]], count: 5, width: [56, 38], bend: [-58, -68], hook: [54, 62], vary: 34 },
+    { root: [[506, 230], [468, 254]], tip: [[404, 536], [298, 456]], count: 5, width: [56, 38], bend: [58, 68], hook: [-54, -62], vary: 34 },
+    { root: [[518, 230], [556, 254]], tip: [[620, 536], [726, 456]], count: 5, width: [56, 38], bend: [-58, -68], hook: [54, 62], vary: 34 },
     { root: [[498, 242], [468, 266]], tip: [[500, 482], [416, 500]], count: 3, width: [42, 32], bend: [40, 48], hook: [-40, -46], vary: 30 },
     { root: [[526, 242], [556, 266]], tip: [[524, 482], [608, 500]], count: 3, width: [42, 32], bend: [-40, -48], hook: [40, 46], vary: 30 },
   ] as Fan[],
@@ -255,6 +255,10 @@ type HairStyle = {
   front?: (context: DrawContext) => string;
   /** Buzzed hair is a tinted cap, not locks. */
   buzz?: boolean;
+  /** Draws the notch where the hair parts in the middle, as the references do. */
+  part?: boolean;
+  /** Fine hairs escaping the silhouette; every style but the shortest has them. */
+  wisps?: boolean;
 };
 
 function drawLocks(context: DrawContext, locks: readonly Lock[], back = false): string {
@@ -296,7 +300,7 @@ function backLayer(style: HairStyle) {
 
 function frontLayer(style: HairStyle) {
   return (context: DrawContext) => {
-    const { hair, hairShade, skinDeep } = context.palette;
+    const { hair, hairShade, hairStrand, skinDeep } = context.palette;
     const sides = context.texture === "straight" ? (style.sides ?? []) : [];
     const overFace = [...sides, ...(style.bangs ?? [])];
 
@@ -328,6 +332,8 @@ function frontLayer(style: HairStyle) {
       shadow +
         capArt +
         sheen +
+        (style.part ? fill(PARTING, hairShade) : "") +
+        (style.wisps !== false && !style.buzz ? stroke(WISPS, 2.5, hairStrand, ` opacity="0.9"`) : "") +
         drawLocks(context, style.canopy ?? []) +
         drawLocks(context, sides) +
         drawLocks(context, style.bangs ?? []) +
@@ -335,6 +341,19 @@ function frontLayer(style: HairStyle) {
     );
   };
 }
+
+/** The little peak where a middle parting splits, drawn under the fringe. */
+const PARTING = "M512 250 C500 276 496 300 500 322 C508 300 516 300 524 322 C528 300 524 276 512 250Z";
+
+/** Fine hairs that escape the silhouette; they keep the outline from looking cut. */
+const WISPS = [
+  "M334 268 C300 236 282 262 276 292",
+  "M690 268 C724 236 742 262 748 292",
+  "M300 372 C268 356 256 384 260 410",
+  "M724 372 C756 356 768 384 764 410",
+  "M420 216 C400 186 372 190 356 208",
+  "M604 216 C624 186 652 190 668 208",
+].join(" ");
 
 function hairStyle(id: string, label: string, style: HairStyle): Asset {
   return { id, label, layers: { backHair: backLayer(style), frontHair: frontLayer(style) } };
@@ -404,6 +423,7 @@ export const HAIR_STYLES = [
   hairStyle("buzz", "Çok kısa", { cap: BUZZ_CAP, buzz: true }),
   hairStyle("bald", "Saçsız", {}),
   hairStyle("curtain", "Perdeli", {
+    part: true,
     mass: [MASS.shoulder],
     cap: CAP,
     back: fans(...BACK.shoulder),
@@ -427,6 +447,7 @@ export const HAIR_STYLES = [
     bangs: fans(...FRINGE.messy),
   }),
   hairStyle("long", "Uzun", {
+    part: true,
     mass: [MASS.long],
     cap: CAP,
     back: fans(...BACK.long),
@@ -435,6 +456,7 @@ export const HAIR_STYLES = [
     bangs: fans(...FRINGE.curtain),
   }),
   hairStyle("longBangs", "Uzun kâküllü", {
+    part: true,
     mass: [MASS.long],
     cap: CAP,
     back: fans(...BACK.long),
@@ -457,12 +479,14 @@ export const HAIR_STYLES = [
     behind: bun(512, 168, 92),
   }),
   hairStyle("spaceBuns", "İki topuz", {
+    part: true,
     cap: CAP,
     canopy: fans(...CANOPY),
     sides: fans(...SIDE.wisp),
     bangs: fans(...FRINGE.curtain),
     behind: (c) => bun(356, 206, 74)(c) + bun(668, 206, 74)(c),
   }),
-  hairStyle("braids", "Örgü", { cap: CAP, canopy: fans(...CANOPY), bangs: fans(...FRINGE.curtain), front: braids }),
+  hairStyle("braids", "Örgü", {
+    part: true, cap: CAP, canopy: fans(...CANOPY), bangs: fans(...FRINGE.curtain), front: braids }),
   hairStyle("volume", "Hacimli", { mass: [MASS.volume], cap: CAP, canopy: fans(...CANOPY, ...TUFTS), bangs: fans(...FRINGE.short) }),
 ] as const satisfies readonly Asset[];

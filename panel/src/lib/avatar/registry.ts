@@ -19,6 +19,7 @@ import { BLUSH, FACIAL_HAIR, FRECKLES, MOLES, SCARS, UNDER_EYE } from "./assets/
 import { FACES, SKIN_TONES } from "./assets/face";
 import { EYEBROWS, EYELASHES, EYES, EYE_COLORS, LIP_COLORS, MOUTHS, NOSES } from "./assets/features";
 import { HAIR_COLORS, HAIR_STYLES, HAIR_TEXTURES } from "./assets/hair";
+import { IMAGE_HAIR, imageHairStyle } from "./assets/hair-images";
 import type { Asset, ColorOption } from "./assets/types";
 import type { LayerName } from "./canvas";
 
@@ -56,7 +57,8 @@ export type Field = AssetField | SetField | ColorField;
 export const FIELDS = {
   face: { label: "Yüz Şekli", kind: "asset", options: FACES, thumb: "face" },
   skinTone: { label: "Ten Rengi", kind: "color", options: SKIN_TONES },
-  hairStyle: { label: "Saç Modeli", kind: "asset", options: HAIR_STYLES, thumb: "hair", omit: FEATURE_LAYERS },
+  // Drawn styles first, then any ready-made picture sets (D-200)
+  hairStyle: { label: "Saç Modeli", kind: "asset", options: [...HAIR_STYLES, ...IMAGE_HAIR.map(imageHairStyle)], thumb: "hair", omit: FEATURE_LAYERS },
   hairTexture: { label: "Saç Dokusu", kind: "asset", options: HAIR_TEXTURES, thumb: "hair", omit: FEATURE_LAYERS },
   hairColor: { label: "Saç Rengi", kind: "color", options: HAIR_COLORS },
   eyes: { label: "Göz Şekli", kind: "asset", options: EYES, thumb: "eyes" },
