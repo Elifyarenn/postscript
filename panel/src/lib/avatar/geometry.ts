@@ -284,8 +284,8 @@ export type Lock = readonly [rootX: number, rootY: number, tipX: number, tipY: n
 const LOCK_TEXTURE: Record<Texture, { waves: number; amplitude: number; tipWidth: number }> = {
   straight: { waves: 0, amplitude: 0, tipWidth: 0 },
   wavy: { waves: 0.55, amplitude: 12, tipWidth: 0.04 },
-  curly: { waves: 0.95, amplitude: 16, tipWidth: 0.16 },
-  coily: { waves: 1.3, amplitude: 12, tipWidth: 0.26 },
+  curly: { waves: 0.8, amplitude: 13, tipWidth: 0.14 },
+  coily: { waves: 1.1, amplitude: 10, tipWidth: 0.22 },
 };
 
 type LockSpine = { points: Point[]; normals: Point[]; widths: number[] };

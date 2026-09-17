@@ -7579,3 +7579,41 @@ her alanın her seçeneğinin çizilmesi, katman sırası, bir parça değişinc
 yalnızca kendi katmanlarının değişmesi, düz/dalgalı yan tutam davranışı,
 geri al/ileri al. `team-avatars.test.ts`: sürüm 1 kaydın indirmede yeniden
 çizilmesi. Kapı: typecheck, lint, test, build.
+
+
+## D-196 — Saçlar tutam tutam: referansa göre ikinci tur
+
+**İstek (ürün sahibi):** "saçlar olmamış, `pic/avatar-referans.png` gibi olacak."
+Yeni referans görselde saç: ince ve sivri uçlu çok sayıda tutam, aralıklı ve
+katmanlı kâkül, tepede hacim, siluetin kenarında birkaç kaçak tutam, koyu saçta
+açık renk parıltı.
+
+**Durum:** D-195'teki saçlar birkaç geniş kamadan oluşuyordu; siluet fazla
+düzgün, kâküller kalın ve bitişikti.
+
+**Karar:**
+
+- **Tutamlar yelpazeyle üretiliyor.** `fan({ root, tip, count, width, bend,
+  vary, mirror })`: kökler bir çizgi boyunca, uçlar başka bir çizgi boyunca
+  dağılır; `vary` her tutamın boyunu ve genişliğini belirli (deterministik)
+  bir ölçüde değiştirir. Bir saç modeli artık yüzlerce sayı değil, birkaç
+  yelpaze tanımıdır.
+- **Model = taban + taç + kâkül + yan tutamlar (+ arka uçlar).** Taban (`cap`,
+  `mass`) tutamların biraz içinde kalır; siluet tutam uçlarından oluşur. Taç
+  (`CANOPY`) tepeden dışa açılan tutamlardır; uçları siluet hattında biter
+  (dışarı fırlayan diken yok). `TUFTS` yalnızca dağınık modellerde kenardan
+  çıkan birkaç kısa kaçak tutamdır. Kâküller (`FRINGE`) aralıklı, farklı
+  boylarda ince şeritlerdir; küt kâkülde daha geniş ve üst üste biner.
+- **Koyu saçta parıltı:** tepeye, saç renginin açığıyla yumuşak bir bant
+  (referanstaki kahverengi yansıma). Siyah saç `#241c1e`'ye açıldı, tutam iç
+  çizgileri biraz daha belirgin: koyu saçta tutamlar birbirinden ayrılıyor.
+- Doku parametreleri yumuşatıldı (dalgalı tek yumuşak S, kıvırcıkta uç kancası
+  azaltıldı); önceki tur "pastırma şeridi" gibi duruyordu.
+- Model kimlikleri değişmedi; kayıtlı avatarlar aynı modeli göstermeye devam
+  eder, yalnızca çizim yenilendi. Konfigürasyon sürümü aynı (2) — parçaların
+  anlamı değişmedi, yalnızca görünüşü.
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test, build. Görsel: 16 modelin dört
+dokuda ve sekiz örnek avatarın render edilmiş tabakaları.

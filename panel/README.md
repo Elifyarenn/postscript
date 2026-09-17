@@ -410,7 +410,7 @@ Public API (`/api/public/*`) oturum istemez, `Cache-Control` ve `ETag` döner ve
 yazarın e-postasını, gerçek adını veya doğum tarihini **hiçbir zaman** döndürmez.
 Geri çekilmiş yazı 410, yayında olmayan her şey 404 verir.
 
-Ekip avatarları (D-194, yeniden tasarım D-195): `/team/avatar` ekibe (yazar,
+Ekip avatarları (D-194; yeniden tasarım D-195, saç D-196): `/team/avatar` ekibe (yazar,
 editör, admin, çizer) açık, Picrew benzeri bir oluşturucudur. Avatar
 `src/lib/avatar/` altında parça parça çizilir:
 
