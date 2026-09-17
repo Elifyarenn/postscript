@@ -7302,3 +7302,29 @@ metni, "Profil görselleri"); yeni veri yok.
 
 **Doğrulama:** `social-graph.test.ts`: yalnızca görünür üyelerin fotoğrafı,
 tekrarlı ad tek kayıt, boş liste. Kapı: typecheck, lint, test.
+
+## D-190 — Topluluk bölümünde panele dair hiçbir şey yok
+
+**İstek (ürün sahibi):** "Profil düzenleme kısmında 'Dergide yazılarınızda
+görünen mahlasınızı Hesabım sayfasından değiştirebilirsiniz' kısmını kaldır;
+sosyal kısımda panele dair hiçbir şey olmayacak."
+
+**Karar:** Topluluk (`/social`) ekranlarından dergi yönetimine ve panele dair
+metinler kaldırıldı:
+
+- Profil düzenleyicideki mahlas notu (D-162) ve stili (`.profile-editor-hint`).
+- Topluluk sayfasında adminlere gösterilen "Topluluk yöneticisisiniz …
+  topluluk yönetim panelinde" notu ve panele bağlantısı (D-179). Bu, D-165'in
+  (panel siteye, site panele karışmaz) topluluk tarafındaki karşılığı.
+- Admin'in gönderi kaldırma onayındaki "Kayıt yönetim panelinde kalır."
+  cümlesi.
+
+**Kalanlar ve neden:** "Topluluk yöneticisi" rozeti ve adminin gönderi altındaki
+"Kaldır" düğmesi topluluğun kendi işleyişi, panele bağlantı değil (D-179).
+"Yöneticiler özel mesajları okuyamaz", "bildiriminiz yöneticilere iletilir" gibi
+cümleler üyeye yapılan yasal bilgilendirmedir (5651, KVKK); kaldırılmadı.
+Üst şeritteki PANEL düğmesi sitenin çerçevesinde, topluluğa özgü değil (D-086).
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test.

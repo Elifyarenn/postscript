@@ -18,7 +18,6 @@
  * behind it inert without a library (the project adds none for this).
  */
 import { useActionState, useEffect, useId, useRef, useState, type FormEvent } from "react";
-import Link from "next/link";
 import { Camera, X } from "lucide-react";
 import { updateProfileAction } from "@/app/social/actions";
 import {
@@ -409,15 +408,6 @@ export function ProfileEditor({
             </div>
             <p id={`${id}-bio-error`} className="profile-editor-error">
               {fieldError("bio")}
-            </p>
-
-            {/* The magazine's name is kept apart, so nobody hunts for it here (D-162) */}
-            <p className="profile-editor-hint">
-              Dergide yazılarınızda görünen mahlasınızı{" "}
-              <Link href="/account" className="underline">
-                Hesabım
-              </Link>{" "}
-              sayfasından değiştirebilirsiniz.
             </p>
           </div>
         </form>

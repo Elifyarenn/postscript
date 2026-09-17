@@ -59,16 +59,6 @@ export default async function CommunityPage({
       </div>
 
       <p className="community-intro">{INTRO[tab]}</p>
-      {canModerateCommunity(user) && (
-        <p className="community-intro">
-          Topluluk yöneticisisiniz: gönderileri buradan kaldırabilirsiniz. Bildirimler, topluluklar
-          ve yasaklı kelimeler{" "}
-          <Link href="/admin/community" className="underline">
-            topluluk yönetim panelinde
-          </Link>
-          .
-        </p>
-      )}
 
       {tab === "akis" &&
         (username ? (

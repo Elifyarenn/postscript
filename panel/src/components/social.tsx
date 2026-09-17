@@ -434,7 +434,7 @@ export function PostCard({
                   variant="ghost"
                   fields={fields}
                   className="post-small"
-                  confirmMessage="Bu gönderi topluluktan kaldırılsın mı? Kayıt yönetim panelinde kalır."
+                  confirmMessage="Bu gönderi topluluktan kaldırılsın mı?"
                 />
               ) : (
                 <Link href={`/social/report?type=post&id=${post.id}`} className="post-small">

@@ -4350,12 +4350,6 @@ html:has(.profile-editor[open]) {
   box-shadow: none;
 }
 
-.ps-site .profile-editor-hint {
-  margin-top: 0.35rem;
-  font-size: 0.85rem;
-  opacity: 0.8;
-}
-
 .ps-site .profile-editor-error {
   margin: 0.3rem 0 0.9rem;
   color: var(--color-danger);
