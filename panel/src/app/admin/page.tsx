@@ -23,7 +23,7 @@ export default async function AdminDashboard() {
   ]);
 
   const queues = [
-    { label: "Açık içerik bildirimi", total: pending.openReports, href: "/admin/community" },
+    { label: "Açık içerik bildirimi", total: pending.openReports, href: "/admin/community/reports" },
     {
       label: "Yönetim onayı bekleyen yazar başvurusu",
       total: pending.applicationsAwaitingAdmin,
@@ -68,7 +68,7 @@ export default async function AdminDashboard() {
               <Alert tone="danger" title="24 saati geçen içerik bildirimi var">
                 {pending.overdueReports} bildirim 5651 sayılı Kanun&apos;un öngördüğü 24
                 saatlik cevap süresini aştı.{" "}
-                <Link href="/admin/community" className="underline">
+                <Link href="/admin/community/reports" className="underline">
                   Hemen inceleyin
                 </Link>
                 .

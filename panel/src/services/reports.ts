@@ -189,7 +189,7 @@ export async function reportContent(
           userId: admin.id,
           kind: "moderation.report",
           title: "Yeni içerik bildirimi: en geç 24 saat içinde sonuçlandırılmalı.",
-          href: "/admin/community",
+          href: "/admin/community/reports",
         },
         tx,
       );

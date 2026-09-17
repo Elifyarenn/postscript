@@ -312,7 +312,7 @@ export async function removeCommentAction(
     const meta = await requestMetadata();
 
     await removeCommunityComment({ ...user }, text(formData, "commentId"), meta);
-    revalidatePath("/admin/community");
+    revalidatePath("/admin/community", "layout");
     return { success: "Yorum kaldırıldı." };
   });
 }
@@ -327,7 +327,7 @@ export async function removeChatMessageAction(
     const meta = await requestMetadata();
 
     await removeChatMessage({ ...user }, text(formData, "messageId"), meta);
-    revalidatePath("/admin/community");
+    revalidatePath("/admin/community", "layout");
     return { success: "Mesaj kaldırıldı." };
   });
 }
@@ -342,7 +342,7 @@ export async function addBannedWordAction(
     const meta = await requestMetadata();
 
     await addBannedWord({ ...user }, { word: text(formData, "word") }, meta);
-    revalidatePath("/admin/community");
+    revalidatePath("/admin/community", "layout");
     return { success: "Kelime yasaklı listesine eklendi." };
   });
 }
@@ -357,7 +357,7 @@ export async function removeBannedWordAction(
     const meta = await requestMetadata();
 
     await removeBannedWord({ ...user }, text(formData, "wordId"), meta);
-    revalidatePath("/admin/community");
+    revalidatePath("/admin/community", "layout");
     return { success: "Kelime listeden çıkarıldı." };
   });
 }

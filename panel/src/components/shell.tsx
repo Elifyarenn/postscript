@@ -68,7 +68,18 @@ export const ADMIN_NAV: NavGroup[] = [
     label: "İçerik & Topluluk",
     items: [
       { href: "/admin/announcements", label: "Duyurular" },
-      { href: "/admin/community", label: "Topluluk yönetimi" },
+      {
+        href: "/admin/community",
+        label: "Topluluk yönetimi",
+        // The community management panel's parts (D-180)
+        children: [
+          { href: "/admin/community/reports", label: "Bildirimler" },
+          { href: "/admin/community/communities", label: "Topluluklar" },
+          { href: "/admin/community/posts", label: "Gönderiler" },
+          { href: "/admin/community/banned-words", label: "Yasaklı kelimeler" },
+          { href: "/admin/community/comments", label: "Yorumlar ve sohbet" },
+        ],
+      },
     ],
   },
   {

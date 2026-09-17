@@ -17,6 +17,7 @@ import { addBannedWord, addCommunityComment, listCommentsForArticle } from "@/se
 import { blockMember, followMember, setUsername } from "@/services/social";
 import {
   bookmarkPost,
+  countRecentPostActivity,
   createPost,
   deleteOwnPost,
   getPostThread,
@@ -29,6 +30,7 @@ import {
   listProfilePosts,
   POSTS_PER_MINUTE,
   pruneDeletedPosts,
+  removePostAsModerator,
   repostPost,
   unlikePost,
 } from "@/services/posts";
@@ -447,5 +449,25 @@ describe("a profile's side column and pager (D-150)", () => {
     const beyond = await listProfileFeed(actorOf(lunae), "lunae", "posts", 99, 2);
     expect(beyond.page).toBe(2);
     expect(beyond.posts.map((item) => item.id)).toEqual([first.id]);
+  });
+});
+
+describe("the community panel's counts (D-180)", () => {
+  it("counts the week's posts and the ones a moderator removed, for admins only", async () => {
+    const admin = await createUser({ role: "admin" });
+    const lunae = await member("lunae");
+    await post(lunae, "birinci");
+    const second = await post(lunae, "ikinci");
+    const own = await post(lunae, "üçüncü");
+    await removePostAsModerator(actorOf(admin), second.id, noMeta);
+    // A post its author deleted is not a moderator's removal
+    await deleteOwnPost(actorOf(lunae), own.id);
+
+    expect(await countRecentPostActivity(actorOf(admin), 7)).toEqual({ shared: 3, removed: 1 });
+
+    const nextMonth = new Date(Date.now() + 30 * 86_400_000);
+    expect(await countRecentPostActivity(actorOf(admin), 7, nextMonth)).toEqual({ shared: 0, removed: 0 });
+
+    expect((await captureError(countRecentPostActivity(actorOf(lunae), 7))).status).toBe(403);
   });
 });

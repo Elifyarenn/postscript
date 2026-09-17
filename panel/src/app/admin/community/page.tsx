@@ -1,444 +1,142 @@
+import Link from "next/link";
 import { guardPanel } from "@/lib/auth/guard";
-import { readCsrfToken } from "@/lib/csrf";
-import { PanelForm } from "@/components/form";
-import {
-  Alert,
-  Card,
-  EmptyState,
-  Field,
-  Input,
-  PageHeader,
-  Table,
-  Td,
-  Th,
-} from "@/components/ui";
-import { formatDateTime } from "@/lib/utils";
-import {
-  listAllBannedWords,
-  listAllCommentsForAdmin,
-  listAllMessagesForAdmin,
-} from "@/services/community";
-import { listRecentPostsForAdmin } from "@/services/posts";
-import { listReports } from "@/services/reports";
 import { REPORT_CATEGORY_LABELS, REPORT_TARGET_LABELS } from "@/lib/reports";
-import { cn } from "@/lib/utils";
-import { Select } from "@/components/ui";
+import { cn, formatDateTime } from "@/lib/utils";
+import { listAllBannedWords } from "@/services/community";
 import { listCommunitiesForAdmin } from "@/services/communities";
-import {
-  archiveCommunityAction,
-  createCommunityAction,
-  removePostAction,
-  resolveReportAction,
-} from "./actions";
-
-/** The admin identifies the account, so the display name comes first here. */
-function accountLabel(name: string | null, username: string | null): string {
-  if (!name) return "Silinmiş kullanıcı";
-  return username ? `${name} (@${username})` : name;
-}
-import {
-  addBannedWordAction,
-  removeBannedWordAction,
-  removeChatMessageAction,
-  removeCommentAction,
-} from "../actions";
+import { countRecentPostActivity } from "@/services/posts";
+import { listReports } from "@/services/reports";
+import { Alert, Card, EmptyState, PageHeader } from "@/components/ui";
 
 export const metadata = { title: "Topluluk yönetimi" };
 
 /**
- * Moderation hub: the banned word blacklist plus every comment and chat
- * message. Removed rows stay visible here (marked) so an admin can see what
- * was moderated; deletion is a soft delete (D-015 style, append-only records).
+ * The community management panel's front page (D-180). The admins are the
+ * community's moderators (D-179); this page says what waits for them and
+ * leads to each part, which used to be one long page.
  */
-export default async function AdminCommunityPage() {
+export default async function CommunityAdminPage() {
   const { user } = await guardPanel("admin");
-  const csrfToken = (await readCsrfToken()) ?? "";
+  const actor = { ...user };
 
-  const [banned, comments, messages, openReports, closedReports, recentPosts, communityList] =
-    await Promise.all([
-      listAllBannedWords({ ...user }),
-      listAllCommentsForAdmin({ ...user }, 150),
-      listAllMessagesForAdmin({ ...user }, 150),
-      listReports({ ...user }, "open"),
-      listReports({ ...user }, "closed", 50),
-      listRecentPostsForAdmin({ ...user }, 150),
-      listCommunitiesForAdmin({ ...user }),
-    ]);
+  const [openReports, communityList, activity, banned] = await Promise.all([
+    listReports(actor, "open"),
+    listCommunitiesForAdmin(actor),
+    countRecentPostActivity(actor, 7),
+    listAllBannedWords(actor),
+  ]);
 
-  const liveBanned = banned.filter((row) => row.deletedAt === null);
+  const overdue = openReports.filter((report) => report.overdue).length;
+  const openCommunities = communityList.filter((community) => !community.archived).length;
+  const liveBanned = banned.filter((row) => row.deletedAt === null).length;
+
+  const tiles = [
+    {
+      href: "/admin/community/reports",
+      value: openReports.length,
+      label: "Açık içerik bildirimi",
+      note: overdue > 0 ? `${overdue} tanesi 24 saati geçti` : "24 saat içinde sonuçlandırılır",
+      urgent: overdue > 0,
+    },
+    {
+      href: "/admin/community/communities",
+      value: openCommunities,
+      label: "Açık topluluk",
+      note: `${communityList.length - openCommunities} arşivde`,
+      urgent: false,
+    },
+    {
+      href: "/admin/community/posts",
+      value: activity.shared,
+      label: "Son 7 günde gönderi",
+      note: `${activity.removed} tanesi yönetici tarafından kaldırıldı`,
+      urgent: false,
+    },
+    {
+      href: "/admin/community/banned-words",
+      value: liveBanned,
+      label: "Yasaklı kelime",
+      note: "Üye içeriğinde yıldızlanır",
+      urgent: false,
+    },
+  ];
 
   return (
     <>
       <PageHeader
         title="Topluluk yönetimi"
-        description="Yorumlar, sohbet mesajları ve yasaklı kelime listesi."
+        description="Topluluğun yöneticileri adminlerdir: bildirimleri sonuçlandırır, gönderi kaldırır, toplulukları ve yasaklı kelimeleri yönetirler."
       />
 
       <div className="space-y-6">
+        {overdue > 0 && (
+          <Alert tone="danger" title="24 saati geçen içerik bildirimi var">
+            {overdue} bildirim 5651 sayılı Kanun&apos;un öngördüğü 24 saatlik cevap süresini
+            aştı.{" "}
+            <Link href="/admin/community/reports" className="underline">
+              Hemen inceleyin
+            </Link>
+            .
+          </Alert>
+        )}
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {tiles.map((tile) => (
+            <Link
+              key={tile.href}
+              href={tile.href}
+              className={cn(
+                "rounded-lg border bg-surface p-4 hover:border-accent",
+                tile.urgent ? "border-danger/40" : "border-line",
+              )}
+            >
+              <p className="font-serif text-3xl">{tile.value}</p>
+              <p className="mt-1 text-sm">{tile.label}</p>
+              <p className={cn("mt-1 text-xs", tile.urgent ? "text-danger" : "text-muted")}>{tile.note}</p>
+            </Link>
+          ))}
+        </div>
+
         <Card>
-          <h2 className="mb-1 font-serif text-lg">İçerik bildirimleri ({openReports.length} açık)</h2>
-          <p className="mb-4 text-sm text-muted">
-            Üyelerin &ldquo;Bildir&rdquo; ile gönderdiği şikâyetler, en eskisi üstte. 5651 sayılı Kanun
-            gereği en geç 24 saat içinde sonuçlandırılmalı; süresi geçenler işaretlidir. Bir karar,
-            aynı içerikle ilgili bütün açık bildirimleri kapatır ve bildirenlere sonucu bildirir.
-          </p>
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="font-serif text-lg">Sırada bekleyen bildirimler</h2>
+            <Link href="/admin/community/reports" className="text-sm text-accent hover:underline">
+              Tümü →
+            </Link>
+          </div>
 
           {openReports.length === 0 ? (
             <EmptyState>Açık bildirim yok.</EmptyState>
           ) : (
-            <ul className="space-y-4">
-              {openReports.map((report) => (
-                <li
-                  key={report.id}
-                  className={cn(
-                    "rounded-md border p-4",
-                    report.overdue ? "border-danger/40 bg-danger-soft" : "border-line bg-paper",
-                  )}
-                >
-                  <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
-                    <span className="font-semibold">{REPORT_TARGET_LABELS[report.targetType]}</span>
-                    <span>· {REPORT_CATEGORY_LABELS[report.category]}</span>
-                    <span className="text-muted">· {formatDateTime(report.createdAt)}</span>
-                    {report.overdue && (
-                      <span className="font-semibold text-danger">24 saat geçti</span>
-                    )}
-                  </div>
-                  <p className="text-sm whitespace-pre-wrap">{report.snapshot}</p>
-                  {report.reason && (
-                    <p className="mt-2 text-xs text-muted">Açıklama: {report.reason}</p>
-                  )}
-                  <p className="mt-2 text-xs text-muted">
-                    İçerik sahibi: {accountLabel(report.ownerName, report.ownerUsername)} · Bildiren:{" "}
-                    {accountLabel(report.reporterName, report.reporterUsername)}
+            <ul className="divide-y divide-line text-sm">
+              {openReports.slice(0, 5).map((report) => (
+                <li key={report.id} className="py-2.5">
+                  <p className="text-xs">
+                    <span className="font-semibold">{REPORT_TARGET_LABELS[report.targetType]}</span> ·{" "}
+                    {REPORT_CATEGORY_LABELS[report.category]} ·{" "}
+                    <span className="text-muted">{formatDateTime(report.createdAt)}</span>
+                    {report.overdue && <span className="ml-1 font-semibold text-danger">24 saat geçti</span>}
                   </p>
-
-                  <div className="mt-3 max-w-md">
-                    <PanelForm
-                      action={resolveReportAction}
-                      csrfToken={csrfToken}
-                      submitLabel="Sonuçlandır"
-                      submitVariant="secondary"
-                    >
-                      <input type="hidden" name="reportId" value={report.id} />
-                      <Field label="Karar" htmlFor={`decision-${report.id}`}>
-                        <Select id={`decision-${report.id}`} name="decision" defaultValue="dismiss">
-                          {report.targetType !== "member" && (
-                            <option value="remove">İçeriği kaldır</option>
-                          )}
-                          <option value="dismiss">Kurallara aykırı değil</option>
-                        </Select>
-                      </Field>
-                      <Field label="Not (isteğe bağlı)" htmlFor={`note-${report.id}`}>
-                        <Input id={`note-${report.id}`} name="note" maxLength={1000} />
-                      </Field>
-                    </PanelForm>
-                  </div>
+                  <p className="mt-1 line-clamp-2 whitespace-pre-wrap">{report.snapshot}</p>
                 </li>
               ))}
             </ul>
           )}
-
-          {closedReports.length > 0 && (
-            <div className="mt-6">
-              <h3 className="mb-2 text-sm font-semibold">Son sonuçlandırılanlar</h3>
-              <Table>
-                <thead>
-                  <tr>
-                    <Th>Tür</Th>
-                    <Th>İçerik</Th>
-                    <Th>Karar</Th>
-                    <Th>Tarih</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {closedReports.map((report) => (
-                    <tr key={report.id}>
-                      <Td className="text-xs">{REPORT_TARGET_LABELS[report.targetType]}</Td>
-                      <Td className="max-w-md">
-                        <p className="line-clamp-2 text-xs whitespace-pre-wrap">{report.snapshot}</p>
-                      </Td>
-                      <Td className="text-xs">
-                        {report.status === "removed" ? "Kaldırıldı" : "Aykırı bulunmadı"}
-                        {report.resolutionNote && (
-                          <span className="block text-muted">{report.resolutionNote}</span>
-                        )}
-                      </Td>
-                      <Td className="text-xs">{formatDateTime(report.resolvedAt)}</Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            </div>
-          )}
         </Card>
 
         <Card>
-          <h2 className="mb-1 font-serif text-lg">Topluluklar ({communityList.length})</h2>
-          <p className="mb-4 text-sm text-muted">
-            Konu gruplarını yalnızca yöneticiler açar ve arşivler. Arşivlenen topluluk okunur ama
-            yeni üye ve gönderi almaz.
+          <h2 className="mb-3 font-serif text-lg">Diğer bölümler</h2>
+          <ul className="divide-y divide-line text-sm">
+            <li>
+              <Link href="/admin/community/comments" className="block py-2.5 hover:text-accent">
+                Yorumlar ve sohbet: yazı yorumları ve eski topluluk sohbetinin mesajları
+              </Link>
+            </li>
+          </ul>
+          {/* No link out to the community: the panel leads nowhere on the site (D-165) */}
+          <p className="mt-3 text-xs text-muted">
+            Toplulukta bir gönderinin altındaki &ldquo;Kaldır&rdquo; ile de gönderi kaldırabilirsiniz.
           </p>
-
-          <div className="mb-6 max-w-md">
-            <PanelForm
-              action={createCommunityAction}
-              csrfToken={csrfToken}
-              submitLabel="Topluluk aç"
-              submitVariant="secondary"
-            >
-              <Field label="Ad" htmlFor="communityName">
-                <Input id="communityName" name="name" required minLength={3} maxLength={60} />
-              </Field>
-              <Field label="Açıklama (isteğe bağlı)" htmlFor="communityDescription">
-                <Input id="communityDescription" name="description" maxLength={500} />
-              </Field>
-            </PanelForm>
-          </div>
-
-          {communityList.length === 0 ? (
-            <EmptyState>Henüz topluluk yok.</EmptyState>
-          ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Topluluk</Th>
-                  <Th>Üye</Th>
-                  <Th>Durum</Th>
-                  <Th />
-                </tr>
-              </thead>
-              <tbody>
-                {communityList.map((community) => (
-                  <tr key={community.id}>
-                    <Td>
-                      <span className="text-sm">{community.name}</span>
-                      <span className="block font-mono text-xs text-muted">{community.slug}</span>
-                    </Td>
-                    <Td className="text-xs">{community.memberCount}</Td>
-                    <Td className="text-xs">{community.archived ? "arşivlendi" : "açık"}</Td>
-                    <Td className="text-right">
-                      {!community.archived && (
-                        <PanelForm
-                          action={archiveCommunityAction}
-                          csrfToken={csrfToken}
-                          submitLabel="Arşivle"
-                          submitVariant="secondary"
-                        >
-                          <input type="hidden" name="communityId" value={community.id} />
-                        </PanelForm>
-                      )}
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          )}
-        </Card>
-
-        <Card>
-          <h2 className="mb-4 font-serif text-lg">Üye gönderileri ({recentPosts.length})</h2>
-
-          {recentPosts.length === 0 ? (
-            <EmptyState>Henüz gönderi yok.</EmptyState>
-          ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Gönderi</Th>
-                  <Th>Yazan</Th>
-                  <Th>Tarih</Th>
-                  <Th />
-                </tr>
-              </thead>
-              <tbody>
-                {recentPosts.map((row) => (
-                  <tr key={row.id}>
-                    <Td className="max-w-md">
-                      <p className="line-clamp-2 text-xs whitespace-pre-wrap">{row.body}</p>
-                      {row.deletedAt && (
-                        <span className="text-xs text-danger">
-                          {row.removedBy ? "yönetici kaldırdı" : "yazarı sildi"}
-                        </span>
-                      )}
-                    </Td>
-                    <Td className="text-xs">{accountLabel(row.authorName, row.authorUsername)}</Td>
-                    <Td className="text-xs">{formatDateTime(row.createdAt)}</Td>
-                    <Td className="text-right">
-                      {!row.deletedAt && (
-                        <PanelForm
-                          action={removePostAction}
-                          csrfToken={csrfToken}
-                          submitLabel="Kaldır"
-                          submitVariant="danger"
-                        >
-                          <input type="hidden" name="postId" value={row.id} />
-                        </PanelForm>
-                      )}
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          )}
-        </Card>
-
-        <Card>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-serif text-lg">Yasaklı kelimeler ({liveBanned.length})</h2>
-
-            <PanelForm
-              action={addBannedWordAction}
-              csrfToken={csrfToken}
-              submitLabel="Ekle"
-              submitVariant="secondary"
-            >
-              <Field label="Kelime" htmlFor="word">
-                <Input id="word" name="word" required minLength={2} maxLength={100} placeholder="ör. küfür" />
-              </Field>
-            </PanelForm>
-          </div>
-
-          <Alert tone="info">
-            Bu listedeki kelimeler yorumlarda ve sohbette otomatik yıldızlanır. Eşleştirme
-            büyük/küçük harfe duyarsız ve ek almış biçimleri de yakalar; liste bu yüzden
-            yönetici tarafından denetlenir.
-          </Alert>
-
-          <div className="mt-4">
-            {banned.length === 0 ? (
-              <EmptyState>Listede kelime yok.</EmptyState>
-            ) : (
-              <Table>
-                <thead>
-                  <tr>
-                    <Th>Kelime</Th>
-                    <Th>Eklendi</Th>
-                    <Th>Durum</Th>
-                    <Th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {banned.map((row) => (
-                    <tr key={row.id}>
-                      <Td className="font-mono">{row.word}</Td>
-                      <Td className="text-xs">{formatDateTime(row.createdAt)}</Td>
-                      <Td>
-                        {row.deletedAt ? (
-                          <span className="text-xs text-danger">kaldırıldı</span>
-                        ) : (
-                          <span className="text-xs text-accent">aktif</span>
-                        )}
-                      </Td>
-                      <Td className="text-right">
-                        {!row.deletedAt && (
-                          <PanelForm
-                            action={removeBannedWordAction}
-                            csrfToken={csrfToken}
-                            submitLabel="Kaldır"
-                            submitVariant="secondary"
-                          >
-                            <input type="hidden" name="wordId" value={row.id} />
-                          </PanelForm>
-                        )}
-                      </Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            )}
-          </div>
-        </Card>
-
-        <Card>
-          <h2 className="mb-4 font-serif text-lg">Yorumlar ({comments.length})</h2>
-
-          {comments.length === 0 ? (
-            <EmptyState>Henüz yorum yok.</EmptyState>
-          ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Yorum</Th>
-                  <Th>Yazar</Th>
-                  <Th>Yazı</Th>
-                  <Th>Tarih</Th>
-                  <Th />
-                </tr>
-              </thead>
-              <tbody>
-                {comments.map((row) => (
-                  <tr key={row.id}>
-                    <Td className="max-w-md">
-                      <p className="line-clamp-2 whitespace-pre-wrap text-xs">{row.body}</p>
-                      {row.deletedAt && (
-                        <span className="text-xs text-danger">kaldırıldı</span>
-                      )}
-                    </Td>
-                    <Td className="text-xs">{row.authorName ?? "Silinmiş kullanıcı"}</Td>
-                    <Td className="text-xs">{row.articleTitle}</Td>
-                    <Td className="text-xs">{formatDateTime(row.createdAt)}</Td>
-                    <Td className="text-right">
-                      {!row.deletedAt && (
-                        <PanelForm
-                          action={removeCommentAction}
-                          csrfToken={csrfToken}
-                          submitLabel="Kaldır"
-                          submitVariant="danger"
-                        >
-                          <input type="hidden" name="commentId" value={row.id} />
-                        </PanelForm>
-                      )}
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          )}
-        </Card>
-
-        <Card>
-          <h2 className="mb-4 font-serif text-lg">Sohbet mesajları ({messages.length})</h2>
-
-          {messages.length === 0 ? (
-            <EmptyState>Henüz mesaj yok.</EmptyState>
-          ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>Mesaj</Th>
-                  <Th>Yazar</Th>
-                  <Th>Tarih</Th>
-                  <Th />
-                </tr>
-              </thead>
-              <tbody>
-                {messages.map((row) => (
-                  <tr key={row.id}>
-                    <Td className="max-w-md">
-                      <p className="line-clamp-2 whitespace-pre-wrap text-xs">{row.body}</p>
-                      {row.deletedAt && (
-                        <span className="text-xs text-danger">kaldırıldı</span>
-                      )}
-                    </Td>
-                    <Td className="text-xs">{row.authorName ?? "Silinmiş kullanıcı"}</Td>
-                    <Td className="text-xs">{formatDateTime(row.createdAt)}</Td>
-                    <Td className="text-right">
-                      {!row.deletedAt && (
-                        <PanelForm
-                          action={removeChatMessageAction}
-                          csrfToken={csrfToken}
-                          submitLabel="Kaldır"
-                          submitVariant="danger"
-                        >
-                          <input type="hidden" name="messageId" value={row.id} />
-                        </PanelForm>
-                      )}
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          )}
         </Card>
       </div>
     </>

@@ -27,7 +27,7 @@ export async function createCommunityAction(
       meta,
     );
 
-    revalidatePath("/admin/community");
+    revalidatePath("/admin/community", "layout");
     revalidatePath("/social", "layout");
     return { success: `Topluluk açıldı: /social/communities/${created.slug}` };
   });
@@ -44,7 +44,7 @@ export async function archiveCommunityAction(
 
     await archiveCommunity({ ...user }, text(formData, "communityId"), meta);
 
-    revalidatePath("/admin/community");
+    revalidatePath("/admin/community", "layout");
     revalidatePath("/social", "layout");
     return { success: "Topluluk arşivlendi." };
   });
@@ -69,7 +69,7 @@ export async function resolveReportAction(
       meta,
     );
 
-    revalidatePath("/admin/community");
+    revalidatePath("/admin/community", "layout");
     revalidatePath("/social", "layout");
     return { success: "Bildirim sonuçlandırıldı." };
   });
@@ -86,7 +86,7 @@ export async function removePostAction(
 
     await removePostAsModerator({ ...user }, text(formData, "postId"), meta);
 
-    revalidatePath("/admin/community");
+    revalidatePath("/admin/community", "layout");
     revalidatePath("/social", "layout");
     return { success: "Gönderi kaldırıldı." };
   });

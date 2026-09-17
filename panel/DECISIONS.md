@@ -6961,3 +6961,38 @@ değişmedi. İşlenen veri değişmedi.
 
 **Doğrulama:** `rbac.test.ts`: yalnızca admin (yasaklı admin değil) moderatör;
 rozet eşlemesi. Kapı: typecheck, lint, test.
+
+## D-180 — Panelde topluluk yönetim paneli
+
+**İstek (ürün sahibi):** "Panele topluluk yönetim paneli ekle."
+
+**Durum:** Admin panelinde "Topluluk yönetimi" tek ve çok uzun bir sayfaydı:
+bildirimler, topluluklar, 150 gönderi, yasaklı kelimeler, 150 yorum ve 150
+sohbet mesajı alt alta. Bekleyen işi görmek için aşağı kaydırmak gerekiyordu.
+
+**Karar:**
+
+- `/admin/community` artık panelin genel bakışı: açık bildirim (24 saati
+  geçenler kırmızı), açık/arşivdeki topluluk, son 7 günde gönderi ve yönetici
+  tarafından kaldırılanlar, aktif yasaklı kelime sayıları; sırada bekleyen ilk beş
+  bildirim. 24 saati geçen bildirim varsa en üstte uyarı.
+- Bölümler ayrı sayfalar, kenar çubuğunda "Topluluk yönetimi"nin alt
+  bağlantıları: **Bildirimler** (`/reports`), **Topluluklar** (`/communities`),
+  **Gönderiler** (`/posts`), **Yasaklı kelimeler** (`/banned-words`),
+  **Yorumlar ve sohbet** (`/comments`). İçerikleri eski sayfadaki kartların
+  aynısı; her birinin üstünde genel bakışa dönüş bağlantısı.
+- Yeni servis `countRecentPostActivity` (yalnızca moderatör): gün penceresi
+  içinde paylaşılan ve `removed_by` dolu gönderi sayısı. Yazarın kendi sildiği
+  gönderi "kaldırılan" sayılmaz.
+- Yeni bildirim bildirimi ve genel bakıştaki "Açık içerik bildirimi" doğrudan
+  Bildirimler sayfasına gider. Moderasyon işlemleri panelin tamamını
+  (`layout`) yeniden doğrular.
+- Panel siteye bağlantı vermez (D-165); toplulukta yerinde kaldırma (D-179)
+  yalnızca yazıyla anılır.
+
+**Hukuk:** 5651 s. m. 9'un 24 saatlik süresi genel bakışta ve menüde öne
+çıktı; işlenen veri değişmedi.
+
+**Doğrulama:** `posts.test.ts`: haftalık sayım, moderatör kaldırması ile
+yazarın silmesinin ayrımı, zaman penceresi, yetkisiz 403. Kapı: typecheck,
+lint, test; üretim derlemesi.

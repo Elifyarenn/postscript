@@ -891,6 +891,25 @@ export async function removePostAsModerator(
   });
 }
 
+/** Posts shared in the last days, and how many of them a moderator took down, for the panel (D-180). */
+export async function countRecentPostActivity(
+  actor: Actor,
+  days = 7,
+  now: Date = new Date(),
+): Promise<{ shared: number; removed: number }> {
+  if (!canModerateCommunity(actor)) throw forbidden();
+  const since = new Date(now.getTime() - days * 86_400_000);
+
+  const [[shared], [removed]] = await Promise.all([
+    db.select({ value: count() }).from(posts).where(gte(posts.createdAt, since)),
+    db
+      .select({ value: count() })
+      .from(posts)
+      .where(and(gte(posts.createdAt, since), isNotNull(posts.removedBy))),
+  ]);
+  return { shared: shared?.value ?? 0, removed: removed?.value ?? 0 };
+}
+
 /** The newest posts, removed ones included, for the moderation screen. */
 export async function listRecentPostsForAdmin(actor: Actor, limit = 150) {
   if (!canModerateCommunity(actor)) throw forbidden();
