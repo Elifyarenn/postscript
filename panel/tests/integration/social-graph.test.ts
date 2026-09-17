@@ -19,6 +19,7 @@ import {
   unblockMember,
   usernameChangeAvailableAt,
   unfollowMember,
+  searchMembers,
 } from "@/services/social";
 import { addCommunityComment, listCommentsForArticle } from "@/services/community";
 import { anonymiseUser } from "@/services/users";
@@ -270,5 +271,37 @@ describe("account deletion", () => {
     // The freed handle can be taken again
     const next = await createUser();
     expect(await setUsername(actorOf(next), { username: "lunae" }, noMeta)).toBe("lunae");
+  });
+});
+
+describe("searching members (D-186)", () => {
+  it("finds handles containing the term, and never a block, a ban, a deletion or oneself", async () => {
+    const reader = await createUser();
+    await setUsername(actorOf(reader), { username: "okur_lu" }, noMeta);
+    const me = await reloadUser(reader.id);
+
+    for (const username of ["lunae", "kara_lunae", "lunar", "engelli_lu", "yasakli_lu"]) {
+      const user = await createUser();
+      await setUsername(actorOf(user), { username }, noMeta);
+    }
+    await createUser({ displayName: "Lu Adı Var Ama Kullanıcı Adı Yok" });
+
+    await blockMember(actorOf(me), "engelli_lu");
+    await db.update(users).set({ isBanned: true }).where(eq(users.username, "yasakli_lu"));
+
+    const found = await searchMembers(actorOf(me), "@LUNA");
+    expect(found.map((member) => member.username)).toEqual(["lunae", "lunar", "kara_lunae"]);
+    expect(Object.keys(found[0]!).sort()).toEqual(["role", "username"]);
+
+    const lu = (await searchMembers(actorOf(me), "lu")).map((member) => member.username);
+    expect(lu).not.toContain("engelli_lu");
+    expect(lu).not.toContain("yasakli_lu");
+    expect(lu).not.toContain("okur_lu");
+
+    // One character, or only characters a handle cannot hold, finds nobody
+    expect(await searchMembers(actorOf(me), "l")).toEqual([]);
+    expect(await searchMembers(actorOf(me), "%%")).toEqual([]);
+    // "_" is not a wildcard
+    expect((await searchMembers(actorOf(me), "a_l")).map((member) => member.username)).toEqual(["kara_lunae"]);
   });
 });

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { nextUsernameChangeAt, normalizeUsername, usernameProblem } from "@/lib/username";
+import {
+  nextUsernameChangeAt,
+  normalizeUsername,
+  usernameProblem,
+  rankUsernameMatches,
+  usernameSearchPattern,
+  usernameSearchTerm,
+} from "@/lib/username";
 
 describe("the handle change window (D-166)", () => {
   const now = new Date("2026-09-16T12:00:00Z");
@@ -48,5 +55,27 @@ describe("community handles (D-089)", () => {
     expect(usernameProblem("anonim")).not.toBeNull();
     // Only an exact word or its prefix form is reserved
     expect(usernameProblem("editoryal")).toBeNull();
+  });
+});
+
+describe("searching members by handle (D-186)", () => {
+  it("keeps only what a handle can contain", () => {
+    expect(usernameSearchTerm("  @Lunae ")).toBe("lunae");
+    expect(usernameSearchTerm("velvet luna!")).toBe("velvetluna");
+    expect(usernameSearchTerm("%_")).toBe("_");
+  });
+
+  it("escapes the LIKE wildcard a handle may contain", () => {
+    expect(usernameSearchPattern("ada_y")).toBe("%ada\\_y%");
+  });
+
+  it("puts the exact handle first, then prefixes, then the rest", () => {
+    const rows = [{ username: "kara_lunae" }, { username: "lunae_b" }, { username: "lunae" }, { username: "lunaea" }];
+    expect(rankUsernameMatches(rows, "lunae").map((row) => row.username)).toEqual([
+      "lunae",
+      "lunae_b",
+      "lunaea",
+      "kara_lunae",
+    ]);
   });
 });

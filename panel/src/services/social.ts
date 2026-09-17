@@ -12,7 +12,7 @@
  */
 import "server-only";
 import { cache } from "react";
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, ne, notExists, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, ne, notExists, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
 import {
@@ -33,7 +33,16 @@ import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { MAX_BIO_LENGTH, MAX_PEN_NAME_LENGTH } from "@/lib/profile-limits";
 import { slugify } from "@/lib/slug";
 import { formatDate } from "@/lib/utils";
-import { nextUsernameChangeAt, normalizeUsername, USERNAME_CHANGE_DAYS, usernameProblem } from "@/lib/username";
+import {
+  nextUsernameChangeAt,
+  normalizeUsername,
+  USERNAME_CHANGE_DAYS,
+  usernameProblem,
+  rankUsernameMatches,
+  USERNAME_SEARCH_MIN,
+  usernameSearchPattern,
+  usernameSearchTerm,
+} from "@/lib/username";
 import { assertMayPost } from "./community";
 import { notify } from "./notifications";
 import type { RequestMeta } from "./auth";
@@ -474,6 +483,46 @@ const loadProfile = cache(async (viewerId: string, rawUsername: string): Promise
 });
 
 export type MemberListItem = Pick<Member, "username" | "role">;
+
+/**
+ * Members whose handle contains what was typed (D-186). Only the handle is
+ * searched: the legal name never shows in the community, and matching the pen
+ * name would tie the magazine byline to a community account (D-163, D-166).
+ * Someone on either side of a block, a banned or deleted account and an
+ * account without a handle are not found.
+ */
+export async function searchMembers(actor: Actor, rawQuery: string, limit = 20): Promise<MemberListItem[]> {
+  assertMayPost(actor);
+  const term = usernameSearchTerm(rawQuery);
+  if (term.length < USERNAME_SEARCH_MIN) return [];
+
+  const blockedEitherWay = db
+    .select({ id: userBlocks.id })
+    .from(userBlocks)
+    .where(
+      or(
+        and(eq(userBlocks.blockerId, actor.id), eq(userBlocks.blockedId, users.id)),
+        and(eq(userBlocks.blockerId, users.id), eq(userBlocks.blockedId, actor.id)),
+      ),
+    );
+
+  const rows = await db
+    .select({ username: users.username, role: users.role })
+    .from(users)
+    .where(
+      and(
+        ilike(users.username, usernameSearchPattern(term)),
+        isNull(users.deletedAt),
+        eq(users.isBanned, false),
+        ne(users.id, actor.id),
+        notExists(blockedEitherWay),
+      ),
+    )
+    .limit(100);
+
+  const found = rows.filter((row): row is MemberListItem => row.username !== null);
+  return rankUsernameMatches(found, term).slice(0, limit);
+}
 
 async function listGraph(
   viewer: Actor,

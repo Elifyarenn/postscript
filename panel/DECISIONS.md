@@ -7198,3 +7198,34 @@ panel listesinde gönderen yok, yalnızca admin, arşiv/kaldırma ve gönderensi
 denetim kaydı, gönderenin kendi dışa aktarımı, 1 yıllık silme. `site.test.ts`:
 menüde anonim kutu rozeti yok. E2E (`07d-social`) derginin kutusuna gönderir.
 Kapı: typecheck, lint, 66 dosya / 629 test; üretim derlemesi.
+
+## D-186 — Toplulukta kullanıcı adıyla üye arama
+
+**İstek (ürün sahibi):** "Kullanıcı arama özelliği getir."
+
+**Karar:**
+
+- Topluluk sayfasının **Keşfet** sekmesinde "Kullanıcı adıyla üye ara…" kutusu
+  (düz GET formu, `/social?sekme=kesfet&ara=…`). Sonuçlar gönderilerin üstünde
+  bir kartta, `MemberList` ile (rozet ve profile bağlantı).
+- **Yalnızca kullanıcı adında aranır.** Ad soyad toplulukta hiç görünmez;
+  mahlasla aramak dergideki imzayı bir topluluk hesabına bağlardı (D-163, D-166).
+- **Bulunmayanlar:** arayanla arasında hangi yönde olursa olsun engel olan,
+  yasaklı, silinmiş, kullanıcı adı olmayan hesaplar ve arayanın kendisi.
+  Sonuç yalnızca kullanıcı adı ve rolü taşır.
+- **Terim:** küçük harfe çevrilir, baştaki "@" atılır, kullanıcı adında
+  olamayacak karakterler (`a-z`, `0-9`, `_` dışı) silinir; en az 2 karakter.
+  `_` LIKE'ta joker olduğu için kaçışlanır. Sıralama: tam eşleşme, ile
+  başlayanlar, içerenler; her grupta alfabetik; en çok 20 sonuç.
+- Sorgu Drizzle `ilike` + parametreli desen ile; üretimde zaten kullanılan kalıp
+  (`public.ts` makale araması), ham `sql` yok (D-078).
+- Mesajlar ekranındaki arama D-183'te kaldırıldı; yeni konuşma artık arama
+  sonucundaki profilden de açılabilir.
+
+**Hukuk:** Yeni veri toplanmıyor. Kullanıcı adları zaten topluluğa açık
+(profil adresi); arama, engellemenin gizlediğini göstermez. Aydınlatma metni
+değişmedi.
+
+**Doğrulama:** `username.test.ts` (terim temizleme, joker kaçışı, sıralama),
+`social-graph.test.ts` (parça eşleşme, engel/yasak/silinmiş/kendisi yok,
+tek karakter ve joker boş döner, `_` joker değil). Kapı: typecheck, lint, test.

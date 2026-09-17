@@ -70,3 +70,31 @@ export function usernameProblem(normalized: string): string | null {
   return null;
 }
 
+
+/* ------------------------------------------------------------------ */
+/* Searching members by handle (D-186)                                 */
+/* ------------------------------------------------------------------ */
+
+/** Two characters narrow a young community enough; one would list nearly everyone. */
+export const USERNAME_SEARCH_MIN = 2;
+
+/**
+ * What is left of a typed search once it can only match a handle: lowercased,
+ * without "@", and without anything a handle cannot contain.
+ */
+export function usernameSearchTerm(raw: string): string {
+  return normalizeUsername(raw).replace(/[^a-z0-9_]/g, "").slice(0, USERNAME_MAX);
+}
+
+/** A LIKE pattern for the term; "_" is a wildcard there, so it is escaped. */
+export function usernameSearchPattern(term: string): string {
+  return `%${term.replaceAll("_", "\\_")}%`;
+}
+
+/** The exact handle first, then those starting with the term, then the rest; A to Z within each. */
+export function rankUsernameMatches<T extends { username: string }>(rows: readonly T[], term: string): T[] {
+  const rank = (username: string) => (username === term ? 0 : username.startsWith(term) ? 1 : 2);
+  return [...rows].sort(
+    (a, b) => rank(a.username) - rank(b.username) || a.username.localeCompare(b.username, "tr"),
+  );
+}

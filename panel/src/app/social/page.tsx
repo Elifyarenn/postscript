@@ -6,12 +6,13 @@ import { canModerateCommunity } from "@/lib/auth/rbac";
 import type { SessionUser } from "@/lib/auth/session";
 import { readCsrfToken } from "@/lib/csrf";
 import { COMMUNITY_TABS, communityTabHref, parseCommunityTab } from "@/lib/site";
+import { USERNAME_MAX } from "@/lib/username";
 import { listCommunities } from "@/services/communities";
 import { listExplorePosts, listHomeFeed, suggestMembers } from "@/services/posts";
-import { getMemberSettings } from "@/services/social";
-import { Alert, Card, EmptyState } from "@/components/ui";
+import { getMemberSettings, searchMembers } from "@/services/social";
+import { Alert, Card, EmptyState, Input } from "@/components/ui";
 import { CommunityCard } from "@/components/communities";
-import { PostComposer, PostList } from "@/components/social";
+import { MemberList, PostComposer, PostList } from "@/components/social";
 import { SiteBanner } from "@/components/site-ui";
 import { MemberSuggestions, MemberSuggestionsFallback } from "./member-suggestions";
 
@@ -32,7 +33,7 @@ const INTRO = {
 export default async function CommunityPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sekme?: string }>;
+  searchParams: Promise<{ sekme?: string; ara?: string }>;
 }) {
   const [{ user }, csrf, params] = await Promise.all([requireSession(), readCsrfToken(), searchParams]);
   const csrfToken = csrf ?? "";
@@ -82,7 +83,9 @@ export default async function CommunityPage({
             .
           </Alert>
         ))}
-      {tab === "kesfet" && <ExploreTab user={user} csrfToken={csrfToken} />}
+      {tab === "kesfet" && (
+        <ExploreTab user={user} csrfToken={csrfToken} query={(params.ara ?? "").slice(0, 40)} />
+      )}
       {tab === "topluluklar" && (
         <CommunitiesTab user={user} csrfToken={csrfToken} canJoin={username !== null} />
       )}
@@ -126,28 +129,67 @@ async function FeedTab({ user, csrfToken }: TabProps) {
   );
 }
 
-async function ExploreTab({ user, csrfToken }: TabProps) {
+async function ExploreTab({ user, csrfToken, query }: TabProps & { query: string }) {
   const suggestions = suggestMembers({ ...user });
-  const popular = await listExplorePosts({ ...user });
+  const [popular, found] = await Promise.all([
+    listExplorePosts({ ...user }),
+    query ? searchMembers({ ...user }, query) : Promise.resolve(null),
+  ]);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_16rem]">
-      <Card>
-        <PostList
-          posts={popular}
-          csrfToken={csrfToken}
-          empty="Son 30 günde paylaşılmış gönderi yok."
-          canModerate={canModerateCommunity(user)}
+    <div className="space-y-6">
+      {/* A plain GET form: searching changes nothing (D-186) */}
+      <form action="/social" method="get" role="search" className="flex flex-wrap gap-2">
+        <input type="hidden" name="sekme" value="kesfet" />
+        <label htmlFor="member-search" className="sr-only">
+          Kullanıcı adıyla üye ara
+        </label>
+        <Input
+          id="member-search"
+          name="ara"
+          type="search"
+          defaultValue={query}
+          maxLength={USERNAME_MAX + 1}
+          placeholder="Kullanıcı adıyla üye ara…"
+          autoComplete="off"
+          className="min-w-0 flex-1"
         />
-      </Card>
+        <button type="submit" className="site-button">
+          Ara
+        </button>
+      </form>
 
-      <Suspense fallback={<MemberSuggestionsFallback />}>
-        <MemberSuggestions
-          suggestions={suggestions}
-          csrfToken={csrfToken}
-          description="Takip ettiklerinizin takip ettikleri, en çok takip edilenler ve kullanıcı adı seçmiş yeni üyeler."
-        />
-      </Suspense>
+      {found && (
+        <Card>
+          <h2 className="mb-2 font-serif text-base">&ldquo;{query}&rdquo; için üyeler</h2>
+          {found.length === 0 ? (
+            <p className="py-4 text-sm text-muted">
+              Bu adla bir üye bulunamadı. En az iki harf yazın; yalnızca kullanıcı adlarında aranır.
+            </p>
+          ) : (
+            <MemberList members={found} />
+          )}
+        </Card>
+      )}
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_16rem]">
+        <Card>
+          <PostList
+            posts={popular}
+            csrfToken={csrfToken}
+            empty="Son 30 günde paylaşılmış gönderi yok."
+            canModerate={canModerateCommunity(user)}
+          />
+        </Card>
+
+        <Suspense fallback={<MemberSuggestionsFallback />}>
+          <MemberSuggestions
+            suggestions={suggestions}
+            csrfToken={csrfToken}
+            description="Takip ettiklerinizin takip ettikleri, en çok takip edilenler ve kullanıcı adı seçmiş yeni üyeler."
+          />
+        </Suspense>
+      </div>
     </div>
   );
 }
