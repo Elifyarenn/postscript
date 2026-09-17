@@ -38,6 +38,7 @@ import {
   clearConversation,
   sendDirectMessage,
   setDirectMessagePolicy,
+  setReadReceipts,
 } from "@/services/direct-messages";
 import { sendAnonMessage } from "@/services/anon-box";
 import { joinCommunity, leaveCommunity } from "@/services/communities";
@@ -169,6 +170,19 @@ export async function setDirectMessagePolicyAction(
     await setDirectMessagePolicy({ ...user }, { dmPolicy: text(formData, "dmPolicy") });
     revalidatePath("/social", "layout");
     return { success: "Özel mesaj tercihiniz kaydedildi." };
+  });
+}
+
+export async function setReadReceiptsAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireAuth();
+    const enabled = await setReadReceipts({ ...user }, { enabled: checkbox(formData, "readReceipts") });
+    revalidatePath("/social", "layout");
+    return { success: enabled ? "Okundu bilgisi açıldı." : "Okundu bilgisi kapatıldı." };
   });
 }
 

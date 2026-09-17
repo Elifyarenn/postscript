@@ -31,7 +31,7 @@ ortaklık adına tek başına temsile yetkilidir.
 | İçerik | Dergiye gönderilen eserler ve sürümleri, yazı üzerindeki editör notları |
 | Topluluk | Yazılara yapılan yorumlar, topluluk sohbeti mesajları, paylaştığınız gönderiler ve yanıtlar ile bunların gönderim zamanı; beğendiğiniz ve yeniden paylaştığınız gönderiler; takip ettiğiniz ve sizi takip eden hesaplar, engellediğiniz hesaplar, katıldığınız topluluklar, kaydettiğiniz yazı ve gönderiler, size gönderilen panel içi bildirimler |
 | İçerik bildirimi | Bildirdiğiniz içeriğin türü ve o anki metni, seçtiğiniz bildirim türü, varsa açıklamanız, bildirimin sonucu; bildirilen içeriğin sahibi olduğunuzda bu bilgiler sizinle ilişkilendirilir |
-| Özel mesajlar | Gönderdiğiniz ve aldığınız özel mesajlar ve gönderim zamanları, konuşmayı en son okuduğunuz ve sildiğiniz zaman, özel mesaj tercihiniz |
+| Özel mesajlar | Gönderdiğiniz ve aldığınız özel mesajlar ve gönderim zamanları, konuşmayı en son okuduğunuz ve sildiğiniz zaman, özel mesaj tercihiniz, okundu bilgisi tercihiniz |
 | Anonim kutu | Derginin anonim kutusuna bıraktığınız mesajlar, bunların gönderim zamanı, yayımlanmalarına verdiğiniz onay ve hesabınızla ilişkisi; üye kutularının kapatıldığı tarihten önce kutunuza bırakılmış veya başka üyelerin kutusuna bıraktığınız mesajlar ile susturma kayıtları |
 | Trafik kaydı | Her yorum, sohbet mesajı, özel mesaj, anonim mesaj, gönderi ve yanıt için: gönderen hesap, IP adresi, tarayıcı bilgisi (user-agent), işlem türü ve zamanı |
 | Moderasyon | Yasaklama durumu ve gerekçesi, kaldırılan içerik kayıtları |
@@ -43,7 +43,9 @@ ortaklık adına tek başına temsile yetkilidir.
 Özel mesajlarınızı yalnızca siz ve yazıştığınız üye görür; yöneticiler özel
 mesajları listeleyemez ve okuyamaz. Konuşmayı açtığınızda, yazıştığınız üye
 kendi gönderdiği mesajların yanında "okundu" işaretini görür; konuşmayı hangi
-saatte açtığınız ona gösterilmez. Taraflardan biri bir mesajı bildirirse
+saatte açtığınız ona gösterilmez. Okundu bilgisini topluluk ayarlarından
+kapatabilirsiniz; kapalıyken sizin okuduğunuz gösterilmez, siz de başkalarınınkini
+görmezsiniz. Taraflardan biri bir mesajı bildirirse
 yalnızca o mesajın metni incelemeye gönderilir. Doğum tarihiniz, özel
 mesajlaşmanın 18 yaşını doldurmuş üyelerle sınırlı olduğunu denetlemek için de
 kullanılır; karşı tarafa gösterilmez.

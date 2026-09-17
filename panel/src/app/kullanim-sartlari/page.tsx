@@ -91,7 +91,8 @@ export default async function TermsPage() {
         <strong>Özel mesajlar.</strong> Özel mesajlaşma yalnızca 18 yaşını doldurmuş üyeler
         arasında açıktır. Size kimlerin yazabileceğini topluluk ayarlarından seçersiniz; engellediğiniz
         hesaplar size yazamaz. Bir konuşmayı açtığınızda yazıştığınız üye, gönderdiği mesajların
-        okunduğunu görür; açtığınız saat gösterilmez. Özel mesajları yöneticiler okuyamaz; yazıştığınız üye bir mesajınızı
+        okunduğunu görür; açtığınız saat gösterilmez. Okundu bilgisini topluluk ayarlarından
+        kapatabilirsiniz; kapalıyken siz de başkalarınınkini görmezsiniz. Özel mesajları yöneticiler okuyamaz; yazıştığınız üye bir mesajınızı
         bildirirse yalnızca o mesajın metni incelenir. Topluluk kuralları özel mesajlarda da
         geçerlidir.
       </p>

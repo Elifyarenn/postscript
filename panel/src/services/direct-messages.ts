@@ -63,6 +63,7 @@ type Participant = {
   bio: string | null;
   birthDate: string | null;
   dmPolicy: DmPolicy;
+  readReceipts: boolean;
   isBanned: boolean;
   deletedAt: Date | null;
 };
@@ -74,6 +75,7 @@ const participantColumns = {
   bio: users.bio,
   birthDate: users.birthDate,
   dmPolicy: users.dmPolicy,
+  readReceipts: users.readReceipts,
   isBanned: users.isBanned,
   deletedAt: users.deletedAt,
 };
@@ -307,7 +309,7 @@ export async function openConversation(actor: Actor, rawUsername: string): Promi
 
   let messages: ConversationMessage[] = [];
   if (conversation) {
-    const [mine, theirs] = await Promise.all([
+    const [mine, theirs, myReceipts] = await Promise.all([
       db
         .select({ clearedAt: conversationStates.clearedAt })
         .from(conversationStates)
@@ -318,9 +320,12 @@ export async function openConversation(actor: Actor, rawUsername: string): Promi
         .from(conversationStates)
         .where(and(eq(conversationStates.conversationId, conversation.id), eq(conversationStates.userId, other.id)))
         .limit(1),
+      getMemberSettings(actor),
     ]);
     const clearedAt = mine[0]?.clearedAt ?? null;
-    const otherReadAt = theirs[0]?.lastReadAt ?? null;
+    // Ticks work both ways: whoever turned them off neither shows nor sees them (D-188)
+    const ticksShown = myReceipts.readReceipts && other.readReceipts;
+    const otherReadAt = ticksShown ? (theirs[0]?.lastReadAt ?? null) : null;
 
     const rows = await db
       .select({
@@ -518,6 +523,20 @@ export async function clearConversation(actor: Actor, rawUsername: string): Prom
   if (!conversation) throw notFound("Konuşma bulunamadı.");
 
   await markRead(db, conversation.id, me.id, new Date(), true);
+}
+
+export const readReceiptsSchema = z.strictObject({ enabled: z.boolean() });
+
+/** Turns the read ticks on or off for the member, both ways (D-188). */
+export async function setReadReceipts(actor: Actor, rawInput: unknown): Promise<boolean> {
+  assertMayPost(actor);
+  const parsed = readReceiptsSchema.safeParse(rawInput);
+  if (!parsed.success) throw badRequest("Tercih geçersiz.");
+  await db
+    .update(users)
+    .set({ readReceipts: parsed.data.enabled, updatedAt: new Date() })
+    .where(eq(users.id, actor.id));
+  return parsed.data.enabled;
 }
 
 export const dmPolicySchema = z.strictObject({

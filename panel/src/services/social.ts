@@ -154,6 +154,8 @@ export type MemberSettings = {
   username: string | null;
   penName: string | null;
   dmPolicy: DmPolicy;
+  /** Read ticks, both ways (D-188). */
+  readReceipts: boolean;
   anonBoxEnabled: boolean;
   bio: string | null;
   interests: string[];
@@ -176,6 +178,7 @@ const loadMemberSettings = cache(async (userId: string): Promise<MemberSettings>
       username: users.username,
       penName: users.penName,
       dmPolicy: users.dmPolicy,
+      readReceipts: users.readReceipts,
       anonBoxEnabled: users.anonBoxEnabled,
       bio: users.bio,
       interests: users.interests,
@@ -189,6 +192,7 @@ const loadMemberSettings = cache(async (userId: string): Promise<MemberSettings>
     username: rows[0]?.username ?? null,
     penName: rows[0]?.penName ?? null,
     dmPolicy: rows[0]?.dmPolicy ?? "following",
+    readReceipts: rows[0]?.readReceipts ?? true,
     anonBoxEnabled: rows[0]?.anonBoxEnabled ?? false,
     bio: rows[0]?.bio ?? null,
     interests: rows[0]?.interests ?? [],

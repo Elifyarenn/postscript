@@ -13,6 +13,7 @@ import {
   pruneDeletedDirectMessages,
   sendDirectMessage,
   setDirectMessagePolicy,
+  setReadReceipts,
   unreadConversationCount,
 } from "@/services/direct-messages";
 import { blockMember, followMember, setUsername } from "@/services/social";
@@ -196,6 +197,29 @@ describe("conversations", () => {
     // The other member's own view never marks their incoming messages
     const theirs = await openConversation(actorOf(velvet), "lunae");
     expect(theirs.messages.every((message) => !message.readByOther)).toBe(true);
+  });
+
+  it("hides the ticks both ways when either member turns read receipts off (D-188)", async () => {
+    const { lunae, velvet } = await openPair();
+    await send(lunae, "velvet", "bir");
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await openConversation(actorOf(velvet), "lunae");
+
+    const ticks = async () =>
+      (await openConversation(actorOf(lunae), "velvet")).messages.map((message) => message.readByOther);
+    expect(await ticks()).toEqual([true]);
+
+    // The reader turns it off: their reading is no longer shown
+    await setReadReceipts(actorOf(velvet), { enabled: false });
+    expect(await ticks()).toEqual([false]);
+
+    // The sender turns it off instead: they see nobody's reading either
+    await setReadReceipts(actorOf(velvet), { enabled: true });
+    await setReadReceipts(actorOf(lunae), { enabled: false });
+    expect(await ticks()).toEqual([false]);
+
+    await setReadReceipts(actorOf(lunae), { enabled: true });
+    expect(await ticks()).toEqual([true]);
   });
 
   it("clears a conversation for one member only, until a new message arrives", async () => {

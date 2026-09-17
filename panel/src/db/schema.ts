@@ -208,6 +208,11 @@ export const users = pgTable(
     nickname: text("nickname"),
     /** Defaults to the people the member follows: nobody is reachable by strangers unasked. */
     dmPolicy: dmPolicyEnum("dm_policy").notNull().default("following"),
+    /**
+     * Read ticks both ways (D-188): off, the member's reading is not shown and
+     * they see nobody else's. On by default, as the ticks were before.
+     */
+    readReceipts: boolean("read_receipts").notNull().default(true),
     /** The anonymous box is opt-in (D-092): closed until the member opens it. */
     anonBoxEnabled: boolean("anon_box_enabled").notNull().default(false),
     bio: text("bio"),

@@ -7253,3 +7253,30 @@ Sayılar sayfasında yayımlanmış sayı yokken çizilen boş kartlar
 **Hukuk:** Değişiklik yok.
 
 **Doğrulama:** Kapı: typecheck, lint, test. Canlıda ana sayfa ve Sayılar.
+
+## D-188 — Okundu bilgisi kapatılabilir (karşılıklı)
+
+**İstek (ürün sahibi):** "Okundu bilgisini kapatma seçeneği ekle." D-184'te
+hukukçu görüşü için açık bırakılan kapatma seçeneği.
+
+**Karar:**
+
+- `users.read_receipts` (varsayılan açık; migration `0039`, sütun ekleme).
+- Topluluk ayarları → Mesajlar: "Okundu bilgisi" başlığı ve "Okundu bilgisini
+  göster" kutusu (`setReadReceipts`).
+- **Karşılıklı:** Çift tik yalnızca iki üyenin de bilgisi açıksa gösterilir.
+  Kapatan üyenin okuduğu gösterilmez, kendisi de başkalarının okuyup okumadığını
+  göremez (WhatsApp'taki gibi). Böylece kapatan biri tek taraflı bilgi edinemez.
+- Okuma zamanı yine tutulur (okunmamış sayısı ve rozet buna dayanır); yalnızca
+  karşı tarafa gösterilmez.
+
+**Hukuk (KVKK):** Aydınlatma metninde özel mesajlar veri satırına "okundu
+bilgisi tercihiniz" ve paragrafa kapatma seçeneği; kullanım şartlarına aynı
+cümle eklendi. D-184'teki ölçülülük sorusunun muhafazakâr cevabı bu seçenek.
+
+**Üretim:** Migration `0039_read_receipts` (tek satır, varsayılanlı sütun
+ekleme; mevcut herkes açık kalır). Push'tan önce üretime uygulanmalı (D-079).
+
+**Doğrulama:** `direct-messages.test.ts`: okuyan kapatınca tik gider, gönderen
+kapatınca tik gider, ikisi açınca geri gelir. Kapı: typecheck, lint, test.
+

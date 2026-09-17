@@ -15,6 +15,7 @@ import { DM_POLICIES, DM_POLICY_LABELS } from "@/lib/direct-messages";
 import {
   setInterestsAction,
   setDirectMessagePolicyAction,
+  setReadReceiptsAction,
   setUsernameAction,
   unblockAction,
 } from "../actions";
@@ -302,6 +303,24 @@ export default async function SocialSettingsPage({
                     ))}
                   </Select>
                 </Field>
+              </PanelForm>
+
+              <h3 className="settings-subtitle mt-8">Okundu bilgisi</h3>
+              <p className="mb-4 text-sm text-muted">
+                Açıkken, bir konuşmayı açtığınızda yazıştığınız üye mesajlarının okunduğunu görür
+                (çift tik); saat gösterilmez. Kapatırsanız sizin okuduğunuz gösterilmez ve siz de
+                başkalarının okuyup okumadığını göremezsiniz.
+              </p>
+              <PanelForm action={setReadReceiptsAction} csrfToken={csrfToken} submitLabel="Kaydet">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="readReceipts"
+                    defaultChecked={settings.readReceipts}
+                    className="size-4 accent-accent"
+                  />
+                  Okundu bilgisini göster
+                </label>
               </PanelForm>
             </>
           )}
