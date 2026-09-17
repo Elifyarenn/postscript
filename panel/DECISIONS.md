@@ -7328,3 +7328,28 @@ cümleler üyeye yapılan yasal bilgilendirmedir (5651, KVKK); kaldırılmadı.
 **Hukuk:** Değişiklik yok.
 
 **Doğrulama:** Kapı: typecheck, lint, test.
+
+## D-191 — Tek tema: tarayıcının otomatik koyu modu kapalı
+
+**İstek (ürün sahibi):** "Bazı tarayıcılar telefonun temasına göre siteyi koyu
+moda almaya çalışıyor; bunu yapamasınlar, tema tek tema kalacak."
+
+**Karar:**
+
+- Kök düzende `viewport.colorScheme = "only light"` → her sayfada
+  `<meta name="color-scheme" content="only light">`. `globals.css`'te aynısı
+  `:root { color-scheme: only light; }` olarak. Chrome'un (Android) "web
+  içeriği için otomatik koyu mod" özelliği ve iOS/Safari bu işareti okur ve
+  sayfayı kendiliğinden koyulaştırmaz; form alanları ve kaydırma çubukları da
+  açık temada kalır.
+- Sitede zaten `prefers-color-scheme` kuralı ya da ikinci tema yok; tasarımın
+  bordo ve kâğıt paleti tek tema.
+
+**Sınır:** Kullanıcının tarayıcı ayarlarında "bütün siteleri zorla koyulaştır"
+açıksa (Samsung Internet'in eski sürümleri, Chrome'un deneysel bayrağı) bazı
+tarayıcılar bu işareti yok sayabilir; web tarafında bunu tamamen engellemenin
+yolu yok.
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Canlıda sayfa kaynağında meta etiketi.
