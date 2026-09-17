@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { requireSession } from "@/lib/auth/guard";
 import { readCsrfToken } from "@/lib/csrf";
 import { getMemberSettings } from "@/services/social";
 import { listHomeFeed, suggestMembers } from "@/services/posts";
 import { Alert, Card, PageHeader } from "@/components/ui";
-import { MemberList, PostComposer, PostList } from "@/components/social";
+import { PostComposer, PostList } from "@/components/social";
+import { MemberSuggestions, MemberSuggestionsFallback } from "./member-suggestions";
 
 export const metadata = { title: "Topluluk" };
 
@@ -36,10 +38,8 @@ export default async function SocialHomePage() {
     );
   }
 
-  const [feed, suggestions] = await Promise.all([
-    listHomeFeed({ ...user }),
-    suggestMembers({ ...user }),
-  ]);
+  const suggestions = suggestMembers({ ...user });
+  const feed = await listHomeFeed({ ...user });
 
   return (
     <>
@@ -65,15 +65,13 @@ export default async function SocialHomePage() {
         </div>
 
         {/* Someone new has nobody to follow yet; the suggestions give them a start (D-139) */}
-        <Card className="h-fit">
-          <h2 className="mb-1 font-serif text-base">Tanıyor olabilirsiniz</h2>
-          <p className="mb-2 text-xs text-muted">Toplulukta kullanıcı adı seçmiş üyeler.</p>
-          {suggestions.length === 0 ? (
-            <p className="py-4 text-sm text-muted">Şimdilik öneri yok.</p>
-          ) : (
-            <MemberList members={suggestions} followToken={csrfToken} />
-          )}
-        </Card>
+        <Suspense fallback={<MemberSuggestionsFallback />}>
+          <MemberSuggestions
+            suggestions={suggestions}
+            csrfToken={csrfToken}
+            description="Toplulukta kullanıcı adı seçmiş üyeler."
+          />
+        </Suspense>
       </div>
     </>
   );

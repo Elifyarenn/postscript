@@ -8,6 +8,7 @@
  * reposts the other's posts.
  */
 import "server-only";
+import { cache } from "react";
 import {
   and,
   asc,
@@ -99,14 +100,27 @@ type Entry = { postId: string; at: Date; repostedBy: PostAuthor | null };
 /** An author the community may still see: not deleted, not banned, with a handle. */
 const visibleAuthor = [isNull(users.deletedAt), eq(users.isBanned, false), isNotNull(users.username)];
 
-/** Everyone on the other side of a block, whichever side placed it. */
-async function blockedIdsFor(viewerId: string): Promise<string[]> {
+/**
+ * Everyone on the other side of a block, whichever side placed it. Memoised
+ * per request like the follow list below: the feed and the suggestions beside
+ * it both need them (D-172).
+ */
+const blockedIdsFor = cache(async (viewerId: string): Promise<string[]> => {
   const rows = await db
     .select({ blockerId: userBlocks.blockerId, blockedId: userBlocks.blockedId })
     .from(userBlocks)
     .where(or(eq(userBlocks.blockerId, viewerId), eq(userBlocks.blockedId, viewerId)));
   return rows.map((row) => (row.blockerId === viewerId ? row.blockedId : row.blockerId));
-}
+});
+
+/** The members this one follows. */
+const followedIdsFor = cache(async (followerId: string): Promise<string[]> => {
+  const rows = await db
+    .select({ id: follows.followeeId })
+    .from(follows)
+    .where(eq(follows.followerId, followerId));
+  return rows.map((row) => row.id);
+});
 
 function countMap(rows: { postId: string | null; value: number }[]): Map<string, number> {
   return new Map(
@@ -443,14 +457,13 @@ export async function removePostBookmark(actor: Actor, postId: string): Promise<
 
 /** The member's own posts and those of the people they follow, reposts included. */
 export async function listHomeFeed(actor: Actor, limit = 50): Promise<PostView[]> {
-  const me = await requireMember(actor);
-  const blocked = await blockedIdsFor(me.id);
-
-  const followed = await db
-    .select({ id: follows.followeeId })
-    .from(follows)
-    .where(eq(follows.followerId, me.id));
-  const authorIds = [me.id, ...followed.map((row) => row.id)];
+  // The three lookups do not depend on each other; each used to wait for the last
+  const [me, blocked, followed] = await Promise.all([
+    requireMember(actor),
+    blockedIdsFor(actor.id),
+    followedIdsFor(actor.id),
+  ]);
+  const authorIds = [me.id, ...followed];
 
   const [own, reposts] = await Promise.all([
     db
@@ -491,15 +504,17 @@ export async function listHomeFeed(actor: Actor, limit = 50): Promise<PostView[]
 /** Explore: the last thirty days' top-level posts, ranked by a plain rule. */
 export async function listExplorePosts(actor: Actor, limit = 30): Promise<PostView[]> {
   assertMayPost(actor);
-  const blocked = await blockedIdsFor(actor.id);
   const since = new Date(Date.now() - EXPLORE_WINDOW_DAYS * 86_400_000);
 
-  const recent = await db
-    .select({ postId: posts.id, at: posts.createdAt })
-    .from(posts)
-    .where(and(isNull(posts.replyToId), isNull(posts.deletedAt), gte(posts.createdAt, since)))
-    .orderBy(desc(posts.createdAt))
-    .limit(200);
+  const [blocked, recent] = await Promise.all([
+    blockedIdsFor(actor.id),
+    db
+      .select({ postId: posts.id, at: posts.createdAt })
+      .from(posts)
+      .where(and(isNull(posts.replyToId), isNull(posts.deletedAt), gte(posts.createdAt, since)))
+      .orderBy(desc(posts.createdAt))
+      .limit(200),
+  ]);
 
   const views = await hydrate(
     actor.id,
@@ -512,13 +527,7 @@ export async function listExplorePosts(actor: Actor, limit = 30): Promise<PostVi
 /** Friends of friends first; when that runs short, the most followed members. */
 export async function suggestMembers(actor: Actor, limit = 5): Promise<MemberListItem[]> {
   assertMayPost(actor);
-  const blocked = await blockedIdsFor(actor.id);
-
-  const followed = await db
-    .select({ id: follows.followeeId })
-    .from(follows)
-    .where(eq(follows.followerId, actor.id));
-  const followedIds = followed.map((row) => row.id);
+  const [blocked, followedIds] = await Promise.all([blockedIdsFor(actor.id), followedIdsFor(actor.id)]);
   const exclude = new Set([actor.id, ...followedIds, ...blocked]);
 
   const secondDegree =
@@ -535,28 +544,31 @@ export async function suggestMembers(actor: Actor, limit = 5): Promise<MemberLis
   );
 
   if (candidates.length < limit) {
-    const popular = await db
-      .select({ id: follows.followeeId, value: count() })
-      .from(follows)
-      .groupBy(follows.followeeId)
-      .orderBy(desc(count()))
-      .limit(50);
+    // Both fallbacks are fetched together and used in order: the most followed
+    // first, then members who picked a handle, newest first, because a young
+    // community has few follows to learn from (D-139). Asking for the second
+    // only after the first cost another round trip (D-172).
+    const [popular, recent] = await Promise.all([
+      db
+        .select({ id: follows.followeeId, value: count() })
+        .from(follows)
+        .groupBy(follows.followeeId)
+        .orderBy(desc(count()))
+        .limit(50),
+      db
+        .select({ id: users.id })
+        .from(users)
+        .where(and(...visibleAuthor))
+        .orderBy(desc(users.createdAt))
+        .limit(50),
+    ]);
     for (const row of popular) {
       if (!exclude.has(row.id) && !candidates.includes(row.id)) candidates.push(row.id);
     }
-  }
-
-  if (candidates.length < limit) {
-    // A young community has few follows to learn from, so members who picked a
-    // handle fill the rest of the list, newest first (D-139)
-    const recent = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(and(...visibleAuthor))
-      .orderBy(desc(users.createdAt))
-      .limit(50);
-    for (const row of recent) {
-      if (!exclude.has(row.id) && !candidates.includes(row.id)) candidates.push(row.id);
+    if (candidates.length < limit) {
+      for (const row of recent) {
+        if (!exclude.has(row.id) && !candidates.includes(row.id)) candidates.push(row.id);
+      }
     }
   }
 
@@ -738,8 +750,7 @@ export async function listProfileComments(
   rawUsername: string,
   limit = 5,
 ): Promise<ProfileComment[]> {
-  const profile = await getProfile(actor, rawUsername);
-  const blocked = await blockedIdsFor(actor.id);
+  const [profile, blocked] = await Promise.all([getProfile(actor, rawUsername), blockedIdsFor(actor.id)]);
   const answered = alias(posts, "answered_post");
 
   const rows = await db
@@ -784,26 +795,31 @@ export async function listProfileComments(
 export async function getPostThread(actor: Actor, postId: string) {
   assertMayPost(actor);
   if (!z.uuid().safeParse(postId).success) throw notFound("Gönderi bulunamadı.");
-  const blocked = await blockedIdsFor(actor.id);
+  const [blocked, replyRows] = await Promise.all([
+    blockedIdsFor(actor.id),
+    db
+      .select({ postId: posts.id, at: posts.createdAt })
+      .from(posts)
+      .where(and(eq(posts.replyToId, postId), isNull(posts.deletedAt)))
+      .orderBy(asc(posts.createdAt))
+      .limit(200),
+  ]);
 
-  const [post] = await hydrate(actor.id, [{ postId, at: new Date(), repostedBy: null }], blocked);
+  // Replies are shown only once the post itself proves visible, but they can be
+  // prepared alongside it rather than after it
+  const [[post], replies] = await Promise.all([
+    hydrate(actor.id, [{ postId, at: new Date(), repostedBy: null }], blocked),
+    hydrate(
+      actor.id,
+      replyRows.map((row) => ({ ...row, repostedBy: null })),
+      blocked,
+    ),
+  ]);
   if (!post) throw notFound("Gönderi bulunamadı.");
 
   const parent = post.replyTo
     ? ((await hydrate(actor.id, [{ postId: post.replyTo.id, at: new Date(), repostedBy: null }], blocked))[0] ?? null)
     : null;
-
-  const replyRows = await db
-    .select({ postId: posts.id, at: posts.createdAt })
-    .from(posts)
-    .where(and(eq(posts.replyToId, post.id), isNull(posts.deletedAt)))
-    .orderBy(asc(posts.createdAt))
-    .limit(200);
-  const replies = await hydrate(
-    actor.id,
-    replyRows.map((row) => ({ ...row, repostedBy: null })),
-    blocked,
-  );
 
   return { post, parent, replies };
 }
@@ -815,27 +831,29 @@ export async function listCommunityPosts(
   limit = 50,
 ): Promise<PostView[]> {
   assertMayPost(actor);
-  const blocked = await blockedIdsFor(actor.id);
-
-  const rows = await db
-    .select({ postId: posts.id, at: posts.createdAt })
-    .from(posts)
-    .where(and(eq(posts.communityId, communityId), isNull(posts.replyToId), isNull(posts.deletedAt)))
-    .orderBy(desc(posts.createdAt))
-    .limit(limit);
+  const [blocked, rows] = await Promise.all([
+    blockedIdsFor(actor.id),
+    db
+      .select({ postId: posts.id, at: posts.createdAt })
+      .from(posts)
+      .where(and(eq(posts.communityId, communityId), isNull(posts.replyToId), isNull(posts.deletedAt)))
+      .orderBy(desc(posts.createdAt))
+      .limit(limit),
+  ]);
 
   return hydrate(actor.id, rows.map((row) => ({ ...row, repostedBy: null })), blocked);
 }
 
 export async function listBookmarkedPosts(actor: Actor): Promise<PostView[]> {
   assertMayPost(actor);
-  const blocked = await blockedIdsFor(actor.id);
-
-  const saved = await db
-    .select({ postId: bookmarks.postId, at: bookmarks.createdAt })
-    .from(bookmarks)
-    .where(and(eq(bookmarks.userId, actor.id), isNotNull(bookmarks.postId)))
-    .orderBy(desc(bookmarks.createdAt));
+  const [blocked, saved] = await Promise.all([
+    blockedIdsFor(actor.id),
+    db
+      .select({ postId: bookmarks.postId, at: bookmarks.createdAt })
+      .from(bookmarks)
+      .where(and(eq(bookmarks.userId, actor.id), isNotNull(bookmarks.postId)))
+      .orderBy(desc(bookmarks.createdAt)),
+  ]);
 
   return hydrate(
     actor.id,

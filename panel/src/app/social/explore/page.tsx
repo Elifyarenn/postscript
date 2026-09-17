@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import { requireSession } from "@/lib/auth/guard";
 import { readCsrfToken } from "@/lib/csrf";
 import { listExplorePosts, suggestMembers } from "@/services/posts";
 import { Card, PageHeader } from "@/components/ui";
-import { MemberList, PostList } from "@/components/social";
+import { PostList } from "@/components/social";
+import { MemberSuggestions, MemberSuggestionsFallback } from "../member-suggestions";
 
 export const metadata = { title: "Keşfet" };
 
@@ -11,10 +13,8 @@ export default async function ExplorePage() {
   const { user } = await requireSession();
   const csrfToken = (await readCsrfToken()) ?? "";
 
-  const [popular, suggestions] = await Promise.all([
-    listExplorePosts({ ...user }),
-    suggestMembers({ ...user }),
-  ]);
+  const suggestions = suggestMembers({ ...user });
+  const popular = await listExplorePosts({ ...user });
 
   return (
     <>
@@ -28,17 +28,13 @@ export default async function ExplorePage() {
           <PostList posts={popular} csrfToken={csrfToken} empty="Son 30 günde paylaşılmış gönderi yok." />
         </Card>
 
-        <Card className="h-fit">
-          <h2 className="mb-1 font-serif text-base">Tanıyor olabilirsiniz</h2>
-          <p className="mb-2 text-xs text-muted">
-            Takip ettiklerinizin takip ettikleri, en çok takip edilenler ve kullanıcı adı seçmiş yeni üyeler.
-          </p>
-          {suggestions.length === 0 ? (
-            <p className="py-4 text-sm text-muted">Şimdilik öneri yok.</p>
-          ) : (
-            <MemberList members={suggestions} followToken={csrfToken} />
-          )}
-        </Card>
+        <Suspense fallback={<MemberSuggestionsFallback />}>
+          <MemberSuggestions
+            suggestions={suggestions}
+            csrfToken={csrfToken}
+            description="Takip ettiklerinizin takip ettikleri, en çok takip edilenler ve kullanıcı adı seçmiş yeni üyeler."
+          />
+        </Suspense>
       </div>
     </>
   );

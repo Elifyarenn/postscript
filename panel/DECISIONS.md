@@ -6717,3 +6717,38 @@ kez; `getMemberSettings` ise çerçeve, iki sayaç ve sayfa için dört kez
 **Doğrulama:** Rozet ile listenin okunmuş, okunmamış, temizlenmiş, engellenmiş
 ve kendi yazdığı konuşmalarda aynı sonucu verdiğini gösteren entegrasyon testi.
 Kapı: typecheck, lint, test.
+
+## D-172 — Topluluk sayfaları paralel sorar, hemen iskelet gösterir
+
+**Sorun (D-170 ile aynı istek):** Akış `requireMember` → engellenenler →
+takip edilenler → gönderiler sırasıyla, her biri öncekini bekleyerek
+çalışıyordu; yanındaki öneri kutusu engellenen ve takip edilen listelerini bir
+kez daha soruyordu. Profil sayfası aynı profili dört kez kuruyordu (başlık,
+sekme, öne çıkan gönderi, yorumlar; her biri ~8 sorgu). Topluluk sayfalarında
+`loading.tsx` yoktu: bağlantıya tıklayan üye, sayfanın bütün verisi gelene
+kadar önceki ekrana bakıyordu.
+
+**Karar:**
+
+- `posts.ts`: engellenen ve takip edilen kimlikler istek başına bir kez
+  (`cache`); akış, Keşfet, topluluk, kaydedilenler, gönderi dizisi ve profil
+  yorumları birbirine bağlı olmayan sorguları `Promise.all` ile birlikte
+  başlatır. Önerilerde iki yedek liste (en çok takip edilenler, yeni üyeler)
+  birlikte çekilir ve eskisi gibi sırayla kullanılır.
+- Gönderi dizisinde yanıtlar gönderinin kendisiyle birlikte hazırlanır; gönderi
+  görünür değilse yine 404 döner, yanıtlar gösterilmez.
+- `getProfile` izleyen ve kullanıcı adıyla istek başına bir kez çalışır.
+- `src/app/social/loading.tsx`: çerçeve içinde iskelet kartlar. Akışta ve
+  Keşfet'te "Tanıyor olabilirsiniz" kendi `Suspense` sınırında; sorgusu sayfanın
+  başında başlatılıp söz olarak verilir, gönderiler öneriyi beklemez.
+- **Neon havuz adresi (`-pooler`) değiştirilmedi:** Uygulama artık veritabanıyla
+  aynı bölgede, bağlantı kurmak milisaniyeler sürüyor. postgres.js'in hazır
+  sorguları PgBouncer'ın işlem kipinde sürücüye duyarlı bir değişiklik (D-078)
+  ve dal kotası dolu olduğu için bir Neon dalında denenemez. Muhafazakâr olan:
+  doğrudan bağlantıda kalmak. Ücretsiz planda 5 dakika boşta kalan veritabanının
+  uyuması (ilk istekte ~0,5 sn) kodla çözülmez.
+
+**Hukuk:** İşlenen veri değişmedi.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Canlıda D-170'teki sayfaların
+yeniden ölçümü.

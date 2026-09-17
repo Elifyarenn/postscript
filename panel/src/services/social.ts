@@ -421,14 +421,23 @@ export type ProfileView = Member & {
 };
 
 export async function getProfile(viewer: Actor, rawUsername: string): Promise<ProfileView> {
+  return loadProfile(viewer.id, rawUsername);
+}
+
+/**
+ * A profile page asks for the same profile four times: the header, the paged
+ * tab, the featured post and the side column's comments (D-172). Memoised by
+ * viewer and handle, so the page pays for it once.
+ */
+const loadProfile = cache(async (viewerId: string, rawUsername: string): Promise<ProfileView> => {
   const target = await findReachableMember(rawUsername);
   if (!target) throw notFound("Profil bulunamadı.");
 
-  const isSelf = target.id === viewer.id;
+  const isSelf = target.id === viewerId;
 
   // Someone who blocked the viewer is simply not there for them; answering
   // "you are blocked" would tell them exactly what the block hides
-  if (!isSelf && (await hasBlocked(target.id, viewer.id))) {
+  if (!isSelf && (await hasBlocked(target.id, viewerId))) {
     throw notFound("Profil bulunamadı.");
   }
 
@@ -440,9 +449,9 @@ export async function getProfile(viewer: Actor, rawUsername: string): Promise<Pr
         .select({ value: count() })
         .from(posts)
         .where(and(eq(posts.authorId, target.id), isNull(posts.deletedAt), isNull(posts.replyToId))),
-      isSelf ? false : isFollowing(viewer.id, target.id),
-      isSelf ? false : isFollowing(target.id, viewer.id),
-      isSelf ? false : hasBlocked(viewer.id, target.id),
+      isSelf ? false : isFollowing(viewerId, target.id),
+      isSelf ? false : isFollowing(target.id, viewerId),
+      isSelf ? false : hasBlocked(viewerId, target.id),
     ]);
 
   return {
@@ -462,7 +471,7 @@ export async function getProfile(viewer: Actor, rawUsername: string): Promise<Pr
     followsViewer,
     viewerBlocked,
   };
-}
+});
 
 export type MemberListItem = Pick<Member, "username" | "role">;
 
