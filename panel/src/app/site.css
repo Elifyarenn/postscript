@@ -453,6 +453,24 @@
   color: var(--site-paper);
 }
 
+/* The collage sits under the title and the star (D-175) */
+.ps-site .site-banner.has-image {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.ps-site .site-banner-image {
+  z-index: -1;
+  object-fit: cover;
+}
+
+.ps-site .community-intro {
+  margin: 1.25rem 0;
+  color: var(--site-muted);
+  font-size: 0.9rem;
+}
+
 .ps-site .site-banner-title {
   font-family: var(--font-italic), Georgia, serif;
   /* MAGAZINES 114.4, ABOUT 125.8 units */

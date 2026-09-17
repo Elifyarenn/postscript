@@ -1,4 +1,5 @@
 import Link from "next/link";
+import contactBanner from "@/assets/design/banner-contact.webp";
 import { getAuthContext } from "@/lib/auth/session";
 import { readCsrfToken } from "@/lib/csrf";
 import { buildImprint } from "@/lib/legal";
@@ -89,7 +90,7 @@ export default async function ContactPage() {
 
   return (
     <SiteShell user={user} bleed>
-      <SiteBanner title="İletişim" subtitle="Bir sorunuz mu var?" />
+      <SiteBanner title="İletişim" subtitle="Bir sorunuz mu var?" image={contactBanner} />
 
       <div className="contact-page">
         <section className="contact-intro" aria-labelledby="contact-intro-title">

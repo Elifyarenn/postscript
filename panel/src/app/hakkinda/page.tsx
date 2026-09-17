@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import aboutBanner from "@/assets/design/banner-about.webp";
 import { getAuthContext } from "@/lib/auth/session";
 import { listPublicStaff, type PublicStaffMember } from "@/services/public";
 import { SiteShell } from "@/components/site-shell";
@@ -80,7 +81,7 @@ export default async function AboutPage({
 
   return (
     <SiteShell user={user} bleed>
-      <SiteBanner title="Hakkında" subtitle="Bizimle ilgili her şey" />
+      <SiteBanner title="Hakkında" subtitle="Bizimle ilgili her şey" image={aboutBanner} />
 
       <div className="about-grid">
         <nav className="about-tabs" aria-label="Hakkında bölümleri">

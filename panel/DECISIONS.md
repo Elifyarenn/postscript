@@ -6800,3 +6800,40 @@ denetler. Kapı: typecheck, lint, test. Canlıda alt bilgi ve iletişim sayfası
 **Hukuk:** D-173 gibi düz dış bağlantı; aydınlatma metni değişmedi.
 
 **Doğrulama:** `site.test.ts`. Kapı: typecheck, lint, test. Canlıda alt bilgi.
+
+## D-175 — Başlık bantlarına tasarımcının kolajları
+
+**İstek (ürün sahibi):** "@pic uygula". Depo kökündeki `pic/` klasöründe dört
+görsel: `hakkında.jpeg` (1415×415), `iletişim.jpeg` (1415×415),
+`kategori.jpeg` (1421×350), `topluluk.jpeg` (1421×488). Hepsi koyu bordo
+zeminde, önceden karartılmış kolajlar; oranları sütun genişliğindeki başlık
+bandına (1320 px sütunda ~290 px) uyuyor.
+
+**Karar:**
+
+- `SiteBanner` isteğe bağlı `image` alır: görsel bandın arkasında,
+  `object-fit: cover` ile, başlık ve yıldızın altında. Görseller zaten
+  karartılmış olduğundan üstüne ek karartma yok; süs görseli olduğu için `alt`
+  boş. Görsel bulunmazsa bant eskisi gibi düz gece bordosu.
+- Görseller diğer tasarım dosyaları gibi webp'ye çevrilip
+  `src/assets/design/banner-{about,contact,categories,community}.webp` olarak
+  eklendi (122–148 KB → 35–44 KB). `pic/` klasörü depoya eklenmedi.
+- Bant sayfanın ilk öğesi olduğundan görsel hemen yüklenir
+  (`loading="eager"`, `fetchPriority="high"`).
+- Hakkında, İletişim ve Kategoriler kendi bantlarını aldı.
+- **Topluluk görselinin yeri:** Topluluk alanında `SiteBanner` kullanan sayfa
+  yoktu. Akış, mesajlar, bildirimler ve profil D-113'teki tasarımların kendi
+  başlıklarını taşıyor; tasarımı olmayan tek liste sayfası "Topluluklar"
+  (`/social/communities`). Bant oraya kondu ("Topluluklar / Konulara göre
+  gruplar"), açıklamanın geri kalanı altında küçük yazı. Ürün sahibi görseli
+  başka bir sayfada isterse yalnızca `image` taşınır.
+
+**Lisans:** Görseller ürün sahibinden, tasarım görselleriyle aynı kaynaktan
+geldi; D-115'teki teyit (telifsiz kaynak ya da tasarımcının işi) kapsamında
+kabul edildi.
+
+**Hukuk:** Görseller sitenin kendi sunucusundan sunulur, dışarıya istek yok;
+aydınlatma metni değişmedi.
+
+**Doğrulama:** Kapı: typecheck, lint, test; üretim derlemesi. Canlıda dört
+sayfanın ekran görüntüsü.

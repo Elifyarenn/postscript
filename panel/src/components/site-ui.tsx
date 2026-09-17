@@ -3,6 +3,7 @@
  * star, the pair of solid stars and the page titles built from them.
  */
 import type { ReactNode } from "react";
+import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
 import wordmark from "@/assets/design/wordmark.png";
 import type { SocialKey } from "@/lib/site";
@@ -110,16 +111,34 @@ export function SiteBanner({
   title,
   subtitle,
   aside,
+  image,
   children,
 }: {
   title: string;
   subtitle?: ReactNode;
   /** Replaces the star on the right, e.g. with a quotation. */
   aside?: ReactNode;
+  /**
+   * The designer's collage behind the title (D-175). It is already darkened
+   * for the light title, so it needs no overlay; purely decorative, no alt text.
+   */
+  image?: StaticImageData;
   children?: ReactNode;
 }) {
   return (
-    <section className="site-banner">
+    <section className={cn("site-banner", image && "has-image")}>
+      {image && (
+        <Image
+          src={image}
+          alt=""
+          fill
+          // The banner is the first thing on its page, so the picture is fetched at once
+          loading="eager"
+          fetchPriority="high"
+          sizes="(min-width: 1400px) 1320px, 100vw"
+          className="site-banner-image"
+        />
+      )}
       <div>
         <h1 className="site-banner-title fit-line">{title}</h1>
         {subtitle && <p className="site-banner-subtitle">{subtitle}</p>}

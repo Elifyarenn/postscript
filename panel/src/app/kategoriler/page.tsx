@@ -1,3 +1,4 @@
+import categoriesBanner from "@/assets/design/banner-categories.webp";
 import { getAuthContext } from "@/lib/auth/session";
 import { listWriterAreasWithQuota } from "@/services/writer-areas";
 import { CategoryCard } from "@/components/category-card";
@@ -16,7 +17,7 @@ export default async function CategoriesPage() {
 
   return (
     <SiteShell user={context?.user ?? null} bleed>
-      <SiteBanner title="Kategoriler" subtitle="Seni harekete geçireni bul" />
+      <SiteBanner title="Kategoriler" subtitle="Seni harekete geçireni bul" image={categoriesBanner} />
 
       <section className="categories-page" aria-label="Tüm kategoriler">
         {areas.length === 0 ? (
