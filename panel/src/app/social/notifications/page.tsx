@@ -12,6 +12,7 @@ import {
 import { formatRelativeTime } from "@/lib/relative-time";
 import { cn, formatDateTime } from "@/lib/utils";
 import { listNotifications } from "@/services/notifications";
+import { avatarUrlsFor } from "@/services/social";
 import { NotificationsSeen, UnreadDot } from "@/components/notifications-seen";
 import { SiteTitle } from "@/components/site-ui";
 
@@ -42,6 +43,8 @@ export default async function NotificationsPage({
   const [items, params] = await Promise.all([listNotifications({ ...user }), searchParams]);
 
   const tab = parseNotificationTab(params.tur);
+  const handles = items.flatMap((item) => splitLeadingHandle(item.title).handle ?? []);
+  const avatars = await avatarUrlsFor({ ...user }, handles);
   const shown = tab === "tumu" ? items : items.filter((item) => notificationTab(item.kind) === tab);
   const hasUnread = items.some((item) => item.readAt === null);
   const fillerRows = Math.max(0, RULED_ROWS - Math.max(shown.length, 1));
@@ -82,7 +85,14 @@ export default async function NotificationsPage({
           return (
             <li key={item.id} className={cn("notice-item", unread && "is-unread")}>
               <span className="notice-avatar" aria-hidden>
-                {handle ? handle.charAt(0) : <Bell className="size-5" />}
+                {handle && avatars.has(handle) ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- served by our own media route, as in Avatar
+                  <img src={avatars.get(handle)} alt="" />
+                ) : handle ? (
+                  handle.charAt(0)
+                ) : (
+                  <Bell className="size-5" />
+                )}
               </span>
               <div className="min-w-0 flex-1">
                 <p className="notice-title">

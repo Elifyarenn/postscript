@@ -489,6 +489,35 @@ const loadProfile = cache(async (viewerId: string, rawUsername: string): Promise
 export type MemberListItem = Pick<Member, "username" | "role">;
 
 /**
+ * The profile pictures of the handles a screen names, in one query (D-189).
+ * Only members the community can still see; the rest keep their initial.
+ */
+export async function avatarUrlsFor(actor: Actor, usernames: readonly string[]): Promise<Map<string, string>> {
+  assertMayPost(actor);
+  const unique = [...new Set(usernames)];
+  if (unique.length === 0) return new Map();
+
+  const rows = await db
+    .select({ username: users.username, avatarMediaId: users.avatarMediaId })
+    .from(users)
+    .where(
+      and(
+        inArray(users.username, unique),
+        isNull(users.deletedAt),
+        eq(users.isBanned, false),
+        isNotNull(users.avatarMediaId),
+      ),
+    );
+
+  const urls = new Map<string, string>();
+  for (const row of rows) {
+    const url = mediaUrl(row.avatarMediaId);
+    if (row.username && url) urls.set(row.username, url);
+  }
+  return urls;
+}
+
+/**
  * Members whose handle contains what was typed (D-186). Only the handle is
  * searched: the legal name never shows in the community, and matching the pen
  * name would tie the magazine byline to a community account (D-163, D-166).

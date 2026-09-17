@@ -7280,3 +7280,25 @@ ekleme; mevcut herkes açık kalır). Push'tan önce üretime uygulanmalı (D-07
 **Doğrulama:** `direct-messages.test.ts`: okuyan kapatınca tik gider, gönderen
 kapatınca tik gider, ikisi açınca geri gelir. Kapı: typecheck, lint, test.
 
+## D-189 — Bildirimlerde profil fotoğrafı, yuvarlak
+
+**İstek (ürün sahibi):** "Bildirim kısmında profil fotoğrafı olan kullanıcılar
+profil fotoğrafıyla gözüksün ve profil fotoğrafı kısmını kare değil yuvarlak
+yap."
+
+**Karar:**
+
+- Bildirim satırındaki kutu, başlıktaki `@kullanıcı` adına (D-164,
+  `splitLeadingHandle`) ait profil fotoğrafını gösterir; fotoğrafı olmayan
+  üyede baş harf, üyeden gelmeyen bildirimde zil simgesi kalır.
+- Fotoğraflar sayfadaki bütün adlar için tek sorguyla alınır (`avatarUrlsFor`):
+  yalnızca silinmemiş ve yasaklı olmayan üyelerin. Adres, profildeki gibi
+  kendi medya yolumuz (`/api/media/<id>`).
+- Kutu tasarımdaki kare yerine yuvarlak (`border-radius: 50%`), fotoğraf
+  kırpılarak doldurur; sitenin diğer avatarlarıyla aynı.
+
+**Hukuk:** Profil fotoğrafları zaten giriş yapmış üyelere açık (aydınlatma
+metni, "Profil görselleri"); yeni veri yok.
+
+**Doğrulama:** `social-graph.test.ts`: yalnızca görünür üyelerin fotoğrafı,
+tekrarlı ad tek kayıt, boş liste. Kapı: typecheck, lint, test.

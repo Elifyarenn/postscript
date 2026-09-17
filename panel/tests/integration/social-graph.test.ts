@@ -5,8 +5,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
-import { articles, auditLog, bookmarks, follows, notifications, userBlocks, users } from "@/db/schema";
+import { articles, auditLog, bookmarks, follows, media, notifications, userBlocks, users } from "@/db/schema";
 import {
+  avatarUrlsFor,
   blockMember,
   bookmarkArticle,
   followMember,
@@ -303,5 +304,34 @@ describe("searching members (D-186)", () => {
     expect(await searchMembers(actorOf(me), "%%")).toEqual([]);
     // "_" is not a wildcard
     expect((await searchMembers(actorOf(me), "a_l")).map((member) => member.username)).toEqual(["kara_lunae"]);
+  });
+});
+
+describe("profile pictures for a list of handles (D-189)", () => {
+  it("returns the pictures of visible members only, in one map", async () => {
+    const viewer = await createUser();
+    const withPicture = await createUser();
+    await setUsername(actorOf(withPicture), { username: "fotolu" }, noMeta);
+    const banned = await createUser();
+    await setUsername(actorOf(banned), { username: "yasakli_foto" }, noMeta);
+    const plain = await createUser();
+    await setUsername(actorOf(plain), { username: "fotosuz" }, noMeta);
+
+    const [picture, bannedPicture] = await db
+      .insert(media)
+      .values([
+        { storageKey: "avatars/a.webp", mime: "image/webp", size: 10, uploadedBy: withPicture.id },
+        { storageKey: "avatars/b.webp", mime: "image/webp", size: 10, uploadedBy: banned.id },
+      ])
+      .returning({ id: media.id });
+    await db.update(users).set({ avatarMediaId: picture!.id }).where(eq(users.id, withPicture.id));
+    await db
+      .update(users)
+      .set({ avatarMediaId: bannedPicture!.id, isBanned: true })
+      .where(eq(users.id, banned.id));
+
+    const urls = await avatarUrlsFor(actorOf(viewer), ["fotolu", "fotolu", "yasakli_foto", "fotosuz", "yok"]);
+    expect([...urls.entries()]).toEqual([["fotolu", `/api/media/${picture!.id}`]]);
+    expect((await avatarUrlsFor(actorOf(viewer), [])).size).toBe(0);
   });
 });
