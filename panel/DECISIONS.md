@@ -6752,3 +6752,28 @@ kadar önceki ekrana bakıyordu.
 
 **Doğrulama:** Kapı: typecheck, lint, test. Canlıda D-170'teki sayfaların
 yeniden ölçümü.
+
+## D-173 — X, TikTok ve Instagram hesapları bağlandı
+
+**İstek (ürün sahibi):** Derginin hesap adresleri verildi:
+`https://x.com/postscriptmgzn`,
+`https://www.instagram.com/postscriptmgzn?stkn=…`,
+`https://www.tiktok.com/@postscriptmgzn?_r=1&_t=…`.
+
+**Karar:**
+
+- `SOCIAL_LINKS`'te X, TikTok ve Instagram artık bağlantı; alt bilgideki
+  simgeler bu adreslere gider (yeni sekmede, `noopener noreferrer`). Pinterest'in
+  adresi yok, D-116'daki gibi bağlantısız simge olarak kalır.
+- Adresler paylaşım parametreleri olmadan tutulur: Instagram'ın `stkn`'si ve
+  TikTok'un `_r`/`_t`'si paylaşan kişiye bağlı izleme değerleridir, sitedeki her
+  tıklamayı o paylaşıma bağlarlardı. Hesap adresi onlarsız aynı sayfayı açar.
+- İletişim sayfasındaki Instagram ve X hesap adları (D-168) aynı listeden
+  bağlantı olur; adres ikinci bir yerde tutulmaz (`socialUrl`).
+
+**Hukuk:** D-128'deki Spotify bağlantısı gibi düz dış bağlantılar: tıklanana
+kadar bu platformlara hiçbir istek gitmez, gömülü içerik veya izleme kodu yok.
+Aydınlatma metni değişmedi.
+
+**Doğrulama:** `site.test.ts` adresleri ve izleme parametresi olmadığını
+denetler. Kapı: typecheck, lint, test. Canlıda alt bilgi ve iletişim sayfası.

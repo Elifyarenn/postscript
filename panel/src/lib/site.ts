@@ -163,14 +163,20 @@ export type SocialLink = { key: SocialKey; label: string; url: string | null };
 
 /**
  * The magazine's accounts in the footer's "arkadaş olalım!" row (D-116).
- * The addresses are not known yet: an icon without one is drawn as designed
- * but is not a link, so nobody is sent to a page that does not exist.
+ * An icon without an address is drawn as designed but is not a link, so
+ * nobody is sent to a page that does not exist. The addresses are kept without
+ * the share links' tracking parameters (D-173).
  */
 export const SOCIAL_LINKS: SocialLink[] = [
-  { key: "x", label: "X", url: null },
-  { key: "tiktok", label: "TikTok", url: null },
+  { key: "x", label: "X", url: "https://x.com/postscriptmgzn" },
+  { key: "tiktok", label: "TikTok", url: "https://www.tiktok.com/@postscriptmgzn" },
   // The account that owns the issue playlists (D-117, D-128)
   { key: "spotify", label: "Spotify", url: "https://open.spotify.com/user/31ni3zrhtxradpywcotdp4jr6k2y" },
-  { key: "instagram", label: "Instagram", url: null },
+  { key: "instagram", label: "Instagram", url: "https://www.instagram.com/postscriptmgzn/" },
   { key: "pinterest", label: "Pinterest", url: null },
 ];
+
+/** The address of one of the magazine's accounts, or null when it has none yet. */
+export function socialUrl(key: SocialKey): string | null {
+  return SOCIAL_LINKS.find((link) => link.key === key)?.url ?? null;
+}

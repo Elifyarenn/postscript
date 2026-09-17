@@ -7,6 +7,7 @@ import {
   isNavActive,
   memberNav,
   SOCIAL_LINKS,
+  socialUrl,
 } from "@/lib/site";
 
 describe("isNavActive (D-112)", () => {
@@ -114,6 +115,16 @@ describe("SOCIAL_LINKS (D-128)", () => {
     const spotify = SOCIAL_LINKS.find((link) => link.key === "spotify");
     expect(spotify?.url?.startsWith("https://open.spotify.com/user/")).toBe(true);
     expect(SOCIAL_LINKS.map((link) => link.key)).not.toContain("linkedin");
+  });
+
+  it("links X, TikTok and Instagram to postscriptmgzn without share tracking (D-173)", () => {
+    expect(socialUrl("x")).toBe("https://x.com/postscriptmgzn");
+    expect(socialUrl("tiktok")).toBe("https://www.tiktok.com/@postscriptmgzn");
+    expect(socialUrl("instagram")).toBe("https://www.instagram.com/postscriptmgzn/");
+    expect(socialUrl("pinterest")).toBeNull();
+    for (const link of SOCIAL_LINKS) {
+      if (link.url) expect(new URL(link.url).search).toBe("");
+    }
   });
 });
 

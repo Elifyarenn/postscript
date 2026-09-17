@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getAuthContext } from "@/lib/auth/session";
 import { readCsrfToken } from "@/lib/csrf";
 import { buildImprint } from "@/lib/legal";
+import { socialUrl } from "@/lib/site";
 import { turnstileSiteKey } from "@/lib/turnstile";
 import { getSiteSettings } from "@/services/site-settings";
 import { listWriterAreasWithQuota } from "@/services/writer-areas";
@@ -18,6 +19,23 @@ export const dynamic = "force-dynamic";
 
 /** The handle the design gives for Instagram and X (D-168). */
 const DESIGN_HANDLE = "postscriptmgzn";
+
+/** The handle, linked to the account once its address is known. */
+function AccountHandle({ label, url }: { label: string; url: string | null }) {
+  const text = (
+    <>
+      <span className="sr-only">{label}: </span>
+      {DESIGN_HANDLE}
+    </>
+  );
+  return url ? (
+    <a href={url} target="_blank" rel="noopener noreferrer">
+      {text}
+    </a>
+  ) : (
+    <span>{text}</span>
+  );
+}
 
 /** The small solid star the design sets on the send button. */
 function SendStar() {
@@ -90,21 +108,14 @@ export default async function ContactPage() {
                 <a href={`mailto:${email}`}>{email}</a>
               </li>
             )}
-            {/* The design names the accounts; they are not linked until their
-                addresses are confirmed, as in the footer (D-116) */}
+            {/* The same addresses as the footer, from one list (D-173) */}
             <li>
               <InstagramIcon />
-              <span>
-                <span className="sr-only">Instagram: </span>
-                {DESIGN_HANDLE}
-              </span>
+              <AccountHandle label="Instagram" url={socialUrl("instagram")} />
             </li>
             <li>
               <XIcon />
-              <span>
-                <span className="sr-only">X: </span>
-                {DESIGN_HANDLE}
-              </span>
+              <AccountHandle label="X" url={socialUrl("x")} />
             </li>
           </ul>
 
