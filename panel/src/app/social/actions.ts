@@ -60,7 +60,7 @@ export async function joinCommunityAction(
     await assertCsrfFromForm(formData);
     const { user } = await requireAuth();
     await joinCommunity({ ...user }, text(formData, "slug"));
-    revalidatePath("/social/communities", "layout");
+    revalidatePath("/social", "layout");
     return { success: "Topluluğa katıldınız." };
   });
 }
@@ -73,7 +73,7 @@ export async function leaveCommunityAction(
     await assertCsrfFromForm(formData);
     const { user } = await requireAuth();
     await leaveCommunity({ ...user }, text(formData, "slug"));
-    revalidatePath("/social/communities", "layout");
+    revalidatePath("/social", "layout");
     return { success: "Topluluktan ayrıldınız." };
   });
 }

@@ -6889,3 +6889,41 @@ gözükecek."
 gitmez.
 
 **Doğrulama:** Kapı: typecheck, lint, test. Canlıda çaları açıp kapatarak.
+
+## D-178 — Sol menü tasarımdaki gibi; akış, keşfet ve topluluklar tek sayfada
+
+**İstek (ürün sahibi):** "Sol menüde alttaki Akış, Keşfet, Topluluklar
+linklerini kaldır ve hepsini tek bir topluluğa topla; sol menü tamamen
+tasarımdaki gibi olsun."
+
+**Tasarım:** "settings and community.ai" ve "notifications.ai" pdf.js ile
+çizdirilip bakıldı. Üye menüsü yalnızca beş kalem: Anon box, Messages (sayı
+rozeti), Notifications, Bookmarks, Settings; altında satır yok. Topluluğa
+tasarımda üst menüdeki "Community" ile gidiliyor. D-112'de eklenen alt satır
+("tasarımda yoklar; konmasalar bu sayfalara yalnızca adres yazarak ulaşılırdı")
+kaldırıldı; gerekçesi bu kararla ortadan kalktı.
+
+**Karar:**
+
+- `SiteMemberNav` yalnızca tasarımdaki beş kalemi çizer; `MEMBER_EXTRA_NAV` ve
+  `.member-extra` silindi.
+- `/social` ("Topluluk", üst menü) tek sayfa: D-175'teki topluluk kolajlı bant
+  ("Topluluk / Paylaş, keşfet, katıl"), altında bildirimler sayfasındaki
+  `site-tabs` şeridiyle üç sekme: **Akış** (`/social`), **Keşfet**
+  (`?sekme=kesfet`), **Topluluklar** (`?sekme=topluluklar`). Her sekmenin eski
+  sayfa açıklaması şeridin altında küçük yazı.
+- Kullanıcı adı olmayan üye Akış'ta eskisi gibi uyarıyı görür; Keşfet ve
+  Topluluklar'a bakabilir, katılma düğmesi kullanıcı adı ister (D-089).
+- Eski adresler kırılmaz: `/social/explore` ve `/social/communities` ilgili
+  sekmeye yönlendirir. Tek topluluk sayfası (`/social/communities/<slug>`)
+  yerinde; üstünde "← Topluluklar" bağlantısı var.
+- Topluluk kolajı D-175'te geçici olarak Topluluklar listesindeydi; o sayfa
+  artık sekme olduğu için bant birleşik sayfanın başında.
+- Katılma, ayrılma ve topluluk açma/arşivleme `/social` altını yeniden doğrular.
+- Uçtan uca topluluk senaryosu (`07d-social`) topluluklara sekme adresinden
+  gider.
+
+**Hukuk:** İşlenen veri değişmedi.
+
+**Doğrulama:** `site.test.ts` sekme ayrıştırması ve adresleri. Kapı:
+typecheck, lint, test. Canlıda menü ve üç sekme.

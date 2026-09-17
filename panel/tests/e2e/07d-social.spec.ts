@@ -54,7 +54,7 @@ test("two members meet in the community area", async ({ page }) => {
   await expect(page.getByRole("article").filter({ hasText: firstPost })).toBeVisible();
 
   // --- ...joins the seeded community and posts in it ---
-  await page.goto("/social/communities");
+  await page.goto("/social?sekme=topluluklar");
   await page.getByRole("button", { name: "Katıl" }).click();
   await expect(page.getByRole("button", { name: "Ayrıl" })).toBeVisible();
   await page.getByRole("link", { name: "Edebiyat Kulübü" }).click();

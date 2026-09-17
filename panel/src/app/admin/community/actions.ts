@@ -28,7 +28,7 @@ export async function createCommunityAction(
     );
 
     revalidatePath("/admin/community");
-    revalidatePath("/social/communities", "layout");
+    revalidatePath("/social", "layout");
     return { success: `Topluluk açıldı: /social/communities/${created.slug}` };
   });
 }
@@ -45,7 +45,7 @@ export async function archiveCommunityAction(
     await archiveCommunity({ ...user }, text(formData, "communityId"), meta);
 
     revalidatePath("/admin/community");
-    revalidatePath("/social/communities", "layout");
+    revalidatePath("/social", "layout");
     return { success: "Topluluk arşivlendi." };
   });
 }

@@ -28,6 +28,11 @@ export default async function CommunityPage({ params }: { params: Promise<{ slug
 
   return (
     <>
+      <p className="mb-4 text-sm">
+        <Link href="/social?sekme=topluluklar" className="text-accent hover:underline">
+          ← Topluluklar
+        </Link>
+      </p>
       <PageHeader
         title={community.name}
         description={community.description ?? undefined}

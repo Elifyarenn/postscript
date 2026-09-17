@@ -5,7 +5,9 @@ import {
   categorySubtitle,
   formatIssueNumber,
   isNavActive,
+  communityTabHref,
   memberNav,
+  parseCommunityTab,
   SOCIAL_LINKS,
   socialUrl,
 } from "@/lib/site";
@@ -151,5 +153,15 @@ describe("categorySubtitle (D-146)", () => {
 
   it("falls back to the line that belongs to the picture a strange name was given", () => {
     expect(categorySubtitle("Gezi", 0)).toBe(categorySubtitle("Sanat & Edebiyat", 0));
+  });
+});
+
+describe("community tabs (D-178)", () => {
+  it("opens the feed for a missing or unknown tab and keeps its plain address", () => {
+    expect(parseCommunityTab(undefined)).toBe("akis");
+    expect(parseCommunityTab("bilinmeyen")).toBe("akis");
+    expect(parseCommunityTab("kesfet")).toBe("kesfet");
+    expect(communityTabHref("akis")).toBe("/social");
+    expect(communityTabHref("topluluklar")).toBe("/social?sekme=topluluklar");
   });
 });

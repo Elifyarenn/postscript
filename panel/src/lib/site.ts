@@ -46,15 +46,27 @@ export function memberNav(state: MemberNavState): MemberNavItem[] {
 }
 
 /**
- * The community pages the designs' menu leaves out. They stay one click away
- * under the member menu, or the feed, Keşfet and the communities would only
- * be reachable by typing their address.
+ * The community page's sections (D-178). The designs' member menu has only its
+ * five entries; the feed, Keşfet and the communities are one page behind the
+ * header's "Topluluk" link, split into these tabs.
  */
-export const MEMBER_EXTRA_NAV: SiteNavItem[] = [
-  { href: "/social", label: "Akış" },
-  { href: "/social/explore", label: "Keşfet" },
-  { href: "/social/communities", label: "Topluluklar" },
-];
+export const COMMUNITY_TABS = [
+  { key: "akis", label: "Akış" },
+  { key: "kesfet", label: "Keşfet" },
+  { key: "topluluklar", label: "Topluluklar" },
+] as const;
+
+export type CommunityTab = (typeof COMMUNITY_TABS)[number]["key"];
+
+/** An unknown or missing `?sekme=` opens the feed. */
+export function parseCommunityTab(value: string | undefined): CommunityTab {
+  return COMMUNITY_TABS.find((tab) => tab.key === value)?.key ?? "akis";
+}
+
+/** The feed keeps the plain address, so the header link lands on it. */
+export function communityTabHref(tab: CommunityTab): string {
+  return tab === "akis" ? "/social" : `/social?sekme=${tab}`;
+}
 
 /**
  * Whether a menu link belongs to the page being shown. An anchor ("/#…") is a

@@ -329,27 +329,6 @@ html[data-playlist-open] .ps-site .topbar-note {
   letter-spacing: 0;
 }
 
-.ps-site .member-extra {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem 1rem;
-  padding: 0.55rem 1rem 0.7rem;
-  border-top: 1px solid rgb(222 210 199 / 0.2);
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.ps-site .member-extra a {
-  opacity: 0.8;
-}
-
-.ps-site .member-extra a:hover,
-.ps-site .member-extra a[aria-current="page"] {
-  opacity: 1;
-  text-decoration: underline;
-}
-
 /* The wide-screen member menu is laid out in the D-116 block at the end */
 
 /* ════════════════ Footer ════════════════ */
@@ -471,6 +450,12 @@ html[data-playlist-open] .ps-site .topbar-note {
 .ps-site .site-banner-image {
   z-index: -1;
   object-fit: cover;
+}
+
+/* The community page's tab band under its banner (D-178) */
+.ps-site .community-bar {
+  margin-top: 1.25rem;
+  border-block: 1px solid var(--site-rule);
 }
 
 .ps-site .community-intro {

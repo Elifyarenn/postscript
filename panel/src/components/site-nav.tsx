@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, Bookmark, Mail, MessagesSquare, Settings } from "lucide-react";
-import { isNavActive, MEMBER_EXTRA_NAV, SITE_NAV, type MemberNavItem } from "@/lib/site";
+import { isNavActive, SITE_NAV, type MemberNavItem } from "@/lib/site";
 
 const MEMBER_ICONS = {
   anon: Mail,
@@ -59,18 +59,6 @@ export function SiteMemberNav({ items }: { items: MemberNavItem[] }) {
           );
         })}
       </ul>
-      <p className="member-extra">
-        {MEMBER_EXTRA_NAV.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            // "/social" is the feed itself; every other community page sits under it
-            aria-current={pathname === item.href ? "page" : undefined}
-          >
-            {item.label}
-          </Link>
-        ))}
-      </p>
     </nav>
   );
 }
