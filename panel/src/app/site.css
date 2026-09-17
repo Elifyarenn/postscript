@@ -1852,6 +1852,17 @@ html[data-playlist-open] .ps-site .topbar-note {
   opacity: 0.75;
 }
 
+/* Read ticks on the reader's own messages (D-184) */
+.ps-site .dm-tick {
+  display: inline-flex;
+  align-items: center;
+}
+
+.ps-site .dm-tick.is-read {
+  color: #e9b8c2;
+  opacity: 1;
+}
+
 .ps-site .dm-message.is-other .dm-meta {
   justify-content: flex-start;
 }

@@ -41,7 +41,9 @@ ortaklık adına tek başına temsile yetkilidir.
 | Müzik çalar | Üye olarak giriş yapmışken ana sayfadaki Spotify çalarını açtığınızda tarayıcınızın Spotify ile kurduğu bağlantıda iletilen IP adresi ve tarayıcı bilgisi; bu veriler dergiye değil, doğrudan Spotify AB şirketine gider |
 
 Özel mesajlarınızı yalnızca siz ve yazıştığınız üye görür; yöneticiler özel
-mesajları listeleyemez ve okuyamaz. Taraflardan biri bir mesajı bildirirse
+mesajları listeleyemez ve okuyamaz. Konuşmayı açtığınızda, yazıştığınız üye
+kendi gönderdiği mesajların yanında "okundu" işaretini görür; konuşmayı hangi
+saatte açtığınız ona gösterilmez. Taraflardan biri bir mesajı bildirirse
 yalnızca o mesajın metni incelemeye gönderilir. Doğum tarihiniz, özel
 mesajlaşmanın 18 yaşını doldurmuş üyelerle sınırlı olduğunu denetlemek için de
 kullanılır; karşı tarafa gösterilmez.
@@ -70,7 +72,7 @@ saklanmaz**.
 | E-posta adresinin doğrulanması, şifre sıfırlama, e-posta adresi değişikliği | (c) Sözleşmenin ifası |
 | Yazarlık başvurusunun alınması ve değerlendirilmesi | (c) Sözleşmenin kurulması |
 | Yazarlık için aranan 18 yaş şartının denetlenmesi | (c) Sözleşmenin kurulması, (e) Bir hakkın tesisi ve korunması |
-| Özel mesajlaşma işlevinin sunulması ve bu işlevin 18 yaşını doldurmuş üyelerle sınırlandırılması | (c) Sözleşmenin ifası, (f) Meşru menfaat |
+| Özel mesajlaşma işlevinin sunulması, mesajın karşı tarafça okunduğunun göndereni bilgilendirecek şekilde işaretlenmesi ve bu işlevin 18 yaşını doldurmuş üyelerle sınırlandırılması | (c) Sözleşmenin ifası, (f) Meşru menfaat |
 | Anonim kutu işlevinin sunulması; anonim mesajın göndereninin, bildirim ve yetkili merci talebi hâlinde belirlenebilmesi için hesapla ilişkilendirilerek saklanması | (c) Sözleşmenin ifası, (ç) Hukuki yükümlülük — 5651 sayılı Kanun m. 5, (f) Meşru menfaat |
 | Yazar sözleşmesinin ve eser bazlı kullanım ruhsatlarının kurulması ve ispatı | (c) Sözleşmenin ifası, (e) Bir hakkın tesisi, kullanılması ve korunması |
 | Yazar profilinin ve eserin dergide yayımlanması, künyede ad veya mahlas belirtilmesi | (c) Sözleşmenin ifası |

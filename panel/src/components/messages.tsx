@@ -3,11 +3,13 @@
  * since D-113: the conversation column, the list and the message thread.
  * Messages are plain text, never rendered as HTML.
  *
- * There are no read receipts and no "online" dot on purpose: when someone read
- * a message, or is on the site, is a fact about their day, not the sender's to
- * see.
+ * The sender's own messages carry a tick: one when sent, two once the other
+ * member has opened the conversation (D-184, reversing D-091 at the owner's
+ * request). Only that it was read is shown, never when. There is still no
+ * "online" dot: being on the site is a fact about someone's day.
  */
 import Link from "next/link";
+import { Check, CheckCheck } from "lucide-react";
 import { formatClockTime, formatDayLabel, formatRelativeTime } from "@/lib/relative-time";
 import { cn, formatDateTime } from "@/lib/utils";
 import { Avatar } from "./social";
@@ -156,7 +158,17 @@ export function MessageThread({ messages }: { messages: ConversationMessage[] })
             <time dateTime={message.createdAt.toISOString()} title={formatDateTime(message.createdAt)}>
               {formatClockTime(message.createdAt)}
             </time>
-            {!message.isOwn && (
+            {message.isOwn ? (
+              message.readByOther ? (
+                <span className="dm-tick is-read" role="img" aria-label="Okundu" title="Okundu">
+                  <CheckCheck aria-hidden className="size-4" />
+                </span>
+              ) : (
+                <span className="dm-tick" role="img" aria-label="Gönderildi" title="Gönderildi">
+                  <Check aria-hidden className="size-4" />
+                </span>
+              )
+            ) : (
               <Link href={`/social/report?type=direct_message&id=${message.id}`}>Bildir</Link>
             )}
           </p>

@@ -270,7 +270,17 @@ export async function sendDirectMessage(
 /* Reading                                                             */
 /* ------------------------------------------------------------------ */
 
-export type ConversationMessage = { id: string; body: string; createdAt: Date; isOwn: boolean };
+export type ConversationMessage = {
+  id: string;
+  body: string;
+  createdAt: Date;
+  isOwn: boolean;
+  /**
+   * On the reader's own messages: the other member has opened the conversation
+   * since it was sent (D-184). Only the fact is shown, never the time.
+   */
+  readByOther: boolean;
+};
 
 export type ConversationView = {
   other: { id: string; username: string; role: Role; bio: string | null };
@@ -297,12 +307,20 @@ export async function openConversation(actor: Actor, rawUsername: string): Promi
 
   let messages: ConversationMessage[] = [];
   if (conversation) {
-    const mine = await db
-      .select({ clearedAt: conversationStates.clearedAt })
-      .from(conversationStates)
-      .where(and(eq(conversationStates.conversationId, conversation.id), eq(conversationStates.userId, me.id)))
-      .limit(1);
+    const [mine, theirs] = await Promise.all([
+      db
+        .select({ clearedAt: conversationStates.clearedAt })
+        .from(conversationStates)
+        .where(and(eq(conversationStates.conversationId, conversation.id), eq(conversationStates.userId, me.id)))
+        .limit(1),
+      db
+        .select({ lastReadAt: conversationStates.lastReadAt })
+        .from(conversationStates)
+        .where(and(eq(conversationStates.conversationId, conversation.id), eq(conversationStates.userId, other.id)))
+        .limit(1),
+    ]);
     const clearedAt = mine[0]?.clearedAt ?? null;
+    const otherReadAt = theirs[0]?.lastReadAt ?? null;
 
     const rows = await db
       .select({
@@ -322,9 +340,16 @@ export async function openConversation(actor: Actor, rawUsername: string): Promi
       .orderBy(desc(directMessages.createdAt))
       .limit(200);
 
-    messages = rows
-      .reverse()
-      .map((row) => ({ id: row.id, body: row.body, createdAt: row.createdAt, isOwn: row.senderId === me.id }));
+    messages = rows.reverse().map((row) => {
+      const isOwn = row.senderId === me.id;
+      return {
+        id: row.id,
+        body: row.body,
+        createdAt: row.createdAt,
+        isOwn,
+        readByOther: isOwn && otherReadAt !== null && row.createdAt.getTime() <= otherReadAt.getTime(),
+      };
+    });
 
     await markRead(db, conversation.id, me.id, new Date());
   }

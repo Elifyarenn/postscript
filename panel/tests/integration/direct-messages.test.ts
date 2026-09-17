@@ -175,6 +175,29 @@ describe("conversations", () => {
     expect(await unreadConversationCount(actorOf(velvet))).toBe(0);
   });
 
+  it("marks the sender's own messages read once the other member opens the conversation (D-184)", async () => {
+    const { lunae, velvet } = await openPair();
+    await send(lunae, "velvet", "bir");
+
+    let view = await openConversation(actorOf(lunae), "velvet");
+    expect(view.messages.map((message) => message.readByOther)).toEqual([false]);
+
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await openConversation(actorOf(velvet), "lunae");
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await send(lunae, "velvet", "iki");
+
+    view = await openConversation(actorOf(lunae), "velvet");
+    expect(view.messages.map((message) => [message.body, message.readByOther])).toEqual([
+      ["bir", true],
+      ["iki", false],
+    ]);
+
+    // The other member's own view never marks their incoming messages
+    const theirs = await openConversation(actorOf(velvet), "lunae");
+    expect(theirs.messages.every((message) => !message.readByOther)).toBe(true);
+  });
+
   it("clears a conversation for one member only, until a new message arrives", async () => {
     const { lunae, velvet } = await openPair();
     await send(lunae, "velvet", "eski");

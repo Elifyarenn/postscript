@@ -7080,3 +7080,46 @@ lint, test.
 **Hukuk:** Değişiklik yok.
 
 **Doğrulama:** Kapı: typecheck, lint, test. Canlıda mesajlar ekranı.
+
+## D-184 — Özel mesajlarda okundu tiki
+
+**İstek (ürün sahibi):** "Okundu bildirimi tiki ekle mesajlaşmada."
+
+**Önceki karar:** D-091 ve D-147 okundu işaretini bilerek koymamıştı ("birinin
+mesajı ne zaman okuduğu kendi gününe dair bir bilgi, gönderenin görmesi
+gereken değil"). Ürün sahibinin isteğiyle bu karar değişti.
+
+**Karar:**
+
+- Gönderenin kendi mesajlarının altında saat yanında tik: tek tik
+  "Gönderildi", çift tik (açık pembe) "Okundu". Karşı üyenin mesajlarında tik
+  yok, eskisi gibi "Bildir" bağlantısı var.
+- "Okundu" = karşı üyenin konuşmayı açtığı son an (`conversation_states.last_read_at`,
+  zaten tutuluyordu) mesajın gönderiminden sonra. Konuşma açık kaldıkça sayfa
+  kendini yenilediği (D-147 otomatik yenileme) ve her açılış okundu işaretlediği
+  için tik birkaç saniyede güncellenir. Karşı üye cevap yazdığında da okumuş
+  sayılır (gönderim `markRead` yapar).
+- **Yalnızca "okundu" bilgisi gösterilir, saat gösterilmez.** Şema değişmedi,
+  migration yok; yeni bir veri toplanmıyor, var olan okuma zamanından türetilen
+  bir evet/hayır karşı tarafa gösteriliyor.
+- "Çevrimiçi" noktası hâlâ yok.
+
+**Hukuk (KVKK):**
+
+- Okuma zamanı zaten işleniyordu (aydınlatma metni: "konuşmayı en son
+  okuduğunuz zaman"), ama karşı tarafa **gösterilmesi** yeni bir amaç. Aynı
+  adımda aydınlatma metnine (özel mesajlar paragrafı ve amaç tablosu: "mesajın
+  karşı tarafça okunduğunun göndereni bilgilendirecek şekilde işaretlenmesi",
+  (c) sözleşmenin ifası, (f) meşru menfaat) ve kullanım şartlarına eklendi.
+  Depodaki tam aydınlatma metni hâlâ yeni sürüm olarak yayınlanmayı bekliyor
+  (adres); kullanım şartları sayfası canlıda hemen güncellenir.
+- **Hukukçu görüşü gerekiyor:** Okundu bilgisinin kapatılabilir olması
+  (WhatsApp'taki gibi karşılıklı kapatma) ölçülülük açısından beklenebilir.
+  Bu bir tercih sütunu ve migration demek; üretim migration'ı ürün sahibinin
+  elinde olduğu için bu adımda eklenmedi. Muhafazakâr olan: saat değil yalnızca
+  okundu bilgisi, metinde açıkça yazılı.
+
+**Doğrulama:** `direct-messages.test.ts`: karşı üye açmadan önce gönderilen
+mesaj okunmamış, açtıktan sonra okundu; açılıştan sonra gönderilen okunmamış;
+alıcının kendi görünümünde gelen mesajlara işaret yok. Kapı: typecheck, lint,
+test.
