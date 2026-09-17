@@ -7661,3 +7661,46 @@ kâkülde ikisi de küçük tutuldu, çünkü o kesim düz iner.
 
 **Doğrulama:** Kapı: typecheck, lint, test, build. Görsel: 16 modelin dört
 dokuda ve sekiz örnek avatarın render edilmiş tabakaları.
+
+
+## D-199 — Saç dokuları referans sayfalarına göre; hazır görseller kullanılmadı
+
+**İstek (ürün sahibi):** `pic/düz.png`, `pic/dalgalı.png`, `pic/kivircik.png`
+sayfalarını göstererek "bunları direkt uygula."
+
+**Durum:** Üç dosya da boyanmış hazır saç seti sayfaları (her birinde altı
+model). `dalgalı` ve `kivircik` saydam zeminli ama **filigranlı**: saydam
+alanın üzerinde yarı saydam beyaz filigran izleri var (büyütülerek
+doğrulandı). `düz` ise saydam değil, koyu zemine basılmış.
+
+**Karar: görseller doğrudan kullanılmadı.** Gerekçeler:
+
+1. **Telif/lisans.** Filigran, dosyaların lisanslanmamış önizleme kopyaları
+   olduğunu gösteriyor. Derginin kendi kuralı, yayımlanan her görselin
+   lisansının belli olmasını şart koşuyor (FSEK; medyada `license_type` zorunlu).
+   Lisansı bilinmeyen bir çizimi avatarlara koymak hak ihlali olur. Ürün
+   sahibi lisansı satın aldıysa ve filigransız dosyaları verirse yeniden
+   değerlendirilir; o zaman ayrıca **saç rengi seçenekleri** (18 renk) boyalı
+   görsellerde karşılanamayacağı için katalog daralır ve boyalı saç ile düz
+   vektör yüz arasında üslup farkı doğar. Bu, ürün sahibinin kararı.
+2. **Filigran çıktıya girerdi.** Beyaz izler PNG'de görünürdü.
+3. **Kapsam.** Setlerde "sık kıvırcık" yok; `düz.png`'nin alfa kanalı yok.
+
+**Bunun yerine** üç sayfa *çizim referansı* olarak alınıp dokular yeniden
+ayarlandı:
+
+- **Düz:** ince, uca doğru sivrilen uzun tutamlar; dalga yok.
+- **Dalgalı:** tutam boyunca bir buçuk yumuşak S kıvrımı, uçta hafif savrulma
+  (`waves` 0,55 → 1,15, genlik 12 → 15).
+- **Kıvırcık / sık kıvırcık:** tutam gövdesi uçta incelmiyor (`tipWidth` 0,3 /
+  0,42) ve **uçta gerçek bir bukle halkası** çiziliyor (`lockCurl`): tutamın
+  ucundan çıkıp geri dönen, tutam kalınlığında konturlu bir ilmek. Sık
+  kıvırcıkta ilmek daha küçük ve sık.
+
+**Hukuk:** Depoya hiçbir üçüncü taraf görseli eklenmedi; `pic/` klasörü zaten
+depo dışında. Lisansı belirsiz görsel kullanılmadığı için yeni bir telif
+sorusu doğmadı. Ürün sahibi lisanslı dosyaları verirse D-115'teki gibi lisans
+teyidi kaydedilmeli.
+
+**Doğrulama:** Kapı: typecheck, lint, test, build. Görsel: altı modelin dört
+dokuda render edilmiş karşılaştırma tablosu.

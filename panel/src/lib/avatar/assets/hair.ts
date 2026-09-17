@@ -19,6 +19,7 @@
  */
 import { INK, OUTLINE, cel, fill, inHead, seeded, stroke, type DrawContext } from "../canvas";
 import {
+  lockCurl,
   lockPath,
   lockStrand,
   mirrorLock,
@@ -261,12 +262,18 @@ function drawLocks(context: DrawContext, locks: readonly Lock[], back = false): 
   return locks
     .map((lock) => {
       const d = lockPath(lock, context.texture);
+      // Curly and coily hair ends in a ringlet, the way the reference sheets draw it
+      const curl = lockCurl(lock, context.texture);
+      const ringlet = curl
+        ? stroke(curl.d, curl.width + 4, INK) + stroke(curl.d, curl.width, back ? hairShade : hair)
+        : "";
       // A darker copy just behind each lock separates it from the one beneath
       return (
         fill(d, back ? hairDeep : hairShade, ` transform="translate(4 7)"`) +
         fill(d, back ? hairShade : hair) +
         stroke(lockStrand(lock, context.texture), 3.5, back ? hairDeep : hairStrand, ` opacity="0.85"`) +
-        stroke(d, 4)
+        stroke(d, 4) +
+        ringlet
       );
     })
     .join("");

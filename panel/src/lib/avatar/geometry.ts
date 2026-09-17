@@ -295,11 +295,14 @@ export type Lock = readonly [
 ];
 
 /** How each texture bends a lock along its length and how it ends. */
-const LOCK_TEXTURE: Record<Texture, { waves: number; amplitude: number; tipWidth: number }> = {
-  straight: { waves: 0, amplitude: 0, tipWidth: 0 },
-  wavy: { waves: 0.55, amplitude: 12, tipWidth: 0.04 },
-  curly: { waves: 0.8, amplitude: 13, tipWidth: 0.14 },
-  coily: { waves: 1.1, amplitude: 10, tipWidth: 0.22 },
+const LOCK_TEXTURE: Record<
+  Texture,
+  { waves: number; amplitude: number; tipWidth: number; /** Radius of the ringlet at the tip, 0 for none. */ curl: number }
+> = {
+  straight: { waves: 0, amplitude: 0, tipWidth: 0, curl: 0 },
+  wavy: { waves: 1.15, amplitude: 15, tipWidth: 0.05, curl: 0 },
+  curly: { waves: 1.9, amplitude: 17, tipWidth: 0.3, curl: 0.62 },
+  coily: { waves: 2.7, amplitude: 12, tipWidth: 0.42, curl: 0.5 },
 };
 
 type LockSpine = { points: Point[]; normals: Point[]; widths: number[] };
@@ -351,6 +354,39 @@ export function lockStrand(lock: Lock, texture: Texture): string {
     .map((p, i) => [p[0] + normals[i]![0] * widths[i]! * 0.16, p[1] + normals[i]![1] * widths[i]! * 0.16] as Point)
     .slice(2, 9);
   return smoothOpenPath(run);
+}
+
+/**
+ * Where a lock ends and which way it points, so a curl can be hung on its tip.
+ * Null when the texture has no ringlet.
+ */
+export function lockCurl(lock: Lock, texture: Texture): { d: string; width: number } | null {
+  const shape = LOCK_TEXTURE[texture];
+  if (shape.curl === 0) return null;
+
+  const { points, widths } = lockSpine(lock, texture);
+  const tip = points[points.length - 1]!;
+  const before = points[points.length - 3]!;
+  const angle = Math.atan2(tip[1] - before[1], tip[0] - before[0]);
+  const width = Math.max(7, widths[widths.length - 1]!);
+  const radius = Math.max(9, lock[4] * shape.curl * 0.5);
+
+  // A loop that leaves the tip sideways and comes back: a ringlet, not a hook
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const at = (along: number, across: number): Point => [
+    tip[0] + cos * along - sin * across,
+    tip[1] + sin * along + cos * across,
+  ];
+  // Starts just inside the lock, so the ringlet never floats free of it
+  const a = at(-radius * 0.25, 0);
+  const b = at(radius * 1.5, radius * 1.1);
+  const c = at(radius * 0.2, radius * 2.1);
+  const e = at(-radius * 0.9, radius * 0.9);
+  return {
+    d: `M${round(a[0])} ${round(a[1])} C${round(b[0])} ${round(b[1])} ${round(c[0])} ${round(c[1])} ${round(e[0])} ${round(e[1])}`,
+    width,
+  };
 }
 
 /** A lock seen in the mirror, for symmetric styles. */
