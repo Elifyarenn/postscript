@@ -144,7 +144,7 @@ sağlayıcıların yurt dışındaki sistemlerinde tutulmaktadır:
 
 | Hizmet sağlayıcı | Aldığımız hizmet | Ülke | Aktarılan veriler |
 |---|---|---|---|
-| Vercel Inc. | Uygulamanın barındırılması | Amerika Birleşik Devletleri | Bölüm 2'deki veriler, işlem sırasında |
+| Vercel Inc. (ABD merkezli; uygulama sunucusu: fra1, Frankfurt; istekler ziyaretçiye en yakın Vercel ağ noktasından geçer) | Uygulamanın barındırılması | Almanya | Bölüm 2'deki veriler, işlem sırasında |
 | Neon Inc. (ABD merkezli; sunucu: AWS eu-central-1, Frankfurt) | Veritabanı | Almanya | Bölüm 2'deki tüm veriler |
 | Cloudflare, Inc. (ABD merkezli; R2 nesne depolama Avrupa Birliği veri yerleşimi garantili, Turnstile bot doğrulaması) | Görsel, PDF ve belge depolama; kayıt formlarında bot doğrulaması | Avrupa Birliği (depolama) | Profil görseli, örnek çalışma dosyaları, sözleşme PDF'leri; bot doğrulamasında IP adresi ve tarayıcı sinyalleri |
 | Resend, Inc. (ABD merkezli; gönderim sunucusu: AWS ap-northeast-1, Tokyo) | Doğrulama ve bildirim e-postalarının gönderimi | Japonya | E-posta adresi, görünen ad, e-posta içeriği |

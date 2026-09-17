@@ -6655,3 +6655,27 @@ boyut ve renkler okundu.
 
 **Doğrulama:** `site.test.ts` yeni satır kırılımlarıyla. Kapı: typecheck, lint,
 66 dosya / 624 test. Canlıda Playwright ile kart ölçüleri.
+
+## D-170 — Uygulama sunucusu Frankfurt'ta (fra1)
+
+**İstek (ürün sahibi):** "Sitenin neden özellikle topluluk kısmında yavaş
+çalıştığını bul, en hızlı haline getir."
+
+**Ölçüm (canlı, 2026-09-17):** Yanıt başlığı `X-Vercel-Id: fra1::iad1::…`:
+istek Frankfurt'tan giriyor, sayfa Washington'da (iad1, Vercel'in varsayılanı)
+üretiliyordu; veritabanı Neon Frankfurt'ta (D-079 notu). Her SQL sorgusu
+Atlantik'i gidip geliyordu (~90–100 ms). Giriş yapmış üyeyle sıcak ölçüm:
+`/social` 1,8 sn, `/social/explore` 1,6 sn, `/social/messages` ve
+`/social/notifications` 1,2 sn, `/magazine` 1,2 sn.
+
+**Karar:** `vercel.json` içinde `"regions": ["fra1"]`. Bölge proje ayarında
+değil kodda durur; ayar panelinde değişip kaybolmaz.
+
+**Hukuk (KVKK):** Aydınlatma metnindeki Vercel satırı "Amerika Birleşik
+Devletleri" yerine uygulama sunucusunun yeri olan Almanya'yı ve isteklerin en
+yakın ağ noktasından geçtiğini yazıyor. Vercel ABD merkezli kalıyor; m. 9
+aktarım dayanağı değişmedi. Depodaki tam metin henüz yeni sürüm olarak
+yayınlanmadı (adres bekleniyor); bu satır da o sürümle yayınlanır.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Canlıda `X-Vercel-Id`'nin
+`::fra1::` göstermesi ve aynı sayfaların yeniden ölçümü.
