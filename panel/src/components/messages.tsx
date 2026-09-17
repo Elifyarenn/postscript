@@ -8,7 +8,6 @@
  * see.
  */
 import Link from "next/link";
-import { Search, SquarePen } from "lucide-react";
 import { formatClockTime, formatDayLabel, formatRelativeTime } from "@/lib/relative-time";
 import { cn, formatDateTime } from "@/lib/utils";
 import { Avatar } from "./social";
@@ -24,7 +23,7 @@ export function ConversationList({
   activeUsername?: string;
 }) {
   if (conversations.length === 0) {
-    return <p className="dm-empty">Aradığınıza uyan konuşma yok.</p>;
+    return <p className="dm-empty">Henüz konuşma yok.</p>;
   }
 
   return (
@@ -103,53 +102,26 @@ function MutualFollows({
   );
 }
 
-/** The left column: the title, the "new conversation" box and the list. */
+/**
+ * The left column: the title, the conversations and the mutual follows. A new
+ * conversation starts from someone's profile or from the mutual follows; the
+ * search box of D-147 was taken out (D-183).
+ */
 export function ConversationColumn({
   conversations,
   mutualFollows = [],
   activeUsername,
-  query = "",
 }: {
   conversations: ConversationSummary[];
   /** Members to offer a new conversation with (D-143). */
   mutualFollows?: MemberListItem[];
   activeUsername?: string;
-  /** What the reader typed into the search box (D-147). */
-  query?: string;
 }) {
   return (
     <section className="dm-column" aria-labelledby="dm-title">
       <h1 id="dm-title" className="dm-title">
         Mesajlar <Sparkle className="dm-title-star" />
       </h1>
-
-      {/* A plain GET form: searching changes nothing (D-147) */}
-      <form method="get" action="/social/messages" className="dm-search">
-        <Search aria-hidden className="size-4 shrink-0" />
-        <label htmlFor="dm-search" className="sr-only">
-          Konuşmalarda ara
-        </label>
-        <input
-          id="dm-search"
-          name="ara"
-          defaultValue={query}
-          placeholder="Konuşmalarda ara…"
-          maxLength={40}
-          autoComplete="off"
-        />
-        <button type="submit" aria-label="Ara" title="Ara">
-          <Search aria-hidden className="size-4" />
-        </button>
-      </form>
-
-      {query && (
-        <p className="dm-search-hint">
-          “{query}” için sonuçlar.{" "}
-          <Link href={`/social/messages/${encodeURIComponent(query.replace(/^@/, ""))}`}>
-            <SquarePen aria-hidden className="size-4" /> Bu adla yeni konuşma aç
-          </Link>
-        </p>
-      )}
 
       <ConversationList conversations={conversations} activeUsername={activeUsername} />
 

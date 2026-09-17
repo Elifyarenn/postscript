@@ -1662,37 +1662,6 @@ html[data-playlist-open] .ps-site .topbar-note {
   color: var(--site-ink);
 }
 
-.ps-site .dm-search {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0 1.1rem 1rem;
-  padding: 0.45rem 0.8rem;
-  border: 1px solid var(--site-rule);
-  border-radius: 10px;
-}
-
-.ps-site .dm-search:focus-within {
-  outline: 2px solid var(--site-wine);
-}
-
-.ps-site .dm-search input {
-  min-width: 0;
-  flex: 1;
-  border: 0;
-  background: transparent;
-  font: inherit;
-  font-size: 0.95rem;
-  outline: none;
-}
-
-.ps-site .dm-search button {
-  display: grid;
-  place-items: center;
-  color: var(--site-ink);
-  cursor: pointer;
-}
-
 .ps-site .dm-conversations {
   border-top: 1px solid var(--site-rule);
 }
@@ -3913,26 +3882,6 @@ html[data-playlist-open] .ps-site .topbar-note {
 
 .ps-site .category-grid .category-card:hover .category-explore svg {
   transform: translateX(calc(4 * var(--gdu)));
-}
-
-/* ════════════════ Searching conversations (D-147) ════════════════ */
-
-.ps-site .dm-search-hint {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.3rem 0.6rem;
-  margin: -0.5rem 1.1rem 0.9rem;
-  color: var(--site-muted);
-  font-size: 0.8rem;
-}
-
-.ps-site .dm-search-hint a {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  color: var(--site-wine);
-  text-decoration: underline;
 }
 
 .ps-site .dm-report {

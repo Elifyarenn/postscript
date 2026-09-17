@@ -7060,3 +7060,23 @@ sanılmış zannediyordu.
 **Doğrulama:** `direct-messages.test.ts` ve `anon-box.test.ts`: doğum tarihi
 olmayan gönderen "doğum tarihi" cümlesini görür, 18 geçmez. Kapı: typecheck,
 lint, test.
+
+## D-183 — Mesajlar ekranında arama kutusu kaldırıldı
+
+**İstek (ürün sahibi):** "Mesaj kutusunda arama kısmını komple kaldır."
+
+**Karar:**
+
+- D-147'deki "Konuşmalarda ara…" kutusu, `?ara=` süzmesi, "… için sonuçlar"
+  satırı ve "Bu adla yeni konuşma aç" kısayolu kaldırıldı; `.dm-search` ve
+  `.dm-search-hint` stilleri silindi. Tasarımda kutu vardı; ürün sahibinin
+  isteği tasarımdan sonra gelir.
+- Boş liste artık "Henüz konuşma yok." der (eskiden "Aradığınıza uyan konuşma
+  yok." diyordu ve arama yokken de bu çıkıyordu).
+- **Yeni konuşma açmanın yolları duruyor:** üyenin profilindeki mesaj
+  bağlantısı ve sütundaki "Takipleştikleriniz" listesi (D-143). Eski
+  `?to=<kullanıcı>` yönlendirmesi de yerinde.
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Canlıda mesajlar ekranı.
