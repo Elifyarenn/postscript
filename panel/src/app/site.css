@@ -105,6 +105,14 @@
   gap: 0.45rem;
 }
 
+.ps-site .topbar-note {
+  display: none;
+}
+
+html[data-playlist-open] .ps-site .topbar-note {
+  display: inline-block;
+}
+
 .ps-site .topbar-actions {
   display: flex;
   overflow-x: auto;

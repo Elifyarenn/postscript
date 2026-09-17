@@ -6866,3 +6866,26 @@ kısmı."
 **Doğrulama:** Kapı: typecheck, lint, test. E2E testleri yerel sunucu
 gerektirdiği için bu adımda çalıştırılmadı; canlıda üst şerit ve Ayarlar →
 Hesabım yolu elle kontrol edilir.
+
+## D-177 — Üst şeritteki müzik notası yalnızca çalar açıkken
+
+**İstek (ürün sahibi):** "Üst headerdaki müzik notası sadece pl açıldığında
+gözükecek."
+
+**Karar:**
+
+- "Hoş geldin"in yanındaki nota varsayılan olarak gizli. Ön sayfadaki çalma
+  listesi çaları açıldığında (oynat düğmesi, D-117) görünür; çarpı ile
+  kapatıldığında ya da başka bir sayfaya geçildiğinde yine gizlenir. "Açıldı"
+  çaların açık olması demektir, şarkının o an çalması değil: Spotify çaları
+  açılıp hazır olmadan da nota görünür.
+- Şerit sunucuda çiziliyor, çalar tarayıcıda. İkisini bağlamak için ortak bir
+  durum kütüphanesi eklenmedi: çalar açıkken `<html>`'e
+  `data-playlist-open` işareti koyar, CSS notayı bu işaretle gösterir. Çalar
+  kapanınca ya da sayfadan çıkılınca bileşen işareti kaldırır.
+- Dar ekranda "Hoş geldin" zaten gizli (D-112); nota da görünmez.
+
+**Hukuk:** Değişiklik yok; işaret yalnızca tarayıcıda, sunucuya bir şey
+gitmez.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Canlıda çaları açıp kapatarak.

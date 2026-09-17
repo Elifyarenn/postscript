@@ -82,7 +82,8 @@ export async function SiteShell({
           </Link>
 
           <span className="topbar-welcome">
-            Hoş geldin <Music aria-hidden className="size-4" />
+            {/* The note shows only while the front page's player is open (D-177) */}
+            Hoş geldin <Music aria-hidden className="topbar-note size-4" />
           </span>
 
           <div className="topbar-actions">

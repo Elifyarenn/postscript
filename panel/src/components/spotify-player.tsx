@@ -100,6 +100,18 @@ export function SpotifyPlayer({
     }
   }, [open]);
 
+  // The top strip's music note appears while the player is open (D-177). A mark
+  // on the document rather than shared state: the strip is rendered on the
+  // server, and leaving the page unmounts the player and takes the mark with it.
+  useEffect(() => {
+    if (!open) return;
+    const root = document.documentElement;
+    root.dataset.playlistOpen = "";
+    return () => {
+      delete root.dataset.playlistOpen;
+    };
+  }, [open]);
+
   // The record is drawn beside the deck first, so its move onto the platter can be seen
   useEffect(() => {
     if (!open) return;
