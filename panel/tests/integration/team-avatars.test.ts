@@ -1,5 +1,5 @@
 /**
- * Team avatars end to end against the database (D-194): who may save, that
+ * Team avatars end to end against the database (D-194, D-195): who may save, that
  * the PNG really is a transparent square PNG, that saving again replaces the
  * record and its file, and that deletion and account anonymisation leave
  * nothing behind.
@@ -8,7 +8,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
 import { auditLog, teamAvatars } from "@/db/schema";
-import { DEFAULT_AVATAR_CONFIG } from "@/lib/avatar/options";
+import { AVATAR_CONFIG_VERSION, DEFAULT_AVATAR_CONFIG } from "@/lib/avatar/registry";
 import { isAppError } from "@/lib/errors";
 import { MemoryStorageAdapter, setStorageAdapter } from "@/lib/storage";
 import {
@@ -82,7 +82,7 @@ describe("saveTeamAvatar", () => {
 
     await saveTeamAvatar(
       actorOf(illustrator),
-      input({ teamRole: "Çizer", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "afro" } }),
+      input({ teamRole: "Çizer", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "volume" } }),
       noMeta,
     );
     const rows = await db.select().from(teamAvatars);
@@ -93,7 +93,7 @@ describe("saveTeamAvatar", () => {
     expect(storage.objects.size).toBe(1);
 
     const own = await getOwnTeamAvatar(actorOf(illustrator));
-    expect(own?.config.hairStyle).toBe("afro");
+    expect(own?.config.hairStyle).toBe("volume");
 
     const actions = await db.select({ action: auditLog.action, entityId: auditLog.entityId }).from(auditLog);
     expect(actions.map((entry) => entry.action)).toEqual(["team_avatar.created", "team_avatar.updated"]);
@@ -109,7 +109,7 @@ describe("saveTeamAvatar", () => {
   it("refuses a configuration outside the catalogue before drawing anything", async () => {
     const editor = await createUser({ role: "editor", editorStatus: "active" });
     await expectStatus(
-      saveTeamAvatar(actorOf(editor), input({ config: { ...DEFAULT_AVATAR_CONFIG, top: "<script>" } }), noMeta),
+      saveTeamAvatar(actorOf(editor), input({ config: { ...DEFAULT_AVATAR_CONFIG, clothing: "<script>" } }), noMeta),
       400,
     );
     await expectStatus(saveTeamAvatar(actorOf(editor), input({ displayName: "" }), noMeta), 400);
@@ -153,6 +153,27 @@ describe("admin access", () => {
     expect(png.body.readUInt32BE(16)).toBe(2048);
     const [after] = await db.select().from(teamAvatars).where(eq(teamAvatars.id, row!.id));
     expect(storage.objects.has(`media:${after!.pngStorageKey}`)).toBe(true);
+  }, 60_000);
+});
+
+describe("records saved in the first style (D-194)", () => {
+  it("are redrawn in the current style, with their choices carried over, when downloaded", async () => {
+    const admin = await createUser({ role: "admin" });
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    await saveTeamAvatar(actorOf(writer), input(), noMeta);
+    const [row] = await db.select().from(teamAvatars);
+    // Turn the fresh record into one saved before the redesign
+    await db
+      .update(teamAvatars)
+      .set({ configVersion: 1, config: { v: 1, faceShape: "square", hairStyle: "afro", hairTexture: "coily", top: "blazer" } })
+      .where(eq(teamAvatars.id, row!.id));
+
+    await getTeamAvatarPng(actorOf(admin), row!.id);
+    const [after] = await db.select().from(teamAvatars).where(eq(teamAvatars.id, row!.id));
+    expect(after!.configVersion).toBe(AVATAR_CONFIG_VERSION);
+    expect(after!.config).toMatchObject({ face: "softSquare", hairStyle: "volume", hairTexture: "coily", clothing: "blazer" });
+    expect(after!.pngStorageKey).not.toBe(row!.pngStorageKey);
+    expect(storage.objects.has(`media:${row!.pngStorageKey}`)).toBe(false);
   }, 60_000);
 });
 

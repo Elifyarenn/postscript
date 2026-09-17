@@ -1,20 +1,25 @@
 /**
- * Team avatars (D-194): the catalogue and its validation, the renderer, the
- * file name, the ZIP writer and who may use the builder.
+ * Team avatars (D-194, D-195): the asset registry and its validation, reading
+ * old records, the layered renderer, undo/redo, the file name, the ZIP writer
+ * and who may use the builder.
  */
 import { describe, expect, it } from "vitest";
 import {
-  AVATAR_CATEGORIES,
+  AVATAR_CONFIG_VERSION,
+  CATEGORIES,
   DEFAULT_AVATAR_CONFIG,
-  EXTRAS,
+  FIELDS,
+  PRESETS,
   avatarConfigSchema,
   avatarFileName,
-  optionLabel,
+  describeConfig,
   parseStoredConfig,
   randomAvatarConfig,
   teamAvatarDetailsSchema,
-} from "@/lib/avatar/options";
-import { AVATAR_LAYERS, renderAvatarSvg } from "@/lib/avatar/render";
+  type FieldKey,
+} from "@/lib/avatar/registry";
+import { LAYER_ORDER, renderAvatarLayers, renderAvatarSvg } from "@/lib/avatar/render";
+import { HISTORY_LIMIT, historyReducer, type History } from "@/lib/avatar/history";
 import { crc32, uniqueEntryNames, zipToBuffer } from "@/lib/zip";
 import { canCreateTeamAvatar, canManageTeamAvatars, type Actor } from "@/lib/auth/rbac";
 
@@ -28,6 +33,27 @@ const actor = (overrides: Partial<Actor> = {}): Actor => ({
   ...overrides,
 });
 
+describe("the asset registry", () => {
+  it("puts every field in a category, and nothing else", () => {
+    const inCategories = new Set(CATEGORIES.flatMap((category) => category.fields as readonly string[]));
+    expect([...inCategories].sort()).toEqual(Object.keys(FIELDS).sort());
+  });
+
+  it("gives every option a unique id and a label within its field", () => {
+    for (const [key, field] of Object.entries(FIELDS)) {
+      const ids = field.options.map((option) => option.id);
+      expect(new Set(ids).size, key).toBe(ids.length);
+      expect(field.options.every((option) => option.label.trim().length > 0), key).toBe(true);
+    }
+  });
+
+  it("keeps every example avatar valid", () => {
+    for (const preset of PRESETS) {
+      expect(avatarConfigSchema.safeParse(preset.config).success, preset.label).toBe(true);
+    }
+  });
+});
+
 describe("avatarConfigSchema", () => {
   it("accepts the default avatar", () => {
     expect(avatarConfigSchema.parse(DEFAULT_AVATAR_CONFIG)).toEqual(DEFAULT_AVATAR_CONFIG);
@@ -38,38 +64,82 @@ describe("avatarConfigSchema", () => {
   });
 
   it("refuses unknown keys, so nothing free-form can reach the SVG", () => {
-    expect(
-      avatarConfigSchema.safeParse({ ...DEFAULT_AVATAR_CONFIG, skinTone: "tone1", fill: "url(javascript:1)" }).success,
-    ).toBe(false);
+    expect(avatarConfigSchema.safeParse({ ...DEFAULT_AVATAR_CONFIG, fill: "url(javascript:1)" }).success).toBe(false);
   });
 
-  it("stores extras once each, in catalogue order", () => {
-    const parsed = avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, extras: ["pencil", "blush", "pencil"] });
-    expect(parsed.extras).toEqual(["blush", "pencil"]);
+  it("stores sets once each, in catalogue order", () => {
+    const parsed = avatarConfigSchema.parse({
+      ...DEFAULT_AVATAR_CONFIG,
+      piercings: ["noseStud", "helix", "noseStud"],
+      extras: ["pencil", "cap"],
+    });
+    expect(parsed.piercings).toEqual(["helix", "noseStud"]);
+    expect(parsed.extras).toEqual(["cap", "pencil"]);
   });
 
-  it("gives every random avatar a valid configuration", () => {
+  it("gives every random avatar a valid configuration with at most one hat", () => {
     let seed = 42;
     const random = () => {
       seed = (seed * 16807) % 2147483647;
       return seed / 2147483647;
     };
-    for (let index = 0; index < 50; index += 1) {
-      expect(avatarConfigSchema.safeParse(randomAvatarConfig(random)).success).toBe(true);
+    for (let index = 0; index < 60; index += 1) {
+      const config = randomAvatarConfig(random);
+      expect(avatarConfigSchema.safeParse(config).success).toBe(true);
+      expect(config.extras.filter((id) => ["cap", "beanie", "beret"].includes(id)).length).toBeLessThanOrEqual(1);
     }
   });
 });
 
 describe("parseStoredConfig", () => {
   it("keeps the valid choices of a record with one broken key", () => {
-    const stored = { ...DEFAULT_AVATAR_CONFIG, hairColor: "blue", mouth: "removed-option" };
-    const parsed = parseStoredConfig(stored);
+    const parsed = parseStoredConfig({ ...DEFAULT_AVATAR_CONFIG, hairColor: "blue", mouth: "removed-option" });
     expect(parsed.hairColor).toBe("blue");
     expect(parsed.mouth).toBe(DEFAULT_AVATAR_CONFIG.mouth);
   });
 
+  it("carries a first-version record over to the current parts", () => {
+    const parsed = parseStoredConfig({
+      v: 1,
+      skinTone: "tone7",
+      faceShape: "square",
+      eyeShape: "upturned",
+      hairStyle: "afro",
+      hairTexture: "coily",
+      hairColor: "copper",
+      top: "hoodie",
+      topColor: "navy",
+      piercing: "helix",
+      extras: ["blush", "pencil"],
+    });
+    expect(parsed).toMatchObject({
+      v: AVATAR_CONFIG_VERSION,
+      skinTone: "tone7",
+      face: "softSquare",
+      eyes: "cat",
+      hairStyle: "volume",
+      hairTexture: "coily",
+      hairColor: "copper",
+      clothing: "hoodie",
+      clothingColor: "navy",
+      piercings: ["helix"],
+      blush: "soft",
+      extras: ["pencil"],
+    });
+  });
+
   it("falls back to the default for garbage", () => {
     expect(parseStoredConfig("nope")).toEqual(DEFAULT_AVATAR_CONFIG);
+  });
+});
+
+describe("describeConfig", () => {
+  it("lists every field once, with Turkish labels", () => {
+    const rows = describeConfig({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "ponytail", piercings: ["helix", "septum"] });
+    expect(rows).toHaveLength(Object.keys(FIELDS).length);
+    expect(rows).toContainEqual({ label: "Saç Modeli", value: "At kuyruğu" });
+    expect(rows).toContainEqual({ label: "Piercing", value: "Helix, Septum" });
+    expect(rows).toContainEqual({ label: "Ekstra", value: "Yok" });
   });
 });
 
@@ -95,18 +165,11 @@ describe("avatarFileName", () => {
   });
 });
 
-describe("optionLabel", () => {
-  it("returns the Turkish label of a stored id", () => {
-    expect(optionLabel("hairStyle", "ponytail")).toBe("At kuyruğu");
-    expect(optionLabel("glasses", "none")).toBe("Yok");
-  });
-});
-
 describe("renderAvatarSvg", () => {
   it("draws a square canvas with no background, so the PNG is transparent", () => {
     const svg = renderAvatarSvg(DEFAULT_AVATAR_CONFIG);
     expect(svg.startsWith('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"')).toBe(true);
-    expect(svg).not.toMatch(/<rect[^>]*width="100%"/);
+    expect(svg).not.toMatch(/<rect[^>]*width="(100%|1024)"/);
     expect(svg).not.toContain("<image");
   });
 
@@ -114,34 +177,82 @@ describe("renderAvatarSvg", () => {
     expect(renderAvatarSvg(DEFAULT_AVATAR_CONFIG)).toBe(renderAvatarSvg(DEFAULT_AVATAR_CONFIG));
   });
 
-  it("draws every layer in order", () => {
+  it("draws the layers in the fixed order", () => {
     const svg = renderAvatarSvg(DEFAULT_AVATAR_CONFIG);
-    const positions = AVATAR_LAYERS.map((layer) => svg.indexOf(`data-layer="${layer.name}"`));
+    const positions = LAYER_ORDER.map((layer) => svg.indexOf(`data-layer="${layer}"`));
     expect(positions.every((position) => position >= 0)).toBe(true);
     expect([...positions].sort((a, b) => a - b)).toEqual(positions);
   });
 
-  it("renders every option of every category without broken numbers", () => {
-    for (const category of AVATAR_CATEGORIES) {
-      for (const option of category.options) {
-        const svg = renderAvatarSvg({ ...DEFAULT_AVATAR_CONFIG, [category.key]: option.id });
-        expect(svg, `${category.key}=${option.id}`).not.toMatch(/NaN|undefined|Infinity/);
+  it("renders every option of every field without broken numbers", () => {
+    for (const key of Object.keys(FIELDS) as FieldKey[]) {
+      const field = FIELDS[key];
+      for (const option of field.options) {
+        const value = field.kind === "set" ? [option.id] : option.id;
+        const svg = renderAvatarSvg(avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, [key]: value }));
+        expect(svg, `${key}=${option.id}`).not.toMatch(/NaN|undefined|Infinity/);
       }
     }
-    const allExtras = renderAvatarSvg({ ...DEFAULT_AVATAR_CONFIG, extras: EXTRAS.map((extra) => extra.id) });
-    expect(allExtras).not.toMatch(/NaN|undefined|Infinity/);
   });
 
-  it("changes the drawing when a choice changes", () => {
-    const base = renderAvatarSvg(DEFAULT_AVATAR_CONFIG);
-    expect(renderAvatarSvg({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "afro" })).not.toBe(base);
-    expect(renderAvatarSvg({ ...DEFAULT_AVATAR_CONFIG, hairTexture: "coily" })).not.toBe(base);
+  it("leaves the other layers alone when one part changes", () => {
+    const before = renderAvatarLayers(DEFAULT_AVATAR_CONFIG);
+    const after = renderAvatarLayers({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "bob" });
+    const changed = after
+      .filter((part) => before.find((old) => old.layer === part.layer)?.svg !== part.svg)
+      .map((part) => part.layer);
+    expect(changed.sort()).toEqual(["backHair", "frontHair"]);
   });
 
-  it("crops to a thumbnail view box", () => {
-    expect(renderAvatarSvg(DEFAULT_AVATAR_CONFIG, { viewBox: "376 364 272 272", size: 132 })).toContain(
-      'viewBox="376 364 272 272" width="132" height="132"',
-    );
+  it("lets straight hair fall in front of the ears and tucks wavy hair behind them", () => {
+    const layer = (texture: "straight" | "wavy", name: string) =>
+      renderAvatarLayers({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "long", hairTexture: texture }).find(
+        (part) => part.layer === name,
+      )!.svg;
+    const count = (svg: string) => svg.split("<path").length;
+    // The side locks move from the back layer to the front one
+    expect(count(layer("straight", "frontHair"))).toBeGreaterThan(count(layer("wavy", "frontHair")));
+    expect(count(layer("straight", "backHair"))).toBeLessThan(count(layer("wavy", "backHair")));
+  });
+
+  it("crops a thumbnail and can leave layers out", () => {
+    const svg = renderAvatarSvg(DEFAULT_AVATAR_CONFIG, { view: "hair", size: 180, omit: ["eyes", "mouth"] });
+    expect(svg).toContain('viewBox="92 20 840 840" width="180" height="180"');
+    expect(svg).not.toContain('data-layer="eyes"');
+  });
+});
+
+describe("historyReducer", () => {
+  const start: History = { past: [], present: DEFAULT_AVATAR_CONFIG, future: [] };
+  const bob = { ...DEFAULT_AVATAR_CONFIG, hairStyle: "bob" as const };
+  const bun = { ...DEFAULT_AVATAR_CONFIG, hairStyle: "bun" as const };
+
+  it("undoes and redoes, and a new change clears the redo steps", () => {
+    let state = historyReducer(start, { type: "set", config: bob });
+    state = historyReducer(state, { type: "set", config: bun });
+    state = historyReducer(state, { type: "undo" });
+    expect(state.present.hairStyle).toBe("bob");
+    state = historyReducer(state, { type: "redo" });
+    expect(state.present.hairStyle).toBe("bun");
+    state = historyReducer(state, { type: "undo" });
+    state = historyReducer(state, { type: "set", config: DEFAULT_AVATAR_CONFIG });
+    expect(state.future).toEqual([]);
+  });
+
+  it("adds no step for picking what is already chosen, and ignores undo at the start", () => {
+    expect(historyReducer(start, { type: "set", config: { ...DEFAULT_AVATAR_CONFIG } })).toBe(start);
+    expect(historyReducer(start, { type: "undo" })).toBe(start);
+  });
+
+  it("keeps a bounded history", () => {
+    let state = start;
+    for (let index = 0; index < HISTORY_LIMIT + 10; index += 1) {
+      state = historyReducer(state, {
+        type: "set",
+        config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: index % 2 ? "bob" : "bun" },
+      });
+    }
+    expect(state.past).toHaveLength(HISTORY_LIMIT);
   });
 });
 

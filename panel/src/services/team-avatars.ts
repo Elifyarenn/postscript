@@ -14,7 +14,7 @@ import {
   parseStoredConfig,
   teamAvatarDetailsSchema,
   type AvatarConfig,
-} from "@/lib/avatar/options";
+} from "@/lib/avatar/registry";
 import { renderAvatarPng } from "@/lib/avatar/png";
 import { getStorage } from "@/lib/storage";
 import { uniqueEntryNames, type ZipEntry } from "@/lib/zip";
@@ -266,18 +266,25 @@ export async function getTeamAvatar(actor: Actor, id: string): Promise<TeamAvata
  * The stored PNG, or a fresh one when the object is gone (a storage move, a
  * bucket restored from backup): the configuration is the source of truth.
  */
-async function pngFor(row: { id: string; config: unknown; pngStorageKey: string | null }): Promise<Buffer> {
-  if (row.pngStorageKey) {
+async function pngFor(row: { id: string; config: unknown; configVersion: number; pngStorageKey: string | null }): Promise<Buffer> {
+  // A record drawn in an older style is redrawn in today's (D-195); its choices carry over
+  const current = row.configVersion === AVATAR_CONFIG_VERSION;
+  if (row.pngStorageKey && current) {
     try {
       return await getStorage().get({ bucket: "media", key: row.pngStorageKey });
     } catch {
       // Fall through and draw it again
     }
   }
-  const png = await renderAvatarPng(parseStoredConfig(row.config));
+  const config = parseStoredConfig(row.config);
+  const png = await renderAvatarPng(config);
   const key = `team-avatars/${new Date().toISOString().slice(0, 10)}/${randomUUID()}.png`;
   await getStorage().put({ bucket: "media", key, body: png, mime: PNG_MIME });
-  await db.update(teamAvatars).set({ pngStorageKey: key }).where(eq(teamAvatars.id, row.id));
+  await db
+    .update(teamAvatars)
+    .set({ pngStorageKey: key, config, configVersion: AVATAR_CONFIG_VERSION })
+    .where(eq(teamAvatars.id, row.id));
+  if (row.pngStorageKey && row.pngStorageKey !== key) await removeObject(row.pngStorageKey);
   return png;
 }
 

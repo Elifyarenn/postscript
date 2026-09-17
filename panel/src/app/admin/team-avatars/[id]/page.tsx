@@ -3,7 +3,7 @@ import { guardPanel } from "@/lib/auth/guard";
 import { readCsrfToken } from "@/lib/csrf";
 import { ActionButton } from "@/components/form";
 import { Card, PageHeader, Table, Td, Th } from "@/components/ui";
-import { AVATAR_CATEGORIES, extraLabels, optionLabel } from "@/lib/avatar/options";
+import { describeConfig } from "@/lib/avatar/registry";
 import { getTeamAvatar } from "@/services/team-avatars";
 import { deleteTeamAvatarAction } from "../actions";
 
@@ -98,16 +98,12 @@ export default async function TeamAvatarDetailPage({ params }: { params: Promise
                 </tr>
               </thead>
               <tbody>
-                {AVATAR_CATEGORIES.map((category) => (
-                  <tr key={category.key}>
-                    <Td>{category.label}</Td>
-                    <Td>{optionLabel(category.key, avatar.config[category.key])}</Td>
+                {describeConfig(avatar.config).map((row) => (
+                  <tr key={row.label}>
+                    <Td>{row.label}</Td>
+                    <Td>{row.value}</Td>
                   </tr>
                 ))}
-                <tr>
-                  <Td>Küçük detaylar</Td>
-                  <Td>{extraLabels(avatar.config.extras).join(", ") || "Yok"}</Td>
-                </tr>
               </tbody>
             </Table>
             <details className="mt-3 text-xs">

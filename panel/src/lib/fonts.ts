@@ -1,4 +1,4 @@
-import { Bodoni_Moda, Cormorant_Garamond, Source_Serif_4 } from "next/font/google";
+import { Bodoni_Moda, Caveat, Cormorant_Garamond, Source_Serif_4 } from "next/font/google";
 
 /**
  * The magazine frame's three faces (D-112).
@@ -31,4 +31,15 @@ export const italicFont = Cormorant_Garamond({
   style: ["italic"],
   display: "swap",
   variable: "--font-italic",
+});
+
+/**
+ * The handwritten margin notes of the team avatar builder (D-195). Self-hosted
+ * by next/font like the others, so opening the builder sends nothing to Google.
+ */
+export const noteFont = Caveat({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "600"],
+  display: "swap",
+  variable: "--font-note",
 });

@@ -1,5 +1,5 @@
 /**
- * Server-side PNG of a team avatar (D-194).
+ * Server-side PNG of a team avatar (D-194, D-195).
  *
  * `next/og` already ships a renderer (resvg) with Next.js, so the PNG needs no
  * new dependency and is drawn on the server from the saved configuration: an
@@ -9,7 +9,7 @@
 import "server-only";
 import { createElement } from "react";
 import { ImageResponse } from "next/og";
-import type { AvatarConfig } from "./options";
+import type { AvatarConfig } from "./registry";
 import { renderAvatarSvg } from "./render";
 
 /** Square and large enough for print-size social media posts; ~1–2 s to draw. */

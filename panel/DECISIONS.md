@@ -7495,3 +7495,87 @@ RGBA; yeniden kayıt tek satır ve eski dosya silinir; okuyucu 403; katalog dı�
 dosyanın yeniden çizilmesi; üye ve admin silmesi; anonimleştirme). Kapı:
 typecheck, lint, test, build. **Migration 0040** (`team_avatars`) üretimde
 kod yayımlanmadan önce uygulanmalı (D-079).
+
+
+## D-195 — Ekip avatarı oluşturucunun yeniden tasarımı (Picrew benzeri)
+
+**İstek (ürün sahibi):** `avatarprompt.txt` ve referans görsel
+(`pic/avatarreferans.png`): Picrew benzeri, modüler, katman tabanlı bir
+oluşturucu; genç, stilize, "avatar hissi" güçlü, anime etkili ama anime
+karakteri olmayan çizim; kafa büyük (~%55–60), ön cephe, büyük gözler, küçük
+burun, sade ağız, allık, ayrı tutamlı hacimli saç, düz renk + hafif cel gölge.
+Önceki uzun/sivri, gerçekçi orana yakın yüzler kullanılmayacak. Arayüz:
+solda kategoriler, ortada büyük önizleme, sağda alt sekmeli seçenekler;
+Geri Al / İleri Al / Rastgele / Sıfırla; önizlemede damalı zemin yok; el
+yazısı notlar; mobilde önizleme üstte kalır. Asset listeleri merkezi bir
+kayıt defterinde, data-driven. Aynı oturumda ayrıca: "düz saçlarda kulak
+arkasına atılmasın, dümdüz insin saç."
+
+**Karar:**
+
+- **Merkezi kayıt defteri** `src/lib/avatar/registry.ts`: `FIELDS` (her
+  seçim: etiket, tür — tek seçim / çoklu set / renk —, seçenekler, küçük
+  önizleme kırpımı) ve `CATEGORIES` (sol menü sırası referanstaki gibi: Saç,
+  Yüz, Ten Rengi, Gözler, Kaşlar, Burun, Ağız, Yüz Detayları, Gözlük, Piercing,
+  Aksesuar, Kıyafet, Ekstra). zod şeması, varsayılan, örnek avatarlar,
+  rastgele avatar ve admin tablosu (`describeConfig`) buradan türetilir.
+- **Parçalar** `src/lib/avatar/assets/*.ts`: her parça `{ id, label, layers }`;
+  `layers` katman adı → çizim fonksiyonu. Yeni bir saç/kıyafet/aksesuar tek
+  bir liste kaydıdır. Katman sırası `canvas.ts`'te `LAYER_ORDER`
+  (backHair → body → neck → clothing → ears → face → skinDetails → eyes →
+  eyebrows → nose → mouth → facialHair → frontHair → glasses → earrings →
+  piercings → necklace → accessories). İstenen sıradan tek sapma: boyun
+  kıyafetten önce, yoksa boyun yakaların ve balıkçı yakanın üstüne çizilir.
+- **Kafa uzayı:** kafa parçaları kendi koordinatlarında çizilip tek bir
+  dönüşümle (`HEAD`, ölçek 0,98) yerleştirilir; kafa oranı tek sayıdır.
+- **Saç tutamları:** stiller arka hacim + kafa örtüsü + yan tutamlar +
+  kâküllerden oluşur; her tutam (`lockPath`) ayrı çizilir, hemen arkasına
+  koyu bir kopyası düşer (tutam ayrımı ve hacim). Doku (düz, dalgalı,
+  kıvırcık, sık kıvırcık) tutamları büker ve siluet kenarını kıvırır; 16 stil
+  × 4 doku. **Yan tutamlar:** düz saçta kulakların önünden dümdüz iner
+  (ürün sahibinin isteği); dalgalı ve kıvırcık saçta referanstaki gibi kulak
+  arkasında kalır, kulaktaki piercingler görünür. Önceki oturumda bu istek
+  için yazılan ve yayına alınmayan ara çözüm bu tasarımla değiştirildi.
+- **Yeni seçimler:** kirpik, dudak rengi, allık, göz altı, yara izi, çoklu
+  piercing (helix, industrial, kulak memesi, burun taşı/halkası, septum,
+  dudak halkası, kaş), küpe ve kolye ayrı, ekstralar (şapka, örgü bere, bere,
+  boyunda kulaklık, toka, çiçek, kulakta kalem, yara bandı, yıldız
+  çıkartma). Şapka/bere kıyafet rengini alır. Özellikler cinsiyete bağlı değil.
+- **Konfigürasyon sürüm 2** (`AVATAR_CONFIG_VERSION`): anahtarlar yeniden
+  adlandırıldı (`face`, `eyes`, `clothing`, `clothingColor`, `piercings` …).
+  `parseStoredConfig` sürüm 1 kaydı en yakın yeni parçalara taşır; bozulan
+  anahtar tek tek varsayılana düşer. Admin bir sürüm 1 kaydını indirdiğinde
+  PNG yeni stille yeniden çizilir, konfigürasyon ve sürüm güncellenir, eski
+  dosya silinir. Şema değişmedi (`config_version` zaten vardı) → migration yok.
+- **Oluşturucu arayüzü:** masaüstünde kategori | avatar | seçenekler; tablette
+  kategoriler üstte, avatar ve seçenekler yan yana; telefonda avatar üstte
+  yapışkan, altında yatay kategori şeridi ve seçenekler. Önizleme, katmanların
+  üst üste yığılmış ayrı SVG'leri (değişmeyen katmanın DOM'u yerinde kalır);
+  arkadaki krem zemin sayfanındır, PNG'ye girmez. Seçenek kutucukları üyenin
+  kendi avatarında o parçayı değiştirir; saç kutucukları sade yüz üzerinde.
+  Renkler yuvarlak örnekler hâlinde alt sekmelerin altında. Geri Al / İleri
+  Al (Ctrl+Z / Ctrl+Y, yazı alanında devre dışı), Rastgele ve Sıfırla geçmişe
+  yazar (`history.ts`, 60 adım). Büyütme penceresi, altta tıklanınca oradan
+  başlanan 8 örnek avatar, el yazısı notlar (Caveat, next/font ile kendi
+  sunucumuzdan; Google'a istek gitmez). Son adım "Gönder": ad, ekip rolü,
+  "Avatarımı Gönder".
+- **Admin:** kart düğmesi "Avatarı Görüntüle"; konfigürasyon tablosu kayıt
+  defterinden.
+
+**Hukuk:** Yeni kişisel veri kategorisi yok; aydınlatma metnindeki "Ekip
+avatarı" satırının parça listesi yeni seçimlere göre güncellendi (kirpik,
+dudak rengi, allık, göz altı, yara izi, piercing, küpe, kolye, ekstralar).
+"Yara izi", "göz altı" gibi seçimler de çizim tercihidir; sağlık verisi
+olarak istenmez (D-194'teki not ve hukukçu soruları geçerli). Yazı tipi
+kendi sunucumuzdan sunulduğu için yeni bir yurt dışı aktarım yok.
+
+**Sınır:** Referans görseldeki boyalı, fırça detaylı çizim kodla üretilen
+vektör parçalarla birebir elde edilemez; oranlar, göz ve tutam dili ve renk
+yaklaşımı yakalandı.
+
+**Doğrulama:** `team-avatar.test.ts`: kayıt defteri bütünlüğü (her alan bir
+kategoride, benzersiz kimlikler, geçerli örnekler), şema, sürüm 1 taşıma,
+her alanın her seçeneğinin çizilmesi, katman sırası, bir parça değişince
+yalnızca kendi katmanlarının değişmesi, düz/dalgalı yan tutam davranışı,
+geri al/ileri al. `team-avatars.test.ts`: sürüm 1 kaydın indirmede yeniden
+çizilmesi. Kapı: typecheck, lint, test, build.

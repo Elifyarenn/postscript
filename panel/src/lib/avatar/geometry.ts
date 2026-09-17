@@ -184,9 +184,9 @@ export type Texture = "straight" | "wavy" | "curly" | "coily";
 /** Wavelength and bump height of each texture on an outline, in canvas units. */
 const EDGE: Record<Texture, { spacing: number; amplitude: number } | null> = {
   straight: null,
-  wavy: { spacing: 58, amplitude: 9 },
-  curly: { spacing: 34, amplitude: 13 },
-  coily: { spacing: 21, amplitude: 9 },
+  wavy: { spacing: 64, amplitude: 6 },
+  curly: { spacing: 36, amplitude: 10 },
+  coily: { spacing: 24, amplitude: 7 },
 };
 
 /**
@@ -267,4 +267,79 @@ export function textureStrands(guides: readonly (readonly Point[])[], texture: T
         .join(" ");
     })
     .join(" ");
+}
+
+/* ------------------------------------------------------------------ */
+/* Hair locks                                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One lock of hair: root point, tip point, width at the root and how far its
+ * middle bows sideways. Hair styles are lists of these (D-195), which is what
+ * gives the drawing separate, overlapping locks instead of one helmet shape.
+ */
+export type Lock = readonly [rootX: number, rootY: number, tipX: number, tipY: number, width: number, bend: number];
+
+/** How each texture bends a lock along its length and how it ends. */
+const LOCK_TEXTURE: Record<Texture, { waves: number; amplitude: number; tipWidth: number }> = {
+  straight: { waves: 0, amplitude: 0, tipWidth: 0 },
+  wavy: { waves: 0.55, amplitude: 12, tipWidth: 0.04 },
+  curly: { waves: 0.95, amplitude: 16, tipWidth: 0.16 },
+  coily: { waves: 1.3, amplitude: 12, tipWidth: 0.26 },
+};
+
+type LockSpine = { points: Point[]; normals: Point[]; widths: number[] };
+
+function lockSpine(lock: Lock, texture: Texture): LockSpine {
+  const [rx, ry, tx, ty, width, bend] = lock;
+  const length = Math.hypot(tx - rx, ty - ry) || 1;
+  const nx = -(ty - ry) / length;
+  const ny = (tx - rx) / length;
+  const shape = LOCK_TEXTURE[texture];
+  const steps = 12;
+
+  const points: Point[] = [];
+  const widths: number[] = [];
+  for (let step = 0; step <= steps; step += 1) {
+    const t = step / steps;
+    // The wave grows towards the tip: the root sits flat against the head
+    const wave = shape.amplitude * Math.sin(t * Math.PI * 2 * shape.waves) * t;
+    const offset = bend * 4 * t * (1 - t) + wave;
+    points.push([rx + (tx - rx) * t + nx * offset, ry + (ty - ry) * t + ny * offset]);
+    widths.push(width * (shape.tipWidth + (1 - shape.tipWidth) * (1 - t) ** 0.9));
+  }
+
+  const normals = points.map((point, index) => {
+    const previous = points[Math.max(0, index - 1)]!;
+    const next = points[Math.min(points.length - 1, index + 1)]!;
+    const dx = next[0] - previous[0];
+    const dy = next[1] - previous[1];
+    const size = Math.hypot(dx, dy) || 1;
+    return [-dy / size, dx / size] as Point;
+  });
+  return { points, normals, widths };
+}
+
+/** The closed outline of a lock: out along one edge, back along the other. */
+export function lockPath(lock: Lock, texture: Texture): string {
+  const { points, normals, widths } = lockSpine(lock, texture);
+  const left = points.map((p, i) => [p[0] + (normals[i]![0] * widths[i]!) / 2, p[1] + (normals[i]![1] * widths[i]!) / 2] as Point);
+  const right = points.map((p, i) => [p[0] - (normals[i]![0] * widths[i]!) / 2, p[1] - (normals[i]![1] * widths[i]!) / 2] as Point);
+  const tipMeets = widths[widths.length - 1]! < 1;
+  const outline = [...left, ...right.reverse().slice(tipMeets ? 1 : 0)];
+  return smoothClosedPath(outline, 0.9);
+}
+
+/** The strand line drawn inside a lock, off its centre, to show its flow. */
+export function lockStrand(lock: Lock, texture: Texture): string {
+  const { points, normals, widths } = lockSpine(lock, texture);
+  const run = points
+    .map((p, i) => [p[0] + normals[i]![0] * widths[i]! * 0.16, p[1] + normals[i]![1] * widths[i]! * 0.16] as Point)
+    .slice(2, 9);
+  return smoothOpenPath(run);
+}
+
+/** A lock seen in the mirror, for symmetric styles. */
+export function mirrorLock(lock: Lock, centre = 512): Lock {
+  return [centre * 2 - lock[0], lock[1], centre * 2 - lock[2], lock[3], lock[4], -lock[5]];
 }

@@ -410,14 +410,28 @@ Public API (`/api/public/*`) oturum istemez, `Cache-Control` ve `ETag` döner ve
 yazarın e-postasını, gerçek adını veya doğum tarihini **hiçbir zaman** döndürmez.
 Geri çekilmiş yazı 410, yayında olmayan her şey 404 verir.
 
-Ekip avatarları (D-194): `/team/avatar` ekibe (yazar, editör, admin, çizer)
-açık, kendi tasarımı olan bir oluşturucudur. Avatar `src/lib/avatar/` altında
-katmanlı bir SVG renderer'ıyla çizilir; aynı saf fonksiyon tarayıcıda önizlemeyi,
-sunucuda `next/og` ile 2048×2048 transparan PNG'yi üretir. Veritabanında yalnızca
-katalog kimliklerinden oluşan konfigürasyon (`team_avatars.config`) ve PNG'nin
-depolama anahtarı tutulur. Admin `/admin/team-avatars` altında avatarları görür,
-tek tek PNG veya akışla üretilen ZIP (`src/lib/zip.ts`) indirir. Yeni bir parça
-eklemek: `options.ts`'teki kataloğa seçenek, `render.ts`'te çizimi.
+Ekip avatarları (D-194, yeniden tasarım D-195): `/team/avatar` ekibe (yazar,
+editör, admin, çizer) açık, Picrew benzeri bir oluşturucudur. Avatar
+`src/lib/avatar/` altında parça parça çizilir:
+
+- `registry.ts` — merkezi kayıt defteri: alanlar, kategoriler, küçük önizleme
+  kırpımları, zod şeması, varsayılan ve örnek avatarlar, rastgele avatar, eski
+  kayıtları okuma. Oluşturucu, çizici ve admin tablosu buradan türetilir.
+- `assets/*.ts` — parçalar (yüz, göz/kaş/burun/ağız, yüz detayları, saç,
+  kıyafet, takı ve ekstralar). Her parça bir kimlik, Türkçe ad ve katman başına
+  bir çizim fonksiyonudur.
+- `canvas.ts` — ortak tuval: katman sırası (`LAYER_ORDER`), kafa ölçeği, renk
+  paleti, çizim yardımcıları. `render.ts` katmanları ayrı ayrı (önizleme) veya
+  tek SVG olarak (PNG, küçük önizlemeler) üretir; `history.ts` geri al/ileri al.
+
+Sunucu PNG'yi (`next/og`, 2048×2048, transparan) kaydedilen konfigürasyondan
+çizer; veritabanında konfigürasyon (`team_avatars.config`, sürümü
+`config_version`) ve PNG'nin depolama anahtarı tutulur. Eski sürüm bir kayıt
+indirilirken yeni stille yeniden çizilir. Admin `/admin/team-avatars` altında
+avatarları görür, tek tek PNG veya akışla üretilen ZIP (`src/lib/zip.ts`)
+indirir. **Yeni bir parça eklemek:** ilgili `assets/` listesine bir kayıt
+(kimlik, ad, katman çizimleri); gerekiyorsa `registry.ts`'te bir alan ve
+kategorisi.
 
 ---
 

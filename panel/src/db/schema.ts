@@ -1447,7 +1447,7 @@ export const teamAvatars = pgTable(
     /** As the member wants it credited on the team page; not the account name. */
     displayName: text("display_name").notNull(),
     teamRole: text("team_role").notNull(),
-    /** Only catalogue ids (`src/lib/avatar/options.ts`), so the builder can reopen it. */
+    /** Only catalogue ids (`src/lib/avatar/registry.ts`), so the builder can reopen it. */
     config: jsonb("config").notNull(),
     configVersion: integer("config_version").notNull(),
     /** The transparent PNG in object storage; regenerated from `config` if it goes missing. */

@@ -126,7 +126,7 @@ export default async function TeamAvatarsPage({
                       href={`/admin/team-avatars/${avatar.id}`}
                       className="rounded-md border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:bg-paper"
                     >
-                      Büyüt ve ayrıntılar
+                      Avatarı Görüntüle
                     </Link>
                   </div>
                 </Card>
