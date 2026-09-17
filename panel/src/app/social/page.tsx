@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import communityBanner from "@/assets/design/banner-community.webp";
 import { requireSession } from "@/lib/auth/guard";
+import { canModerateCommunity } from "@/lib/auth/rbac";
 import type { SessionUser } from "@/lib/auth/session";
 import { readCsrfToken } from "@/lib/csrf";
 import { COMMUNITY_TABS, communityTabHref, parseCommunityTab } from "@/lib/site";
@@ -57,6 +58,16 @@ export default async function CommunityPage({
       </div>
 
       <p className="community-intro">{INTRO[tab]}</p>
+      {canModerateCommunity(user) && (
+        <p className="community-intro">
+          Topluluk yöneticisisiniz: gönderileri buradan kaldırabilirsiniz. Bildirimler, topluluklar
+          ve yasaklı kelimeler{" "}
+          <Link href="/admin/community" className="underline">
+            topluluk yönetim panelinde
+          </Link>
+          .
+        </p>
+      )}
 
       {tab === "akis" &&
         (username ? (
@@ -97,6 +108,7 @@ async function FeedTab({ user, csrfToken }: TabProps) {
           <PostList
             posts={feed}
             csrfToken={csrfToken}
+            canModerate={canModerateCommunity(user)}
             empty="Akışınız boş. Keşfet sekmesinden takip edecek üyeler bulabilirsiniz."
           />
         </Card>
@@ -121,7 +133,12 @@ async function ExploreTab({ user, csrfToken }: TabProps) {
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_16rem]">
       <Card>
-        <PostList posts={popular} csrfToken={csrfToken} empty="Son 30 günde paylaşılmış gönderi yok." />
+        <PostList
+          posts={popular}
+          csrfToken={csrfToken}
+          empty="Son 30 günde paylaşılmış gönderi yok."
+          canModerate={canModerateCommunity(user)}
+        />
       </Card>
 
       <Suspense fallback={<MemberSuggestionsFallback />}>

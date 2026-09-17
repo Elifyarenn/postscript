@@ -6,7 +6,7 @@
  * rules themselves live in `src/services/social.ts`.
  */
 import { revalidatePath } from "next/cache";
-import { requestMetadata, requireAuth } from "@/lib/auth/session";
+import { requestMetadata, requireAuth, requireRole } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
 import { checkbox, runAction, text, type ActionState } from "@/lib/action";
 import { badRequest } from "@/lib/errors";
@@ -27,6 +27,7 @@ import {
   createPost,
   deleteOwnPost,
   likePost,
+  removePostAsModerator,
   removePostBookmark,
   repostPost,
   unlikePost,
@@ -47,6 +48,30 @@ import {
 } from "@/services/anon-box";
 import { joinCommunity, leaveCommunity } from "@/services/communities";
 import { updateProfile, type PictureChange } from "@/services/profile-edit";
+
+/* ------------------------------------------------------------------ */
+/* Moderation in place (D-179)                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * An admin removing a post from the community screens. The same service and
+ * the same audit record as the panel's removal; the admin role (and with it
+ * the second factor) is checked here again, not trusted from the button.
+ */
+export async function moderatePostAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
+    await removePostAsModerator({ ...user }, text(formData, "postId"), meta);
+    revalidatePath("/social", "layout");
+    revalidatePath("/admin/community", "layout");
+    return { success: "Gönderi kaldırıldı." };
+  });
+}
 
 /* ------------------------------------------------------------------ */
 /* Communities (D-093)                                                 */

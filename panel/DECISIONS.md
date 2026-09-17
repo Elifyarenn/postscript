@@ -6927,3 +6927,37 @@ kaldırıldı; gerekçesi bu kararla ortadan kalktı.
 
 **Doğrulama:** `site.test.ts` sekme ayrıştırması ve adresleri. Kapı:
 typecheck, lint, test. Canlıda menü ve üç sekme.
+
+## D-179 — Adminler topluluğun yöneticisi
+
+**İstek (ürün sahibi):** "Adminleri topluluk yöneticisi yap."
+
+**Durum:** Yetki zaten yalnızca admindeydi: `canModerateCommunity` =
+`canAccessAdminPanel` (module 4, D-093). Ama bu yalnızca panelde görünüyordu;
+toplulukta admin "Yönetici" rozetiyle sıradan bir üye gibi duruyor, kurala aykırı
+bir gönderiyi ya bildirmek ya da panele gidip uzun listede bulmak zorundaydı.
+
+**Karar:**
+
+- **Rol eklenmedi.** Ayrı bir "moderatör" rolü `role_changes`, terfi kuralları ve
+  yeni bir yetki katmanı demekti; D-093'te grup sahipliği de aynı gerekçeyle
+  reddedilmişti. Topluluk yöneticisi = admin.
+- **Rozet:** Toplulukta (gönderi, profil, üye listeleri) admin
+  "Topluluk yöneticisi" rozetiyle görünür (`communityBadge`). Editör ve yazar
+  rozetleri değişmedi; panel başlığındaki rol adı "Yönetici" kaldı.
+- **Yerinde kaldırma:** Admin, başkasının gönderisinde "Bildir" yerine
+  "Kaldır" görür (onay sorulur): akış, keşfet, topluluk sayfası, gönderi dizisi,
+  profil ve kaydedilenler. `moderatePostAction` paneldeki kaldırmayla aynı
+  servisi (`removePostAsModerator`) ve aynı `audit_log` kaydını kullanır; rol
+  sunucuda yeniden `requireRole("admin")` ile (2FA dahil) denetlenir, düğmenin
+  görünmesine güvenilmez. Kaldırılan gönderi panelde "yönetici kaldırdı" diye
+  kalır.
+- Topluluk sayfasında admine kısa bir not: bildirimler, topluluklar ve yasaklı
+  kelimeler topluluk yönetim panelinde (D-180), bağlantısıyla.
+
+**Hukuk:** Kullanım şartları zaten "yöneticiler kurallara aykırı içeriği
+kaldırabilir, işlem kayıt altına alınır" diyor (5651 s. yer sağlayıcı); metin
+değişmedi. İşlenen veri değişmedi.
+
+**Doğrulama:** `rbac.test.ts`: yalnızca admin (yasaklı admin değil) moderatör;
+rozet eşlemesi. Kapı: typecheck, lint, test.

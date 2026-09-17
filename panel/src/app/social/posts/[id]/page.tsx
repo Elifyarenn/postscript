@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth/guard";
+import { canModerateCommunity } from "@/lib/auth/rbac";
 import { readCsrfToken } from "@/lib/csrf";
 import { isAppError } from "@/lib/errors";
 import { getPostThread } from "@/services/posts";
@@ -23,6 +24,8 @@ export default async function PostThreadPage({ params }: { params: Promise<{ id:
     getMemberSettings({ ...user }),
   ]);
 
+  const canModerate = canModerateCommunity(user);
+
   return (
     <>
       <PageHeader title="Gönderi" />
@@ -31,10 +34,10 @@ export default async function PostThreadPage({ params }: { params: Promise<{ id:
         <Card>
           {thread.parent && (
             <div className="border-l-2 border-line pl-3 opacity-80">
-              <PostCard post={thread.parent} csrfToken={csrfToken} />
+              <PostCard post={thread.parent} csrfToken={csrfToken} canModerate={canModerate} />
             </div>
           )}
-          <PostCard post={thread.post} csrfToken={csrfToken} />
+          <PostCard post={thread.post} csrfToken={csrfToken} canModerate={canModerate} />
         </Card>
 
         <Card>
@@ -53,7 +56,12 @@ export default async function PostThreadPage({ params }: { params: Promise<{ id:
 
         <Card>
           <h2 className="mb-2 font-serif text-lg">Yanıtlar ({thread.replies.length})</h2>
-          <PostList posts={thread.replies} csrfToken={csrfToken} empty="Henüz yanıt yok." />
+          <PostList
+            posts={thread.replies}
+            csrfToken={csrfToken}
+            empty="Henüz yanıt yok."
+            canModerate={canModerate}
+          />
         </Card>
       </div>
     </>

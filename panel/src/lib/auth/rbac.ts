@@ -133,9 +133,19 @@ export function canFinalizeApplications(actor: Actor): boolean {
   return canAccessAdminPanel(actor);
 }
 
-/** Comment and chat moderation is an admin-only duty (module 4). */
+/**
+ * The admins are the community's moderators (module 4, D-179): they remove
+ * posts, settle reports, open and archive the topic groups and keep the
+ * banned word list. Nobody else moderates; there are no group owners (D-093).
+ */
 export function canModerateCommunity(actor: Actor): boolean {
   return canAccessAdminPanel(actor);
+}
+
+/** The badge the community shows beside a staff member's handle (D-179). */
+export function communityBadge(role: Actor["role"]): string | null {
+  if (role === "admin") return "community_admin";
+  return role === "user" ? null : role;
 }
 
 /** The writing areas are managed from the admin panel (D-055). */

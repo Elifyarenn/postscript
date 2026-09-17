@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Bookmark } from "lucide-react";
 import { requireSession } from "@/lib/auth/guard";
+import { canModerateCommunity } from "@/lib/auth/rbac";
 import { readCsrfToken } from "@/lib/csrf";
 import { formatDate } from "@/lib/utils";
 import { listBookmarkedArticles } from "@/services/social";
@@ -67,7 +68,12 @@ export default async function BookmarksPage() {
         <h2 id="saved-posts" className="site-subheading">
           Gönderiler
         </h2>
-        <PostList posts={posts} csrfToken={csrfToken} empty="Henüz kaydettiğiniz bir gönderi yok." />
+        <PostList
+          posts={posts}
+          csrfToken={csrfToken}
+          empty="Henüz kaydettiğiniz bir gönderi yok."
+          canModerate={canModerateCommunity(user)}
+        />
       </section>
     </>
   );

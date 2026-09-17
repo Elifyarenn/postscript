@@ -9,6 +9,8 @@
  */
 import Link from "next/link";
 import { Bookmark, Heart, Link as LinkIcon, MessageCircle, Repeat2, Star } from "lucide-react";
+import type { Role } from "@/db/schema";
+import { communityBadge } from "@/lib/auth/rbac";
 import { formatMonthYear, formatRelativeTime } from "@/lib/relative-time";
 import { cn, formatDateTime } from "@/lib/utils";
 import { ActionButton, PanelForm } from "./form";
@@ -22,6 +24,7 @@ import {
   deletePostAction,
   followAction,
   likePostAction,
+  moderatePostAction,
   removePostBookmarkAction,
   repostAction,
   unblockAction,
@@ -118,7 +121,7 @@ export function ProfileHeader({
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="profile-name">{memberName(profile)}</h1>
             <Star aria-hidden className="profile-name-star" fill="currentColor" />
-            {profile.role !== "user" && <StatusBadge status={profile.role} />}
+            <RoleBadge role={profile.role} />
           </div>
           <p className="profile-handle">
             @{profile.username} · {formatMonthYear(profile.joinedAt)} tarihinde katıldı
@@ -312,7 +315,22 @@ export function PostComposer({
   );
 }
 
-export function PostCard({ post, csrfToken }: { post: PostView; csrfToken: string }) {
+/** A staff member's badge; an admin is shown as the community's moderator (D-179). */
+function RoleBadge({ role }: { role: Role }) {
+  const status = communityBadge(role);
+  return status ? <StatusBadge status={status} /> : null;
+}
+
+export function PostCard({
+  post,
+  csrfToken,
+  canModerate = false,
+}: {
+  post: PostView;
+  csrfToken: string;
+  /** A moderator removes someone else's post in place instead of reporting it (D-179). */
+  canModerate?: boolean;
+}) {
   const fields = { postId: post.id };
 
   return (
@@ -329,7 +347,7 @@ export function PostCard({ post, csrfToken }: { post: PostView; csrfToken: strin
         <div className="min-w-0 flex-1">
           <p className="post-meta">
             <MemberLink member={post.author} />
-            {post.author.role !== "user" && <StatusBadge status={post.author.role} />}
+            <RoleBadge role={post.author.role} />
             <Link
               href={`/social/posts/${post.id}`}
               className="post-time"
@@ -413,6 +431,16 @@ export function PostCard({ post, csrfToken }: { post: PostView; csrfToken: strin
                   className="post-small"
                   confirmMessage="Gönderi silinsin mi?"
                 />
+              ) : canModerate ? (
+                <ActionButton
+                  action={moderatePostAction}
+                  csrfToken={csrfToken}
+                  label="Kaldır"
+                  variant="ghost"
+                  fields={fields}
+                  className="post-small"
+                  confirmMessage="Bu gönderi topluluktan kaldırılsın mı? Kayıt yönetim panelinde kalır."
+                />
               ) : (
                 <Link href={`/social/report?type=post&id=${post.id}`} className="post-small">
                   Bildir
@@ -445,10 +473,12 @@ export function PostList({
   posts,
   csrfToken,
   empty,
+  canModerate = false,
 }: {
   posts: PostView[];
   csrfToken: string;
   empty: string;
+  canModerate?: boolean;
 }) {
   if (posts.length === 0) {
     return <p className="py-6 text-center text-sm text-muted">{empty}</p>;
@@ -456,7 +486,12 @@ export function PostList({
   return (
     <div className="post-list">
       {posts.map((post) => (
-        <PostCard key={`${post.id}:${post.repostedBy?.username ?? ""}`} post={post} csrfToken={csrfToken} />
+        <PostCard
+          key={`${post.id}:${post.repostedBy?.username ?? ""}`}
+          post={post}
+          csrfToken={csrfToken}
+          canModerate={canModerate}
+        />
       ))}
     </div>
   );
@@ -479,7 +514,7 @@ export function MemberList({
         <li key={member.username} className="flex flex-wrap items-center gap-3 py-3">
           <Avatar username={member.username} size="sm" />
           <MemberLink member={member} className="text-sm" />
-          {member.role !== "user" && <StatusBadge status={member.role} />}
+          <RoleBadge role={member.role} />
           {followToken && (
             <ActionButton
               action={followAction}

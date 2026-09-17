@@ -11,6 +11,8 @@ import {
   canAccessWriterPanel,
   canFinalizePublication,
   canManageUsers,
+  canModerateCommunity,
+  communityBadge,
   canPerformTransition,
   canReadArticle,
   canReviewCategoryStage,
@@ -267,5 +269,21 @@ describe("the staged review chain (D-059)", () => {
     expect(canPerformTransition(editor, artEditor, article("pending_admin_approval"), "revision_requested")).toBe(false);
     expect(canPerformTransition(editor, mainEditor, article("ready_for_publishing"), "revision_requested")).toBe(false);
     expect(canPerformTransition(actor({ role: "admin" }), noAssignment, article("ready_for_publishing"), "revision_requested")).toBe(true);
+  });
+});
+
+describe("community moderation (D-179)", () => {
+  it("makes the admins, and only them, the community's moderators", () => {
+    expect(canModerateCommunity(actor({ role: "admin" }))).toBe(true);
+    expect(canModerateCommunity(actor({ role: "editor" }))).toBe(false);
+    expect(canModerateCommunity(actor({ role: "writer", writerStatus: "active" }))).toBe(false);
+    expect(canModerateCommunity(actor())).toBe(false);
+    expect(canModerateCommunity(actor({ role: "admin", isBanned: true }))).toBe(false);
+  });
+
+  it("shows an admin as the community's moderator and a plain member with no badge", () => {
+    expect(communityBadge("admin")).toBe("community_admin");
+    expect(communityBadge("editor")).toBe("editor");
+    expect(communityBadge("user")).toBeNull();
   });
 });

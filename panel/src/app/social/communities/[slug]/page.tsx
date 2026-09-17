@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth/guard";
+import { canModerateCommunity } from "@/lib/auth/rbac";
 import { readCsrfToken } from "@/lib/csrf";
 import { isAppError } from "@/lib/errors";
 import { getCommunity } from "@/services/communities";
@@ -63,7 +64,12 @@ export default async function CommunityPage({ params }: { params: Promise<{ slug
         )}
 
         <Card>
-          <PostList posts={posts} csrfToken={csrfToken} empty="Bu toplulukta henüz gönderi yok." />
+          <PostList
+            posts={posts}
+            csrfToken={csrfToken}
+            empty="Bu toplulukta henüz gönderi yok."
+            canModerate={canModerateCommunity(user)}
+          />
         </Card>
       </div>
     </>

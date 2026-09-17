@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, Heart, MessageCircle, Repeat2 } from "lucide-react";
 import { requireSession } from "@/lib/auth/guard";
+import { canModerateCommunity } from "@/lib/auth/rbac";
 import { readCsrfToken } from "@/lib/csrf";
 import { isAppError } from "@/lib/errors";
 import { formatMonthYear, formatRelativeTime } from "@/lib/relative-time";
@@ -104,7 +105,12 @@ export default async function ProfilePage({
             </dl>
           ) : (
             <>
-              <PostList posts={feed.posts} csrfToken={csrfToken} empty={EMPTY_TEXT[tab]} />
+              <PostList
+                posts={feed.posts}
+                csrfToken={csrfToken}
+                empty={EMPTY_TEXT[tab]}
+                canModerate={canModerateCommunity(user)}
+              />
               {/* The design puts the pager in the side column; it sits under the
                   list it moves, where it says what it does (D-150) */}
               <Pager page={feed.page} pageCount={feed.pageCount} href={pageHref} />

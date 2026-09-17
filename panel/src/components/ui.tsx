@@ -194,6 +194,8 @@ export const STATUS_LABELS: Record<string, string> = {
   illustrator: "Çizer",
   editor: "Editör",
   admin: "Yönetici",
+  // What an admin is called inside the community (D-179)
+  community_admin: "Topluluk yöneticisi",
   not_run: "Kontrol edilmedi",
   clean: "Temiz",
   flagged: "İşaretlendi",
@@ -215,6 +217,7 @@ const BADGE_TONES: Record<string, string> = {
   pending_admin_approval: "bg-accent-soft text-accent border-accent/30",
   editor_writer: "bg-accent-soft text-accent border-accent/30",
   illustrator: "bg-accent-soft text-accent border-accent/30",
+  community_admin: "bg-accent-soft text-accent border-accent/30",
   withdrawn: "bg-danger-soft text-danger border-danger/30",
   declined: "bg-danger-soft text-danger border-danger/30",
   revoked: "bg-danger-soft text-danger border-danger/30",
