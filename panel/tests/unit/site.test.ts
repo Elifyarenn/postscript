@@ -117,11 +117,11 @@ describe("SOCIAL_LINKS (D-128)", () => {
     expect(SOCIAL_LINKS.map((link) => link.key)).not.toContain("linkedin");
   });
 
-  it("links X, TikTok and Instagram to postscriptmgzn without share tracking (D-173)", () => {
+  it("links every account without share tracking (D-173, D-174)", () => {
     expect(socialUrl("x")).toBe("https://x.com/postscriptmgzn");
     expect(socialUrl("tiktok")).toBe("https://www.tiktok.com/@postscriptmgzn");
     expect(socialUrl("instagram")).toBe("https://www.instagram.com/postscriptmgzn/");
-    expect(socialUrl("pinterest")).toBeNull();
+    expect(socialUrl("pinterest")).toBe("https://www.pinterest.com/magpostscript/");
     for (const link of SOCIAL_LINKS) {
       if (link.url) expect(new URL(link.url).search).toBe("");
     }

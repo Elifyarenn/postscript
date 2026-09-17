@@ -6777,3 +6777,26 @@ Aydınlatma metni değişmedi.
 
 **Doğrulama:** `site.test.ts` adresleri ve izleme parametresi olmadığını
 denetler. Kapı: typecheck, lint, test. Canlıda alt bilgi ve iletişim sayfası.
+
+## D-174 — Pinterest hesabı bağlandı
+
+**İstek (ürün sahibi):** Pinterest adresi kısa link olarak verildi:
+`https://pin.it/6aCshrJiD`.
+
+**Karar:**
+
+- Kısa link çözülerek asıl profil adresi kullanıldı: `pin.it` →
+  `api.pinterest.com/url_shortener/…` →
+  `https://www.pinterest.com/magpostscript/?invite_code=…&sender=…`.
+  Sitede `https://www.pinterest.com/magpostscript/` durur. Kısa link
+  Pinterest'in sunucusundan geçip her tıklamayı saydığı ve adresi kendi
+  tarafında değiştirilebildiği için kullanılmadı.
+- `invite_code` ve `sender` atıldı: ikincisi linki paylaşan kişinin Pinterest
+  kimliğidir, sitede herkese gösterilmemeli (D-173'teki gerekçe).
+- Hesap adı diğerlerinden farklı (`magpostscript`, ötekiler `postscriptmgzn`);
+  alt bilgide yalnızca simge var, ad yazılmadığı için tasarımda değişiklik yok.
+  Artık alt bilgideki beş simgenin hepsi bağlantı.
+
+**Hukuk:** D-173 gibi düz dış bağlantı; aydınlatma metni değişmedi.
+
+**Doğrulama:** `site.test.ts`. Kapı: typecheck, lint, test. Canlıda alt bilgi.

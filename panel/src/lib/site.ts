@@ -173,7 +173,8 @@ export const SOCIAL_LINKS: SocialLink[] = [
   // The account that owns the issue playlists (D-117, D-128)
   { key: "spotify", label: "Spotify", url: "https://open.spotify.com/user/31ni3zrhtxradpywcotdp4jr6k2y" },
   { key: "instagram", label: "Instagram", url: "https://www.instagram.com/postscriptmgzn/" },
-  { key: "pinterest", label: "Pinterest", url: null },
+  // A different handle from the other accounts (D-174)
+  { key: "pinterest", label: "Pinterest", url: "https://www.pinterest.com/magpostscript/" },
 ];
 
 /** The address of one of the magazine's accounts, or null when it has none yet. */
