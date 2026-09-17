@@ -6996,3 +6996,29 @@ sohbet mesajı alt alta. Bekleyen işi görmek için aşağı kaydırmak gerekiy
 **Doğrulama:** `posts.test.ts`: haftalık sayım, moderatör kaldırması ile
 yazarın silmesinin ayrımı, zaman penceresi, yetkisiz 403. Kapı: typecheck,
 lint, test; üretim derlemesi.
+
+## D-181 — Üye menüsünün simgeleri tasarımdaki gibi
+
+**İstek (ürün sahibi):** D-178'deki "sol menü tamamen tasarımdaki gibi olsun".
+
+**Karşılaştırma:** "settings and community.ai" 2 kat ölçekte çizdirilip menü
+kırpıldı ve canlıyla yan yana konuldu. Renkler (gece bordosu kutu, seçili
+satırda şarap rengi, açık renkli sayı rozeti) ve kalemler zaten aynıydı. Farklı
+olan iki simge:
+
+- **Mesajlar:** Tasarımda iki yuvarlak konuşma balonu (biri sol altta, biri sağ
+  altta kuyruklu); bizde simge setinin köşeli `MessagesSquare`'i vardı.
+- **Ayarlar:** Tasarımda ortası delik, içi dolu çark; bizde çizgi çark.
+
+**Karar:** Simge setinde karşılıkları olmadığı için iki simge `site-nav.tsx`
+içinde SVG olarak çizildi (çizgi kalınlığı diğer simgelerle aynı; çark
+`evenodd` ile delikli). Anonim kutu, bildirimler ve kaydedilenler simge
+setinden kaldı; tasarımdakilerle aynı biçimde.
+
+**Bilerek kalan fark:** Menü yazısının yazı tipi. Tasarımdaki Minion ticari;
+yerine D-112'deki açık lisanslı yazı tipi kullanılıyor.
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:** Simgeler başsız tarayıcıda çizdirilip tasarım kırpımıyla
+karşılaştırıldı. Kapı: typecheck, lint, test.
