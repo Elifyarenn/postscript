@@ -7382,3 +7382,28 @@ için sayaç kur."
 **Doğrulama:** `countdown.test.ts`: gün/saat/dakika/saniye bölme, sıfırda durma,
 Türkiye saatiyle "1 Ekim 17.00", Sayı 01'in tarihi. Kapı: typecheck, lint, test.
 Canlıda Sayılar sayfası.
+
+## D-193 — Bant kolajları doğru sayfalarda; Sayılar bandına kolaj
+
+**İstek (ürün sahibi):** "`pic` klasöründe yanlış birkaç yerleştirme yapmışım,
+isimleri düzelttim, ona göre tekrar yap."
+
+**Durum:** D-175'teki dört görselin adları değişmiş, bir görsel eklenmiş. Boyut
+ve dosya büyüklüğüyle eşlendi:
+
+| Yeni dosya | Eskiden | Artık |
+|---|---|---|
+| `hakkinda.jpeg` (1421×488) | `topluluk.jpeg` | Hakkında |
+| `iletisim.jpeg` (1415×415) | `hakkında.jpeg` | İletişim |
+| `kategori.jpeg` (1415×415) | `iletişim.jpeg` | Kategoriler |
+| `magazines.jpeg` (1421×350) | `kategori.jpeg` | Sayılar (tasarımın "magazines" ekranı) |
+| `topluluk.jpeg` (1414×332) | — (yeni) | Topluluk |
+
+**Karar:** `src/assets/design/banner-{about,contact,categories,community}.webp`
+yeni eşleşmeyle yeniden üretildi (aynı adlar, kod değişmedi) ve
+`banner-issues.webp` eklendi; Sayılar sayfasının `SiteBanner`'ı bu kolajı
+kullanır. Lisans D-175 ile aynı.
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test; canlıda beş sayfanın bandı.

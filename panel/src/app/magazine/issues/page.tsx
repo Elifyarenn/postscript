@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Heart } from "lucide-react";
+import issuesBanner from "@/assets/design/banner-issues.webp";
 import { requireSession } from "@/lib/auth/guard";
 import { listPublishedIssues } from "@/services/public";
 import { SiteBanner, Sparkle } from "@/components/site-ui";
@@ -37,6 +38,7 @@ export default async function IssuesPage() {
       <SiteBanner
         title="Sayılar"
         subtitle="Yazılar, öyküler, söyleşiler ve dahası…"
+        image={issuesBanner}
         aside={<p className="banner-quote">&ldquo;Daha tuhaf bir dünya için daha iyi hikâyeler.&rdquo;</p>}
       >
         <a href="#one-cikan-sayilar" className="site-outline-button banner-button">
