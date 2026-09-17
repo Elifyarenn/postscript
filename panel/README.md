@@ -433,6 +433,13 @@ indirir. **Yeni bir parça eklemek:** ilgili `assets/` listesine bir kayıt
 (kimlik, ad, katman çizimleri); gerekiyorsa `registry.ts`'te bir alan ve
 kategorisi.
 
+**Elle çizilmiş yollardan saç (D-201).** Bir saç modeli, kendi kutusuna (ör.
+400×400) çizilmiş SVG yolları olarak da eklenebilir:
+`src/lib/avatar/assets/hair-paths.ts` içindeki `PATH_HAIR` listesine arka/ön yol
+dizeleri, varsa ışıltı yolları ve `place` (ölçek + kaydırma) yazılır. Dolgu
+seçilen saç rengini, kontur ortak mürekkebi alır; yani model 18 renkte çalışır.
+Bu modeller saç dokusu seçimine uymaz, çizim neyse odur.
+
 **Hazır görselden saç (D-200).** Bir saç modeli çizim yerine PNG dosyası da
 olabilir; çizerin verdiği ya da lisansı satın alınmış setler böyle eklenir:
 

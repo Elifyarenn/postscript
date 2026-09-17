@@ -7744,3 +7744,41 @@ yönerge de bunu söylüyor.
 çözücüsünden geçmesi, varsayılanın `public/` yolu olması, `isImageHair`,
 çizilmiş modellerde hiç `<image>` bulunmaması. Kapı: typecheck, lint, test,
 build.
+
+
+## D-201 — Elle çizilmiş SVG yollarından saç
+
+**İstek (ürün sahibi):** `StraightHair01` adlı bir React bileşeni paylaşıldı:
+400'lük bir kutuya çizilmiş saç; arka saç, sol ve sağ ön bölüm ve iki ışıltı
+yolu; renk, ışıltı ve kontur birer prop.
+
+**Karar:** Saç için üçüncü bir yol açıldı (`assets/hair-paths.ts`). Bir model
+artık şu üç biçimden biri olabilir:
+
+1. **Üretilmiş tutamlar** (`hair.ts`) — yelpazelerle çizilir, dokuya uyar.
+2. **Elle çizilmiş yollar** (`hair-paths.ts`) — bu karar. Yol dizeleri kendi
+   koordinatlarında kalır; `place` (ölçek + kaydırma) onu kafaya oturtur, yani
+   çizim tuval birimlerine çevrilmek zorunda değil.
+3. **Hazır görsel** (`hair-images.ts`, D-200).
+
+Renkler bizden gelir, dosyadan değil: dolgu seçilen saç rengi, kontur ortak
+mürekkep, ışıltı ise saç renginin **sıcak** bir tonu (koyu saçta beyaza değil
+amber'e doğru karıştırılır; beyaza karıştırmak kurşuni gösteriyordu). Böylece
+elle çizilmiş bir model de 18 renkte çalışır — hazır görselin çalışmadığı yer
+burası.
+
+Kontur kalınlığı tuval biriminde yazılıp ölçeğe bölünür; yani hangi boyutta
+çizilmiş olursa olsun saç, yüzle aynı çizgi kalınlığını taşır. Işıltı kalınlığı
+ise çizimin kendi biriminde kalır, çünkü o çizimin üslubunun parçası.
+
+Paylaşılan model **"Düz 01"** adıyla katalogda. Sıradaki modeller aynı listeye
+yol dizeleri olarak eklenir; başka hiçbir yere dokunmak gerekmez.
+
+**Sınır:** Bu modeller saç dokusu (düz/dalgalı/kıvırcık) seçimine uymaz; çizim
+neyse odur. Üretilmiş modeller dokuya uymaya devam eder.
+
+**Hukuk:** Çizim ürün sahibinden geldi; üçüncü taraf görseli yok.
+
+**Doğrulama:** `team-avatar.test.ts`: modelin katalogda olması, seçilen saç
+rengiyle boyanması, yolların kafaya ölçeklenmesi. Kapı: typecheck, lint, test,
+build.

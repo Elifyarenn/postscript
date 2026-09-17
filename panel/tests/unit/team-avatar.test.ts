@@ -223,6 +223,20 @@ describe("renderAvatarSvg", () => {
   });
 });
 
+describe("hand-drawn path hair (D-201)", () => {
+  it("is in the catalogue and takes the chosen hair colour", () => {
+    const ids = FIELDS.hairStyle.options.map((option) => option.id);
+    expect(ids).toContain("straight01");
+
+    const blonde = renderAvatarSvg(avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "straight01", hairColor: "blonde" }));
+    const black = renderAvatarSvg(avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "straight01", hairColor: "black" }));
+    expect(blonde).toContain('fill="#e3c283"');
+    expect(black).not.toContain('fill="#e3c283"');
+    // The paths are placed on the head, not left in their own 400 box
+    expect(blonde).toContain("scale(2.62)");
+  });
+});
+
 describe("picture-based hair (D-200)", () => {
   const config = avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "imageSample" });
 
