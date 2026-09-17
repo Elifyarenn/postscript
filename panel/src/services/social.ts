@@ -11,6 +11,7 @@
  * retracts must not outlive the retraction there.
  */
 import "server-only";
+import { cache } from "react";
 import { and, asc, count, desc, eq, inArray, isNotNull, isNull, ne, notExists, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
@@ -140,9 +141,7 @@ export function mediaUrl(mediaId: string | null): string | null {
   return mediaId ? `/api/media/${mediaId}` : null;
 }
 
-export async function getMemberSettings(
-  actor: Actor,
-): Promise<{
+export type MemberSettings = {
   username: string | null;
   penName: string | null;
   dmPolicy: DmPolicy;
@@ -151,7 +150,18 @@ export async function getMemberSettings(
   interests: string[];
   avatarUrl: string | null;
   headerUrl: string | null;
-}> {
+};
+
+export async function getMemberSettings(actor: Actor): Promise<MemberSettings> {
+  return loadMemberSettings(actor.id);
+}
+
+/**
+ * Keyed by id rather than by the actor, since every caller spreads a fresh
+ * actor object. The site frame, its three unread counters and the page all
+ * asked for the same row, four round trips per community page (D-171).
+ */
+const loadMemberSettings = cache(async (userId: string): Promise<MemberSettings> => {
   const rows = await db
     .select({
       username: users.username,
@@ -164,7 +174,7 @@ export async function getMemberSettings(
       headerMediaId: users.headerMediaId,
     })
     .from(users)
-    .where(eq(users.id, actor.id))
+    .where(eq(users.id, userId))
     .limit(1);
   return {
     username: rows[0]?.username ?? null,
@@ -176,7 +186,7 @@ export async function getMemberSettings(
     avatarUrl: mediaUrl(rows[0]?.avatarMediaId ?? null),
     headerUrl: mediaUrl(rows[0]?.headerMediaId ?? null),
   };
-}
+});
 
 const penNameSchema = z.strictObject({
   penName: z

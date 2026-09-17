@@ -189,6 +189,46 @@ describe("conversations", () => {
     const view = await openConversation(actorOf(velvet), "lunae");
     expect(view.messages.map((message) => message.body)).toEqual(["yeni"]);
   });
+
+  it("gives the badge and the list the same answer across several conversations (D-171)", async () => {
+    const { lunae, velvet } = await openPair();
+    const kestrel = await member("kestrel");
+    const moss = await member("moss");
+    const quiet = await member("quiet");
+    for (const other of [kestrel, moss, quiet]) {
+      await setDirectMessagePolicy(actorOf(other), { dmPolicy: "everyone" });
+    }
+
+    // Unread from lunae, answered to kestrel, cleared from quiet, blocked by moss.
+    // Writing marks a conversation read for the writer, so velvet's own
+    // message comes before lunae's.
+    await send(velvet, "lunae", "selam");
+    await send(lunae, "velvet", "okunmadı");
+    await send(kestrel, "velvet", "okundu");
+    await send(velvet, "kestrel", "teşekkürler");
+    await send(quiet, "velvet", "silindi");
+    await clearConversation(actorOf(velvet), "quiet");
+    await send(moss, "velvet", "engel");
+    await blockMember(actorOf(moss), "velvet");
+
+    const list = await listConversations(actorOf(velvet));
+    expect(list.map((summary) => [summary.other.username, summary.unread])).toEqual([
+      ["kestrel", 0],
+      ["lunae", 1],
+    ]);
+    expect(list[0]!.lastMessage).toMatchObject({ body: "teşekkürler", isOwn: true });
+    expect(list[1]!.lastMessage).toMatchObject({ body: "okunmadı", isOwn: false });
+    expect(await unreadConversationCount(actorOf(velvet))).toBe(1);
+
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await send(quiet, "velvet", "yeniden");
+    expect(await unreadConversationCount(actorOf(velvet))).toBe(2);
+    expect((await listConversations(actorOf(velvet))).map((summary) => summary.other.username)).toEqual([
+      "quiet",
+      "kestrel",
+      "lunae",
+    ]);
+  });
 });
 
 describe("reports and retention", () => {

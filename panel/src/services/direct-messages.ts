@@ -11,7 +11,23 @@
  * leaves a traffic record like everything else (D-088).
  */
 import "server-only";
-import { and, count, desc, eq, gt, gte, inArray, isNotNull, isNull, lt, ne, or } from "drizzle-orm";
+import {
+  type AnyColumn,
+  and,
+  count,
+  countDistinct,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  notExists,
+  or,
+} from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
 import {
@@ -329,6 +345,29 @@ export type ConversationSummary = {
   unread: number;
 };
 
+/*
+ * The reader's own view of each message's conversation, joined in rather than
+ * read per conversation: the list and the badge used to ask two questions for
+ * every conversation, up to a hundred round trips on each page (D-171).
+ */
+function ownState(meId: string) {
+  return and(
+    eq(conversationStates.conversationId, directMessages.conversationId),
+    eq(conversationStates.userId, meId),
+  );
+}
+
+/** Not hidden by the reader's own "delete conversation". */
+const afterClear = or(isNull(conversationStates.clearedAt), gt(directMessages.createdAt, conversationStates.clearedAt));
+
+/** Written after the reader last opened the conversation. */
+const afterRead = or(isNull(conversationStates.lastReadAt), gt(directMessages.createdAt, conversationStates.lastReadAt));
+
+/** A message the reader did not send; an anonymised sender counts as someone else. */
+function fromOthers(meId: string) {
+  return or(isNull(directMessages.senderId), ne(directMessages.senderId, meId));
+}
+
 /**
  * The member's conversations, newest first. A conversation they cleared with
  * nothing new since, or one with a member who blocked them, is left out.
@@ -350,81 +389,91 @@ export async function listConversations(actor: Actor, limit = 50): Promise<Conve
 
   const ids = rows.map((row) => row.id);
   const otherIds = rows.map((row) => (row.memberAId === me.id ? row.memberBId : row.memberAId));
+  const visible = and(inArray(directMessages.conversationId, ids), isNull(directMessages.deletedAt), afterClear);
 
-  const [others, states, blockers] = await Promise.all([
+  const [others, blockers, lastMessages, unreadRows] = await Promise.all([
     db
       .select({ id: users.id, username: users.username, role: users.role })
       .from(users)
       .where(inArray(users.id, otherIds)),
     db
-      .select({
-        conversationId: conversationStates.conversationId,
-        lastReadAt: conversationStates.lastReadAt,
-        clearedAt: conversationStates.clearedAt,
-      })
-      .from(conversationStates)
-      .where(and(eq(conversationStates.userId, me.id), inArray(conversationStates.conversationId, ids))),
-    db
       .select({ blockerId: userBlocks.blockerId })
       .from(userBlocks)
       .where(and(eq(userBlocks.blockedId, me.id), inArray(userBlocks.blockerId, otherIds))),
+    db
+      .selectDistinctOn([directMessages.conversationId], {
+        conversationId: directMessages.conversationId,
+        body: directMessages.body,
+        createdAt: directMessages.createdAt,
+        senderId: directMessages.senderId,
+      })
+      .from(directMessages)
+      .leftJoin(conversationStates, ownState(me.id))
+      .where(visible)
+      .orderBy(directMessages.conversationId, desc(directMessages.createdAt)),
+    db
+      .select({ conversationId: directMessages.conversationId, value: count() })
+      .from(directMessages)
+      .leftJoin(conversationStates, ownState(me.id))
+      .where(and(visible, afterRead, fromOthers(me.id)))
+      .groupBy(directMessages.conversationId),
   ]);
 
   const otherById = new Map(others.map((other) => [other.id, other]));
-  const stateById = new Map(states.map((state) => [state.conversationId, state]));
   const blockedBy = new Set(blockers.map((row) => row.blockerId));
+  const lastById = new Map(lastMessages.map((message) => [message.conversationId, message]));
+  const unreadById = new Map(unreadRows.map((row) => [row.conversationId, row.value]));
 
-  const summaries = await Promise.all(
-    rows.map(async (row, index): Promise<ConversationSummary | null> => {
-      const otherId = otherIds[index]!;
-      if (blockedBy.has(otherId)) return null;
+  const summaries: ConversationSummary[] = [];
+  rows.forEach((row, index) => {
+    const otherId = otherIds[index]!;
+    const last = lastById.get(row.id);
+    if (blockedBy.has(otherId) || !last) return;
 
-      const state = stateById.get(row.id);
-      const visible = [
-        eq(directMessages.conversationId, row.id),
-        isNull(directMessages.deletedAt),
-        ...(state?.clearedAt ? [gt(directMessages.createdAt, state.clearedAt)] : []),
-      ];
-
-      const [last] = await db
-        .select({ body: directMessages.body, createdAt: directMessages.createdAt, senderId: directMessages.senderId })
-        .from(directMessages)
-        .where(and(...visible))
-        .orderBy(desc(directMessages.createdAt))
-        .limit(1);
-      if (!last) return null;
-
-      const readSince = state?.lastReadAt ? [gt(directMessages.createdAt, state.lastReadAt)] : [];
-      const [unread] = await db
-        .select({ value: count() })
-        .from(directMessages)
-        .where(
-          and(
-            ...visible,
-            ...readSince,
-            or(isNull(directMessages.senderId), ne(directMessages.senderId, me.id)),
-          ),
-        );
-
-      const other = otherById.get(otherId);
-      return {
-        conversationId: row.id,
-        other: { username: other?.username ?? null, role: other?.role ?? "user" },
-        lastMessage: { body: last.body, createdAt: last.createdAt, isOwn: last.senderId === me.id },
-        unread: unread?.value ?? 0,
-      };
-    }),
-  );
-
-  return summaries.filter((summary): summary is ConversationSummary => summary !== null);
+    const other = otherById.get(otherId);
+    summaries.push({
+      conversationId: row.id,
+      other: { username: other?.username ?? null, role: other?.role ?? "user" },
+      lastMessage: { body: last.body, createdAt: last.createdAt, isOwn: last.senderId === me.id },
+      unread: unreadById.get(row.id) ?? 0,
+    });
+  });
+  return summaries;
 }
 
-/** How many conversations wait to be read, for the sidebar badge. */
+/**
+ * How many conversations wait to be read, for the sidebar badge. One counting
+ * query with the same rules as the list: the reader's clear and read marks,
+ * messages from the other side, nobody who blocked the reader.
+ */
 export async function unreadConversationCount(actor: Actor): Promise<number> {
   const { username } = await getMemberSettings(actor);
   if (!username || actor.isBanned || actor.emailVerifiedAt === null) return 0;
-  const summaries = await listConversations(actor);
-  return summaries.filter((summary) => summary.unread > 0).length;
+
+  const blockedMeFrom = (otherColumn: AnyColumn) =>
+    db
+      .select({ id: userBlocks.id })
+      .from(userBlocks)
+      .where(and(eq(userBlocks.blockedId, actor.id), eq(userBlocks.blockerId, otherColumn)));
+
+  const [row] = await db
+    .select({ value: countDistinct(directMessages.conversationId) })
+    .from(directMessages)
+    .innerJoin(conversations, eq(conversations.id, directMessages.conversationId))
+    .leftJoin(conversationStates, ownState(actor.id))
+    .where(
+      and(
+        or(
+          and(eq(conversations.memberAId, actor.id), notExists(blockedMeFrom(conversations.memberBId))),
+          and(eq(conversations.memberBId, actor.id), notExists(blockedMeFrom(conversations.memberAId))),
+        ),
+        isNull(directMessages.deletedAt),
+        afterClear,
+        afterRead,
+        fromOthers(actor.id),
+      ),
+    );
+  return row?.value ?? 0;
 }
 
 /**

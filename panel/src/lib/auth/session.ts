@@ -7,6 +7,7 @@
  */
 import "server-only";
 import { cookies, headers } from "next/headers";
+import { cache } from "react";
 import { and, eq, isNull, ne, desc } from "drizzle-orm";
 import { db } from "@/db/client";
 import { sessions, users, type EditorStatus, type Role, type WriterStatus } from "@/db/schema";
@@ -141,8 +142,14 @@ export async function listSessions(userId: string) {
  * Resolves the caller from the session cookie, or null when there is no valid
  * session. Also refreshes `last_seen_at`, which is what makes the 7 day
  * inactivity rule work.
+ *
+ * Memoised per request (D-171): a layout and its page both guard themselves,
+ * and each call used to cost a database round trip. Server actions and route
+ * handlers run outside React's render, where `cache` passes every call through.
  */
-export async function getAuthContext(): Promise<AuthContext | null> {
+export const getAuthContext = cache(loadAuthContext);
+
+async function loadAuthContext(): Promise<AuthContext | null> {
   const cookieStore = await cookies();
   const rawToken = cookieStore.get(SESSION_COOKIE)?.value;
   if (!rawToken) return null;

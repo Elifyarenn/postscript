@@ -6679,3 +6679,41 @@ yayınlanmadı (adres bekleniyor); bu satır da o sürümle yayınlanır.
 
 **Doğrulama:** Kapı: typecheck, lint, test. Canlıda `X-Vercel-Id`'nin
 `::fra1::` göstermesi ve aynı sayfaların yeniden ölçümü.
+
+## D-171 — Bir sayfada aynı soruyu bir kez sor; mesaj rozeti tek sorgu
+
+**Sorun (kod okuması, D-170 ile aynı istek):** Giriş yapmış üyenin her
+sayfasında `SiteShell` üç okunmamış sayacını hesaplıyor. Mesaj rozeti
+(`unreadConversationCount`) bunun için bütün konuşma listesini kuruyordu;
+`listConversations` her konuşma için iki ayrı sorgu attığından 50 konuşmada
+~100 gidiş dönüş demekti ve bu yük dergi sayfalarına da biniyordu. Ayrıca
+katman ve sayfa ikisi de `requireSession()` çağırdığı için oturum sorgusu iki
+kez; `getMemberSettings` ise çerçeve, iki sayaç ve sayfa için dört kez
+çalışıyordu. `/social` açılışı kabaca 35 + 2×(konuşma sayısı) sorgu.
+
+**Karar:**
+
+- `getAuthContext` ve `getMemberSettings` React `cache()` ile istek başına
+  bir kez çalışır. Ayarlar kullanıcı kimliğiyle anahtarlanır, çünkü her çağıran
+  yeni bir `actor` nesnesi yayıyor. Server action ve route handler React
+  render'ı dışında çalışır; orada `cache` her çağrıyı geçirir, yani bir
+  mutasyondan sonra bayat oturum ya da ayar okunmaz.
+- `listConversations`: son mesaj `DISTINCT ON` ile, okunmamış sayısı
+  `GROUP BY` ile, üyenin kendi okuma/temizleme kaydı birleştirilerek toplu
+  alınır. Konuşma sayısından bağımsız olarak iki gidiş dönüş.
+- `unreadConversationCount` listeyi kurmaz; aynı kuralları (temizleme, okuma
+  zamanı, karşı taraftan gelen mesaj, beni engelleyen yok) tek bir
+  `count(distinct)` sorgusunda uygular. Eskiden sayaç yalnızca son 50
+  konuşmaya bakıyordu; şimdi hepsine bakar, 50'den eski ve okunmamış bir
+  konuşma da rozete yansır.
+- Sorgular yalnızca Drizzle kurucusuyla yazıldı: ham `sql` şablonu, upsert veya
+  ham tip parametresi yok; tarih karşılaştırmaları sütun sütunadır, parametre
+  olarak tarih geçmez (D-078'in işaret ettiği sürücü farkları). Neon'da dal
+  kotası dolu olduğu için ayrı bir dalda denenemedi; canlıda mesajlar ve rozet
+  yayından hemen sonra elle kontrol edilir.
+
+**Hukuk:** İşlenen veri değişmedi.
+
+**Doğrulama:** Rozet ile listenin okunmuş, okunmamış, temizlenmiş, engellenmiş
+ve kendi yazdığı konuşmalarda aynı sonucu verdiğini gösteren entegrasyon testi.
+Kapı: typecheck, lint, test.
