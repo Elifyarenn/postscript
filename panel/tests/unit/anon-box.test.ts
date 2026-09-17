@@ -1,36 +1,14 @@
 import { describe, expect, it } from "vitest";
-import {
-  ANON_BOX_CLOSED,
-  ANON_PER_RECIPIENT_PER_DAY,
-  ANON_PER_SENDER_PER_DAY,
-  anonMessageProblem,
-  type AnonContext,
-} from "@/lib/anon-box";
+import { ANON_PER_SENDER_PER_DAY, anonMessageProblem, type AnonContext } from "@/lib/anon-box";
 
 const open: AnonContext = {
   senderAdult: true,
-  recipientAdult: true,
-  boxEnabled: true,
-  blocked: false,
-  muted: false,
-  sentToRecipientToday: 0,
   sentTodayTotal: 0,
 };
 
-describe("anonymous box rule (D-092)", () => {
-  it("lets an adult write to an open box", () => {
+describe("the magazine's anonymous box rule (D-092, D-185)", () => {
+  it("lets an adult member write", () => {
     expect(anonMessageProblem(open)).toBeNull();
-  });
-
-  it("answers every recipient-side refusal with the same sentence", () => {
-    for (const refusal of [
-      { boxEnabled: false },
-      { blocked: true },
-      { muted: true },
-      { recipientAdult: false },
-    ]) {
-      expect(anonMessageProblem({ ...open, ...refusal })).toEqual({ status: 403, message: ANON_BOX_CLOSED });
-    }
   });
 
   it("asks a sender without a birth date for one (D-182)", () => {
@@ -43,9 +21,8 @@ describe("anonymous box rule (D-092)", () => {
     expect(anonMessageProblem({ ...open, senderAdult: false })?.status).toBe(403);
   });
 
-  it("limits a day's messages per recipient and in total", () => {
-    expect(anonMessageProblem({ ...open, sentToRecipientToday: ANON_PER_RECIPIENT_PER_DAY })?.status).toBe(429);
+  it("limits a day's messages from one member", () => {
     expect(anonMessageProblem({ ...open, sentTodayTotal: ANON_PER_SENDER_PER_DAY })?.status).toBe(429);
-    expect(anonMessageProblem({ ...open, sentToRecipientToday: ANON_PER_RECIPIENT_PER_DAY - 1 })).toBeNull();
+    expect(anonMessageProblem({ ...open, sentTodayTotal: ANON_PER_SENDER_PER_DAY - 1 })).toBeNull();
   });
 });

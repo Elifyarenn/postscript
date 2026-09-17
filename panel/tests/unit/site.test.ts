@@ -32,7 +32,7 @@ describe("isNavActive (D-112)", () => {
 
 describe("memberNav", () => {
   it("lists the designs' five entries with the unread counts on the right ones", () => {
-    const items = memberNav({ anon: 2, messages: 3, notifications: 0 });
+    const items = memberNav({ messages: 3, notifications: 0 });
     expect(items.map((item) => item.href)).toEqual([
       "/social/anon",
       "/social/messages",
@@ -40,7 +40,8 @@ describe("memberNav", () => {
       "/social/bookmarks",
       "/social/settings",
     ]);
-    expect(items[0]?.badge).toBe(2);
+    // The anonymous box is the magazine's; a member only writes into it (D-185)
+    expect(items[0]?.badge).toBeUndefined();
     expect(items[1]?.badge).toBe(3);
     expect(items[2]?.badge).toBe(0);
     expect(items[3]?.badge).toBeUndefined();

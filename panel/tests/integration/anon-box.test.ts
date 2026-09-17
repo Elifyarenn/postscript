@@ -1,25 +1,22 @@
 /**
- * The anonymous box (D-092).
+ * The magazine's anonymous box (D-092, D-185).
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
-import { anonMessages, trafficLogs, userBlocks } from "@/db/schema";
+import { anonMessages, auditLog, trafficLogs } from "@/db/schema";
 import {
-  clearAnonMutes,
+  archiveAnonMessage,
   getAnonComposeState,
-  hideAnonMessage,
-  listAnonInbox,
-  muteAnonSender,
+  listMagazineAnonBox,
   pruneDeletedAnonMessages,
+  removeAnonMessage,
   sendAnonMessage,
-  setAnonBoxEnabled,
-  unreadAnonCount,
+  unreadMagazineAnonCount,
 } from "@/services/anon-box";
-import { blockMember, getProfile, setUsername } from "@/services/social";
-import { listReports, reportContent, resolveReport } from "@/services/reports";
-import { anonymiseUser, exportUserData } from "@/services/users";
-import { ANON_BOX_CLOSED, ANON_PER_RECIPIENT_PER_DAY } from "@/lib/anon-box";
+import { setUsername } from "@/services/social";
+import { exportUserData } from "@/services/users";
+import { ANON_PER_SENDER_PER_DAY } from "@/lib/anon-box";
 import { isAppError } from "@/lib/errors";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
 import { actorOf, createUser, noMeta, reloadUser } from "../helpers/factories";
@@ -56,174 +53,114 @@ async function member(username: string, overrides: Parameters<typeof createUser>
 
 type Member = Awaited<ReturnType<typeof member>>;
 
-function send(from: Member, to: string, body: string) {
-  return sendAnonMessage(actorOf(from), { username: to, body }, noMeta);
-}
-
-/** A recipient with an open box and a sender. */
-async function openBox() {
-  const lunae = await member("lunae");
-  await setAnonBoxEnabled(actorOf(lunae), { enabled: true });
-  const velvet = await member("velvet");
-  return { lunae, velvet };
+function send(from: Member, body: string, publishConsent: unknown = true) {
+  return sendAnonMessage(actorOf(from), { body, publishConsent }, noMeta);
 }
 
 describe("who may write", () => {
-  it("keeps the box closed until the recipient opens it", async () => {
-    const lunae = await member("lunae");
-    const velvet = await member("velvet");
-
-    const closed = await captureError(send(velvet, "lunae", "selam"));
-    expect(closed.status).toBe(403);
-    expect(closed.message).toBe(ANON_BOX_CLOSED);
-    expect((await getProfile(actorOf(velvet), "lunae")).anonBoxEnabled).toBe(false);
-
-    await setAnonBoxEnabled(actorOf(lunae), { enabled: true });
-    await send(velvet, "lunae", "selam");
-  });
-
-  it("is for verified members with a handle only", async () => {
-    await openBox();
+  it("is for verified adult members with a handle only", async () => {
     const noHandle = await createUser();
     const unverified = await createUser({ emailVerified: false });
+    const minor = await member("genc", { birthDate: "2012-01-01" });
+    const unknownAge = await member("belirsiz", { birthDate: null });
 
     expect(
-      (await captureError(sendAnonMessage(actorOf(noHandle), { username: "lunae", body: "x" }, noMeta))).status,
+      (await captureError(sendAnonMessage(actorOf(noHandle), { body: "x", publishConsent: true }, noMeta))).status,
     ).toBe(409);
     expect(
-      (await captureError(sendAnonMessage(actorOf(unverified), { username: "lunae", body: "x" }, noMeta))).status,
+      (await captureError(sendAnonMessage(actorOf(unverified), { body: "x", publishConsent: true }, noMeta))).status,
     ).toBe(403);
+    expect((await captureError(send(minor, "selam"))).status).toBe(403);
+    const missing = await captureError(send(unknownAge, "selam"));
+    expect(missing.message).toMatch(/doğum tarihi/);
+    expect((await getAnonComposeState(actorOf(minor))).canSend).toBe(false);
   });
 
-  it("is closed to minors on both sides, without telling the sender why", async () => {
-    const { lunae } = await openBox();
-    const minor = await member("genc", { birthDate: "2012-01-01" });
-    await setAnonBoxEnabled(actorOf(minor), { enabled: true });
-
-    expect((await captureError(send(minor, "lunae", "selam"))).status).toBe(403);
-    const toMinor = await captureError(send(lunae, "genc", "selam"));
-    expect(toMinor.message).toBe(ANON_BOX_CLOSED);
+  it("asks for the publication consent", async () => {
+    const velvet = await member("velvet");
+    expect((await captureError(send(velvet, "izinsiz", false))).status).toBe(400);
+    expect(
+      (await captureError(sendAnonMessage(actorOf(velvet), { body: "izinsiz" }, noMeta))).status,
+    ).toBe(400);
+    expect(await db.select().from(anonMessages)).toHaveLength(0);
   });
 
-  it("limits how many messages one sender leaves in a box per day", async () => {
-    const { velvet } = await openBox();
-    for (let index = 0; index < ANON_PER_RECIPIENT_PER_DAY; index += 1) {
-      await send(velvet, "lunae", `soru ${index}`);
+  it("limits how many messages one member leaves per day", async () => {
+    const velvet = await member("velvet");
+    for (let index = 0; index < ANON_PER_SENDER_PER_DAY; index += 1) {
+      await send(velvet, `dedikodu ${index}`);
     }
-    expect((await captureError(send(velvet, "lunae", "bir daha"))).status).toBe(429);
-  });
-
-  it("hides a box from someone the recipient blocked", async () => {
-    const { lunae, velvet } = await openBox();
-    await blockMember(actorOf(lunae), "velvet");
-
-    expect((await captureError(send(velvet, "lunae", "selam"))).status).toBe(404);
-    expect((await captureError(getAnonComposeState(actorOf(velvet), "lunae"))).status).toBe(404);
+    expect((await captureError(send(velvet, "bir daha"))).status).toBe(429);
   });
 });
 
-describe("the recipient never learns the sender", () => {
-  it("delivers without the sender, but keeps the sender and a traffic record", async () => {
-    const { lunae, velvet } = await openBox();
-    const sent = await send(velvet, "lunae", "gizli soru");
-
-    expect(await unreadAnonCount(actorOf(lunae))).toBe(1);
-    const inbox = await listAnonInbox(actorOf(lunae));
-    expect(inbox).toHaveLength(1);
-    expect(Object.keys(inbox[0]!).sort()).toEqual(["body", "createdAt", "id", "unread"]);
-    expect(JSON.stringify(inbox)).not.toContain(velvet.id);
-    expect(await unreadAnonCount(actorOf(lunae))).toBe(0);
+describe("the admins read it without the sender", () => {
+  it("delivers to the magazine, keeps the sender and a traffic record, never shows them", async () => {
+    const admin = await createUser({ role: "admin" });
+    const velvet = await member("velvet");
+    const sent = await send(velvet, "gizli dedikodu");
 
     const [stored] = await db.select().from(anonMessages).where(eq(anonMessages.id, sent.id));
+    expect(stored!.recipientId).toBeNull();
     expect(stored!.senderId).toBe(velvet.id);
     const [traffic] = await db.select().from(trafficLogs).where(eq(trafficLogs.entityId, sent.id));
     expect(traffic!.userId).toBe(velvet.id);
+
+    expect(await unreadMagazineAnonCount(actorOf(admin))).toBe(1);
+    const box = await listMagazineAnonBox(actorOf(admin), "inbox");
+    expect(box).toHaveLength(1);
+    expect(Object.keys(box[0]!).sort()).toEqual(["body", "createdAt", "id", "unread"]);
+    expect(JSON.stringify(box)).not.toContain(velvet.id);
+    expect(await unreadMagazineAnonCount(actorOf(admin))).toBe(0);
   });
 
-  it("mutes a sender without a block that would show on their profile", async () => {
-    const { lunae, velvet } = await openBox();
-    const sent = await send(velvet, "lunae", "istenmeyen");
-    await send(velvet, "lunae", "yine istenmeyen");
+  it("is the admins' alone", async () => {
+    const editor = await createUser({ role: "editor" });
+    const velvet = await member("velvet");
+    const sent = await send(velvet, "yalnızca yöneticiler");
 
-    await muteAnonSender(actorOf(lunae), sent.id);
-
-    expect(await listAnonInbox(actorOf(lunae))).toHaveLength(0);
-    expect(await db.select().from(userBlocks)).toHaveLength(0);
-    expect((await getProfile(actorOf(lunae), "velvet")).viewerBlocked).toBe(false);
-
-    const muted = await captureError(send(velvet, "lunae", "üçüncü"));
-    expect(muted.message).toBe(ANON_BOX_CLOSED);
-
-    expect(await clearAnonMutes(actorOf(lunae))).toBe(1);
+    expect((await captureError(listMagazineAnonBox(actorOf(editor), "inbox"))).status).toBe(403);
+    expect((await captureError(listMagazineAnonBox(actorOf(velvet), "inbox"))).status).toBe(403);
+    expect((await captureError(archiveAnonMessage(actorOf(velvet), sent.id))).status).toBe(403);
   });
 
-  it("keeps the sender out of the recipient's KVKK data export", async () => {
-    const { lunae, velvet } = await openBox();
-    await send(velvet, "lunae", "dışa aktarılacak");
-    const [message] = await listAnonInbox(actorOf(lunae));
-    await reportContent(
-      actorOf(lunae),
-      { targetType: "anon_message", targetId: message!.id, category: "harassment" },
-      noMeta,
-    );
+  it("archives and removes, with an audit record that names no sender", async () => {
+    const admin = await createUser({ role: "admin" });
+    const velvet = await member("velvet");
+    const kept = await send(velvet, "arşivlenecek");
+    const bad = await send(velvet, "kurallara aykırı");
 
-    const recipientExport = JSON.stringify(await exportUserData(actorOf(lunae), lunae.id));
-    expect(recipientExport).toContain("dışa aktarılacak");
-    expect(recipientExport).not.toContain(velvet.id);
+    await archiveAnonMessage(actorOf(admin), kept.id);
+    expect((await listMagazineAnonBox(actorOf(admin), "archive")).map((item) => item.id)).toEqual([kept.id]);
 
+    await removeAnonMessage(actorOf(admin), bad.id, noMeta);
+    expect(await listMagazineAnonBox(actorOf(admin), "inbox")).toHaveLength(0);
+    const [audit] = await db.select().from(auditLog).where(eq(auditLog.entityId, bad.id));
+    expect(audit!.action).toBe("social.anon_message_removed");
+    expect(JSON.stringify(audit)).not.toContain(velvet.id);
+  });
+
+  it("keeps the message in the sender's own KVKK export", async () => {
+    const velvet = await member("velvet");
+    await send(velvet, "dışa aktarılacak");
     const senderExport = JSON.stringify(await exportUserData(actorOf(velvet), velvet.id));
     expect(senderExport).toContain("anon_messages_sent");
-  });
-
-  it("lets the recipient delete a message from the box", async () => {
-    const { lunae, velvet } = await openBox();
-    const sent = await send(velvet, "lunae", "silinecek");
-    await hideAnonMessage(actorOf(lunae), sent.id);
-    expect(await listAnonInbox(actorOf(lunae))).toHaveLength(0);
-    // The sender cannot reach into the recipient's box
-    expect((await captureError(hideAnonMessage(actorOf(velvet), sent.id))).status).toBe(404);
+    expect(senderExport).toContain("dışa aktarılacak");
   });
 });
 
-describe("moderation and retention", () => {
-  it("shows the sender to the moderator once the recipient reports, and to nobody else", async () => {
-    const admin = await createUser({ role: "admin" });
-    const { lunae, velvet } = await openBox();
-    const outsider = await member("disaridan");
-    const sent = await send(velvet, "lunae", "tehdit");
-
-    expect(
-      (
-        await captureError(
-          reportContent(actorOf(outsider), { targetType: "anon_message", targetId: sent.id, category: "harassment" }, noMeta),
-        )
-      ).status,
-    ).toBe(404);
-
-    const report = await reportContent(
-      actorOf(lunae),
-      { targetType: "anon_message", targetId: sent.id, category: "harassment" },
-      noMeta,
-    );
-    const [queued] = await listReports(actorOf(admin), "open");
-    expect(queued!.ownerUsername).toBe("velvet");
-
-    await resolveReport(actorOf(admin), { reportId: report.id, decision: "remove" }, noMeta);
-    const [row] = await db.select().from(anonMessages).where(eq(anonMessages.id, sent.id));
-    expect(row!.removedBy).toBe(admin.id);
-  });
-
-  it("clears both sides on account deletion and prunes after a year", async () => {
-    const { lunae, velvet } = await openBox();
-    const sent = await send(velvet, "lunae", "gidecek");
-
-    await anonymiseUser(velvet.id);
-    expect(await listAnonInbox(actorOf(lunae))).toHaveLength(0);
-
+describe("retention", () => {
+  it("deletes every anonymous message a year after it was written", async () => {
+    const velvet = await member("velvet");
+    const old = await send(velvet, "eski");
+    const fresh = await send(velvet, "yeni");
     await db
       .update(anonMessages)
-      .set({ deletedAt: new Date("2025-01-01T00:00:00Z") })
-      .where(eq(anonMessages.id, sent.id));
-    expect(await pruneDeletedAnonMessages(new Date("2026-09-13T00:00:00Z"))).toBe(1);
+      .set({ createdAt: new Date("2025-01-01T00:00:00Z") })
+      .where(eq(anonMessages.id, old.id));
+
+    expect(await pruneDeletedAnonMessages(new Date("2026-09-17T00:00:00Z"))).toBe(1);
+    const left = await db.select({ id: anonMessages.id }).from(anonMessages);
+    expect(left.map((row) => row.id)).toEqual([fresh.id]);
   });
 });

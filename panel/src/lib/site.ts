@@ -22,8 +22,6 @@ export type MemberNavIcon = "anon" | "messages" | "notifications" | "bookmarks" 
 export type MemberNavItem = SiteNavItem & { icon: MemberNavIcon; badge?: number };
 
 export type MemberNavState = {
-  /** Unread messages in the anonymous box. */
-  anon: number;
   /** Conversations with unread messages. */
   messages: number;
   notifications: number;
@@ -32,7 +30,8 @@ export type MemberNavState = {
 /** The five entries of the designs' member menu, with their unread counts. */
 export function memberNav(state: MemberNavState): MemberNavItem[] {
   return [
-    { href: "/social/anon", label: "Anonim kutu", icon: "anon", badge: state.anon },
+    // The magazine's box: members write into it, so it counts nothing for them (D-185)
+    { href: "/social/anon", label: "Anonim kutu", icon: "anon" },
     { href: "/social/messages", label: "Mesajlar", icon: "messages", badge: state.messages },
     {
       href: "/social/notifications",

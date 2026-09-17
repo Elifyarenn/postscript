@@ -1,0 +1,1 @@
+ALTER TABLE "anon_messages" ALTER COLUMN "recipient_id" DROP NOT NULL;

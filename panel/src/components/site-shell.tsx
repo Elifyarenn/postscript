@@ -19,7 +19,6 @@ import { readCsrfToken } from "@/lib/csrf";
 import { bodyFont, capsFont, italicFont } from "@/lib/fonts";
 import { memberNav, SOCIAL_LINKS } from "@/lib/site";
 import { cn } from "@/lib/utils";
-import { unreadAnonCount } from "@/services/anon-box";
 import { unreadConversationCount } from "@/services/direct-messages";
 import { unreadNotificationCount } from "@/services/notifications";
 import { getMemberSettings } from "@/services/social";
@@ -46,13 +45,12 @@ const LEGAL_LINKS = [
 
 async function memberState(user: SessionUser) {
   const actor = { ...user };
-  const [settings, notifications, messages, anon] = await Promise.all([
+  const [settings, notifications, messages] = await Promise.all([
     getMemberSettings(actor),
     unreadNotificationCount(actor),
     unreadConversationCount(actor),
-    unreadAnonCount(actor),
   ]);
-  return { username: settings.username, notifications, messages, anon };
+  return { username: settings.username, notifications, messages };
 }
 
 export async function SiteShell({
@@ -132,7 +130,6 @@ export async function SiteShell({
         {member && (
           <SiteMemberNav
             items={memberNav({
-              anon: member.anon,
               messages: member.messages,
               notifications: member.notifications,
             })}

@@ -1,30 +1,35 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { requireSession } from "@/lib/auth/guard";
 import { readCsrfToken } from "@/lib/csrf";
-import { cn, formatDateTime } from "@/lib/utils";
+import { MAX_ANON_MESSAGE_LENGTH } from "@/lib/anon-box";
+import { getAnonComposeState } from "@/services/anon-box";
 import { getMemberSettings } from "@/services/social";
-import { listAnonInbox } from "@/services/anon-box";
-import { ActionButton } from "@/components/form";
+import { PanelForm } from "@/components/form";
 import { SiteTitle, Sparkle } from "@/components/site-ui";
-import { Alert } from "@/components/ui";
-import { hideAnonMessageAction, muteAnonSenderAction } from "../actions";
+import { Alert, Textarea } from "@/components/ui";
+import { sendAnonMessageAction } from "../actions";
 
 export const metadata = { title: "Anonim kutu" };
 
-/** The recipient's box. It never carries the sender, by construction (D-092). */
-export default async function AnonInboxPage() {
+/**
+ * The magazine's anonymous box, laid out as the "anon box" design (D-113,
+ * D-185): what a member writes here goes to the admins, without the member's
+ * name, for the "Eğlence & Dedikodu" section.
+ */
+export default async function AnonBoxPage() {
   const { user } = await requireSession();
   const csrfToken = (await readCsrfToken()) ?? "";
-  const settings = await getMemberSettings({ ...user });
 
-  if (!settings.username) {
+  const { username } = await getMemberSettings({ ...user });
+  if (!username) {
     return (
       <>
         <SiteTitle>Anonim kutu</SiteTitle>
-        <Alert tone="info" title="Önce bir kullanıcı adı seçin">
-          Anonim kutu için bir kullanıcı adı gerekir.{" "}
+        <Alert tone="info">
+          Anonim kutuya yazmak için{" "}
           <Link href="/social/settings" className="underline">
-            Kullanıcı adı seçin
+            bir kullanıcı adı seçin
           </Link>
           .
         </Alert>
@@ -32,70 +37,80 @@ export default async function AnonInboxPage() {
     );
   }
 
-  const messages = await listAnonInbox({ ...user });
+  const state = await getAnonComposeState({ ...user });
 
   return (
     <div className="anon-page">
       <header className="anon-banner">
         <h1 className="fit-line">Anonim kutu</h1>
-        <p>Adını söylemeden sana söylenenler.</p>
+        <p>Adını söylemeden söylemek istediklerin.</p>
         <Sparkle />
       </header>
 
-      {!settings.anonBoxEnabled && (
-        <Alert tone="warning" title="Kutunuz kapalı">
-          Yeni anonim mesaj gelmez.{" "}
-          <Link href="/social/settings#gizlilik" className="underline">
-            Ayarlardan açabilirsiniz
-          </Link>
-          .
-        </Alert>
-      )}
+      {/* Said before the form, not after it: the sender must know this while writing */}
+      <div className="anon-warning" role="note">
+        <strong>Adınızı görmeyiz, ama anonim değilsiniz</strong>
+        Mesajınız yöneticilere adınız olmadan ulaşır. 5651 sayılı Kanun gereği hesabınızla ve trafik
+        kaydıyla birlikte saklanır; yalnızca yetkili mercilerin hukuka uygun talebi üzerine
+        paylaşılabilir. Başkalarının adını, özel hayatını veya kişisel bilgilerini yazmayın.
+      </div>
 
-      <p className="anon-note">
-        Gönderenlerin kimliğini göremezsiniz. İstemediğiniz bir göndereni susturabilirsiniz; kim
-        olduğunu siz de öğrenmezsiniz. Kurallara aykırı bir mesajı bildirirseniz göndereni yalnızca
-        yöneticiler görür.
-      </p>
-
-      {messages.length === 0 ? (
-        <p className="anon-empty">Kutunuzda mesaj yok.</p>
+      {state.canSend ? (
+        <div className="anon-form">
+          <PanelForm
+            action={sendAnonMessageAction}
+            csrfToken={csrfToken}
+            submitLabel="Anonim olarak gönder"
+            submitClassName="anon-send fit-line"
+            submitContent={
+              <>
+                <Sparkle /> Anonim olarak gönder <ArrowRight aria-hidden />
+              </>
+            }
+          >
+            <div className="anon-field">
+              <label htmlFor="anonBody" className="sr-only">
+                Mesajınız
+              </label>
+              <Textarea
+                id="anonBody"
+                name="body"
+                required
+                maxLength={MAX_ANON_MESSAGE_LENGTH}
+                rows={8}
+                placeholder="Söylemek istediğini buraya yaz…"
+                className="anon-textarea"
+              />
+              <p className="anon-hint">En çok {MAX_ANON_MESSAGE_LENGTH} karakter.</p>
+            </div>
+            <p className="anon-quote">Bazı şeyler söylenmek için değil, yazılmak için vardır.</p>
+            <div className="anon-divider" aria-hidden>
+              <Sparkle />
+            </div>
+            {/* Publication needs the writer's leave (5846 s. FSEK), so it is asked, not assumed (D-185) */}
+            <label className="anon-consent">
+              <input type="checkbox" name="publishConsent" required className="size-4 accent-accent" />
+              <span>
+                Mesajımın Eğlence &amp; Dedikodu bölümünde, adım olmadan, kısaltılarak veya düzenlenerek
+                yayımlanabileceğini kabul ediyorum.
+              </span>
+            </label>
+          </PanelForm>
+        </div>
       ) : (
-        <ul className="anon-inbox">
-          {messages.map((message) => {
-            const fields = { messageId: message.id };
-            return (
-              <li key={message.id} className={cn("anon-inbox-item", message.unread && "is-unread")}>
-                <p className="anon-inbox-body">{message.body}</p>
-                <div className="mt-2 flex flex-wrap items-center gap-1">
-                  <span className="mr-2 text-xs text-muted">{formatDateTime(message.createdAt)}</span>
-                  <ActionButton
-                    action={hideAnonMessageAction}
-                    csrfToken={csrfToken}
-                    label="Sil"
-                    variant="ghost"
-                    fields={fields}
-                  />
-                  <ActionButton
-                    action={muteAnonSenderAction}
-                    csrfToken={csrfToken}
-                    label="Göndereni sustur"
-                    variant="ghost"
-                    fields={fields}
-                    confirmMessage="Bu gönderen size bir daha anonim mesaj gönderemez ve bıraktığı tüm mesajlar kutunuzdan kalkar. Kim olduğunu siz de öğrenmezsiniz. Devam edilsin mi?"
-                  />
-                  <Link
-                    href={`/social/report?type=anon_message&id=${message.id}`}
-                    className="rounded-md px-2.5 py-1 text-xs text-muted hover:bg-paper hover:text-danger"
-                  >
-                    Bildir
-                  </Link>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+        <Alert tone="info">{state.problem}</Alert>
       )}
+
+      {/* The design's closing box, telling what this box is for */}
+      <p className="anon-note">
+        Anonim kutu, anonim olarak bize gönderebileceğin hikâye, anı, itiraf ve dedikodular içindir.
+        Seçtiklerimiz Eğlence &amp; Dedikodu bölümünde adın olmadan yayımlanır ve herkes tarafından
+        okunur. +18 ve siyasi içerikler, gerçek kişileri teşhir eden ya da kırıcı yazılar
+        yayımlanmaz.{" "}
+        <Link href="/kullanim-sartlari" className="underline">
+          Kullanım şartları
+        </Link>
+      </p>
     </div>
   );
 }

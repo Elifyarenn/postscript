@@ -10,6 +10,7 @@ import { assertCsrfFromForm } from "@/lib/csrf";
 import { runAction, text, type ActionState } from "@/lib/action";
 import { removePostAsModerator } from "@/services/posts";
 import { resolveReport } from "@/services/reports";
+import { archiveAnonMessage, removeAnonMessage } from "@/services/anon-box";
 import { archiveCommunity, createCommunity } from "@/services/communities";
 
 export async function createCommunityAction(
@@ -89,5 +90,36 @@ export async function removePostAction(
     revalidatePath("/admin/community", "layout");
     revalidatePath("/social", "layout");
     return { success: "Gönderi kaldırıldı." };
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* The magazine's anonymous box (D-185)                                */
+/* ------------------------------------------------------------------ */
+
+export async function archiveAnonMessageAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    await archiveAnonMessage({ ...user }, text(formData, "messageId"));
+    revalidatePath("/admin/community", "layout");
+    return { success: "Mesaj arşive taşındı." };
+  });
+}
+
+export async function removeAnonMessageAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
+    await removeAnonMessage({ ...user }, text(formData, "messageId"), meta);
+    revalidatePath("/admin/community", "layout");
+    return { success: "Mesaj kaldırıldı." };
   });
 }

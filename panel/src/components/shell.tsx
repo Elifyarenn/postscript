@@ -74,6 +74,8 @@ export const ADMIN_NAV: NavGroup[] = [
         // The community management panel's parts (D-180)
         children: [
           { href: "/admin/community/reports", label: "Bildirimler" },
+          // The magazine's anonymous box, for the gossip section (D-185)
+          { href: "/admin/community/anon", label: "Anonim kutu" },
           { href: "/admin/community/communities", label: "Topluluklar" },
           { href: "/admin/community/posts", label: "Gönderiler" },
           { href: "/admin/community/banned-words", label: "Yasaklı kelimeler" },

@@ -1478,10 +1478,6 @@ html[data-playlist-open] .ps-site .topbar-note {
   transform: translateY(-50%);
 }
 
-.ps-site .anon-recipient {
-  text-align: center;
-}
-
 .ps-site .anon-note {
   max-width: 36rem;
   margin: 0 auto;
@@ -1574,30 +1570,21 @@ html[data-playlist-open] .ps-site .topbar-note {
   background: var(--site-wine);
 }
 
-.ps-site .anon-empty {
-  color: var(--site-muted);
-  text-align: center;
+/* The publication consent above the send button (D-185) */
+.ps-site .anon-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  max-width: 36rem;
+  margin: 0 auto 1.2rem;
+  font-size: 0.9rem;
+  text-align: left;
+  text-transform: none;
 }
 
-.ps-site .anon-inbox {
-  display: grid;
-  gap: 1rem;
-}
-
-.ps-site .anon-inbox-item {
-  padding: 1.1rem 1.3rem;
-  border: 1px solid var(--site-rule);
-  border-radius: 14px;
-}
-
-.ps-site .anon-inbox-body {
-  font-size: 1.05rem;
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
-}
-
-.ps-site .anon-inbox-item.is-unread .anon-inbox-body {
-  font-weight: 600;
+.ps-site .anon-consent input {
+  flex-shrink: 0;
+  margin-top: 0.2rem;
 }
 
 @media (max-width: 640px) {

@@ -12,10 +12,7 @@ import { SiteTitle } from "@/components/site-ui";
 import { EmptyState, Field, Input, Select } from "@/components/ui";
 import { MemberLink } from "@/components/social";
 import { DM_POLICIES, DM_POLICY_LABELS } from "@/lib/direct-messages";
-import { countAnonMutes } from "@/services/anon-box";
 import {
-  clearAnonMutesAction,
-  setAnonBoxAction,
   setInterestsAction,
   setDirectMessagePolicyAction,
   setUsernameAction,
@@ -58,10 +55,9 @@ export default async function SocialSettingsPage({
   const label = SECTIONS.find((item) => item.id === section)?.label ?? "Profil";
   const csrfToken = (await readCsrfToken()) ?? "";
 
-  const [settings, blocked, mutes, usernameChangeAt] = await Promise.all([
+  const [settings, blocked, usernameChangeAt] = await Promise.all([
     getMemberSettings({ ...user }),
     listBlockedMembers({ ...user }),
-    countAnonMutes({ ...user }),
     usernameChangeAvailableAt({ ...user }),
   ]);
   // Only a handle already held is locked; the first pick is always open (D-166)
@@ -245,50 +241,8 @@ export default async function SocialSettingsPage({
 
           {section === "gizlilik" && (
             <>
-              <h3 className="settings-subtitle">Anonim kutu</h3>
-              <p className="mb-4 text-sm text-muted">
-                Kutunuzu açarsanız profilinizde &ldquo;Anonim mesaj&rdquo; bağlantısı görünür ve
-                e-postası doğrulanmış, 18 yaşını doldurmuş üyeler size adlarını göstermeden mesaj
-                bırakabilir. Gönderenleri siz göremezsiniz; ancak gönderen dergi karşısında anonim
-                değildir ve bildirdiğiniz bir mesajın göndereni yöneticilere görünür. Kutunuz
-                kapalıyken yeni mesaj gelmez.
-              </p>
-              {settings.username ? (
-                <>
-                  <PanelForm action={setAnonBoxAction} csrfToken={csrfToken} submitLabel="Kaydet">
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        name="anonBoxEnabled"
-                        defaultChecked={settings.anonBoxEnabled}
-                        className="size-4 accent-accent"
-                      />
-                      Anonim kutum açık olsun
-                    </label>
-                  </PanelForm>
-                  <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-                    <span className="text-muted">Susturulan gönderen: {mutes}</span>
-                    {mutes > 0 && (
-                      <ActionButton
-                        action={clearAnonMutesAction}
-                        csrfToken={csrfToken}
-                        label="Tüm susturmaları kaldır"
-                        confirmMessage="Susturduğunuz gönderenler size yeniden anonim mesaj gönderebilecek. Devam edilsin mi?"
-                      />
-                    )}
-                  </div>
-                </>
-              ) : (
-                <p className="text-sm text-muted">
-                  Anonim kutu için önce{" "}
-                  <Link href={sectionHref("profil")} className="underline">
-                    bir kullanıcı adı seçin
-                  </Link>
-                  .
-                </p>
-              )}
-
-              <h3 className="settings-subtitle mt-8">Engellenen hesaplar ({blocked.length})</h3>
+              {/* The member boxes closed; the anonymous box is the magazine's now (D-185) */}
+              <h3 className="settings-subtitle">Engellenen hesaplar ({blocked.length})</h3>
               <p className="mb-4 text-sm text-muted">
                 Engellediğiniz hesap sizi takip edemez ve profilinizi göremez. Aranızdaki takipler
                 engelle birlikte kaldırılır.

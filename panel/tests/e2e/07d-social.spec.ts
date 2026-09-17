@@ -1,7 +1,7 @@
 /**
- * D-089…D-093 — the community area end to end: handles, a post shared in a
- * community, a follow and a like, a private message and an anonymous one, and
- * what each side sees afterwards.
+ * D-089…D-093, D-185 — the community area end to end: handles, a post shared
+ * in a community, a follow and a like, a private message, a note left in the
+ * magazine's anonymous box, and what each side sees afterwards.
  *
  * Uses the seeded reader and writer only, so it needs no second factor. Named
  * to run before 08, which re-enrols the admin's TOTP secret.
@@ -32,16 +32,11 @@ test("two members meet in the community area", async ({ page }) => {
   const firstPost = "E2E: topluluktaki ilk gönderim";
   const communityPost = "E2E: kulübe merhaba";
   const privateMessage = "E2E: merhaba Kerem";
-  const anonymousMessage = "E2E: bu soruyu kimin sorduğunu bilmeyeceksin";
+  const anonymousMessage = "E2E: dergiye kimin yazdığını bilmeyeceksiniz";
 
-  // --- The reader sets up: a handle, an open box, messages from everyone ---
+  // --- The reader sets up: a handle and messages from everyone ---
   await signIn(page, SEED.reader);
   await pickHandle(page, "kerem_okur");
-
-  await page.goto("/social/settings?bolum=gizlilik");
-  await page.getByLabel("Anonim kutum açık olsun").check();
-  await formWith(page, "Anonim kutum açık olsun").getByRole("button", { name: "Kaydet" }).click();
-  await expect(page.getByText("Anonim kutunuz açıldı.")).toBeVisible();
 
   await page.goto("/social/settings?bolum=mesajlar");
   await page.getByLabel("Bana kimler özel mesaj gönderebilir?").selectOption("everyone");
@@ -86,21 +81,18 @@ test("two members meet in the community area", async ({ page }) => {
   await page.getByRole("button", { name: "Gönder" }).click();
   await expect(page.locator("ol").getByText(privateMessage)).toBeVisible();
 
-  await page.goto("/social/anon/kerem_okur");
-  await expect(page.getByText("Alıcı adınızı görmez, ama anonim değilsiniz")).toBeVisible();
+  // The anonymous box goes to the magazine, not to a member (D-185)
+  await page.goto("/social/anon");
+  await expect(page.getByText("Adınızı görmeyiz, ama anonim değilsiniz")).toBeVisible();
   await page.getByLabel("Mesajınız").fill(anonymousMessage);
+  await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Anonim olarak gönder" }).click();
-  await expect(page.getByText("Mesajınız anonim olarak iletildi.")).toBeVisible();
+  await expect(page.getByText("Mesajınız anonim olarak iletildi. Teşekkürler!")).toBeVisible();
 
   await logout(page);
 
-  // --- The reader sees all of it, and the anonymous message without a name ---
+  // --- The reader sees the rest; the anonymous note went to the admins, not here ---
   await signIn(page, SEED.reader);
-
-  await page.goto("/social/anon");
-  await expect(page.getByText(anonymousMessage)).toBeVisible();
-  await expect(page.getByText("ada_yazar")).toHaveCount(0);
-  await expect(page.getByText("Ada Y.")).toHaveCount(0);
 
   await page.goto("/social/messages");
   // The writer publishes under a pen name, which is what the list shows

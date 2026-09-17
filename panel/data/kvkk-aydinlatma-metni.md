@@ -32,7 +32,7 @@ ortaklık adına tek başına temsile yetkilidir.
 | Topluluk | Yazılara yapılan yorumlar, topluluk sohbeti mesajları, paylaştığınız gönderiler ve yanıtlar ile bunların gönderim zamanı; beğendiğiniz ve yeniden paylaştığınız gönderiler; takip ettiğiniz ve sizi takip eden hesaplar, engellediğiniz hesaplar, katıldığınız topluluklar, kaydettiğiniz yazı ve gönderiler, size gönderilen panel içi bildirimler |
 | İçerik bildirimi | Bildirdiğiniz içeriğin türü ve o anki metni, seçtiğiniz bildirim türü, varsa açıklamanız, bildirimin sonucu; bildirilen içeriğin sahibi olduğunuzda bu bilgiler sizinle ilişkilendirilir |
 | Özel mesajlar | Gönderdiğiniz ve aldığınız özel mesajlar ve gönderim zamanları, konuşmayı en son okuduğunuz ve sildiğiniz zaman, özel mesaj tercihiniz |
-| Anonim kutu | Kutunuzun açık olup olmadığı; kutunuza bırakılan mesajlar ve okunma zamanları; susturduğunuz gönderenler; başka üyelerin kutusuna bıraktığınız anonim mesajlar ve bunların hesabınızla ilişkisi |
+| Anonim kutu | Derginin anonim kutusuna bıraktığınız mesajlar, bunların gönderim zamanı, yayımlanmalarına verdiğiniz onay ve hesabınızla ilişkisi; üye kutularının kapatıldığı tarihten önce kutunuza bırakılmış veya başka üyelerin kutusuna bıraktığınız mesajlar ile susturma kayıtları |
 | Trafik kaydı | Her yorum, sohbet mesajı, özel mesaj, anonim mesaj, gönderi ve yanıt için: gönderen hesap, IP adresi, tarayıcı bilgisi (user-agent), işlem türü ve zamanı |
 | Moderasyon | Yasaklama durumu ve gerekçesi, kaldırılan içerik kayıtları |
 | Denetim | Panelde yapılan işlemlerin kaydı: kimin, ne zaman, hangi işlemi, hangi IP adresinden yaptığı |
@@ -54,11 +54,14 @@ bildirim türü yer alır; içeriğin metni, bildiren ve bildirilen hesap e-post
 yazılmaz, yalnızca panelde görünür. Yönetim onayı bekleyen bir yazarlık
 başvurusu için gönderilen e-postada da başvuru sahibinin bilgileri yer almaz.
 
-Anonim kutuya bıraktığınız bir mesajda adınız alıcıya gösterilmez; bu, alıcıya
-karşı bir gizliliktir. Mesaj hesabınızla ilişkilendirilerek saklanır. Alıcı
-mesajı bildirirse yöneticiler göndereni görür; kanunen yetkili mercilerin hukuka
-uygun talebi üzerine bu bilgi paylaşılabilir. Kişisel veri dışa aktarımında
-alıcıya gelen anonim mesajların göndereni yer almaz.
+Anonim kutu derginindir: bıraktığınız mesaj, Eğlence & Dedikodu bölümü için
+yöneticilere adınız olmadan ulaşır ve onay verdiğiniz için dergide adınız
+olmadan, kısaltılarak veya düzenlenerek yayımlanabilir. Yönetim panelinde
+gönderenin kimliği gösterilmez. Mesaj yine de hesabınızla ve trafik kaydıyla
+ilişkilendirilerek saklanır; bu bilgi yalnızca kanunen yetkili mercilerin hukuka
+uygun talebi üzerine paylaşılabilir. Mesajınızda başkalarına ait kişisel veri
+yazmamanızı rica ederiz; yayımlanan metinlerden kişiyi tanınır kılan ayrıntılar
+çıkarılır. Kişisel veri dışa aktarımında gönderdiğiniz anonim mesajlar yer alır.
 
 Özel nitelikli kişisel veri (sağlık, din, biyometrik veri ve benzeri)
 toplamıyoruz. Kimlik belgesi fotokopisi veya görüntüsü **talep edilmez ve
@@ -73,7 +76,7 @@ saklanmaz**.
 | Yazarlık başvurusunun alınması ve değerlendirilmesi | (c) Sözleşmenin kurulması |
 | Yazarlık için aranan 18 yaş şartının denetlenmesi | (c) Sözleşmenin kurulması, (e) Bir hakkın tesisi ve korunması |
 | Özel mesajlaşma işlevinin sunulması, mesajın karşı tarafça okunduğunun göndereni bilgilendirecek şekilde işaretlenmesi ve bu işlevin 18 yaşını doldurmuş üyelerle sınırlandırılması | (c) Sözleşmenin ifası, (f) Meşru menfaat |
-| Anonim kutu işlevinin sunulması; anonim mesajın göndereninin, bildirim ve yetkili merci talebi hâlinde belirlenebilmesi için hesapla ilişkilendirilerek saklanması | (c) Sözleşmenin ifası, (ç) Hukuki yükümlülük — 5651 sayılı Kanun m. 5, (f) Meşru menfaat |
+| Derginin anonim kutusunun sunulması, gönderilen metinlerin onayınızla Eğlence & Dedikodu bölümünde adınız olmadan yayımlanması; anonim mesajın göndereninin yetkili merci talebi hâlinde belirlenebilmesi için hesapla ilişkilendirilerek saklanması | (c) Sözleşmenin ifası, (ç) Hukuki yükümlülük — 5651 sayılı Kanun m. 5, (f) Meşru menfaat |
 | Yazar sözleşmesinin ve eser bazlı kullanım ruhsatlarının kurulması ve ispatı | (c) Sözleşmenin ifası, (e) Bir hakkın tesisi, kullanılması ve korunması |
 | Yazar profilinin ve eserin dergide yayımlanması, künyede ad veya mahlas belirtilmesi | (c) Sözleşmenin ifası |
 | Çizer olarak işaretlenmiş hesapların Hakkında sayfasında mahlas veya topluluk adıyla listelenmesi | (c) Sözleşmenin ifası |
@@ -173,7 +176,7 @@ esas alınarak gerçekleştirilmektedir.
 | Yorum, sohbet mesajı, gönderi ve yanıt içerikleri | Siz silene veya yönetici kaldırana kadar yayında kalır. Silinen veya kaldırılan içerik 1 yıl daha saklanır, sonra kalıcı olarak silinir. |
 | İçerik bildirimleri | Sonuçlanana kadar; sonuçlandıktan 1 yıl sonra kalıcı olarak silinir. |
 | Özel mesajlar | Hesabınız açık kaldığı sürece. "Konuşmayı sil" yalnızca sizin görünümünüzden kaldırır, karşı taraf görmeye devam eder. Hesabınız silindiğinde veya mesaj bildirim üzerine kaldırıldığında karşı taraftan da kalkar ve 1 yıl sonra kalıcı olarak silinir. |
-| Anonim mesajlar | Alıcı kutusundan silene kadar. Alıcının sildiği, bildirim üzerine kaldırılan veya taraflardan birinin hesabı silinen mesaj 1 yıl sonra kalıcı olarak silinir. Susturma kayıtları siz kaldırana veya hesabınız silinene kadar tutulur. |
+| Anonim mesajlar | Yazıldıktan 1 yıl sonra kalıcı olarak silinir (derginin kutusundakiler ve kapatılan üye kutularından kalanlar). Dergide yayımlanan metin, adınız olmadan, yayın arşivinin parçası olarak kalır. Susturma kayıtları hesabınız silinene kadar tutulur. |
 | Takip, engelleme, kaydetme, beğeni, yeniden paylaşım ve topluluk üyeliği kayıtları | Siz geri alana kadar. Geri aldığınızda veya hesabınız silindiğinde kalıcı olarak silinir. |
 | Sözleşme ve eser onayı kayıtları | Sözleşme ilişkisi sona erdikten sonra 10 yıl — Türk Borçlar Kanunu m. 146 |
 | Panel işlem (denetim) kayıtları | 10 yıl |
@@ -182,7 +185,7 @@ esas alınarak gerçekleştirilmektedir.
 Hesabınızı sildirdiğinizde ad, e-posta, doğum tarihi, telefon, kullanıcı adı,
 biyografi ve profil görseliniz anonimleştirilir; takip, engelleme, kaydetme,
 beğeni, yeniden paylaşım, susturma ve topluluk üyeliği kayıtlarınız silinir. Gönderileriniz,
-gönderdiğiniz özel mesajlar ve anonim kutunuzla ilgili mesajlar topluluktan
+gönderdiğiniz özel mesajlar ve anonim mesajlarınız topluluktan
 kalkar ve silinmiş içerik gibi 1 yıl sonra kalıcı olarak silinir. İmzalı eser onayları, sözleşme kayıtları ve
 kanunen saklanması zorunlu trafik kayıtları yukarıdaki süreler boyunca saklanmaya
 devam eder; bunlar derginin eserleri yayımlama hakkının ve yasal

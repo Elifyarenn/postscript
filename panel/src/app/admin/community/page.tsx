@@ -2,6 +2,7 @@ import Link from "next/link";
 import { guardPanel } from "@/lib/auth/guard";
 import { REPORT_CATEGORY_LABELS, REPORT_TARGET_LABELS } from "@/lib/reports";
 import { cn, formatDateTime } from "@/lib/utils";
+import { unreadMagazineAnonCount } from "@/services/anon-box";
 import { listAllBannedWords } from "@/services/community";
 import { listCommunitiesForAdmin } from "@/services/communities";
 import { countRecentPostActivity } from "@/services/posts";
@@ -19,8 +20,9 @@ export default async function CommunityAdminPage() {
   const { user } = await guardPanel("admin");
   const actor = { ...user };
 
-  const [openReports, communityList, activity, banned] = await Promise.all([
+  const [openReports, unreadAnon, communityList, activity, banned] = await Promise.all([
     listReports(actor, "open"),
+    unreadMagazineAnonCount(actor),
     listCommunitiesForAdmin(actor),
     countRecentPostActivity(actor, 7),
     listAllBannedWords(actor),
@@ -37,6 +39,13 @@ export default async function CommunityAdminPage() {
       label: "Açık içerik bildirimi",
       note: overdue > 0 ? `${overdue} tanesi 24 saati geçti` : "24 saat içinde sonuçlandırılır",
       urgent: overdue > 0,
+    },
+    {
+      href: "/admin/community/anon",
+      value: unreadAnon,
+      label: "Yeni anonim mesaj",
+      note: "Eğlence & Dedikodu için",
+      urgent: false,
     },
     {
       href: "/admin/community/communities",
@@ -80,7 +89,7 @@ export default async function CommunityAdminPage() {
           </Alert>
         )}
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {tiles.map((tile) => (
             <Link
               key={tile.href}

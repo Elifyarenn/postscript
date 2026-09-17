@@ -260,6 +260,13 @@
       "when": 1789573145919,
       "tag": "0037_community_nickname",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1789647497109,
+      "tag": "0038_magazine_anon_box",
+      "breakpoints": true
     }
   ]
 }

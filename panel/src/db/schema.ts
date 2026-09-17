@@ -1368,21 +1368,22 @@ export const directMessages = pgTable(
 );
 
 /* ------------------------------------------------------------------ */
-/* anonymous box (D-092)                                               */
+/* anonymous box (D-092, D-185)                                        */
 /* ------------------------------------------------------------------ */
 
 /**
- * A message the recipient receives without the sender's name. Anonymous to the
- * recipient only: the sender is stored, because the magazine must be able to
- * answer for it as a hosting provider (5651 m. 5).
+ * A message left without the sender's name. Since D-185 the box is the
+ * magazine's: a message with no recipient goes to the admins, for the
+ * "Eğlence & Dedikodu" section. Rows with a recipient are left from the member
+ * boxes of D-092, which closed. Anonymous to the reader only: the sender is
+ * stored, because the magazine must be able to answer for it (5651 m. 5).
  */
 export const anonMessages = pgTable(
   "anon_messages",
   {
     id: id(),
-    recipientId: uuid("recipient_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    /** Null for the magazine's box (D-185); a member for the old member boxes. */
+    recipientId: uuid("recipient_id").references(() => users.id, { onDelete: "cascade" }),
     senderId: uuid("sender_id").references(() => users.id, { onDelete: "set null" }),
     /** Stored with banned words already masked (D-040). */
     body: text("body").notNull(),

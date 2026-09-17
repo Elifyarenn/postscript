@@ -7123,3 +7123,78 @@ gereken değil"). Ürün sahibinin isteğiyle bu karar değişti.
 mesaj okunmamış, açtıktan sonra okundu; açılıştan sonra gönderilen okunmamış;
 alıcının kendi görünümünde gelen mesajlara işaret yok. Kapı: typecheck, lint,
 test.
+
+## D-185 — Anonim kutu derginin: mesajlar Eğlence & Dedikodu için yöneticilere gider
+
+**İstek (ürün sahibi):** "Anonim kutu sadece adminlerin paneline gidecek, o
+eğlence ve dedikodu bölümümüz için."
+
+**Tasarım:** "anon box.ai" çizdirilip okundu. Kapanış kutusu: "Anon Box, anonim
+olarak bize gönderebileceğiniz hikâye, anı, itiraf ve dedikodular içindir. Bu
+yazılar yazar tarafından dergide yayınlanacak ve herkes tarafından okunacaktır.
+… +18 şeyler ve siyasi şeyler yayınlanmayacaktır." D-092'deki üyeden üyeye kutu
+bu tasarımın karşılığı değildi (D-116 bunu "bilerek duran sapma" diye yazmış,
+dergiye anonim gönderiyi ayrı bir ürün kararı saymıştı). Karar artık verildi.
+
+**Karar:**
+
+- **Tek kutu, derginin.** `/social/anon` (üye menüsündeki "Anonim kutu")
+  tasarımdaki gönderme ekranı. Mesaj `recipient_id` boş olarak saklanır; boş
+  alıcı = derginin kutusu. Migration `0038`: `recipient_id` NOT NULL kaldırıldı
+  (veri değişmez).
+- **Üye kutuları kapandı:** gelen kutusu, profildeki "Anonim mesaj" bağlantısı,
+  ayarlardaki "Anonim kutum açık olsun" ve susturma, menüdeki okunmamış rozeti
+  kaldırıldı. `/social/anon/<kullanıcı>` derginin kutusuna yönlenir.
+  `users.anon_box_enabled` ve `anon_mutes` tabloları silinmedi (yıkıcı migration
+  yok); kullanılmıyorlar. Eski üye kutusu mesajları görünmez, aşağıdaki saklama
+  kuralıyla bir yıl içinde silinir.
+- **Kim yazabilir:** doğrulanmış, kullanıcı adı olan, 18 yaşını doldurmuş üye
+  (doğum tarihi yoksa D-182 cümlesi). Günde en çok 5 mesaj, en çok 2000
+  karakter (hikâye ve anı sığsın diye 500'den büyütüldü), yasaklı kelime
+  maskesi, trafik kaydı.
+- **Yayın onayı zorunlu:** "Mesajımın Eğlence & Dedikodu bölümünde, adım
+  olmadan, kısaltılarak veya düzenlenerek yayımlanabileceğini kabul ediyorum"
+  kutusu işaretlenmeden gönderilemez; sunucuda da `publishConsent: true`
+  doğrulanır. Mesaj ancak onayla var olduğu için onay ayrıca saklanmadı.
+- **Yöneticilere karşı da anonim:** Panel sayfası
+  (`/admin/community/anon`, "Topluluk yönetimi → Anonim kutu", genel bakışta
+  "Yeni anonim mesaj" sayısı) göndereni hiç taşımayan `AnonBoxItem` ile
+  çalışır. Gelen kutusu açılınca okundu sayılır; "Arşivle" ve "Kaldır" var.
+  Kaldırma `audit_log`'a gönderensiz yazılır. Tasarımdaki "Sırrınız bizimle
+  güvende" sözü böyle karşılandı; gönderen yalnızca yetkili merci talebinde
+  veritabanından çıkarılır, ekranı yok. Yalnızca admin (editör 403).
+- **Formun üstündeki uyarı:** "Adınızı görmeyiz, ama anonim değilsiniz" —
+  hesap ve trafik kaydıyla saklanma, yetkili merci, başkalarının adını ve özel
+  hayatını yazmama.
+- **Saklama:** Her anonim mesaj (derginin kutusu ve eski üye kutuları) yazıldıktan
+  1 yıl sonra silinir (`pruneDeletedAnonMessages`, günlük cron). Yayımlanan metin
+  yazıda kalır; gönderenle bağı kalmaz.
+
+**Hukuk:**
+
+- **KVKK:** Aydınlatma metninde anonim kutu veri satırı, açıklama paragrafı,
+  amaç satırı (yayımlama eklendi) ve saklama satırı koda göre yeniden yazıldı.
+  Kullanım şartlarında anonim kutu paragrafı yenilendi (yayın onayı, yöneticilere
+  anonimlik, yasaklar).
+- **Hukukçu görüşü gerekiyor:**
+  1. **Kişilik hakları ve özel hayat (TCK 125, 134; TMK 24):** Dedikodu, tanınabilir
+     kişiler hakkında olduğunda yayın dergiyi içerik sağlayıcı olarak sorumlu
+     kılar (5651 m. 4). Panelde yayımlamadan önce uyarı var; bir yayın ilkeleri
+     metni ve yayın öncesi kontrol listesi önerilir.
+  2. **FSEK:** Anonim gönderenden alınan onay kutusu, ücretsiz ve süresiz
+     yayımlama izni için yeterli mi; yazar sözleşmesindeki basit ruhsatla (D-084)
+     nasıl ilişkilendirilmeli.
+  3. **Üçüncü kişilerin kişisel verileri:** Gönderilen metinde başkalarına ait veri
+     olabilir; aydınlatma yükümlülüğü ve yayımlamada anonimleştirme yeterliliği.
+- Muhafazakâr olan uygulandı: hiçbir mesaj kendiliğinden yayımlanmaz, yayın
+  tamamen yöneticinin elinde; gönderen hiçbir ekranda görünmez.
+
+**Üretim:** Migration `0038_magazine_anon_box` (tek satır, `DROP NOT NULL`,
+geri alınabilir). Push'tan önce üretime uygulanmalı (D-079).
+
+**Doğrulama:** `anon-box.test.ts` (birim ve entegrasyon): yetişkin/doğrulanmış
+üye kuralı, yayın onayı zorunlu, günlük sınır, alıcısız saklama ve trafik kaydı,
+panel listesinde gönderen yok, yalnızca admin, arşiv/kaldırma ve gönderensiz
+denetim kaydı, gönderenin kendi dışa aktarımı, 1 yıllık silme. `site.test.ts`:
+menüde anonim kutu rozeti yok. E2E (`07d-social`) derginin kutusuna gönderir.
+Kapı: typecheck, lint, 66 dosya / 629 test; üretim derlemesi.

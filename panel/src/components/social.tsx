@@ -213,11 +213,6 @@ export function ProfileHeader({
                 <Link href={`/social/messages/${profile.username}`} className="profile-link">
                   Mesaj
                 </Link>
-                {profile.anonBoxEnabled && (
-                  <Link href={`/social/anon/${profile.username}`} className="profile-link">
-                    Anonim mesaj
-                  </Link>
-                )}
                 <ActionButton
                   action={blockAction}
                   csrfToken={csrfToken}

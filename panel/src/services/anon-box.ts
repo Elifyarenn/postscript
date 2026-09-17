@@ -1,130 +1,69 @@
 /**
- * The anonymous box (D-092): a member opens a box, and other verified adult
- * members may leave a message in it without their name.
+ * The magazine's anonymous box (D-092, D-185).
  *
- * Anonymous means anonymous to the recipient, and nothing more. The sender is
- * stored with the message and in the traffic record; nothing in this module
- * ever hands the sender to the recipient — not the inbox, not the mute, not
- * the data export. A moderator sees the sender only when the recipient reports
- * the message (D-090).
+ * A verified adult member leaves a story, a memory, a confession or a piece of
+ * gossip for the "Eğlence & Dedikodu" section. It reaches the admins without
+ * the sender's name; they may publish it, unsigned, in the magazine.
+ *
+ * Anonymous means anonymous to whoever reads the box, and nothing more. The
+ * sender is stored with the message and in the traffic record, because the
+ * magazine must be able to answer for it (5651 m. 5); nothing in this module
+ * hands the sender to the panel. A competent authority's lawful request is
+ * answered from the database, not from a screen.
  */
 import "server-only";
-import { and, count, desc, eq, gte, isNull, lt, or } from "drizzle-orm";
+import { and, count, desc, eq, gte, isNotNull, isNull, lt } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { anonMessages, anonMutes, users } from "@/db/schema";
+import { anonMessages, users } from "@/db/schema";
 import { isAdult } from "@/lib/age";
-import type { Actor } from "@/lib/auth/rbac";
+import { writeAudit } from "@/lib/audit";
+import { canModerateCommunity, type Actor } from "@/lib/auth/rbac";
 import { badRequest, forbidden, notFound, rateLimited } from "@/lib/errors";
 import { anonMessageProblem, MAX_ANON_MESSAGE_LENGTH, type AnonProblem } from "@/lib/anon-box";
 import { maskBannedWords } from "@/lib/moderation";
 import { recordTraffic, trafficCutoff } from "@/lib/traffic";
-import { normalizeUsername } from "@/lib/username";
 import { activeBannedWords } from "./community";
-import { getMemberSettings, hasBlocked, requireMember } from "./social";
+import { requireMember } from "./social";
 import type { RequestMeta } from "./auth";
 
-type Recipient = {
-  id: string;
-  username: string;
-  birthDate: string | null;
-  anonBoxEnabled: boolean;
-};
-
-async function findRecipient(rawUsername: string): Promise<Recipient | null> {
-  const username = normalizeUsername(rawUsername);
-  if (username === "") return null;
-
-  const rows = await db
-    .select({
-      id: users.id,
-      username: users.username,
-      birthDate: users.birthDate,
-      anonBoxEnabled: users.anonBoxEnabled,
-    })
-    .from(users)
-    .where(and(eq(users.username, username), isNull(users.deletedAt), eq(users.isBanned, false)))
-    .limit(1);
-
-  const row = rows[0];
-  return row?.username ? { ...row, username: row.username } : null;
-}
-
-function adult(birthDate: string | null): boolean {
-  return birthDate !== null && isAdult(birthDate);
-}
-
-async function problemFor(senderId: string, recipient: Recipient): Promise<AnonProblem | null> {
+async function problemFor(senderId: string): Promise<AnonProblem | null> {
   const since = new Date(Date.now() - 86_400_000);
 
-  const [sender, blockedOut, muted, [toRecipient], [total]] = await Promise.all([
+  const [sender, [total]] = await Promise.all([
     db.select({ birthDate: users.birthDate }).from(users).where(eq(users.id, senderId)).limit(1),
-    hasBlocked(senderId, recipient.id),
-    db
-      .select({ id: anonMutes.id })
-      .from(anonMutes)
-      .where(and(eq(anonMutes.recipientId, recipient.id), eq(anonMutes.senderId, senderId)))
-      .limit(1),
-    db
-      .select({ value: count() })
-      .from(anonMessages)
-      .where(
-        and(
-          eq(anonMessages.senderId, senderId),
-          eq(anonMessages.recipientId, recipient.id),
-          gte(anonMessages.createdAt, since),
-        ),
-      ),
     db
       .select({ value: count() })
       .from(anonMessages)
       .where(and(eq(anonMessages.senderId, senderId), gte(anonMessages.createdAt, since))),
   ]);
 
+  const birthDate = sender[0]?.birthDate ?? null;
   return anonMessageProblem({
-    senderAdult: adult(sender[0]?.birthDate ?? null),
-    senderBirthDateMissing: (sender[0]?.birthDate ?? null) === null,
-    recipientAdult: adult(recipient.birthDate),
-    boxEnabled: recipient.anonBoxEnabled,
-    blocked: blockedOut,
-    muted: muted.length > 0,
-    sentToRecipientToday: toRecipient?.value ?? 0,
+    senderAdult: birthDate !== null && isAdult(birthDate),
+    senderBirthDateMissing: birthDate === null,
     sentTodayTotal: total?.value ?? 0,
   });
-}
-
-/** The same lookup for the form and the send: 404 for someone who blocked the sender. */
-async function reachableRecipient(senderId: string, rawUsername: string): Promise<Recipient> {
-  const recipient = await findRecipient(rawUsername);
-  if (!recipient) throw notFound("Üye bulunamadı.");
-  if (recipient.id === senderId) throw badRequest("Kendinize anonim mesaj gönderemezsiniz.");
-  if (await hasBlocked(recipient.id, senderId)) throw notFound("Üye bulunamadı.");
-  return recipient;
 }
 
 /* ------------------------------------------------------------------ */
 /* Sending                                                             */
 /* ------------------------------------------------------------------ */
 
-export async function getAnonComposeState(actor: Actor, rawUsername: string) {
+export async function getAnonComposeState(actor: Actor) {
   const me = await requireMember(actor);
-  const recipient = await reachableRecipient(me.id, rawUsername);
-  const problem = await problemFor(me.id, recipient);
-
-  return {
-    recipient: { username: recipient.username },
-    canSend: problem === null,
-    problem: problem?.message ?? null,
-  };
+  const problem = await problemFor(me.id);
+  return { canSend: problem === null, problem: problem?.message ?? null };
 }
 
 export const anonMessageSchema = z.strictObject({
-  username: z.string().min(1).max(40),
   body: z
     .string()
     .trim()
     .min(1, "Mesaj boş olamaz.")
     .max(MAX_ANON_MESSAGE_LENGTH, `Mesaj en çok ${MAX_ANON_MESSAGE_LENGTH} karakter olabilir.`),
+  // The words may be published in the magazine, so the sender agrees to that first (D-185)
+  publishConsent: z.literal(true, "Mesajınızın dergide adınız olmadan yayımlanabileceğini onaylayın."),
 });
 
 /** "Verified users only": `requireMember` insists on a verified, unbanned account with a handle. */
@@ -140,8 +79,7 @@ export async function sendAnonMessage(
     throw badRequest("Mesaj geçersiz.", z.flattenError(parsed.error).fieldErrors);
   }
 
-  const recipient = await reachableRecipient(me.id, parsed.data.username);
-  const problem = await problemFor(me.id, recipient);
+  const problem = await problemFor(me.id);
   if (problem) {
     throw problem.status === 429 ? rateLimited(problem.message) : forbidden(problem.message);
   }
@@ -149,12 +87,13 @@ export async function sendAnonMessage(
   const body = maskBannedWords(parsed.data.body, await activeBannedWords());
 
   return db.transaction(async (tx) => {
+    // No recipient: the message is the magazine's (D-185)
     const [row] = await tx
       .insert(anonMessages)
-      .values({ recipientId: recipient.id, senderId: me.id, body })
+      .values({ recipientId: null, senderId: me.id, body })
       .returning({ id: anonMessages.id });
 
-    // The record names the sender: the box is anonymous to the recipient, not to the law
+    // The record names the sender: the box is anonymous to its readers, not to the law
     await recordTraffic(
       {
         userId: me.id,
@@ -172,15 +111,19 @@ export async function sendAnonMessage(
 }
 
 /* ------------------------------------------------------------------ */
-/* The recipient's box                                                 */
+/* The admins' box                                                     */
 /* ------------------------------------------------------------------ */
 
-/** Deliberately without the sender: this shape is all the recipient ever gets. */
-export type AnonInboxItem = { id: string; body: string; createdAt: Date; unread: boolean };
+/** Deliberately without the sender: this shape is all the panel ever gets. */
+export type AnonBoxItem = { id: string; body: string; createdAt: Date; unread: boolean };
 
-/** The box, newest first; listing it marks what was unread as read. */
-export async function listAnonInbox(actor: Actor): Promise<AnonInboxItem[]> {
-  const me = await requireMember(actor);
+export type AnonBoxView = "inbox" | "archive";
+
+const magazineBox = isNull(anonMessages.recipientId);
+
+/** The box, newest first. Opening the inbox marks what was unread as read. */
+export async function listMagazineAnonBox(actor: Actor, view: AnonBoxView): Promise<AnonBoxItem[]> {
+  if (!canModerateCommunity(actor)) throw forbidden();
 
   const rows = await db
     .select({
@@ -192,135 +135,92 @@ export async function listAnonInbox(actor: Actor): Promise<AnonInboxItem[]> {
     .from(anonMessages)
     .where(
       and(
-        eq(anonMessages.recipientId, me.id),
-        isNull(anonMessages.hiddenAt),
+        magazineBox,
         isNull(anonMessages.deletedAt),
+        view === "inbox" ? isNull(anonMessages.hiddenAt) : isNotNull(anonMessages.hiddenAt),
       ),
     )
     .orderBy(desc(anonMessages.createdAt))
     .limit(200);
 
-  if (rows.some((row) => row.readAt === null)) {
+  if (view === "inbox" && rows.some((row) => row.readAt === null)) {
     const now = new Date();
     await db
       .update(anonMessages)
       .set({ readAt: now, updatedAt: now })
-      .where(and(eq(anonMessages.recipientId, me.id), isNull(anonMessages.readAt)));
+      .where(and(magazineBox, isNull(anonMessages.readAt), isNull(anonMessages.hiddenAt)));
   }
 
   return rows.map((row) => ({ id: row.id, body: row.body, createdAt: row.createdAt, unread: row.readAt === null }));
 }
 
-export async function unreadAnonCount(actor: Actor): Promise<number> {
-  const { username } = await getMemberSettings(actor);
-  if (!username || actor.isBanned || actor.emailVerifiedAt === null) return 0;
+export async function unreadMagazineAnonCount(actor: Actor): Promise<number> {
+  if (!canModerateCommunity(actor)) throw forbidden();
 
   const [row] = await db
     .select({ value: count() })
     .from(anonMessages)
     .where(
-      and(
-        eq(anonMessages.recipientId, actor.id),
-        isNull(anonMessages.readAt),
-        isNull(anonMessages.hiddenAt),
-        isNull(anonMessages.deletedAt),
-      ),
+      and(magazineBox, isNull(anonMessages.readAt), isNull(anonMessages.hiddenAt), isNull(anonMessages.deletedAt)),
     );
   return row?.value ?? 0;
 }
 
-async function ownMessage(recipientId: string, messageId: string) {
+async function magazineMessage(messageId: string) {
   if (!z.uuid().safeParse(messageId).success) throw badRequest("Mesaj geçersiz.");
   const rows = await db
-    .select({ id: anonMessages.id, senderId: anonMessages.senderId })
+    .select({ id: anonMessages.id })
     .from(anonMessages)
-    .where(and(eq(anonMessages.id, messageId), eq(anonMessages.recipientId, recipientId)))
+    .where(and(eq(anonMessages.id, messageId), magazineBox, isNull(anonMessages.deletedAt)))
     .limit(1);
   if (!rows[0]) throw notFound("Mesaj bulunamadı.");
-  return rows[0];
 }
 
-/** Deletes a message from the recipient's box; it ages out a year later. */
-export async function hideAnonMessage(actor: Actor, messageId: string): Promise<void> {
-  const me = await requireMember(actor);
-  await ownMessage(me.id, messageId);
+/** Moves a message out of the inbox (read, used or not wanted); it ages out with the rest. */
+export async function archiveAnonMessage(actor: Actor, messageId: string): Promise<void> {
+  if (!canModerateCommunity(actor)) throw forbidden();
+  await magazineMessage(messageId);
 
   const now = new Date();
   await db
     .update(anonMessages)
-    .set({ hiddenAt: now, updatedAt: now })
+    .set({ hiddenAt: now, readAt: now, updatedAt: now })
     .where(and(eq(anonMessages.id, messageId), isNull(anonMessages.hiddenAt)));
 }
 
-/**
- * Silences the sender of a message without naming them: they can no longer
- * write to this box, and everything they left in it is put away.
- */
-export async function muteAnonSender(actor: Actor, messageId: string): Promise<void> {
-  const me = await requireMember(actor);
-  const message = await ownMessage(me.id, messageId);
+/** Takes down a message against the rules. The audit record carries no sender. */
+export async function removeAnonMessage(actor: Actor, messageId: string, meta: RequestMeta): Promise<void> {
+  if (!canModerateCommunity(actor)) throw forbidden();
+  await magazineMessage(messageId);
+
   const now = new Date();
+  await db
+    .update(anonMessages)
+    .set({ deletedAt: now, removedBy: actor.id, updatedAt: now })
+    .where(eq(anonMessages.id, messageId));
 
-  await db.transaction(async (tx) => {
-    if (message.senderId) {
-      const existing = await tx
-        .select({ id: anonMutes.id })
-        .from(anonMutes)
-        .where(and(eq(anonMutes.recipientId, me.id), eq(anonMutes.senderId, message.senderId)))
-        .limit(1);
-      if (!existing[0]) {
-        await tx.insert(anonMutes).values({ recipientId: me.id, senderId: message.senderId });
-      }
-    }
-
-    await tx
-      .update(anonMessages)
-      .set({ hiddenAt: now, updatedAt: now })
-      .where(
-        and(
-          eq(anonMessages.recipientId, me.id),
-          isNull(anonMessages.hiddenAt),
-          message.senderId ? eq(anonMessages.senderId, message.senderId) : eq(anonMessages.id, message.id),
-        ),
-      );
+  await writeAudit({
+    actorId: actor.id,
+    action: "social.anon_message_removed",
+    entityType: "anon_messages",
+    entityId: messageId,
+    ip: meta.ip,
   });
 }
 
-export async function countAnonMutes(actor: Actor): Promise<number> {
-  const [row] = await db.select({ value: count() }).from(anonMutes).where(eq(anonMutes.recipientId, actor.id));
-  return row?.value ?? 0;
-}
+/* ------------------------------------------------------------------ */
+/* Retention                                                           */
+/* ------------------------------------------------------------------ */
 
-/** Lifts every mute at once; individual mutes cannot be told apart by design. */
-export async function clearAnonMutes(actor: Actor): Promise<number> {
-  await requireMember(actor);
-  const removed = await db
-    .delete(anonMutes)
-    .where(eq(anonMutes.recipientId, actor.id))
-    .returning({ id: anonMutes.id });
-  return removed.length;
-}
-
-export const anonBoxSettingSchema = z.strictObject({ enabled: z.boolean() });
-
-export async function setAnonBoxEnabled(actor: Actor, rawInput: unknown): Promise<boolean> {
-  await requireMember(actor);
-  const parsed = anonBoxSettingSchema.safeParse(rawInput);
-  if (!parsed.success) throw badRequest("Tercih geçersiz.");
-
-  await db
-    .update(users)
-    .set({ anonBoxEnabled: parsed.data.enabled, updatedAt: new Date() })
-    .where(eq(users.id, actor.id));
-  return parsed.data.enabled;
-}
-
-/** Removed, gone-with-the-account or box-deleted messages past their year. */
+/**
+ * Every anonymous message, in the magazine's box or left from a member box,
+ * is deleted a year after it was written (D-185). What the magazine published
+ * lives on in the article; the link to the sender does not.
+ */
 export async function pruneDeletedAnonMessages(now: Date = new Date()): Promise<number> {
-  const cutoff = trafficCutoff(now);
   const removed = await db
     .delete(anonMessages)
-    .where(or(lt(anonMessages.deletedAt, cutoff), lt(anonMessages.hiddenAt, cutoff)))
+    .where(lt(anonMessages.createdAt, trafficCutoff(now)))
     .returning({ id: anonMessages.id });
   return removed.length;
 }

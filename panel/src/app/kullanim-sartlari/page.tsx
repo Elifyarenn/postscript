@@ -97,12 +97,16 @@ export default async function TermsPage() {
       </p>
 
       <p>
-        <strong>Anonim kutu.</strong> Kutusunu açan üyeye, e-postası doğrulanmış ve 18 yaşını
-        doldurmuş üyeler adlarını göstermeden mesaj bırakabilir. Bu gizlilik yalnızca alıcıya
-        karşıdır: anonim mesaj hesabınızla ve trafik kaydıyla saklanır, bildirilirse yöneticiler
-        göndereni görür ve kanunen yetkili mercilere bildirilebilir. Anonim kutu taciz, tehdit veya
-        kimliğini gizleyerek kural ihlali için kullanılamaz; bu kullanım hesabın askıya alınmasına
-        yol açabilir.
+        <strong>Anonim kutu.</strong> Anonim kutu derginindir. E-postası doğrulanmış ve 18 yaşını
+        doldurmuş üyeler, Eğlence &amp; Dedikodu bölümü için adlarını göstermeden hikâye, anı, itiraf
+        ve dedikodu gönderebilir; mesajlar yalnızca yöneticilere ulaşır ve panelde gönderen
+        gösterilmez. Göndermeden önce, metninizin dergide adınız olmadan, kısaltılarak veya
+        düzenlenerek, ücretsiz olarak yayımlanabileceğini onaylarsınız; yayımlayıp yayımlamamak
+        derginin takdirindedir. Bu gizlilik okuyana karşıdır: anonim mesaj hesabınızla ve trafik
+        kaydıyla saklanır ve yalnızca kanunen yetkili mercilerin hukuka uygun talebi üzerine
+        paylaşılabilir. Gerçek kişilerin adını, özel hayatını veya kişisel bilgilerini yazmak,
+        birini teşhir etmek, iftira, taciz veya tehdit için anonim kutu kullanılamaz; +18 ve
+        siyasi içerikler yayımlanmaz. Bu kullanım hesabın askıya alınmasına yol açabilir.
       </p>
 
       <h2>4. İçeriğinizden siz sorumlusunuz</h2>
