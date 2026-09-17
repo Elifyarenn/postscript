@@ -44,16 +44,18 @@ test("registers as a reader, verifies the address, and stays a reader", async ({
   await submitLogin(page, { email: NEW_READER.email, password: NEW_READER.password });
   await waitForHome(page);
 
-  // A reader has a profile but no panel, so the header offers PROFİL alone
-  await expect(page.getByRole("link", { name: "PROFİL", exact: true })).toBeVisible();
+  // A reader has no panel, and the header no longer carries a PROFİL link (D-176)
+  await expect(page.getByRole("link", { name: "PROFİL", exact: true })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "PANEL", exact: true })).toHaveCount(0);
 
   // The reading area opens in the magazine frame, with the member menu (D-112)
   await page.goto("/magazine");
   await expect(page.getByRole("navigation", { name: "Üye menüsü" })).toBeVisible();
 
-  // The top-right profile button leads to the account page
-  await page.getByRole("link", { name: "PROFİL", exact: true }).click();
+  // The account page is reached through the settings (D-176)
+  await page.getByRole("link", { name: "Ayarlar", exact: true }).first().click();
+  await page.waitForURL("**/social/settings");
+  await page.getByRole("link", { name: "Hesabım" }).first().click();
   await page.waitForURL("**/account");
 
   // The account is a plain reader, not a writer

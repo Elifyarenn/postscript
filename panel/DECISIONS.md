@@ -6837,3 +6837,32 @@ aydınlatma metni değişmedi.
 
 **Doğrulama:** Kapı: typecheck, lint, test; üretim derlemesi. Canlıda dört
 sayfanın ekran görüntüsü.
+
+## D-176 — Üst şeritteki PROFİL bağlantısı kaldırıldı
+
+**İstek (ürün sahibi):** "Headerdaki profil kısmını kaldır, o zaten panelin
+kısmı."
+
+**Karar:**
+
+- `SiteShell`'in üst şeridindeki "PROFİL" (`/account`) bağlantısı kaldırıldı.
+  Şeritte Ayarlar, Blog, PANEL (yetkisi olana) ve Çıkış kalıyor.
+- **Hesap sayfası erişilebilir kalıyor:** Panellerde `/account` bağlantısı yok;
+  D-165'ten beri hesap sayfası sitenin çerçevesinde. Paneli olmayan okur için
+  PROFİL tek kısa yoldu. Kaldırıldıktan sonra her üye (personel dahil) şuradan
+  ulaşır: üst şerit **Ayarlar** → `/social/settings` → **Hesabım** (Profil
+  bölümünde ve Hesap bölümünde; kullanıcı adı seçmemiş üyeye de görünür).
+  Hakkında sayfasındaki "katıl" düğmesi ve profil düzenleyicideki bağlantı da
+  oraya gider. 2FA kurmamış editör/admin yine `requireRole` ile
+  `/account?twoFactor=1`'e yönlendirilir.
+- Bu önemli, çünkü hesap sayfası KVKK m. 11 haklarının (bilgi düzeltme, hesap
+  silme) ve yazar başvurusunun yapıldığı yer; yol kısaldı ama kopmadı.
+- Uçtan uca testler (`01-registration`, `07-writer-application`) hesap
+  sayfasına Ayarlar → Hesabım yoluyla gider; kayıt testi PROFİL
+  bağlantısının artık olmadığını denetler.
+
+**Hukuk:** İşlenen veri değişmedi; KVKK haklarına giden yol erişilebilir.
+
+**Doğrulama:** Kapı: typecheck, lint, test. E2E testleri yerel sunucu
+gerektirdiği için bu adımda çalıştırılmadı; canlıda üst şerit ve Ayarlar →
+Hesabım yolu elle kontrol edilir.

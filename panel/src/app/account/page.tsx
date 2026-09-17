@@ -28,8 +28,8 @@ export const metadata = { title: "Hesabım" };
 /**
  * Every member's account: profile, password, sessions.
  * There is no self-service route from here to the writer role by design (§3).
- * It sits in the magazine's frame for every role: the site's PROFİL button must
- * not drop a staff member into the panel (D-165).
+ * It sits in the magazine's frame for every role: reached from the community
+ * settings, it must not drop a staff member into the panel (D-165, D-176).
  */
 export default async function AccountPage({
   searchParams,

@@ -25,7 +25,9 @@ test("a reader applies, gets reviewed twice, and becomes a writer by signing", a
   // 1. The reader submits the application from the account page
   await submitLogin(page, SEED.applicant);
   await waitForHome(page);
-  await page.getByRole("link", { name: "PROFİL", exact: true }).click();
+  await page.getByRole("link", { name: "Ayarlar", exact: true }).first().click();
+  await page.waitForURL("**/social/settings");
+  await page.getByRole("link", { name: "Hesabım" }).first().click();
   await page.waitForURL("**/account");
 
   await expect(page.getByRole("heading", { name: "Yazar olma başvurusu" })).toBeVisible();
@@ -68,7 +70,9 @@ test("a reader applies, gets reviewed twice, and becomes a writer by signing", a
   // 4. The applicant signs the contract
   await submitLogin(page, SEED.applicant);
   await waitForHome(page);
-  await page.getByRole("link", { name: "PROFİL", exact: true }).click();
+  await page.getByRole("link", { name: "Ayarlar", exact: true }).first().click();
+  await page.waitForURL("**/social/settings");
+  await page.getByRole("link", { name: "Hesabım" }).first().click();
   await expect(page.getByText("Sözleşmeniz hazır")).toBeVisible();
   await page.getByRole("link", { name: "Sözleşmeyi oku ve imzala" }).click();
   await page.waitForURL("**/writer-application/contract**");

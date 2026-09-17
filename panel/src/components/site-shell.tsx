@@ -98,9 +98,8 @@ export async function SiteShell({
                     Blog
                   </Link>
                 )}
-                <Link href="/account" className="topbar-cell">
-                  PROFİL
-                </Link>
+                {/* No PROFİL link (D-176): every member, staff included, reaches the
+                    account page through Ayarlar, which links to Hesabım */}
                 {panelHref && (
                   <Link href={panelHref} className="topbar-cell topbar-strong">
                     PANEL
