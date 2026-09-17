@@ -8,6 +8,7 @@ import { SiteShell } from "@/components/site-shell";
 /** The issue the designs announce, shown until the first issue is published. */
 const FIRST_ISSUE: HomeIssue = {
   number: 1,
+  published: false,
   title: "Obsession",
   titleLang: "en",
   theme: "Bırakamadıklarımız",
@@ -29,6 +30,7 @@ export default async function HomePageRoute() {
   const issue: HomeIssue = latest
     ? {
         number: latest.number,
+        published: true,
         title: latest.title,
         theme: latest.theme,
         href: `/magazine/issues/${latest.number}`,

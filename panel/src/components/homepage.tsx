@@ -45,6 +45,8 @@ function cardImageAlt(card: IssueCard): string {
 
 export type HomeIssue = {
   number: number;
+  /** False for the announced issue before it is out: nothing to read yet (D-187). */
+  published: boolean;
   title: string;
   theme: string | null;
   href: string;
@@ -92,7 +94,7 @@ export function HomePage({
           </h2>
           {issue.theme && <p className="hero-theme">{issue.theme}</p>}
           <Link href={issue.href} className="site-outline-button">
-            Hemen oku!
+            {issue.published ? "Hemen oku!" : "Çok yakında"}
           </Link>
         </div>
 

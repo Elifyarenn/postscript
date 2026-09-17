@@ -7229,3 +7229,27 @@ değişmedi.
 **Doğrulama:** `username.test.ts` (terim temizleme, joker kaçışı, sıralama),
 `social-graph.test.ts` (parça eşleşme, engel/yasak/silinmiş/kendisi yok,
 tek karakter ve joker boş döner, `_` joker değil). Kapı: typecheck, lint, test.
+
+## D-187 — Yayımlanmamış sayılarda "Çok yakında"
+
+**İstek (ürün sahibi):** "Yayınlanmamış yazılarda 'hemen yakında' yerine 'çok
+yakında' yazsın."
+
+**Durum:** Kodda "hemen yakında" metni yok; canlıda iki yer bu tarife uyuyor:
+Sayılar sayfasında yayımlanmış sayı yokken çizilen boş kartlar
+("POSTSCRIPT: Yakında") ve ana sayfada henüz yayımlanmamış Sayı 01 için
+"Hemen oku!" düğmesi (okunacak bir şey yokken).
+
+**Karar:**
+
+- Boş sayı kartları: "POSTSCRIPT: Çok yakında".
+- Ana sayfa: `HomeIssue.published`; yayımlanmış sayı yokken gösterilen duyuru
+  sayısında düğme "Çok yakında" der, bağlantı yine dergi sayfasına gider. İlk sayı
+  yayımlanınca "Hemen oku!" geri gelir.
+- Diğer "yakında" ibareleri (devre dışı düğmelerin ipuçları, çalma listesi,
+  alanlar ve personel listelerindeki "çok yakında burada") değişmedi; onlar yazı
+  değil.
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Canlıda ana sayfa ve Sayılar.

@@ -58,7 +58,7 @@ export default async function IssuesPage() {
                   </span>
                   <div className="issue-text">
                     <p className="issue-title">
-                      POSTSCRIPT: <span className="fit-line">Yakında</span>
+                      POSTSCRIPT: <span className="fit-line">Çok yakında</span>
                     </p>
                   </div>
                 </li>
