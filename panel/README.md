@@ -410,6 +410,15 @@ Public API (`/api/public/*`) oturum istemez, `Cache-Control` ve `ETag` döner ve
 yazarın e-postasını, gerçek adını veya doğum tarihini **hiçbir zaman** döndürmez.
 Geri çekilmiş yazı 410, yayında olmayan her şey 404 verir.
 
+Ekip avatarları (D-194): `/team/avatar` ekibe (yazar, editör, admin, çizer)
+açık, kendi tasarımı olan bir oluşturucudur. Avatar `src/lib/avatar/` altında
+katmanlı bir SVG renderer'ıyla çizilir; aynı saf fonksiyon tarayıcıda önizlemeyi,
+sunucuda `next/og` ile 2048×2048 transparan PNG'yi üretir. Veritabanında yalnızca
+katalog kimliklerinden oluşan konfigürasyon (`team_avatars.config`) ve PNG'nin
+depolama anahtarı tutulur. Admin `/admin/team-avatars` altında avatarları görür,
+tek tek PNG veya akışla üretilen ZIP (`src/lib/zip.ts`) indirir. Yeni bir parça
+eklemek: `options.ts`'teki kataloğa seçenek, `render.ts`'te çizimi.
+
 ---
 
 ## Zamanlanmış işler

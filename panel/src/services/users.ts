@@ -56,6 +56,7 @@ import { sendMail } from "@/lib/mail/transport";
 import { slugify } from "@/lib/slug";
 import * as templates from "@emails/templates";
 import { removeProfileImages } from "./profile-images";
+import { removeTeamAvatarOf } from "./team-avatars";
 import { PEN_NAME_TAKEN, penNameProblem } from "./social";
 import type { RequestMeta } from "./auth";
 
@@ -889,6 +890,8 @@ export async function cancelAccountDeletion(actor: Actor): Promise<void> {
 async function anonymise(user: User): Promise<void> {
   // The pictures leave storage before the columns forget where they were (D-141)
   await removeProfileImages(user.id);
+  // The team avatar is the member's own creation and leaves with the account (D-194)
+  await removeTeamAvatarOf(user.id);
 
   await db
     .update(users)

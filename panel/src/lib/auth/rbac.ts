@@ -293,3 +293,21 @@ export function canPerformTransition(
       return false;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Team avatars (D-194)                                                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The team is everyone who makes the magazine: writers, editors, admins, and
+ * members marked as illustrators, who hold no staff role (D-151). A plain
+ * reader has no place on a team page, so the builder stays closed to them.
+ */
+export function canCreateTeamAvatar(actor: Actor, isIllustrator: boolean): boolean {
+  return isOperational(actor) && (hasRole(actor.role, "writer") || isIllustrator);
+}
+
+/** Every team avatar, its PNG and the ZIP are the admin's to see (D-194). */
+export function canManageTeamAvatars(actor: Actor): boolean {
+  return canAccessAdminPanel(actor);
+}

@@ -1426,6 +1426,39 @@ export const anonMutes = pgTable(
 );
 
 /* ------------------------------------------------------------------ */
+/* team_avatars (D-194)                                                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A team member's illustrated avatar: the chosen parts and the PNG drawn from
+ * them. One per account; saving again replaces it.
+ *
+ * Deleted for real, not soft deleted: the avatar is the member's own optional
+ * creation, nothing refers to it, and "Avatarımı sil" should leave nothing
+ * behind (KVKK). The audit log keeps that it existed.
+ */
+export const teamAvatars = pgTable(
+  "team_avatars",
+  {
+    id: id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** As the member wants it credited on the team page; not the account name. */
+    displayName: text("display_name").notNull(),
+    teamRole: text("team_role").notNull(),
+    /** Only catalogue ids (`src/lib/avatar/options.ts`), so the builder can reopen it. */
+    config: jsonb("config").notNull(),
+    configVersion: integer("config_version").notNull(),
+    /** The transparent PNG in object storage; regenerated from `config` if it goes missing. */
+    pngStorageKey: text("png_storage_key"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex("team_avatars_user_unique").on(t.userId)],
+);
+
+/* ------------------------------------------------------------------ */
 /* audit_log (append only, D-015)                                      */
 /* ------------------------------------------------------------------ */
 
@@ -1483,3 +1516,4 @@ export type ReportTarget = (typeof reportTargetEnum.enumValues)[number];
 export type ReportCategory = (typeof reportCategoryEnum.enumValues)[number];
 export type ReportStatus = (typeof reportStatusEnum.enumValues)[number];
 export type DmPolicy = (typeof dmPolicyEnum.enumValues)[number];
+export type TeamAvatar = typeof teamAvatars.$inferSelect;

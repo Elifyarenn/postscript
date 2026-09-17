@@ -62,6 +62,8 @@ export const ADMIN_NAV: NavGroup[] = [
       },
       { href: "/admin/categories", label: "Yazı alanları" },
       { href: "/admin/applications", label: "Yazar başvuruları" },
+      // Avatars the team sends from the builder (D-194)
+      { href: "/admin/team-avatars", label: "Ekip avatarları" },
     ],
   },
   {
@@ -123,6 +125,11 @@ export const EDITOR_NAV: NavGroup[] = [
       { href: "/editor/media", label: "Medya kütüphanesi" },
     ],
   },
+  {
+    label: "Ekip",
+    // The team avatar builder is team work, not the magazine or the community (D-194)
+    items: [{ href: "/team/avatar", label: "Ekip avatarım" }],
+  },
 ];
 
 /** `locked` only greys the links out; each page checks the rule itself. */
@@ -137,6 +144,7 @@ export function writerNav(locked: boolean): NavGroup[] {
         { href: "/writer/approvals", label: "Eser Onayları", disabled: locked },
         { href: "/writer/articles", label: "Yazılarım", disabled: locked },
         { href: "/writer/profile", label: "Profil ve güvenlik" },
+        { href: "/team/avatar", label: "Ekip avatarım" },
       ],
     },
   ];

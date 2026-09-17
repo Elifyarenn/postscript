@@ -38,6 +38,7 @@ ortaklık adına tek başına temsile yetkilidir.
 | Denetim | Panelde yapılan işlemlerin kaydı: kimin, ne zaman, hangi işlemi, hangi IP adresinden yaptığı |
 | İletişim formu | İletişim sayfasındaki formu doldurduğunuzda yazdığınız ad, e-posta adresi, konu ve mesajınız. Bu bilgiler sitede saklanmaz; doğrudan derginin e-posta kutusuna iletilir |
 | Profil görselleri | Topluluk profilinize yüklediğiniz profil fotoğrafı ve kapak fotoğrafı; yükleyen hesap, dosya türü ve boyutu. Bu görselleri giriş yapmış diğer üyeler görür; yüklemek zorunlu değildir |
+| Ekip avatarı | Yalnızca dergi ekibindeyseniz (yazar, editör, çizer, yönetici) ve avatar oluşturucuyu kullanırsanız: seçtiğiniz çizim parçaları (ten tonu, yüz, göz, kaş, burun, ağız, saç, sakal, çil, ben, gözlük, takı, kıyafet ve küçük detaylar), bu seçimlerden sunucuda çizilen PNG görseli, girdiğiniz görünen isim ve ekipteki rolünüz, kaydın hesabınızla ilişkisi, oluşturulma ve güncellenme zamanı. Oluşturmak zorunlu değildir |
 | Müzik çalar | Üye olarak giriş yapmışken ana sayfadaki Spotify çalarını açtığınızda tarayıcınızın Spotify ile kurduğu bağlantıda iletilen IP adresi ve tarayıcı bilgisi; bu veriler dergiye değil, doğrudan Spotify AB şirketine gider |
 
 Özel mesajlarınızı yalnızca siz ve yazıştığınız üye görür; yöneticiler özel
@@ -66,7 +67,9 @@ yazmamanızı rica ederiz; yayımlanan metinlerden kişiyi tanınır kılan ayr�
 çıkarılır. Kişisel veri dışa aktarımında gönderdiğiniz anonim mesajlar yer alır.
 
 Özel nitelikli kişisel veri (sağlık, din, biyometrik veri ve benzeri)
-toplamıyoruz. Kimlik belgesi fotokopisi veya görüntüsü **talep edilmez ve
+toplamıyoruz. Avatar oluşturucudaki ten tonu, saç ve yüz seçimleri bir çizim
+tercihidir: gerçek görünüşünüzü yansıtması gerekmez, ırk veya etnik köken bilgisi
+olarak istenmez ve böyle kullanılmaz. Kimlik belgesi fotokopisi veya görüntüsü **talep edilmez ve
 saklanmaz**.
 
 ## 3. İşleme amaçlarımız ve her birinin hukuki sebebi
@@ -83,6 +86,7 @@ saklanmaz**.
 | Yazar profilinin ve eserin dergide yayımlanması, künyede ad veya mahlas belirtilmesi | (c) Sözleşmenin ifası |
 | Çizer olarak işaretlenmiş hesapların Hakkında sayfasında mahlas veya topluluk adıyla listelenmesi | (c) Sözleşmenin ifası |
 | Yorum ve topluluk sohbeti işlevlerinin sunulması | (c) Sözleşmenin ifası |
+| Ekip üyelerinin avatarlarının oluşturulması, yönetim tarafından görüntülenmesi ve indirilmesi; avatarın görünen isim ve ekip rolüyle birlikte derginin sitesinde veya sosyal medya hesaplarında ekip tanıtımı için kullanılması (yayımlama yalnızca ilgili ekip üyesinin onayıyla yapılır) | (f) Meşru menfaat; yayımlama bakımından (a) açık rıza |
 | Topluluk profilinin gösterilmesi; gönderi, yanıt, beğeni, yeniden paylaşım, takip, engelleme, kaydetme ve bildirim işlevlerinin sunulması | (c) Sözleşmenin ifası |
 | İçerik bildirimlerinin alınması, incelenmesi ve 5651 sayılı Kanun kapsamındaki içerik kaldırma yükümlülüğünün yerine getirilmesi | (ç) Veri sorumlusunun hukuki yükümlülüğü, (f) Meşru menfaat |
 | Yorum, mesaj ve oturumlara ilişkin trafik kayıtlarının tutulması | (ç) Veri sorumlusunun hukuki yükümlülüğü — 5651 sayılı Kanun m. 5 |
@@ -104,7 +108,7 @@ sistemlerle verilen bir karar bulunmamaktadır.
 Kişisel verileriniz tamamen elektronik ortamda toplanır:
 
 - **Doğrudan sizden:** Kayıt formu, yazarlık başvuru formu, profil ekranı,
-  sözleşme ve eser onayı ekranları, yorum ve sohbet alanları, topluluk
+  sözleşme ve eser onayı ekranları, ekip avatarı oluşturucusu, yorum ve sohbet alanları, topluluk
   ayarları ve topluluk ekranlarındaki takip, engelleme ve kaydetme düğmeleri.
 - **Kullanım sırasında otomatik olarak:** Oturum çerezi aracılığıyla tutulan
   oturum kaydı ile sunucu tarafında oluşan IP adresi, tarayıcı bilgisi ve işlem
@@ -153,7 +157,7 @@ sağlayıcıların yurt dışındaki sistemlerinde tutulmaktadır:
 |---|---|---|---|
 | Vercel Inc. (ABD merkezli; uygulama sunucusu: fra1, Frankfurt; istekler ziyaretçiye en yakın Vercel ağ noktasından geçer) | Uygulamanın barındırılması | Almanya | Bölüm 2'deki veriler, işlem sırasında |
 | Neon Inc. (ABD merkezli; sunucu: AWS eu-central-1, Frankfurt) | Veritabanı | Almanya | Bölüm 2'deki tüm veriler |
-| Cloudflare, Inc. (ABD merkezli; R2 nesne depolama Avrupa Birliği veri yerleşimi garantili, Turnstile bot doğrulaması) | Görsel, PDF ve belge depolama; kayıt formlarında bot doğrulaması | Avrupa Birliği (depolama) | Profil görseli, örnek çalışma dosyaları, sözleşme PDF'leri; bot doğrulamasında IP adresi ve tarayıcı sinyalleri |
+| Cloudflare, Inc. (ABD merkezli; R2 nesne depolama Avrupa Birliği veri yerleşimi garantili, Turnstile bot doğrulaması) | Görsel, PDF ve belge depolama; kayıt formlarında bot doğrulaması | Avrupa Birliği (depolama) | Profil görseli, ekip avatarı görselleri, örnek çalışma dosyaları, sözleşme PDF'leri; bot doğrulamasında IP adresi ve tarayıcı sinyalleri |
 | Resend, Inc. (ABD merkezli; gönderim sunucusu: AWS ap-northeast-1, Tokyo) | Doğrulama ve bildirim e-postalarının gönderimi | Japonya | E-posta adresi, görünen ad, e-posta içeriği |
 | Spotify AB | Çalma listesi çaları (yalnızca üyeler açtığında yüklenir) | İsveç | Çaları açtığınızda IP adresi ve tarayıcı bilgisi; aktarım tarayıcınızdan doğrudan yapılır |
 
@@ -168,6 +172,7 @@ esas alınarak gerçekleştirilmektedir.
 | Hesap verileri (kimlik, iletişim, profil) | Hesap açık kaldığı sürece. Silme talebiniz üzerine 30 gün sonra anonimleştirilir. |
 | İletişim formu mesajları | Sitede saklanmaz. Derginin e-posta kutusunda, talebiniz karşılandıktan sonra en geç 1 yıl içinde silinir. |
 | Profil ve kapak fotoğrafı | Siz kaldırana kadar. Yenisini yüklediğinizde eskisi hemen silinir; hesabınız silindiğinde dosyalar da silinir. |
+| Ekip avatarı (seçimler, görsel, görünen isim, ekip rolü) | Siz avatar oluşturucudan silene, yönetim silene veya hesabınız silinene kadar; üçü de kaydı ve görseli kalıcı olarak siler. Yeniden kaydettiğinizde eski görsel hemen silinir. Yönetimin indirdiği kopyalar sistemin dışında kalır; silinmelerini Bölüm 9'daki yolla isteyebilirsiniz. |
 | Tamamlanmamış (e-postası doğrulanmamış) kayıtlar | 7 gün |
 | E-posta doğrulama bağlantıları | 24 saat |
 | Şifre sıfırlama bağlantıları | 30 dakika |
@@ -185,7 +190,7 @@ esas alınarak gerçekleştirilmektedir.
 | Yayımlanmış eserler ve künyedeki ad veya mahlas | Yayın arşivinin parçası olarak süresiz |
 
 Hesabınızı sildirdiğinizde ad, e-posta, doğum tarihi, telefon, kullanıcı adı,
-biyografi ve profil görseliniz anonimleştirilir; takip, engelleme, kaydetme,
+biyografi ve profil görseliniz anonimleştirilir, ekip avatarınız silinir; takip, engelleme, kaydetme,
 beğeni, yeniden paylaşım, susturma ve topluluk üyeliği kayıtlarınız silinir. Gönderileriniz,
 gönderdiğiniz özel mesajlar ve anonim mesajlarınız topluluktan
 kalkar ve silinmiş içerik gibi 1 yıl sonra kalıcı olarak silinir. İmzalı eser onayları, sözleşme kayıtları ve

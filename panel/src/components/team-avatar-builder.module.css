@@ -1,0 +1,541 @@
+/*
+ * Team avatar builder (D-194). A CSS module: every class is scoped to this
+ * page, so the studio's own look cannot leak into the magazine or the panels.
+ */
+
+.page {
+  --paper: #f5efe6;
+  --card: #fffdf9;
+  --ink: #1f1a1b;
+  --muted: #6d6360;
+  --line: #e3d8c9;
+  --accent: #7a1f2b;
+  --accent-ink: #fffaf4;
+  --sun: #e0a93b;
+  --ok: #2f6b4f;
+  --danger: #a4262c;
+
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  font-family: ui-serif, Georgia, "Times New Roman", serif;
+  font-size: 1.35rem;
+  font-style: italic;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.headerTitle {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.layout {
+  flex: 1;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+/* ---------------------------------------------------------------- */
+/* Preview stage: a compact sticky strip on phones                   */
+/* ---------------------------------------------------------------- */
+
+.stage {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: 112px 1fr;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 10px 16px 8px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+
+.previewFrame {
+  grid-row: span 2;
+  aspect-ratio: 1;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  /* A faint checkerboard says "transparent background" without words */
+  background-color: var(--card);
+  background-image: conic-gradient(#efe7db 25%, transparent 0 50%, #efe7db 0 75%, transparent 0);
+  background-size: 24px 24px;
+  overflow: hidden;
+}
+
+.preview {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.stageActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chipButton {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.chipButton:hover {
+  border-color: var(--ink);
+}
+
+.steps {
+  grid-column: 2;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.steps::-webkit-scrollbar {
+  display: none;
+}
+
+.stepTab {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 6px 10px 6px 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.stepTab[aria-current="step"] {
+  background: var(--ink);
+  color: var(--accent-ink);
+}
+
+.stepNumber {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--line);
+  color: var(--ink);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.stepTab[aria-current="step"] .stepNumber {
+  background: var(--sun);
+}
+
+/* ---------------------------------------------------------------- */
+/* Options                                                            */
+/* ---------------------------------------------------------------- */
+
+.panel {
+  padding: 16px 16px 32px;
+  /* Jumping to a step on a phone must not hide its title under the sticky strip */
+  scroll-margin-top: 150px;
+}
+
+.stepTitle {
+  font-family: ui-serif, Georgia, "Times New Roman", serif;
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin: 4px 0 12px;
+  line-height: 1.1;
+}
+
+.eyebrow {
+  display: block;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.notice {
+  background: #fbf3de;
+  border: 1px solid #efd9a3;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  margin: 0 0 12px;
+}
+
+.category {
+  border: 0;
+  padding: 0;
+  margin: 0 0 22px;
+  min-width: 0;
+}
+
+.categoryLabel {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 10px;
+  padding: 0;
+}
+
+.hint {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: -4px 0 8px;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 6px 6px 8px;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: 0 0 0 1px var(--line);
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform 120ms ease;
+}
+
+.tile:hover {
+  transform: translateY(-1px);
+}
+
+.tile[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  background: #fff6f2;
+}
+
+.tileImage {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  background: #f3ece2;
+}
+
+.tileLabel {
+  font-size: 0.78rem;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 64px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.swatchColor {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.15);
+  outline: 2px solid transparent;
+  outline-offset: 3px;
+}
+
+.swatch[aria-pressed="true"] .swatchColor {
+  outline-color: var(--accent);
+}
+
+.swatchLabel {
+  font-size: 0.72rem;
+  text-align: center;
+  line-height: 1.15;
+}
+
+.tile:focus-visible,
+.swatch:focus-visible,
+.stepTab:focus-visible,
+.chipButton:focus-visible,
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible {
+  outline: 3px solid var(--sun);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------- */
+/* Send step                                                          */
+/* ---------------------------------------------------------------- */
+
+.sendStep {
+  max-width: 560px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.input {
+  font: inherit;
+  font-size: 1rem; /* 16px keeps iOS from zooming into the field */
+  padding: 11px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+}
+
+.input:focus {
+  outline: 3px solid var(--sun);
+  outline-offset: 1px;
+  border-color: var(--ink);
+}
+
+.field .hint {
+  margin: 0;
+}
+
+.fieldError {
+  color: var(--danger);
+  font-size: 0.85rem;
+}
+
+.account,
+.privacy {
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.privacy {
+  color: var(--muted);
+}
+
+.privacy a {
+  color: var(--accent);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.successBox,
+.errorBox {
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 0 0 14px;
+  font-weight: 500;
+}
+
+.successBox {
+  background: #e4f1e8;
+  color: var(--ok);
+  border: 1px solid #b9dcc5;
+}
+
+.errorBox {
+  background: #fbe7e5;
+  color: var(--danger);
+  border: 1px solid #f0bdb8;
+}
+
+.primaryButton,
+.secondaryButton {
+  font: inherit;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 12px 20px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.primaryButton {
+  border: 0;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.primaryButton:hover {
+  background: #611823;
+}
+
+.primaryButton:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.secondaryButton {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+}
+
+.secondaryButton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.deleteForm {
+  margin-top: 18px;
+}
+
+.dangerLink {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.88rem;
+  color: var(--danger);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.pager {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.footer {
+  padding: 18px 16px 24px;
+  text-align: center;
+  font-size: 0.82rem;
+}
+
+.footer a {
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------- */
+/* The page shown to someone outside the team                         */
+/* ---------------------------------------------------------------- */
+
+.closed {
+  max-width: 520px;
+  margin: 12vh auto;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.closedTitle {
+  font-family: ui-serif, Georgia, "Times New Roman", serif;
+  font-size: 1.8rem;
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------- */
+/* Wide screens: a large preview beside the options                   */
+/* ---------------------------------------------------------------- */
+
+@media (min-width: 900px) {
+  .header {
+    padding: 18px 32px;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(340px, 440px) 1fr;
+    gap: 40px;
+    padding: 28px 32px;
+    align-items: start;
+  }
+
+  .stage {
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .previewFrame {
+    width: 100%;
+    border-radius: 28px;
+  }
+
+  .steps {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  .panel {
+    padding: 0 0 32px;
+  }
+
+  .stepTitle {
+    font-size: 2.2rem;
+  }
+
+  .tiles {
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+    gap: 10px;
+  }
+}

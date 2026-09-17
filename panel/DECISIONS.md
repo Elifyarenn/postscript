@@ -7407,3 +7407,91 @@ kullanır. Lisans D-175 ile aynı.
 **Hukuk:** Değişiklik yok.
 
 **Doğrulama:** Kapı: typecheck, lint, test; canlıda beş sayfanın bandı.
+
+## D-194 — Ekip avatarı oluşturucu
+
+**İstek (ürün sahibi):** Ekip üyeleri kendi avatarlarını web üzerinden
+oluştursun; avatar ve bilgileri admin paneline düşsün, yönetim görüntüleyip
+transparan PNG (tek tek ve ZIP) indirebilsin. Tek bir "modern cartoon /
+editorial illustration" stili, omuzdan yukarı, aynı açı ve kırpım; kapsayıcı,
+cinsiyete bağlı olmayan seçenekler; mobilde rahat; arayüz Türkçe; kendi
+tasarımı olabilir ama mevcut sistemi bozmadan.
+
+**Karar:**
+
+- **Çizim bir saf fonksiyon:** `renderAvatarSvg(config)` (`src/lib/avatar/render.ts`)
+  1024'lük sabit tuvale katman katman çizer (arka saç → gövde → boyun →
+  kıyafet → kolye → omuzdaki saç → kulak ve küpe → yüz → çil/ben → göz → kaş →
+  burun → sakal → ağız → ön saç → gözlük → şapka/toka). Her katman
+  `AVATAR_LAYERS`'ta bir kayıt; yeni parça = katalogda seçenek + çizim. Şekiller
+  kontrol noktalarıyla tanımlı ve aynı yumuşatmadan geçiyor (`geometry.ts`);
+  saç dokusu (düz, dalgalı, kıvırcık, sık kıvırcık) saç modelinden bağımsız
+  olarak kenara ve iç çizgilere uygulanıyor, bu yüzden 16 model × 4 doku tek
+  stilde kalıyor. Stil: sıcak koyu, orta-ince kontur; düz renk; tek kademe cel
+  gölge (dolgu kendi gölge renginin üstüne ışığa doğru kaydırılıp kırpılıyor);
+  hafif büyük gözler; doku ve degrade yok. Arka plan elemanı yok → transparan.
+- **Konfigürasyon yalnızca katalog kimlikleri** (`options.ts`, zod `strict`):
+  serbest metin SVG'ye hiç ulaşmaz; kayıt builder'a geri yüklenip düzenlenebilir.
+  Katalogdan bir seçenek kalkarsa `parseStoredConfig` yalnızca bozuk anahtarı
+  varsayılana çeker. `v` alanı ileride çizimi değiştiren bir sürüm için.
+- **PNG sunucuda çiziliyor**, tarayıcıdan yüklenmiyor: yüklenen dosya her şey
+  olabilir, konfigürasyon yalnızca katalog olabilir. Yeni bağımlılık yok:
+  Next.js ile gelen `next/og` (resvg). 2048×2048, RGBA; bir kayıt ~1–2 sn.
+  Dosya R2'de `team-avatars/…` altında; `media` tablosuna girmiyor (medya
+  kütüphanesinde görünmesin, lisans alanı anlamsız). Dosya kaybolursa indirme
+  onu konfigürasyondan yeniden çiziyor.
+- **Veri:** `team_avatars` (kullanıcı başına bir kayıt, benzersiz indeks):
+  `user_id`, `display_name`, `team_role`, `config` (jsonb), `config_version`,
+  `png_storage_key`, zamanlar. Upsert yerine seç-sonra-yaz (D-078). Silme
+  gerçek silme (yumuşak değil): isteğe bağlı, üyenin kendi ürettiği, başka
+  hiçbir şeyin başvurmadığı bir kayıt; "sil" dendiğinde hiçbir şey kalmamalı.
+  Denetim kaydı `team_avatar.created/updated/deleted/deleted_by_admin`.
+  Hesap anonimleştirilirken avatar da siliniyor.
+- **Kim:** `canCreateTeamAvatar` — operasyonel hesap ve (rol ≥ writer veya
+  çizer işareti, D-151). Okuyucuya kapalı; sayfa Türkçe bir "yalnızca ekibe
+  açık" ekranı gösteriyor. Hesapla ilişkilendirme otomatik (giriş yapan hesap);
+  ayrı bir "hesap seç" alanı yok, başkası adına avatar gönderilemiyor.
+  Yönetim `canManageTeamAvatars` (admin, 2FA'lı `requireRole("admin")`).
+- **Oluşturucu:** `/team/avatar`, site çerçevesi ve panel dışında kendi
+  sayfası; görünüşü bir CSS modülünde (global CSS değişmedi). 8 adım: Yüz,
+  Gözler, Burun & ağız, Saç, Takılar, Kıyafet, Detaylar, Gönder. Seçenek
+  kutucukları aynı renderer'la, üyenin kendi yüzünde o parçayı değiştirerek
+  kırpılmış küçük çizimler; renkler yuvarlak örnek. Rastgele / Sıfırla /
+  Kayıtlıya dön. Telefonda önizleme ve adım şeridi üstte yapışkan küçük bir
+  bant; geniş ekranda büyük önizleme solda. Ten tonları ad değil numarayla
+  ("Ten tonu 3"): ad vermek bir köken sınıflandırması gibi okunurdu.
+  Bağlantı yazar ve editör kenar çubuklarında "Ekip avatarım"; çizerlerin
+  paneli yok, adres onlarla paylaşılır (admin sayfasında yazılı).
+- **Admin:** `/admin/team-avatars` kart ızgarası (önizleme, isim, rol,
+  oluşturma/güncelleme, hesap, PNG İndir, Büyüt, ZIP için seçim kutusu,
+  Tümünü ZIP indir); `/admin/team-avatars/[id]` büyük önizleme (saklanan PNG,
+  damalı zeminde), Türkçe konfigürasyon tablosu ve ham JSON, silme.
+  İndirmeler route handler (`/api/admin/team-avatars/[id]/png`, `/zip`),
+  CSV indirmesiyle aynı kalıp. Dosya adı `isim-soyisim-avatar.png` (`slugify`,
+  Türkçe harfler çevrilir); ZIP'te aynı isim `-2` alır.
+- **ZIP bağımlılıksız** (`src/lib/zip.ts`): PNG zaten sıkıştırılmış olduğu
+  için "stored", UTF-8 adlar; arşiv dosya dosya akışla üretiliyor, Vercel'in
+  4,5 MB yanıt sınırına ve belleğe takılmıyor.
+
+**Hukuk:** Yeni kişisel veri → aydınlatma metni aynı adımda güncellendi:
+Bölüm 2 (Ekip avatarı satırı; ten tonu gibi seçimlerin özel nitelikli veri
+olarak istenmediği), Bölüm 3 (amaç ve hukuki sebep), Bölüm 4 (toplama yolu),
+Bölüm 6.2 (Cloudflare R2: ekip avatarı görselleri), Bölüm 7 (saklama: silene
+kadar; indirilen kopyalar sistem dışında). **Hukukçu görüşü gerekiyor:**
+(1) avatarın isim ve rolle sitede/sosyal medyada yayımlanmasının dayanağı —
+muhafazakâr olan uygulandı: metin ve oluşturucu "yalnızca onayınızla
+kullanılır" diyor, yani yönetim yayımlamadan önce üyenin onayını almalı (kodda
+bir yayımlama akışı yok, bu bir süreç yükümlülüğü); (2) ten tonu seçiminin
+KVKK m. 6 bakımından değerlendirilmesi — seçim çizim tercihi olarak sunuluyor,
+gerçek görünüşü yansıtması istenmiyor, hiçbir amaçla sınıflandırılmıyor.
+Metnin yeni sürümü, bekleyen adres nedeniyle henüz yayımlanmadı (bkz. önceki
+kararlar); bu satırlar o sürüme girecek.
+
+**Doğrulama:** `team-avatar.test.ts` (şema, eski kayıt okuma, dosya adı,
+her seçeneğin her kategoride çizilmesi, katman sırası, transparan tuval, ZIP
+başlıkları ve CRC, yetki) ve `team-avatars.test.ts` (gerçek PNG: 2048×2048
+RGBA; yeniden kayıt tek satır ve eski dosya silinir; okuyucu 403; katalog dışı
+400 ve hiçbir dosya yazılmaz; admin listesi/PNG/ZIP, diğerlerine 403; kayıp
+dosyanın yeniden çizilmesi; üye ve admin silmesi; anonimleştirme). Kapı:
+typecheck, lint, test, build. **Migration 0040** (`team_avatars`) üretimde
+kod yayımlanmadan önce uygulanmalı (D-079).
