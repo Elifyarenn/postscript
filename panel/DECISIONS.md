@@ -7957,3 +7957,35 @@ reddi, ikisi de olmayan kişi. Kapı: typecheck, lint, 689 test, build.
 `PersonName` geçirilebilir. Yazısı olan 25 kişiden 8'inin mahlası yok, yani
 profili gerçekten yok — bunun çözümü link değil, mahlas belirlemeleri
 (ayrı adım).
+
+
+## D-210 — Mahlası olmayana, geç olmadan söylenir
+
+**İstek (ürün sahibi):** D-209'un ardından, mahlası olmadığı için profili
+oluşmayan kişilere hatırlatma çıkarılması.
+
+**Durum:** Canlıda yazısı olan 25 kişiden 8'inin mahlası yok. Sonucu iki türlü:
+yazar sayfası hiç oluşmuyor (`pen_name_slug` null, sayfa 404) ve yayında künye
+`publicByline` kuralıyla **isimsiz** yazıyor — devir formunda açıkça "gerçek
+ad" seçilmediği sürece. İkisi de ancak yazı yayına girdiğinde fark ediliyor;
+o noktada düzeltmek geç.
+
+**Karar:** Uyarı iki yere kondu, ikisi de panelde:
+
+- **Yazarın kendi panelinde** (`/writer`), mahlası yoksa bir uyarı: yazının
+  isimsiz yayımlanacağı ve yazar sayfası olmayacağı, `/account`'a bağlantıyla.
+  Zaten orada duran "sözleşme" ve "duyuru" uyarılarıyla aynı biçimde.
+- **Yönetici panelinde** (`/admin`), mahlası olmayan yazar/editör/yöneticileri
+  sayan ve ilk sekizini kullanıcı sayfasına bağlayan bir kart.
+
+E-posta ile hatırlatma **yapılmadı**: bu bir yayın engeli değil, yazarın kendi
+tercihi olabilir (isimsiz yayımlanmak isteyebilir). Panelde görünen bir uyarı
+bilgilendirir, zorlamaz; e-posta ısrar gibi okunur. Gerekirse sonra
+`send-reminders` işine eklenebilir.
+
+**Hukuk:** Mahlas zorunlu hâle getirilmedi. İsimsiz yayın meşru bir seçimdir ve
+künyedeki adın rızaya bağlı olması (D-209, `publicByline`) korunuyor; uyarı
+yalnızca sonucu görünür kılıyor.
+
+**Doğrulama:** Kapı: typecheck, lint, 689 test, build. Uyarıların kendisi saf
+görüntü; davranış değişmediği için yeni test yazılmadı.

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, count, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import { guardPanel } from "@/lib/auth/guard";
@@ -36,6 +36,21 @@ export default async function AdminDashboard() {
     },
   ];
   const nothingPending = queues.every((queue) => queue.total === 0);
+
+  // A writer with no pen name is published without a name and has no author
+  // page; the byline rule is in `publicByline` (D-210)
+  const withoutPenName = await db
+    .select({ id: users.id, displayName: users.displayName })
+    .from(users)
+    .where(
+      and(
+        inArray(users.role, ["writer", "editor", "admin"]),
+        isNull(users.penName),
+        isNull(users.deletedAt),
+        eq(users.isBanned, false),
+      ),
+    )
+    .orderBy(asc(users.displayName));
 
   // Readers who could be promoted today, if the contract settings are in place
   const promotable = await db
@@ -153,6 +168,30 @@ export default async function AdminDashboard() {
                   ))}
                 </ul>
               )}
+            </div>
+          )}
+        </Card>
+
+        <Card>
+          <h2 className="mb-3 font-serif text-lg">Mahlası olmayanlar</h2>
+          {withoutPenName.length === 0 ? (
+            <p className="text-sm text-muted">Herkesin mahlası var.</p>
+          ) : (
+            <div className="text-sm">
+              <p>
+                <strong>{withoutPenName.length}</strong> kişinin mahlası yok. Yazıları
+                isimsiz yayımlanır (devir formunda gerçek adı seçmedikleri sürece) ve
+                okurun gidebileceği bir yazar sayfaları olmaz.
+              </p>
+              <ul className="mt-3 space-y-1 text-xs text-muted">
+                {withoutPenName.slice(0, 8).map((person) => (
+                  <li key={person.id}>
+                    <Link href={`/admin/users/${person.id}`} className="hover:underline">
+                      {person.displayName}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </Card>

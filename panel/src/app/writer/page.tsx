@@ -43,6 +43,18 @@ export default async function WriterDashboard() {
           </Alert>
         )}
 
+        {user.penName === null && (
+          <Alert tone="warning" title="Mahlasınız yok">
+            Yazınız yayına girdiğinde künyesinde <strong>mahlasınız</strong> yazar. Mahlas
+            belirlemezseniz yazı <strong>isimsiz</strong> yayımlanır — devir formunda
+            açıkça gerçek adınızı seçmediğiniz sürece — ve okurun gidebileceği bir yazar
+            sayfanız olmaz.{" "}
+            <Link href="/account" className="underline">
+              Hesabımdan mahlas belirleyin
+            </Link>
+          </Alert>
+        )}
+
         {pending.length > 0 && (
           <Alert tone="warning" title="Onayınız bekleyen duyuru var">
             <Link href="/writer/announcements" className="underline">
