@@ -28,7 +28,6 @@ import {
   DEFAULT_AVATAR_CONFIG,
   FIELDS,
   PRESETS,
-  hairFollowsTexture,
   TEAM_ROLE_SUGGESTIONS,
   randomAvatarConfig,
   type AvatarConfig,
@@ -42,7 +41,6 @@ import { historyReducer } from "@/lib/avatar/history";
 import { mix, shade } from "@/lib/avatar/geometry";
 import { SKIN_TONES } from "@/lib/avatar/assets/face";
 import { isImageHair } from "@/lib/avatar/assets/hair-images";
-import { HEADWEAR } from "@/lib/avatar/assets/accessories";
 import { bodyFont, noteFont } from "@/lib/fonts";
 import type { ActionState } from "./form";
 import styles from "./team-avatar-builder.module.css";
@@ -181,12 +179,7 @@ export function TeamAvatarBuilder({
   }, [saveState, deleteState]);
 
   const category = CATEGORIES.find((entry) => entry.id === view);
-  const choiceFields = (category?.fields ?? []).filter(
-    (key) =>
-      FIELDS[key].kind !== "color" &&
-      // A hand-drawn or picture style carries its own texture (D-202)
-      !(key === "hairTexture" && !hairFollowsTexture(config.hairStyle)),
-  ) as FieldKey[];
+  const choiceFields = (category?.fields ?? []).filter((key) => FIELDS[key].kind !== "color") as FieldKey[];
   const colorFields = (category?.fields ?? []).filter((key) => FIELDS[key].kind === "color") as FieldKey[];
   const activeTab = tab && choiceFields.includes(tab) ? tab : (choiceFields[0] ?? null);
   const viewIndex = VIEWS.indexOf(view);
@@ -403,18 +396,10 @@ export function TeamAvatarBuilder({
 
                 {activeTab && <OptionGrid fieldKey={activeTab} config={config} onPick={set} onToggle={toggle} />}
 
-                {view === "hair" && !hairFollowsTexture(config.hairStyle) && (
-                  <p className={styles.hint}>
-                    Bu saç modelinin dokusu çiziminden gelir; doku seçimi bu modelde görünmez.
-                  </p>
-                )}
-
                 {colorFields.map((key) => {
                   const field: Field = FIELDS[key];
                   // A frame colour means nothing without a frame
                   if (key === "glassesColor" && config.glasses === "none") return null;
-                  // Nor a hat colour without a hat (D-203)
-                  if (key === "headwearColor" && !config.extras.some((id) => HEADWEAR.has(id))) return null;
                   // A ready-made hair picture carries its own colour (D-200)
                   const fixedByPicture = key === "hairColor" && isImageHair(config.hairStyle);
                   return (

@@ -7784,236 +7784,51 @@ rengiyle boyanması, yolların kafaya ölçeklenmesi. Kapı: typecheck, lint, te
 build.
 
 
-## D-202 — Doku sekmesi yalnızca dokuya uyan modellerde
+## D-207 — 20 Eylül 2026'da yapılan saç çalışması geri alındı
 
-**İstek (ürün sahibi):** "Dokuları o modellerde gizle" — elle çizilmiş
-(D-201) ve hazır görsel (D-200) saç modelleri saç dokusu seçimine uymuyordu,
-ama oluşturucu yine de "Saç Dokusu" sekmesini gösteriyordu; seçim hiçbir şeyi
-değiştirmiyordu.
+**Not:** D-202…D-206 numaraları **kullanılmıştır ve geri alınmıştır**; bu
+dosyada yoklar. Numaralar yeniden kullanılmaz, o yüzden sıra D-207'den devam
+eder. İçerikleri `git log` içinde `step 123`…`step 127` commit'lerinde durur.
 
-**Karar:** `hairFollowsTexture(hairStyleId)` tek soru noktası oldu: üretilmiş
-modeller için doğru, elle çizilmiş ve görsel modeller için yanlış. Oluşturucu,
-yanlış olduğunda "Saç Dokusu" sekmesini hiç göstermiyor ve Saç kategorisinin
-altında "bu modelin dokusu çiziminden gelir" notunu yazıyor. Doku değeri
-konfigürasyonda kalmaya devam ediyor (kullanıcı üretilmiş bir modele
-döndüğünde son seçimi yerinde bulur).
+**İstek (ürün sahibi):** "Bugün yapılan tüm değişiklikleri sil." Kapsam ve
+yöntem soruldu: **bugünkü beş commit'in tamamı**, **geri alma commit'iyle**
+(force push yok, geçmiş korunuyor).
 
-**Hukuk:** Değişiklik yok.
+**Geri alınanlar (`step 123`…`step 127`):**
 
-**Doğrulama:** `team-avatar.test.ts`: `hairFollowsTexture` ayrımı ve elle
-çizilmiş bir modelde doku değişiminin çizimi hiç değiştirmemesi. Kapı:
-typecheck, lint, test, build.
+- **D-202** — kendi dokusunu taşıyan saç modellerinde doku sekmesinin
+  gizlenmesi.
+- **D-203** — şapka/berenin kıyafetten ayrı kendi rengi (`headwearColor`,
+  konfigürasyon sürümü 3), saçın tek form olarak çizilmesi, askılı üstün
+  omzu saran askısı.
+- **D-204** — ortak kafa anchor'ları üzerine kurulu, şekil tabanlı yeni saç
+  sistemi (`assets/hair-shapes.ts`) ve onunla çizilen altı model.
+- **D-205, D-206** — o altı modelden ikisinin (orta ayrım, perdeli) organik
+  kütlelerle ve referans sayfasına göre yeniden çizilmesi.
 
+**Gerekçe:** Şekil tabanlı saç sistemi üç turda da görsel olarak kabul
+edilmedi. Ürün sahibi çalışmanın tamamının geri alınmasını istedi.
 
-## D-203 — Şapka kendi rengini alır, saç tek form, askı omzu sarar
+**Sonuç:** Saç kataloğu `step 122` hâlindeki tutam tabanlı sisteme
+(`assets/hair.ts`, D-196…D-201) döndü: 16 üretilmiş model, elle çizilmiş
+"Düz 01" ve örnek görsel saç. `AVATAR_CONFIG_VERSION` yeniden 2.
+`LAYER_ORDER`'dan `baseHair`/`sideHair`/`bangs`/`hairDetails` katmanları,
+`face.ts`'ten `HEAD_ANCHORS`/`SKULL_RIGHT` çıktı.
 
-**İstek (ürün sahibi):** "Şapka ve bere kıyafet rengini almasın ve perçemleri
-ayrı formda yapma saçı ve perçemleri tek saç formunda yap ve askılı da askı
-yarım kalıyor omzu sarmıyor."
+**Bugün kaydedilmiş avatarlar için:** Sürüm 3 kaydedilmiş bir konfigürasyon
+sürüm 2 koduyla okunduğunda `parseStoredConfig` anahtar anahtar geri düşer;
+`headwearColor` atılır, kayıt geçerli kalır. Yalnızca bugün eklenen
+`straightCenter`/`shortStraight` saç modelini seçmiş bir avatar varsa o alan
+varsayılana döner — avatarın geri kalanı korunur. Veritabanı şeması
+değişmediği için migration gerekmedi.
 
-**Karar — üç ayrı düzeltme:**
+**Tekrar denenecekse:** Reddedilme sebebi üslup, mimari değil. Şekil tabanlı
+yaklaşım (veri olarak geometri, ortak anchor'lar, tek çizici) çalışıyordu;
+kabul edilmeyen, çizimlerin kask/peruk gibi durmasıydı. Aynı sisteme yeniden
+girmeden önce ürün sahibinden onaylı bir görsel hedef alınmalı.
 
-**1. Şapka rengi.** Şapka, örgü bere ve bere `palette.clothing` kullanıyordu;
-siyah bir kapüşonlunun üstüne siyah bereden başkası çıkmıyordu. Kendi alanı
-oldu: `headwearColor` (15 renk, `HEADWEAR_COLORS`), paletin `headwear` anahtarı
-üzerinden. Oluşturucuda renk, gözlük çerçevesi gibi, yalnızca bir şapka
-takılıyken görünür. Konfigürasyon sürümü 3'e çıktı; eski bir kayıtta şapka
-rengi yoksa kıyafet renginden alınır, yani eski avatarlar aynı görünür.
+**Hukuk:** Değişiklik yok. `pic/` altındaki referans görseller depoya hiçbir
+zaman girmedi.
 
-**2. Saç tek form.** Perçem, kâkül ve yan tutamlar ayrı ayrı çizilip her
-birine kendi mürekkep konturu veriliyordu: saçın üstüne yapıştırılmış parçalar
-gibi duruyordu. `hairForm` geldi: tüm parçalar önce mürekkeple çizilip sonra
-üstlerine boya basılır, böylece parçaların iç konturları boyanın altında
-kalır, dışarıda yalnızca **tek bir siluet** kalır. Gölge de tek bir kırpma
-yolu (birleşik clip) ile tüm forma bir kez uygulanır. Tutamlar hâlâ okunur:
-siluetteki sivri uçlar ve içeride ince akış çizgileri olarak.
-
-Saçın ortasında bir yan etki çıktı: perçem ortadan ikiye ayrılırken altta kalan
-ten, etrafı saçla çevrili bir **ada** gibi görünüyordu (parçalar ayrıyken göze
-batmıyordu). Ortadan ayrılmayan modellere `crown` kaması eklendi; ortadan
-ayrılan modeller (perdeli, uzun) o açıklığı bilerek koruyor.
-
-**3. Askı.** Askılı üstün askısı y≈800'de bitip havada kalıyordu; omuz çizgisi
-y≈755'te. Askı artık omuz konturuna kadar çıkıp omzun arkasından iniyor,
-üstünde katlanmayı gösteren bir dikiş çizgisi var.
-
-**Hukuk:** Değişiklik yok; yeni kişisel veri alanı yok (şapka rengi de
-katalogdan gelen bir kimlik).
-
-**Doğrulama:** `team-avatar.test.ts`: şapkanın kıyafet rengiyle değişmemesi,
-eski kaydın şapka rengini kıyafetten devralması, ön saç katmanında tek bir saç
-kırpma yolu olması, ortadan ayrılan modelin kamayı almaması. Kapı: typecheck,
-lint, 690 test, build. Ayrıca 16 saç modeli, örnek avatarlar, şapkalar ve
-askılı üst PNG'ye basılıp gözle kontrol edildi.
-
-
-## D-204 — Saç: tutamlar yerine büyük şekiller
-
-**İstek (ürün sahibi):** `avatarprompt.txt` yeniden yazıldı. Özeti: saç
-modelleri birbirinden kopuk görünüyor, her biri başka bir çizim mantığı
-kullanıyor. Picrew tarzı, aynı kafa tabanı üzerinde çalışan, tutarlı bir SVG
-saç sistemi kurulsun. Yüz, kafa boyutu ve konumu değişmesin. Gerçekçi saç teli,
-onlarca ince çizgi, anime sivri perçem, yüze rastgele tutam, parlak highlight,
-gradient ve 3B görünüm yok. Model başına 3–8 ana şekil, en çok 3–6 detay
-çizgisi. Renk gömülü olmasın. Önce yalnızca altı model: düz orta ayrım, düz yan
-ayrım, kısa düz, perdeli, katlı (wolf), pixie — bunlar düzgün olmadan diğerleri
-elden geçirilmesin.
-
-**Karar:** İkinci bir saç sistemi kuruldu, `assets/hair-shapes.ts`. Bir model
-yalnızca **veri**: kapalı şekillerin nokta listeleri ve birkaç açık çizgi. Tek
-bir çizici (`shapeHairStyle`) bunları katmanlara basar. Altı model bu sistemde;
-kataloğun başında duruyorlar.
-
-**Ortak kafa noktaları.** `face.ts` artık `HEAD_ANCHORS` (headTop,
-foreheadCenter, sol/sağ şakak, sol/sağ kulak üstü, sol/sağ çene, boyun) ve
-`SKULL_RIGHT` (kafatası kenarının sağ yarısı) veriyor. Bütün saç şekilleri
-bunların üzerine kurulu; saç değişince yüz, göz, kaş, burun, ağız, kulak ve
-boyun yerinden oynamıyor.
-
-**Katman sırası.** `LAYER_ORDER`'a dört katman eklendi (brief'in sırasıyla):
-`backHair` → kulaklar → **`baseHair`** → yüz → `sideHair` → `bangs` →
-`hairDetails`. Kritik olan `baseHair`'in **yüzün altında** olması: alın her
-zaman temiz ten kalıyor, saç çizgisini üstteki parçalar çiziyor. Bu, saçın
-kafaya yapıştırılmış peruk gibi durmasını yapısal olarak engelliyor.
-
-**Tek form.** Her ön parça kafatasının kendi kenarından (`SKULL_RIGHT`)
-başlıyor; konturu tabanın konturuyla çakıştığı için aralarında dikiş
-görünmüyor. Ayrıca ayrılmalı modellerde perçem ile yüzü çerçeveleyen parça **tek
-şekil**: parçanın iç kenarı aşağıda yüzü çerçeveliyor, yukarıda saç çizgisine
-dönüşüyor. Önceki denemede bu iki parça ayrıyken birleştikleri yerde çengel
-çıkıyordu.
-
-**Saç çizgisi.** Ayrımdan neredeyse yatay çıkıp şakakta aşağı dönen bir eğri.
-Ayrımdan şakağa düz inen bir çizgi keskin V veriyor ve alnı çadıra çeviriyor;
-brief bunu ayrıca yasaklıyor.
-
-**Renk.** Brief `--hair-color`, `--hair-shadow`, `--hair-line` CSS
-değişkenlerini istiyordu. PNG sunucuda satori/resvg ile üretiliyor ve orada CSS
-özel değişkenleri çözülmüyor; bu yüzden aynı işi mevcut palet görüyor: dolgu
-`palette.hair`, gölge şekilleri `palette.hairShade`, ince çizgiler
-`palette.hairStrand` (koyu saçta açılır, açık saçta koyulur; ortak mürekkep
-kontur zaten `INK`). Geometri renkten tamamen bağımsız — test bunu doğruluyor.
-
-**Değiştirilen modeller.** `sidePart`, `curtain`, `wolf`, `pixie` eski tutam
-sisteminden çıkarılıp aynı kimliklerle yeni sistemde yeniden çizildi; kayıtlı
-avatarlar geçerli kalıyor, yalnızca daha temiz çiziliyorlar. `straightCenter`
-ve `shortStraight` yeni kimlikler. Kataloğun kalan 12 modeli brief'in dediği
-gibi şimdilik eski sistemde (`hair.ts`, D-196…D-203).
-
-**Sınır:** Şekil modelleri saç dokusu (düz/dalgalı/kıvırcık) seçimine uymuyor;
-zaten hepsi düz saç modelleri. `hairFollowsTexture` onları da dışarıda
-bırakıyor, yani oluşturucu doku sekmesini göstermiyor (D-202).
-
-**Hukuk:** Değişiklik yok; çizim bize ait, üçüncü taraf görseli yok.
-
-**Doğrulama:** `team-avatar.test.ts`: altısının katalog başında olması, şekil
-katmanlarına çizmesi, `baseHair`'in yüzün altında kalması, saç rengi değişince
-**tek bir yol dizesinin bile değişmemesi**, doku sekmesinin gizlenmesi. Kapı:
-typecheck, lint, 695 test, build. Ayrıca altı model üç ten/saç renginde
-(siyah/açık ten, kahve/koyu ten, sarı/orta ten) ve kıyafet + şapka + gözlükle
-PNG'ye basılıp yan yana gözle karşılaştırıldı.
-
-
-## D-205 — Şekil saçı organik kütlelere çevirme (önce iki model)
-
-**İstek (ürün sahibi):** D-204'ün altı modeli görsel olarak reddedildi. "Saçlar
-insan saçı gibi değil, kafanın üzerine geçirilmiş katı geometrik kask/peruklar
-gibi." Mimari (ortak koordinat sistemi, tek çizici, renk değişkenleri, aynı
-asset'in küçük önizlemede kullanılması) kalsın, **geometri** yeniden çizilsin.
-Hedef: Picrew / editorial cartoon estetiği — temiz vektör ama geometrik değil,
-organik eğriler, hafif asimetri, gerçek saç kütleleri, birkaç kontrollü tutam.
-"Minimal SVG" tek parça geometrik şekil demek değil; gerekiyorsa model başına
-8–15 yol kullanılabilir. Önce yalnızca **düz orta ayrım** ve **perdeli**;
-bunlar tutmadan sistem genişletilmesin, diğer dörde dokunulmasın.
-
-**Karar — neyi değiştirdik:**
-
-1. **Hacim.** Saç artık kafatasının tam sınırından başlamıyor. `CROWN`, kafa
-   yüksekliğinin birkaç yüzdesi kadar üstte duran, kendi kendisinin aynası
-   olmayan bir taç; yüzün altında kapanıyor. Kafatasına yapışan kontur kaskı
-   doğuruyordu.
-2. **Üst üste binen kütleler.** Tek bir "ön parça" yerine, yüzü çerçeveleyen
-   kütleler + arkadaki uzunluk + (perdelide) ayrı perçem katmanı. Perçem ile
-   uzun saç **aynı şekil değil**; brief bunu ayrıca istiyordu.
-3. **Uçlar.** Tek yatay kesim yok: her kütlenin alt kenarı iki farklı
-   yükseklikte uçla bitiyor. İlk denemede bu girintiler diş gibi sivriydi,
-   sığlaştırıldı.
-4. **Yüzü çerçeveleme.** Kütlelerin iç kenarı elmacık kemiğini ve çene hattını
-   takip ediyor; düz dikey blok değil.
-5. **Perdeli.** Ayrımdan çıkıp aşağı, dışarı, sonra elmacık kemiğine dönen bir
-   eğri; uç sivrilerek bitiyor, gözün dışında ve altında kalıyor. Alnın merkezi
-   açık. Arkasında ana saç kendi katmanında devam ediyor.
-6. **İç çizgiler.** Her modelde altı ince çizgi, saçın aktığı yönü anlatıyor:
-   ayrımdan dışarı ve aşağı. İlk denemede bu çizgiler alında **tenin üzerine**
-   düşüyordu; saç sınırının içine alındı.
-
-**Yan etki:** `straightCenter` artık `bangs` katmanını hiç kullanmıyor — orta
-ayrımda perçem yoktur, ön kütleler `sideHair`'dedir. Test buna göre düzeltildi;
-`curtain` ise perçemi ayrı katmanda tutuyor.
-
-**Dokunulmayanlar:** `sidePart`, `shortStraight`, `wolf`, `pixie` hâlâ D-204
-geometrisinde. Ürün sahibi bu ikisini onaylamadan diğerleri elden geçirilmeyecek.
-
-**Hukuk:** Değişiklik yok.
-
-**Doğrulama:** Kapı: typecheck, lint, 696 test, build. `team-avatar.test.ts`
-şekil katmanlarını, perçemin uzunluğun önünde olmasını ve saç rengi değişince
-geometrinin hiç değişmemesini doğruluyor. İki model dört saç renginde (koyu
-kahve, sarı, siyah, bakır) ve dört ten tonunda PNG'ye basılıp gözle kontrol
-edildi; üç geçişte düzeltildi (yüzde asılı kalan tutamlar, fazla kubbeli taç,
-küt perçem ucu, diş gibi uç girintileri).
-
-
-## D-206 — Referans sayfasına göre iki usta model
-
-**İstek (ürün sahibi):** `pic/ChatGPT Image 20 Eyl 2026 14_20_59.png` bir **görsel
-referans** olarak verildi: altı saç modelinin ön/yan/arka/detay görünümleri.
-Açık talimat: görseli uygulamaya asset olarak ekleme, crop etme, gömme,
-base64'e çevirme, piksellerini kopyalama. Yalnızca siluet, oturuş, ayrım,
-çerçeveleme, katman mantığı, tutam yönü ve uzunluk anlaşılsın; sonra **projeye
-özgü, orijinal SVG geometrisi** yazılsın. Önce yalnızca **01 düz orta ayrım**
-ve **03 perdeli**; bunlar "master hair style" referansımız olacak, diğerlerine
-dokunulmayacak. D-205 geometrisi yamanmasın, sıfırdan yazılsın.
-
-**Görselin kullanımı:** Dosya `pic/` altında, depoya **girmedi** ve koda hiçbir
-biçimde kopyalanmadı; yalnızca okunup analiz edildi. Kodda ondan türeyen tek
-şey sayısal koordinatlar — bizim kafa anchor'larımıza göre elle yazılmış
-noktalar (FSEK açısından güvenli taraf: üçüncü taraf görseli yayına girmiyor).
-
-**Referanstan çıkarılan ilkeler:** taç kafatasının üstünde belirgin hacim
-bırakıyor; kütle kulak hizasında kafadan dışa taşıyor; saç çizgisi şakakları
-örtüyor ve alnın ortası yumuşak bir açıklık olarak kalıyor; ayrım ince tek bir
-çizgi; uçlar tek yatay kesim değil yumuşak ve farklı yüksekliklerde; perdelide
-ön parçalar **ayrı bir katman**, arkalarında uzun ana kütle devam ediyor.
-
-**Karar — sıfırdan yazılan geometri:**
-
-- **Taç (`CROWN`).** Kafa yüksekliğinin ~%5–10'u kadar üstte; kendi aynası
-  değil. D-205'te bile fazla kubbeliydi, referansa göre yeniden ölçüldü.
-- **Orta ayrım.** Arkada tek uzun kütle; önde yüzü çerçeveleyen iki kütle.
-  İki kütle ortada **birbirinin üstüne biniyor**; aralarında ince bir boşluk
-  bırakmak alna aşağı doğru sivrilen bir diken çiziyordu. Sol kütle sonra
-  çizildiği için ayrım onun kenarı: merkezin biraz solunda tek bir çizgi.
-- **Uçlar.** Önce iki sivri uç + derin çentik denendi, diş gibi göründü;
-  yumuşak, hafif asimetrik, yuvarlatılmış uçla değiştirildi.
-- **Perdeli.** Ön parçalar ayrımdan çıkıp aşağı, dışarı, sonra elmacık
-  kemiğine dönüyor ve çene hizasında sivrilerek bitiyor. Dış kenarları arkadaki
-  uzun kütlenin **içinde** kalıyor, böylece uzun saç dışarıda ve altta
-  görünüyor; iki katman olarak okunuyor. Alnın ortası orta ayrımdakinden daha
-  geniş açık.
-- **İç çizgiler.** Model başına yedi ince çizgi; ayrımdan dışarı/aşağı ve
-  uzunluk boyunca. Hepsi saç sınırının içinde (D-205'te bir kısmı alında tenin
-  üzerine düşüyordu).
-
-**Sınır:** `sidePart`, `shortStraight`, `wolf`, `pixie` hâlâ D-204
-geometrisinde. Ürün sahibi bu iki modeli onaylamadan diğerleri elden
-geçirilmeyecek.
-
-**Hukuk:** Referans görsel yayınlanmıyor, gömülmüyor, kopyalanmıyor; koddaki
-geometri özgün. Aydınlatma metnini ilgilendiren değişiklik yok.
-
-**Doğrulama:** Kapı: typecheck, lint, 696 test, build. İki model dört saç
-rengi × dört ten tonunda ve ayrıca seçim panelindeki küçük önizleme kırpımında
-(aynı asset, yalnızca kırpılmış) PNG'ye basılıp gözle kontrol edildi; dört
-geçişte düzeltildi (ayrımdaki diken, diş gibi uçlar, yüksek kalan saç çizgisi,
-perdelinin orta ayrımdan ayrışmaması).
+**Doğrulama:** Geri alma sonrası ağaç `step 122` ile bire bir aynı
+(`git diff f08688e -- panel` boş). Kapı: typecheck, lint, 684 test, build.

@@ -433,28 +433,6 @@ indirir. **Yeni bir parça eklemek:** ilgili `assets/` listesine bir kayıt
 (kimlik, ad, katman çizimleri); gerekiyorsa `registry.ts`'te bir alan ve
 kategorisi.
 
-**Şekillerden saç (D-204).** Kataloğun başındaki altı model — düz orta ayrım,
-düz yan ayrım, kısa düz, perdeli, katlı, pixie — tutam tutam değil, büyük ve
-temiz şekillerle çizilir: `src/lib/avatar/assets/hair-shapes.ts`. Bir model
-yalnızca geometridir; üç ila sekiz kapalı şekil ve en çok altı ince çizgi.
-Şekiller `face.ts`'teki ortak kafa noktalarına (`HEAD_ANCHORS`, `SKULL_RIGHT`)
-oturur, yani saç değişince yüz yerinden oynamaz.
-
-Katman sırası şudur: `backHair` kafanın arkasında, `baseHair` kulakların
-üstünde ama **yüzün altında** (böylece alın her zaman temiz ten kalır ve saç
-çizgisini üstteki parçalar çizer), sonra `sideHair`, `bangs` ve `hairDetails`
-yüzün üstünde. Her ön parça kafatasının kendi kenarından başlar; konturu tabanın
-konturuyla çakışır, saç tek form gibi okunur.
-
-Renk geometride durmaz: dolgu seçilen saç rengi, birkaç gölge şekli onun koyu
-tonu, ince çizgiler paletin çizgi rengidir (brief'teki `--hair-color`,
-`--hair-shadow`, `--hair-line`; PNG sunucuda üretildiği için CSS değişkeni
-çözülmez, paletteki karşılıkları kullanılır). Yeni model eklemek: `SHAPE_HAIR`
-listesine bir kayıt; başka hiçbir yere dokunmak gerekmez. Bu modeller saç
-dokusu seçimine uymaz. Kataloğun geri kalanı hâlâ eski tutam tabanlı sistemle
-(`hair.ts`, D-196…D-203) çizilir; ürün sahibinin isteğiyle önce bu altısı
-oturtuldu.
-
 **Elle çizilmiş yollardan saç (D-201).** Bir saç modeli, kendi kutusuna (ör.
 400×400) çizilmiş SVG yolları olarak da eklenebilir:
 `src/lib/avatar/assets/hair-paths.ts` içindeki `PATH_HAIR` listesine arka/ön yol

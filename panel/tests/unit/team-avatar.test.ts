@@ -13,7 +13,6 @@ import {
   avatarConfigSchema,
   avatarFileName,
   describeConfig,
-  hairFollowsTexture,
   parseStoredConfig,
   randomAvatarConfig,
   teamAvatarDetailsSchema,
@@ -224,21 +223,6 @@ describe("renderAvatarSvg", () => {
   });
 });
 
-describe("which styles follow the texture choice (D-202)", () => {
-  it("is true for the generated styles and false for drawn or picture ones", () => {
-    expect(hairFollowsTexture("messy")).toBe(true);
-    expect(hairFollowsTexture("long")).toBe(true);
-    expect(hairFollowsTexture("straight01")).toBe(false);
-    expect(hairFollowsTexture("imageSample")).toBe(false);
-  });
-
-  it("does not change what such a style draws", () => {
-    const straight = renderAvatarSvg(avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "straight01", hairTexture: "straight" }));
-    const coily = renderAvatarSvg(avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "straight01", hairTexture: "coily" }));
-    expect(straight).toBe(coily);
-  });
-});
-
 describe("hand-drawn path hair (D-201)", () => {
   it("is in the catalogue and takes the chosen hair colour", () => {
     const ids = FIELDS.hairStyle.options.map((option) => option.id);
@@ -273,92 +257,6 @@ describe("picture-based hair (D-200)", () => {
 
   it("leaves the drawn styles free of pictures", () => {
     expect(renderAvatarSvg(DEFAULT_AVATAR_CONFIG)).not.toContain("<image");
-  });
-});
-
-describe("a hat's own colour (D-203)", () => {
-  const withCap = (overrides: Record<string, unknown>) =>
-    avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, extras: ["cap"], ...overrides });
-  const accessories = (config: ReturnType<typeof avatarConfigSchema.parse>) =>
-    renderAvatarLayers(config).find((part) => part.layer === "accessories")!.svg;
-
-  it("follows the hat colour and not the clothing colour", () => {
-    const base = accessories(withCap({ headwearColor: "red", clothingColor: "black" }));
-    expect(accessories(withCap({ headwearColor: "red", clothingColor: "mustard" }))).toBe(base);
-    expect(accessories(withCap({ headwearColor: "navy", clothingColor: "black" }))).not.toBe(base);
-  });
-
-  it("gives an older record the colour its hat used to take from the clothes", () => {
-    // A stored v2 record has no hat colour of its own
-    const { headwearColor: _dropped, ...stored } = { ...DEFAULT_AVATAR_CONFIG, v: 2, clothingColor: "navy" };
-    const parsed = parseStoredConfig(stored);
-    expect(parsed.headwearColor).toBe("navy");
-    expect(parsed.v).toBe(AVATAR_CONFIG_VERSION);
-  });
-});
-
-describe("hair drawn as one form (D-203)", () => {
-  const frontHair = (overrides: Record<string, unknown>) =>
-    renderAvatarLayers(avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, ...overrides })).find(
-      (part) => part.layer === "frontHair",
-    )!.svg;
-
-  it("shades the cap, the canopy and the fringe through a single clip", () => {
-    // One clip for the hair itself, one for the shadow it casts on the face
-    const svg = frontHair({ hairStyle: "messy" });
-    expect(svg.match(/<clipPath /g)).toHaveLength(2);
-    expect(svg).toContain('id="frontHair-hair"');
-  });
-
-  it("closes the crown, so a fringe that parts leaves no hole in the middle", () => {
-    expect(frontHair({ hairStyle: "messy" })).toContain("M512 240");
-    // A style meant to part in the middle keeps its opening
-    expect(frontHair({ hairStyle: "long" })).not.toContain("M512 240");
-  });
-});
-
-describe("hair built from shapes (D-204)", () => {
-  const layers = (overrides: Record<string, unknown>) =>
-    renderAvatarLayers(avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, ...overrides }));
-  const layerNames = (overrides: Record<string, unknown>) => layers(overrides).map((part) => part.layer);
-
-  it("offers the six styles first, so they lead the catalogue", () => {
-    const ids = FIELDS.hairStyle.options.map((option) => option.id);
-    expect(ids.slice(0, 6)).toEqual(["straightCenter", "sidePart", "shortStraight", "curtain", "wolf", "pixie"]);
-  });
-
-  it("draws into the shape layers and not into the old front hair one", () => {
-    const names = layerNames({ hairStyle: "straightCenter" });
-    expect(names).toContain("baseHair");
-    // A centre parting has no fringe: its front masses are the side pieces
-    expect(names).toContain("sideHair");
-    expect(names).toContain("hairDetails");
-    expect(names).not.toContain("frontHair");
-  });
-
-  it("keeps a curtain fringe on its own layer, in front of the length", () => {
-    const names = layerNames({ hairStyle: "curtain" });
-    expect(names).toContain("bangs");
-    expect(names.indexOf("sideHair")).toBeLessThan(names.indexOf("bangs"));
-  });
-
-  it("puts the volume on the skull under the face, so the forehead stays skin", () => {
-    const names = layerNames({ hairStyle: "pixie" });
-    expect(names.indexOf("baseHair")).toBeLessThan(names.indexOf("face"));
-    expect(names.indexOf("face")).toBeLessThan(names.indexOf("bangs"));
-  });
-
-  it("changes nothing but the colours when the hair colour changes", () => {
-    const geometry = (hairColor: string) =>
-      renderAvatarSvg(avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "curtain", hairColor }))
-        .match(/ d="[^"]+"/g);
-    expect(geometry("blonde")).toEqual(geometry("black"));
-    expect(geometry("blonde")).not.toEqual(null);
-  });
-
-  it("carries its own texture, so the texture tab stays hidden", () => {
-    expect(hairFollowsTexture("straightCenter")).toBe(false);
-    expect(hairFollowsTexture("pixie")).toBe(false);
   });
 });
 

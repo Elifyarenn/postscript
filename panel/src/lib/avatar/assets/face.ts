@@ -33,40 +33,6 @@ export const FACE_OUTLINES: Record<string, Point[]> = {
 /** The default face's widest point; ears move out by however much wider a face is. */
 export const EAR_BASE_X = 732;
 
-/**
- * The named points of the head, in head space (D-204). Hair is built on these
- * rather than on numbers copied into each style, so every hair style sits on
- * the same skull and changing the hair never moves the face.
- *
- * `headTop` is the top of the *hair*, a little above the face outline, because
- * hair has volume; the face's own top is `FACE_OUTLINES[...][0]`.
- */
-export const HEAD_ANCHORS = {
-  headTop: [512, 184],
-  foreheadCenter: [512, 330],
-  leftTemple: [342, 316],
-  rightTemple: [682, 316],
-  leftEarTop: [276, 506],
-  rightEarTop: [748, 506],
-  leftJawArea: [328, 642],
-  rightJawArea: [696, 642],
-  neckCenter: [512, 774],
-} as const satisfies Record<string, Point>;
-
-/**
- * The skull's right half, from the top centre down to below the temple: the
- * outer edge every hair style shares, so the silhouettes agree (D-204).
- */
-export const SKULL_RIGHT: Point[] = [
-  HEAD_ANCHORS.headTop,
-  [610, 192],
-  [690, 228],
-  [742, 292],
-  [766, 368],
-  // Just below the temple, where the hair starts falling beside the face
-  [772, 452],
-];
-
 const SHOULDERS_RIGHT: Point[] = [[606, 752], [722, 772], [834, 812], [912, 880], [950, 1060]];
 
 /** Shoulders with a given neckline (canvas space), listed left to right across the neck. */

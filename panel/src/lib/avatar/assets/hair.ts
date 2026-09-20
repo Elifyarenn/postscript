@@ -4,13 +4,9 @@
  * Hair is built from many thin locks rather than a few wide wedges, which is
  * what the reference drawing does: a soft base underneath, a canopy of locks
  * fanning from the crown that forms the silhouette with pointed tips, a fringe
- * over the forehead and side locks that fall past the ears. Stray tufts break
- * the outline, so it never reads as a helmet.
- *
- * The locks are not drawn as separate outlined pieces: they are merged into a
- * single hair form (see `hairForm`, D-203), so the fringe belongs to the hair
- * instead of looking like a shape laid on top of it. The locks still show, as
- * points along the silhouette and as flow lines inside it.
+ * of separate strands over the forehead with gaps between them, and side locks
+ * that fall past the ears. Stray tufts break the outline, so it never reads as
+ * a helmet.
  *
  * Locks come from `fan(...)`: roots spread along one line, tips along another,
  * with a fixed amount of variation per lock, so a whole style is a handful of
@@ -35,7 +31,6 @@ import {
   type Lock,
   type Point,
   type ShapePoint,
-  type Texture,
 } from "../geometry";
 import type { Asset, ColorOption } from "./types";
 
@@ -262,87 +257,44 @@ type HairStyle = {
   buzz?: boolean;
   /** Draws the notch where the hair parts in the middle, as the references do. */
   part?: boolean;
-  /** Closes the crown at the middle, for a fringe that covers the forehead. */
-  crown?: boolean;
   /** Fine hairs escaping the silhouette; every style but the shortest has them. */
   wisps?: boolean;
 };
 
-/** A piece of the hair form: a closed shape (cap, mass, lock) or a stroked ringlet. */
-type Piece = { d: string; width?: number };
-
-/** A list of locks as pieces: each lock's outline, plus its ringlet if it has one. */
-function lockPieces(locks: readonly Lock[], texture: Texture): Piece[] {
-  return locks.flatMap((lock) => {
-    // Curly and coily hair ends in a ringlet, the way the reference sheets draw it
-    const curl = lockCurl(lock, texture);
-    const outline: Piece = { d: lockPath(lock, texture) };
-    return curl ? [outline, { d: curl.d, width: curl.width }] : [outline];
-  });
-}
-
-/**
- * Draws the cap, the canopy, the side locks and the fringe as ONE hair form
- * (D-203).
- *
- * Every piece is stroked in ink first and only then filled, so a piece's own
- * outline survives just where nothing is drawn over it — the silhouette. The
- * fringe stops being a shape glued onto the hair: it is the same form, with
- * the locks reading as line work inside it and as points along its edge.
- *
- * One clip path over all the pieces gives the whole form a single step of cel
- * shade, instead of one shadow per lock.
- */
-function hairForm(
-  context: DrawContext,
-  name: string,
-  pieces: readonly Piece[],
-  base: string,
-  shadow: string,
-  lift: Point = [0, 12],
-): string {
-  if (pieces.length === 0) return "";
-  const id = context.id(name);
-  context.def(`<clipPath id="${id}">${pieces.map((piece) => `<path d="${piece.d}"/>`).join("")}</clipPath>`);
-  const paint = (color: string) =>
-    pieces.map((piece) => (piece.width ? stroke(piece.d, piece.width, color) : fill(piece.d, color))).join("");
-  // Half of this stroke sits outside the shape; the fills cover the rest
-  const ink = pieces
-    .map((piece) =>
-      piece.width
-        ? stroke(piece.d, piece.width + OUTLINE * 2, INK)
-        : `<path d="${piece.d}" fill="${INK}" stroke="${INK}" stroke-width="${OUTLINE * 2}"/>`,
-    )
+function drawLocks(context: DrawContext, locks: readonly Lock[], back = false): string {
+  const { hair, hairShade, hairDeep, hairStrand } = context.palette;
+  return locks
+    .map((lock) => {
+      const d = lockPath(lock, context.texture);
+      // Curly and coily hair ends in a ringlet, the way the reference sheets draw it
+      const curl = lockCurl(lock, context.texture);
+      const ringlet = curl
+        ? stroke(curl.d, curl.width + 4, INK) + stroke(curl.d, curl.width, back ? hairShade : hair)
+        : "";
+      // A darker copy just behind each lock separates it from the one beneath
+      return (
+        fill(d, back ? hairDeep : hairShade, ` transform="translate(4 7)"`) +
+        fill(d, back ? hairShade : hair) +
+        stroke(lockStrand(lock, context.texture), 3.5, back ? hairDeep : hairStrand, ` opacity="0.85"`) +
+        stroke(d, 4) +
+        ringlet
+      );
+    })
     .join("");
-  return (
-    ink + paint(shadow) + `<g clip-path="url(#${id})"><g transform="translate(${lift[0]} ${lift[1]})">${paint(base)}</g></g>`
-  );
-}
-
-/**
- * The flow lines inside the form, which is what now separates one lock from
- * the next. They are kept thin and faint: they are meant to be read as hair,
- * not as the edges of pieces stuck together.
- */
-function strandLines(context: DrawContext, locks: readonly Lock[], color: string): string {
-  return locks.map((lock) => stroke(lockStrand(lock, context.texture), 3, color, ` opacity="0.5"`)).join("");
 }
 
 function backLayer(style: HairStyle) {
   return (context: DrawContext) => {
-    const { hair, hairShade, hairDeep } = context.palette;
+    const { hair, hairShade } = context.palette;
+    const mass = (style.mass ?? [])
+      .map((shape) => {
+        const d = texturedClosedPath(shape, context.texture);
+        return fill(d, mix(hair, hairShade, 0.7)) + stroke(d, OUTLINE);
+      })
+      .join("");
     // Anything but straight hair tucks its side locks behind the ears
     const tucked = context.texture === "straight" ? [] : (style.sides ?? []);
-    const locks = [...(style.back ?? []), ...tucked];
-    const pieces: Piece[] = [
-      ...(style.mass ?? []).map((shape) => ({ d: texturedClosedPath(shape, context.texture) })),
-      ...lockPieces(locks, context.texture),
-    ];
-    return inHead(
-      hairForm(context, "back", pieces, mix(hair, hairShade, 0.7), hairDeep, [0, 16]) +
-        strandLines(context, locks, hairDeep) +
-        (style.behind?.(context) ?? ""),
-    );
+    return inHead(mass + (style.behind?.(context) ?? "") + drawLocks(context, [...(style.back ?? []), ...tucked], true));
   };
 }
 
@@ -351,7 +303,6 @@ function frontLayer(style: HairStyle) {
     const { hair, hairShade, hairStrand, skinDeep } = context.palette;
     const sides = context.texture === "straight" ? (style.sides ?? []) : [];
     const overFace = [...sides, ...(style.bangs ?? [])];
-    const locks = [...(style.canopy ?? []), ...overFace];
 
     // The hair's shadow on the forehead and cheeks, clipped to the face
     const faceClip = context.id("face-clip");
@@ -364,42 +315,32 @@ function frontLayer(style: HairStyle) {
       ? `<g clip-path="url(#${faceClip})" opacity="0.38">${shadowShapes.map((d) => fill(d, skinDeep, ` transform="translate(0 20)"`)).join("")}</g>`
       : "";
 
-    // Buzzed hair is a tinted cap rather than locks, so it stays on its own
-    if (style.buzz && style.cap) {
-      const d = texturedClosedPath(style.cap, "straight");
-      return inHead(shadow + fill(d, mix(hair, context.palette.skin, 0.3)) + stroke(d, OUTLINE, INK));
+    let capArt = "";
+    if (style.cap) {
+      const d = texturedClosedPath(style.cap, style.buzz ? "straight" : context.texture);
+      capArt = style.buzz
+        ? fill(d, mix(hair, context.palette.skin, 0.3)) + stroke(d, OUTLINE, INK)
+        : cel(context, "cap", d, hair, hairShade, [0, -12]);
     }
 
-    const pieces: Piece[] = [
-      ...(style.cap ? [{ d: texturedClosedPath(style.cap, context.texture) }] : []),
-      ...(style.crown ? [{ d: CROWN }] : []),
-      ...lockPieces(locks, context.texture),
-    ];
-
     // A soft sheen across the crown, as the reference has on dark hair
-    const sheen = style.cap
-      ? stroke("M382 296 C436 252 588 248 656 292", 16, tint(hair, 0.24), ` opacity="0.3"`)
+    const sheen = style.cap && !style.buzz
+      ? stroke("M374 300 C432 246 592 242 662 296", 26, tint(hair, 0.22), ` opacity="0.45"`)
       : "";
 
     return inHead(
       shadow +
-        hairForm(context, "hair", pieces, hair, hairShade) +
+        capArt +
         sheen +
-        (style.part ? fill(PARTING, hairShade, ` opacity="0.7"`) : "") +
-        strandLines(context, locks, hairStrand) +
-        (style.wisps !== false ? stroke(WISPS, 2.5, hairStrand, ` opacity="0.9"`) : "") +
+        (style.part ? fill(PARTING, hairShade) : "") +
+        (style.wisps !== false && !style.buzz ? stroke(WISPS, 2.5, hairStrand, ` opacity="0.9"`) : "") +
+        drawLocks(context, style.canopy ?? []) +
+        drawLocks(context, sides) +
+        drawLocks(context, style.bangs ?? []) +
         (style.front?.(context) ?? ""),
     );
   };
 }
-
-/**
- * The wedge that closes the crown at the middle. The fringe fans away from the
- * centre, which used to leave an island of skin under the hairline; harmless
- * when every lock was its own shape, a hole now that the hair is one form
- * (D-203). Parted styles want that opening, so they do not get it.
- */
-const CROWN = "M512 240 C440 250 418 302 424 370 C452 396 482 422 512 442 C542 422 572 396 600 370 C606 302 584 250 512 240Z";
 
 /** The little peak where a middle parting splits, drawn under the fringe. */
 const PARTING = "M512 250 C500 276 496 300 500 322 C508 300 516 300 524 322 C528 300 524 276 512 250Z";
@@ -454,17 +395,17 @@ function braids(context: DrawContext): string {
 }
 
 function ponytail(context: DrawContext): string {
-  const locks = fans({ root: [[672, 250], [706, 320]], tip: [[880, 620], [828, 840]], count: 4, width: [120, 84], bend: [-50, -24], vary: 50 });
   return (
-    hairForm(context, "ponytail", lockPieces(locks, context.texture), context.palette.hair, context.palette.hairShade) +
-    strandLines(context, locks, context.palette.hairStrand) +
+    drawLocks(
+      context,
+      fans({ root: [[672, 250], [706, 320]], tip: [[880, 620], [828, 840]], count: 4, width: [120, 84], bend: [-50, -24], vary: 50 }),
+    ) +
     `<ellipse cx="672" cy="246" rx="20" ry="26" fill="${context.palette.metal}" stroke="${INK}" stroke-width="3" transform="rotate(-38 672 246)"/>`
   );
 }
 
 export const HAIR_STYLES = [
   hairStyle("messy", "Dağınık", {
-    crown: true,
     mass: [MASS.nape],
     cap: CAP,
     back: fans(...BACK.nape),
@@ -473,20 +414,37 @@ export const HAIR_STYLES = [
     bangs: fans(...FRINGE.messy),
   }),
   hairStyle("shortMessy", "Kısa dağınık", {
-    crown: true,
     cap: CAP,
     canopy: fans(...CANOPY, ...TUFTS, { root: [[474, 256], [550, 256]], tip: [[442, 186], [584, 186]], count: 4, width: [40, 40], bend: [10, -10], vary: 18 }),
     bangs: fans(...FRINGE.short),
   }),
+  hairStyle("sidePart", "Yana taranmış", { cap: CAP, canopy: fans(...CANOPY), bangs: fans(...FRINGE.swept) }),
+  hairStyle("pixie", "Pixie", { cap: CAP, canopy: fans(...CANOPY, ...TUFTS), sides: fans(...SIDE.pixie), bangs: fans(...FRINGE.swept) }),
   hairStyle("buzz", "Çok kısa", { cap: BUZZ_CAP, buzz: true }),
   hairStyle("bald", "Saçsız", {}),
+  hairStyle("curtain", "Perdeli", {
+    part: true,
+    mass: [MASS.shoulder],
+    cap: CAP,
+    back: fans(...BACK.shoulder),
+    canopy: fans(...CANOPY),
+    sides: fans(...SIDE.shoulder),
+    bangs: fans(...FRINGE.curtain),
+  }),
   hairStyle("bob", "Küt kâküllü", {
-    crown: true,
     mass: [MASS.bob],
     cap: CAP,
     canopy: fans(...CANOPY),
     sides: fans(...SIDE.bob),
     bangs: fans(...FRINGE.blunt),
+  }),
+  hairStyle("wolf", "Katlı", {
+    mass: [MASS.shoulder],
+    cap: CAP,
+    back: fans(...BACK.shoulder),
+    canopy: fans(...CANOPY, ...TUFTS),
+    sides: fans(...SIDE.wolf),
+    bangs: fans(...FRINGE.messy),
   }),
   hairStyle("long", "Uzun", {
     part: true,
@@ -530,5 +488,5 @@ export const HAIR_STYLES = [
   }),
   hairStyle("braids", "Örgü", {
     part: true, cap: CAP, canopy: fans(...CANOPY), bangs: fans(...FRINGE.curtain), front: braids }),
-  hairStyle("volume", "Hacimli", { crown: true, mass: [MASS.volume], cap: CAP, canopy: fans(...CANOPY, ...TUFTS), bangs: fans(...FRINGE.short) }),
+  hairStyle("volume", "Hacimli", { mass: [MASS.volume], cap: CAP, canopy: fans(...CANOPY, ...TUFTS), bangs: fans(...FRINGE.short) }),
 ] as const satisfies readonly Asset[];

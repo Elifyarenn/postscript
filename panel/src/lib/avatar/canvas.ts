@@ -30,11 +30,6 @@ export function headToCanvas([x, y]: Point): Point {
 /**
  * The drawing order. Neck comes before clothing (unlike a strict
  * body → clothing → neck order) so a collar or turtleneck can sit over it.
- *
- * Hair has five places in the order (D-204): behind the head, then the volume
- * on the skull — over the ears but *under* the face, so the forehead is always
- * clean skin and the hairline belongs to the pieces on top — and finally what
- * falls over the face: side pieces, the fringe and the detail lines.
  */
 export const LAYER_ORDER = [
   "backHair",
@@ -42,7 +37,6 @@ export const LAYER_ORDER = [
   "neck",
   "clothing",
   "ears",
-  "baseHair",
   "face",
   "skinDetails",
   "eyes",
@@ -51,9 +45,6 @@ export const LAYER_ORDER = [
   "mouth",
   "facialHair",
   "frontHair",
-  "sideHair",
-  "bangs",
-  "hairDetails",
   "glasses",
   "earrings",
   "piercings",
@@ -76,8 +67,6 @@ export type Palette = {
   lip: string;
   clothing: string;
   clothingShade: string;
-  /** Hats keep a colour of their own, apart from the clothes (D-203). */
-  headwear: string;
   glasses: string;
   metal: string;
 };
@@ -88,7 +77,6 @@ export function buildPalette(colors: {
   eye: string;
   lip: string | null;
   clothing: string;
-  headwear: string;
   glasses: string;
   metal: string;
 }): Palette {
@@ -108,7 +96,6 @@ export function buildPalette(colors: {
     lip: colors.lip ?? mix(shade(skin, 0.14), "#d0606f", 0.34),
     clothing,
     clothingShade: shade(clothing, luminance(clothing) < 0.05 ? 0.1 : 0.2),
-    headwear: colors.headwear,
     glasses: colors.glasses,
     metal: colors.metal,
   };
