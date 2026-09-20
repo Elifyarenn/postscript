@@ -61,7 +61,7 @@ export default async function ConversationPage({
 
         <section className="dm-chat" aria-label={`@${other.username} ile konuşma`}>
           <header className="dm-chat-head">
-            <Avatar username={other.username} size="md" />
+            <Avatar username={other.username} size="md" imageUrl={other.avatarUrl} />
             <div className="min-w-0">
               <Link href={`/social/u/${other.username}`} className="dm-chat-name">
                 {memberName(other)}
@@ -127,7 +127,7 @@ export default async function ConversationPage({
 
         <aside className="dm-info" aria-label={`@${other.username} hakkında`}>
           <div className="dm-info-card">
-            <Avatar username={other.username} size="lg" />
+            <Avatar username={other.username} size="lg" imageUrl={other.avatarUrl} />
             <p className="mt-3 font-serif text-lg">{memberName(other)}</p>
             <p className="text-sm text-muted">@{other.username}</p>
             {other.role !== "user" && (

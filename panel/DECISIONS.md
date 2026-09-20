@@ -7832,3 +7832,52 @@ zaman girmedi.
 
 **Doğrulama:** Geri alma sonrası ağaç `step 122` ile bire bir aynı
 (`git diff f08688e -- panel` boş). Kapı: typecheck, lint, 684 test, build.
+
+
+## D-208 — Profil fotoğrafı kişiyle birlikte taşınır
+
+**İstek (ürün sahibi):** "Kullanıcıların profilleri gözükmüyor; her yerde
+profili olan kullanıcıların profilleri gözüksün."
+
+**Bulgu:** Fotoğraflar yüklenmiş ama neredeyse hiçbir yerde basılmıyordu.
+Canlıda 41 kişiden 19'unun profil fotoğrafı var; `Avatar` bileşeni `imageUrl`
+alıyor ama yalnızca dört yer onu veriyordu: profil başlığı, bildirimler, kendi
+ayarlar önizlemesi ve düzenleme kutusu. Gönderi kartı, üye listeleri (takipçi,
+takip edilen, arama, öneriler), profil yanındaki yorum listesi ve mesajlar hep
+baş harfi gösteriyordu — veri elde olduğu hâlde.
+
+Sebep mimariydi: fotoğraf görünüm tiplerinde yoktu, her ekranın ayrıca
+`avatarUrlsFor` çağırıp elle taşıması gerekiyordu (D-189) ve yalnızca bildirim
+sayfası bunu yapıyordu.
+
+**Karar:** Fotoğraf kişiyle birlikte taşınır. `PostAuthor` ve `MemberListItem`
+artık `avatarUrl` içeriyor; doğrudan mesajlardaki karşı taraf da. Sorgular
+`avatar_media_id`'yi seçip `mediaUrl` ile adrese çeviriyor, bileşen de basıyor.
+Böylece bir kişiyi adıyla anan her ekran fotoğrafı da alıyor; ayrı sorgu yok,
+ekran başına elle taşıma yok.
+
+`avatarUrlsFor` duruyor: elinde yalnızca kullanıcı adı olan ekranlar için
+(bildirimler) hâlâ doğru araç.
+
+**Sınır:** Fotoğraf yalnızca oturum açmış üyeye gösterilir; `/api/media/:id`
+en başta `requireAuth()` çağırıyor (D-141). Dergiyi dışarıdan okuyan biri
+hiçbir profil fotoğrafı görmez ve public API fotoğraf döndürmez. Bu
+değişiklik o sınırı **açmıyor**.
+
+**Hukuk:** Yeni kişisel veri toplanmıyor, yeni bir yere aktarılmıyor; zaten
+üyelerin kendi yüklediği fotoğraf, zaten oturum açmış üyelere açık olan
+yerlerde gösteriliyor. Aydınlatma metni değişmedi.
+
+**Doğrulama:** `social-graph.test.ts`: yüklenmiş fotoğrafın üye listesine
+adresiyle geldiği, olmayanın `null` kaldığı. İki mevcut test tam nesne eşitliği
+kontrol ettiği için yeni alanla güncellendi. Kapı: typecheck, lint, 685 test,
+build.
+
+**Açık kalan (ürün sahibine sorulacak):** "Profil gözüksün" isteğinin ikinci
+yarısı — bir kişiyi adıyla anan yerlerin profiline **link vermesi** — bu adımda
+yapılmadı. Panellerde (editör yazı listesi yazar sütunu, admin kullanıcı ve
+topluluk sayfaları) isimler hâlâ düz metin; dergi yorumlarında yorum sahibinin
+kullanıcı adı servis katmanından hiç dönmüyor, o yüzden link verilemiyor.
+Ayrıca yazısı olan 25 kişiden 8'inin mahlası olmadığı için yazar sayfası
+oluşmuyor ve public API'de isimleri anonim görünüyor — bu sonuncusu bilinçli
+bir rıza korumasıdır (bkz. `publicByline`), kaldırılmamalıdır.

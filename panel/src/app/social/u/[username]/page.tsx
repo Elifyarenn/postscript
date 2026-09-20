@@ -127,7 +127,7 @@ export default async function ProfilePage({
               <ul className="aside-comments">
                 {comments.map((comment) => (
                   <li key={comment.id}>
-                    <Avatar username={comment.author.username} size="sm" />
+                    <Avatar username={comment.author.username} size="sm" imageUrl={comment.author.avatarUrl} />
                     <div className="min-w-0">
                       <Link
                         href={`/social/u/${comment.author.username}`}

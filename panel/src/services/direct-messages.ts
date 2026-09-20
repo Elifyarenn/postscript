@@ -48,7 +48,7 @@ import { maskBannedWords } from "@/lib/moderation";
 import { recordTraffic, trafficCutoff } from "@/lib/traffic";
 import { normalizeUsername } from "@/lib/username";
 import { activeBannedWords, assertMayPost } from "./community";
-import { getMemberSettings, hasBlocked, isFollowing, requireMember } from "./social";
+import { getMemberSettings, hasBlocked, isFollowing, mediaUrl, requireMember } from "./social";
 import type { RequestMeta } from "./auth";
 
 export const MAX_DIRECT_MESSAGE_LENGTH = 2000;
@@ -61,6 +61,7 @@ type Participant = {
   username: string | null;
   role: Role;
   bio: string | null;
+  avatarMediaId: string | null;
   birthDate: string | null;
   dmPolicy: DmPolicy;
   readReceipts: boolean;
@@ -73,6 +74,7 @@ const participantColumns = {
   username: users.username,
   role: users.role,
   bio: users.bio,
+  avatarMediaId: users.avatarMediaId,
   birthDate: users.birthDate,
   dmPolicy: users.dmPolicy,
   readReceipts: users.readReceipts,
@@ -285,7 +287,7 @@ export type ConversationMessage = {
 };
 
 export type ConversationView = {
-  other: { id: string; username: string; role: Role; bio: string | null };
+  other: { id: string; username: string; role: Role; bio: string | null; avatarUrl: string | null };
   conversationId: string | null;
   messages: ConversationMessage[];
   canSend: boolean;
@@ -360,7 +362,13 @@ export async function openConversation(actor: Actor, rawUsername: string): Promi
   }
 
   return {
-    other: { id: other.id, username: other.username, role: other.role, bio: other.bio },
+    other: {
+      id: other.id,
+      username: other.username,
+      role: other.role,
+      bio: other.bio,
+      avatarUrl: mediaUrl(other.avatarMediaId),
+    },
     conversationId: conversation?.id ?? null,
     messages,
     canSend: state.canSend,
@@ -371,7 +379,7 @@ export async function openConversation(actor: Actor, rawUsername: string): Promi
 
 export type ConversationSummary = {
   conversationId: string;
-  other: { username: string | null; role: Role };
+  other: { username: string | null; role: Role; avatarUrl: string | null };
   lastMessage: { body: string; createdAt: Date; isOwn: boolean };
   unread: number;
 };
@@ -424,7 +432,7 @@ export async function listConversations(actor: Actor, limit = 50): Promise<Conve
 
   const [others, blockers, lastMessages, unreadRows] = await Promise.all([
     db
-      .select({ id: users.id, username: users.username, role: users.role })
+      .select({ id: users.id, username: users.username, role: users.role, avatarMediaId: users.avatarMediaId })
       .from(users)
       .where(inArray(users.id, otherIds)),
     db
@@ -464,7 +472,11 @@ export async function listConversations(actor: Actor, limit = 50): Promise<Conve
     const other = otherById.get(otherId);
     summaries.push({
       conversationId: row.id,
-      other: { username: other?.username ?? null, role: other?.role ?? "user" },
+      other: {
+        username: other?.username ?? null,
+        role: other?.role ?? "user",
+        avatarUrl: mediaUrl(other?.avatarMediaId ?? null),
+      },
       lastMessage: { body: last.body, createdAt: last.createdAt, isOwn: last.senderId === me.id },
       unread: unreadById.get(row.id) ?? 0,
     });

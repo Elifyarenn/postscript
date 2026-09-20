@@ -35,7 +35,7 @@ export function ConversationList({
         const last = conversation.lastMessage;
         const content = (
           <>
-            <Avatar username={username ?? "?"} size="md" />
+            <Avatar username={username ?? "?"} size="md" imageUrl={conversation.other.avatarUrl} />
             <div className="min-w-0 flex-1">
               <p className="dm-conversation-row">
                 <span className="dm-name">{username ?? "Silinmiş kullanıcı"}</span>
@@ -94,7 +94,7 @@ function MutualFollows({
         {members.map((member) => (
           <li key={member.username} className={cn(member.username === activeUsername && "is-active")}>
             <Link href={`/social/messages/${member.username}`} className="dm-conversation">
-              <Avatar username={member.username} size="md" />
+              <Avatar username={member.username} size="md" imageUrl={member.avatarUrl} />
               <span className="dm-name">{member.username}</span>
             </Link>
           </li>

@@ -292,7 +292,7 @@ describe("searching members (D-186)", () => {
 
     const found = await searchMembers(actorOf(me), "@LUNA");
     expect(found.map((member) => member.username)).toEqual(["lunae", "lunar", "kara_lunae"]);
-    expect(Object.keys(found[0]!).sort()).toEqual(["role", "username"]);
+    expect(Object.keys(found[0]!).sort()).toEqual(["avatarUrl", "role", "username"]);
 
     const lu = (await searchMembers(actorOf(me), "lu")).map((member) => member.username);
     expect(lu).not.toContain("engelli_lu");
@@ -333,5 +333,26 @@ describe("profile pictures for a list of handles (D-189)", () => {
     const urls = await avatarUrlsFor(actorOf(viewer), ["fotolu", "fotolu", "yasakli_foto", "fotosuz", "yok"]);
     expect([...urls.entries()]).toEqual([["fotolu", `/api/media/${picture!.id}`]]);
     expect((await avatarUrlsFor(actorOf(viewer), [])).size).toBe(0);
+  });
+
+  it("hands the picture to every list that names the person (D-208)", async () => {
+    const viewer = await createUser();
+    await setUsername(actorOf(viewer), { username: "bakan" }, noMeta);
+    const shown = await createUser();
+    await setUsername(actorOf(shown), { username: "fotolu_uye" }, noMeta);
+
+    const [picture] = await db
+      .insert(media)
+      .values({ storageKey: "avatars/c.webp", mime: "image/webp", size: 10, uploadedBy: shown.id })
+      .returning({ id: media.id });
+    await db.update(users).set({ avatarMediaId: picture!.id }).where(eq(users.id, shown.id));
+
+    // Search and the follower list are the two shapes every member list uses
+    const [found] = await searchMembers(actorOf(viewer), "fotolu_uye");
+    expect(found?.avatarUrl).toBe(`/api/media/${picture!.id}`);
+
+    await followMember(actorOf(viewer), "fotolu_uye");
+    const followers = await listFollowers(actorOf(shown), "fotolu_uye");
+    expect(followers[0]?.avatarUrl).toBeNull();
   });
 });

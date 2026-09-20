@@ -51,6 +51,7 @@ import { notify } from "./notifications";
 import {
   getProfile,
   isBlockedEitherWay,
+  mediaUrl,
   requireMember,
   type MemberListItem,
 } from "./social";
@@ -73,7 +74,8 @@ export const postSchema = z.strictObject({
   communityId: z.uuid().optional().nullable(),
 });
 
-export type PostAuthor = { username: string; role: Role };
+/** Whoever the community names, with the picture they uploaded (D-208). */
+export type PostAuthor = { username: string; role: Role; avatarUrl: string | null };
 
 export type PostView = {
   id: string;
@@ -156,6 +158,7 @@ async function hydrate(
       communityName: communities.name,
       username: users.username,
       role: users.role,
+      avatarMediaId: users.avatarMediaId,
     })
     .from(posts)
     .innerJoin(users, eq(posts.authorId, users.id))
@@ -198,9 +201,9 @@ async function hydrate(
       .from(bookmarks)
       .where(and(eq(bookmarks.userId, viewerId), inArray(bookmarks.postId, visibleIds))),
     parentIds.length === 0
-      ? Promise.resolve([] as { id: string; username: string | null; role: Role }[])
+      ? Promise.resolve([] as { id: string; username: string | null; role: Role; avatarMediaId: string | null }[])
       : db
-          .select({ id: posts.id, username: users.username, role: users.role })
+          .select({ id: posts.id, username: users.username, role: users.role, avatarMediaId: users.avatarMediaId })
           .from(posts)
           .innerJoin(users, eq(posts.authorId, users.id))
           .where(and(inArray(posts.id, parentIds), isNull(posts.deletedAt), ...visibleAuthor, ...notBlocked)),
@@ -227,12 +230,12 @@ async function hydrate(
       id: row.id,
       body: row.body,
       createdAt: row.createdAt,
-      author: { username: row.username, role: row.role },
+      author: { username: row.username, role: row.role, avatarUrl: mediaUrl(row.avatarMediaId) },
       replyTo: row.replyToId
         ? {
             id: row.replyToId,
             author: parent?.username
-              ? { username: parent.username, role: parent.role }
+              ? { username: parent.username, role: parent.role, avatarUrl: mediaUrl(parent.avatarMediaId) }
               : null,
           }
         : null,
@@ -478,6 +481,7 @@ export async function listHomeFeed(actor: Actor, limit = 50): Promise<PostView[]
         at: postReposts.createdAt,
         username: users.username,
         role: users.role,
+        avatarMediaId: users.avatarMediaId,
       })
       .from(postReposts)
       .innerJoin(users, eq(postReposts.userId, users.id))
@@ -492,7 +496,7 @@ export async function listHomeFeed(actor: Actor, limit = 50): Promise<PostView[]
       ...reposts.map((row) => ({
         postId: row.postId,
         at: row.at,
-        repostedBy: { username: row.username!, role: row.role },
+        repostedBy: { username: row.username!, role: row.role, avatarUrl: mediaUrl(row.avatarMediaId) },
       })),
     ],
     limit,
@@ -576,18 +580,18 @@ export async function suggestMembers(actor: Actor, limit = 5): Promise<MemberLis
   if (shortlist.length === 0) return [];
 
   const rows = await db
-    .select({ id: users.id, username: users.username, role: users.role })
+    .select({ id: users.id, username: users.username, role: users.role, avatarMediaId: users.avatarMediaId })
     .from(users)
     .where(and(inArray(users.id, shortlist), ...visibleAuthor));
 
   const byId = new Map(rows.map((row) => [row.id, row]));
   return shortlist
     .map((id) => byId.get(id))
-    .filter((row): row is { id: string; username: string; role: Role } =>
+    .filter((row): row is { id: string; username: string; role: Role; avatarMediaId: string | null } =>
       Boolean(row?.username),
     )
     .slice(0, limit)
-    .map(({ username, role }) => ({ username, role }));
+    .map(({ username, role, avatarMediaId }) => ({ username, role, avatarUrl: mediaUrl(avatarMediaId) }));
 }
 
 export type ProfileTab = "posts" | "replies" | "favorites";
@@ -595,7 +599,7 @@ export type ProfileTab = "posts" | "replies" | "favorites";
 /** How many posts a profile shows at once; the design draws a pager (D-150). */
 export const PROFILE_PAGE_SIZE = 10;
 
-type ProfileOwner = { id: string; username: string; role: Role };
+type ProfileOwner = { id: string; username: string; role: Role; avatarUrl: string | null };
 
 /** One page of a tab's entries, newest first. */
 async function profileEntries(
@@ -626,7 +630,7 @@ async function profileEntries(
     return replies.map((row) => ({ ...row, repostedBy: null }));
   }
 
-  const author: PostAuthor = { username: profile.username, role: profile.role };
+  const author: PostAuthor = { username: profile.username, role: profile.role, avatarUrl: profile.avatarUrl };
   // Two sources become one timeline, so each is read down to the end of the
   // asked-for page and the window is cut only after they are merged
   const reach = limit + offset;
@@ -760,6 +764,7 @@ export async function listProfileComments(
       createdAt: posts.createdAt,
       username: users.username,
       role: users.role,
+      avatarMediaId: users.avatarMediaId,
     })
     .from(posts)
     .innerJoin(answered, eq(posts.replyToId, answered.id))
@@ -785,7 +790,7 @@ export async function listProfileComments(
             id: row.id,
             body: row.body,
             createdAt: row.createdAt,
-            author: { username: row.username, role: row.role },
+            author: { username: row.username, role: row.role, avatarUrl: mediaUrl(row.avatarMediaId) },
           },
         ],
   );

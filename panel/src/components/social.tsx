@@ -43,8 +43,9 @@ const AVATAR_SIZES = {
 } as const;
 
 /**
- * The circle standing in for a profile picture. Uploads need object storage,
- * which production does not have yet, so the initial is used (D-089).
+ * A member profile picture, or their initial where there is none (D-089,
+ * D-141). Every screen that names someone passes the picture with them
+ * (D-208); the initial is the fallback, not the rule.
  */
 export function Avatar({
   username,
@@ -338,7 +339,7 @@ export function PostCard({
       )}
 
       <div className="flex gap-3">
-        <Avatar username={post.author.username} size="md" />
+        <Avatar username={post.author.username} size="md" imageUrl={post.author.avatarUrl} />
         <div className="min-w-0 flex-1">
           <p className="post-meta">
             <MemberLink member={post.author} />
@@ -507,7 +508,7 @@ export function MemberList({
     <ul className="divide-y divide-line">
       {members.map((member) => (
         <li key={member.username} className="flex flex-wrap items-center gap-3 py-3">
-          <Avatar username={member.username} size="sm" />
+          <Avatar username={member.username} size="sm" imageUrl={member.avatarUrl} />
           <MemberLink member={member} className="text-sm" />
           <RoleBadge role={member.role} />
           {followToken && (
