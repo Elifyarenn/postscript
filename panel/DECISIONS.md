@@ -7803,3 +7803,45 @@ döndüğünde son seçimi yerinde bulur).
 **Doğrulama:** `team-avatar.test.ts`: `hairFollowsTexture` ayrımı ve elle
 çizilmiş bir modelde doku değişiminin çizimi hiç değiştirmemesi. Kapı:
 typecheck, lint, test, build.
+
+
+## D-203 — Şapka kendi rengini alır, saç tek form, askı omzu sarar
+
+**İstek (ürün sahibi):** "Şapka ve bere kıyafet rengini almasın ve perçemleri
+ayrı formda yapma saçı ve perçemleri tek saç formunda yap ve askılı da askı
+yarım kalıyor omzu sarmıyor."
+
+**Karar — üç ayrı düzeltme:**
+
+**1. Şapka rengi.** Şapka, örgü bere ve bere `palette.clothing` kullanıyordu;
+siyah bir kapüşonlunun üstüne siyah bereden başkası çıkmıyordu. Kendi alanı
+oldu: `headwearColor` (15 renk, `HEADWEAR_COLORS`), paletin `headwear` anahtarı
+üzerinden. Oluşturucuda renk, gözlük çerçevesi gibi, yalnızca bir şapka
+takılıyken görünür. Konfigürasyon sürümü 3'e çıktı; eski bir kayıtta şapka
+rengi yoksa kıyafet renginden alınır, yani eski avatarlar aynı görünür.
+
+**2. Saç tek form.** Perçem, kâkül ve yan tutamlar ayrı ayrı çizilip her
+birine kendi mürekkep konturu veriliyordu: saçın üstüne yapıştırılmış parçalar
+gibi duruyordu. `hairForm` geldi: tüm parçalar önce mürekkeple çizilip sonra
+üstlerine boya basılır, böylece parçaların iç konturları boyanın altında
+kalır, dışarıda yalnızca **tek bir siluet** kalır. Gölge de tek bir kırpma
+yolu (birleşik clip) ile tüm forma bir kez uygulanır. Tutamlar hâlâ okunur:
+siluetteki sivri uçlar ve içeride ince akış çizgileri olarak.
+
+Saçın ortasında bir yan etki çıktı: perçem ortadan ikiye ayrılırken altta kalan
+ten, etrafı saçla çevrili bir **ada** gibi görünüyordu (parçalar ayrıyken göze
+batmıyordu). Ortadan ayrılmayan modellere `crown` kaması eklendi; ortadan
+ayrılan modeller (perdeli, uzun) o açıklığı bilerek koruyor.
+
+**3. Askı.** Askılı üstün askısı y≈800'de bitip havada kalıyordu; omuz çizgisi
+y≈755'te. Askı artık omuz konturuna kadar çıkıp omzun arkasından iniyor,
+üstünde katlanmayı gösteren bir dikiş çizgisi var.
+
+**Hukuk:** Değişiklik yok; yeni kişisel veri alanı yok (şapka rengi de
+katalogdan gelen bir kimlik).
+
+**Doğrulama:** `team-avatar.test.ts`: şapkanın kıyafet rengiyle değişmemesi,
+eski kaydın şapka rengini kıyafetten devralması, ön saç katmanında tek bir saç
+kırpma yolu olması, ortadan ayrılan modelin kamayı almaması. Kapı: typecheck,
+lint, 690 test, build. Ayrıca 16 saç modeli, örnek avatarlar, şapkalar ve
+askılı üst PNG'ye basılıp gözle kontrol edildi.

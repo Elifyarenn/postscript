@@ -42,6 +42,7 @@ import { historyReducer } from "@/lib/avatar/history";
 import { mix, shade } from "@/lib/avatar/geometry";
 import { SKIN_TONES } from "@/lib/avatar/assets/face";
 import { isImageHair } from "@/lib/avatar/assets/hair-images";
+import { HEADWEAR } from "@/lib/avatar/assets/accessories";
 import { bodyFont, noteFont } from "@/lib/fonts";
 import type { ActionState } from "./form";
 import styles from "./team-avatar-builder.module.css";
@@ -412,6 +413,8 @@ export function TeamAvatarBuilder({
                   const field: Field = FIELDS[key];
                   // A frame colour means nothing without a frame
                   if (key === "glassesColor" && config.glasses === "none") return null;
+                  // Nor a hat colour without a hat (D-203)
+                  if (key === "headwearColor" && !config.extras.some((id) => HEADWEAR.has(id))) return null;
                   // A ready-made hair picture carries its own colour (D-200)
                   const fixedByPicture = key === "hairColor" && isImageHair(config.hairStyle);
                   return (

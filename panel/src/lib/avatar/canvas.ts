@@ -67,6 +67,8 @@ export type Palette = {
   lip: string;
   clothing: string;
   clothingShade: string;
+  /** Hats keep a colour of their own, apart from the clothes (D-203). */
+  headwear: string;
   glasses: string;
   metal: string;
 };
@@ -77,6 +79,7 @@ export function buildPalette(colors: {
   eye: string;
   lip: string | null;
   clothing: string;
+  headwear: string;
   glasses: string;
   metal: string;
 }): Palette {
@@ -96,6 +99,7 @@ export function buildPalette(colors: {
     lip: colors.lip ?? mix(shade(skin, 0.14), "#d0606f", 0.34),
     clothing,
     clothingShade: shade(clothing, luminance(clothing) < 0.05 ? 0.1 : 0.2),
+    headwear: colors.headwear,
     glasses: colors.glasses,
     metal: colors.metal,
   };

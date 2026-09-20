@@ -13,7 +13,7 @@
  */
 import { z } from "zod";
 import { slugify } from "@/lib/slug";
-import { EARRINGS, EXTRAS, GLASSES, GLASSES_COLORS, HEADWEAR, JEWELRY_COLORS, NECKLACES, PIERCINGS } from "./assets/accessories";
+import { EARRINGS, EXTRAS, GLASSES, GLASSES_COLORS, HEADWEAR, HEADWEAR_COLORS, JEWELRY_COLORS, NECKLACES, PIERCINGS } from "./assets/accessories";
 import { CLOTHING, CLOTHING_COLORS } from "./assets/clothing";
 import { BLUSH, FACIAL_HAIR, FRECKLES, MOLES, SCARS, UNDER_EYE } from "./assets/details";
 import { FACES, SKIN_TONES } from "./assets/face";
@@ -90,7 +90,8 @@ export const FIELDS = {
   jewelryColor: { label: "Takı Rengi", kind: "color", options: JEWELRY_COLORS },
   clothing: { label: "Kıyafet", kind: "asset", options: CLOTHING, thumb: "body" },
   clothingColor: { label: "Kıyafet Rengi", kind: "color", options: CLOTHING_COLORS },
-  extras: { label: "Ekstra", kind: "set", options: EXTRAS, thumb: "full", hint: "İstediğiniz kadarını ekleyin. Şapka ve bere kıyafet rengini alır." },
+  extras: { label: "Ekstra", kind: "set", options: EXTRAS, thumb: "full", hint: "İstediğiniz kadarını ekleyin." },
+  headwearColor: { label: "Şapka Rengi", kind: "color", options: HEADWEAR_COLORS },
 } as const satisfies Record<string, Field>;
 
 export type FieldKey = keyof typeof FIELDS;
@@ -111,7 +112,7 @@ export const CATEGORIES = [
   { id: "piercing", label: "Piercing", fields: ["piercings", "jewelryColor"] },
   { id: "accessory", label: "Aksesuar", fields: ["earrings", "necklace", "jewelryColor"] },
   { id: "clothing", label: "Kıyafet", fields: ["clothing", "clothingColor"] },
-  { id: "extra", label: "Ekstra", fields: ["extras"] },
+  { id: "extra", label: "Ekstra", fields: ["extras", "headwearColor"] },
 ] as const satisfies readonly { id: string; label: string; fields: readonly FieldKey[] }[];
 
 export type CategoryId = (typeof CATEGORIES)[number]["id"];
@@ -129,8 +130,11 @@ export function hairFollowsTexture(hairStyleId: string): boolean {
 /* Configuration                                                       */
 /* ------------------------------------------------------------------ */
 
-/** Bumped whenever the drawing changes meaning; v1 was the first style (D-194). */
-export const AVATAR_CONFIG_VERSION = 2;
+/**
+ * Bumped whenever the drawing changes meaning; v1 was the first style (D-194),
+ * v2 the reference rework (D-195), v3 the hat colour of its own (D-203).
+ */
+export const AVATAR_CONFIG_VERSION = 3;
 
 type IdsOf<K extends FieldKey> = (typeof FIELDS)[K]["options"][number]["id"];
 
@@ -185,6 +189,7 @@ export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
   clothing: "hoodie",
   clothingColor: "black",
   extras: [],
+  headwearColor: "black",
 };
 
 /** Example avatars shown under the builder; a click starts from one of them. */
@@ -193,7 +198,7 @@ export const PRESETS: readonly { label: string; config: AvatarConfig }[] = [
   { label: "Uzun dalgalı", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "long", hairColor: "darkBrown", eyes: "round", eyelashes: "soft", mouth: "smile", earrings: "drop", clothing: "tank", clothingColor: "black", face: "oval" } },
   { label: "Kızıl ve gözlüklü", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "shortMessy", hairTexture: "curly", hairColor: "red", glasses: "round", skinTone: "tone2", freckles: "light", extras: ["headphones"], clothing: "tshirt" } },
   { label: "İki topuz", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "spaceBuns", hairTexture: "wavy", hairColor: "platinum", skinTone: "tone1", eyes: "round", eyeColor: "gray", blush: "rosy", clothing: "hoodie", clothingColor: "gray", mouth: "cat" } },
-  { label: "Şapkalı", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "wolf", skinTone: "tone5", extras: ["cap"], clothing: "bomber", clothingColor: "charcoal", eyebrows: "thick", mouth: "smirk" } },
+  { label: "Şapkalı", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "wolf", skinTone: "tone5", extras: ["cap"], headwearColor: "rust", clothing: "bomber", clothingColor: "charcoal", eyebrows: "thick", mouth: "smirk" } },
   { label: "Düz siyah", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "longBangs", hairTexture: "straight", glasses: "square", eyes: "cat", clothing: "shirt", clothingColor: "white", face: "oval", eyelashes: "soft" } },
   { label: "Kıvırcık ve çilli", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "volume", hairTexture: "coily", hairColor: "brown", skinTone: "tone6", freckles: "dense", necklace: "layered", jewelryColor: "gold", earrings: "bigHoop", clothing: "blazer", clothingColor: "rust", face: "round" } },
   { label: "Kulaklıklı", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "curtain", hairTexture: "wavy", hairColor: "ash", skinTone: "tone7", extras: ["headphones"], piercings: ["eyebrow", "lobeStack"], eyes: "sleepy", clothing: "sweater", clothingColor: "black", scar: "brow" } },
@@ -244,7 +249,11 @@ export function parseStoredConfig(value: unknown): AvatarConfig {
   if (direct.success) return direct.data;
 
   const raw = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
-  const source = raw.v === 1 ? fromVersion1(raw) : raw;
+  let source = raw.v === 1 ? fromVersion1(raw) : raw;
+  // Before D-203 a hat took the clothing colour, so an older avatar keeps its look
+  if (source.headwearColor === undefined && typeof source.clothingColor === "string") {
+    source = { ...source, headwearColor: source.clothingColor };
+  }
   const merged: Record<string, unknown> = { ...DEFAULT_AVATAR_CONFIG };
   for (const key of Object.keys(FIELDS) as FieldKey[]) {
     if (source[key] === undefined) continue;

@@ -140,11 +140,24 @@ export const CLOTHING = [
   clothing("tank", "Askılı", {
     clothing: (c) => {
       const color = c.palette.clothing;
+      // The strap runs all the way up over the shoulder and down the back of
+      // it, instead of stopping in mid-air the way the first shape did (D-203)
       const d = smoothClosedPath(
-        [[196, 1070], [240, 966], [330, 916], [372, 900], [384, 804], [404, 800], [424, 884], [512, 916], [600, 884], [620, 800], [640, 804], [652, 900], [694, 916], [784, 966], [828, 1070], [512, 1110]],
+        [
+          [196, 1070], [240, 966], [318, 912], [322, 830], [324, 774], [364, 756],
+          [400, 790], [412, 846], [424, 888],
+          [512, 918],
+          [600, 888], [612, 846], [624, 790],
+          [660, 756], [700, 774], [702, 830], [706, 912],
+          [784, 966], [828, 1070], [512, 1110],
+        ],
         0.25,
       );
-      return cel(c, "tank", d, color, shade(color, 0.2), [-18, 8]);
+      return (
+        cel(c, "tank", d, color, shade(color, 0.2), [-18, 8]) +
+        // The seam along the top of each strap, so it reads as folded over
+        stroke("M336 786 C356 768 380 772 394 792 M688 786 C668 768 644 772 630 792", 3.5, seam(color, 0.25))
+      );
     },
   }),
 ] as const satisfies readonly Asset[];

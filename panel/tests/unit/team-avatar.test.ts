@@ -276,6 +276,47 @@ describe("picture-based hair (D-200)", () => {
   });
 });
 
+describe("a hat's own colour (D-203)", () => {
+  const withCap = (overrides: Record<string, unknown>) =>
+    avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, extras: ["cap"], ...overrides });
+  const accessories = (config: ReturnType<typeof avatarConfigSchema.parse>) =>
+    renderAvatarLayers(config).find((part) => part.layer === "accessories")!.svg;
+
+  it("follows the hat colour and not the clothing colour", () => {
+    const base = accessories(withCap({ headwearColor: "red", clothingColor: "black" }));
+    expect(accessories(withCap({ headwearColor: "red", clothingColor: "mustard" }))).toBe(base);
+    expect(accessories(withCap({ headwearColor: "navy", clothingColor: "black" }))).not.toBe(base);
+  });
+
+  it("gives an older record the colour its hat used to take from the clothes", () => {
+    // A stored v2 record has no hat colour of its own
+    const { headwearColor: _dropped, ...stored } = { ...DEFAULT_AVATAR_CONFIG, v: 2, clothingColor: "navy" };
+    const parsed = parseStoredConfig(stored);
+    expect(parsed.headwearColor).toBe("navy");
+    expect(parsed.v).toBe(AVATAR_CONFIG_VERSION);
+  });
+});
+
+describe("hair drawn as one form (D-203)", () => {
+  const frontHair = (overrides: Record<string, unknown>) =>
+    renderAvatarLayers(avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, ...overrides })).find(
+      (part) => part.layer === "frontHair",
+    )!.svg;
+
+  it("shades the cap, the canopy and the fringe through a single clip", () => {
+    // One clip for the hair itself, one for the shadow it casts on the face
+    const svg = frontHair({ hairStyle: "messy" });
+    expect(svg.match(/<clipPath /g)).toHaveLength(2);
+    expect(svg).toContain('id="frontHair-hair"');
+  });
+
+  it("closes the crown, so a fringe that parts leaves no hole in the middle", () => {
+    expect(frontHair({ hairStyle: "messy" })).toContain("M512 240");
+    // A style meant to part in the middle keeps its opening
+    expect(frontHair({ hairStyle: "curtain" })).not.toContain("M512 240");
+  });
+});
+
 describe("historyReducer", () => {
   const start: History = { past: [], present: DEFAULT_AVATAR_CONFIG, future: [] };
   const bob = { ...DEFAULT_AVATAR_CONFIG, hairStyle: "bob" as const };
