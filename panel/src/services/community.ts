@@ -500,6 +500,9 @@ export async function listAllCommentsForAdmin(actor: Actor, limit = 200) {
       createdAt: communityComments.createdAt,
       deletedAt: communityComments.deletedAt,
       authorName: users.displayName,
+      authorUsername: users.username,
+      authorPenName: users.penName,
+      authorPenNameSlug: users.penNameSlug,
       articleTitle: articles.title,
     })
     .from(communityComments)
@@ -523,6 +526,9 @@ export async function listAllMessagesForAdmin(actor: Actor, limit = 200) {
       createdAt: communityMessages.createdAt,
       deletedAt: communityMessages.deletedAt,
       authorName: users.displayName,
+      authorUsername: users.username,
+      authorPenName: users.penName,
+      authorPenNameSlug: users.penNameSlug,
     })
     .from(communityMessages)
     .leftJoin(users, eq(communityMessages.authorId, users.id))

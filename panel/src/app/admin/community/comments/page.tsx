@@ -3,7 +3,8 @@ import { readCsrfToken } from "@/lib/csrf";
 import { formatDateTime } from "@/lib/utils";
 import { listAllCommentsForAdmin, listAllMessagesForAdmin } from "@/services/community";
 import { PanelForm } from "@/components/form";
-import { Card, EmptyState, Table, Td, Th } from "@/components/ui";
+import { Card, EmptyState, PersonName, Table, Td, Th } from "@/components/ui";
+import { accountLabel } from "../account-label";
 import { CommunityAdminHeader } from "../community-admin-header";
 import { removeChatMessageAction, removeCommentAction } from "../../actions";
 
@@ -51,7 +52,16 @@ export default async function CommunityCommentsPage() {
                         <span className="text-xs text-danger">kaldırıldı</span>
                       )}
                     </Td>
-                    <Td className="text-xs">{row.authorName ?? "Silinmiş kullanıcı"}</Td>
+                    <Td className="text-xs">
+                      <PersonName
+                        person={{
+                          penName: row.authorPenName,
+                          penNameSlug: row.authorPenNameSlug,
+                          username: row.authorUsername,
+                        }}
+                        name={accountLabel(row.authorName, row.authorUsername)}
+                      />
+                    </Td>
                     <Td className="text-xs">{row.articleTitle}</Td>
                     <Td className="text-xs">{formatDateTime(row.createdAt)}</Td>
                     <Td className="text-right">
@@ -97,7 +107,16 @@ export default async function CommunityCommentsPage() {
                         <span className="text-xs text-danger">kaldırıldı</span>
                       )}
                     </Td>
-                    <Td className="text-xs">{row.authorName ?? "Silinmiş kullanıcı"}</Td>
+                    <Td className="text-xs">
+                      <PersonName
+                        person={{
+                          penName: row.authorPenName,
+                          penNameSlug: row.authorPenNameSlug,
+                          username: row.authorUsername,
+                        }}
+                        name={accountLabel(row.authorName, row.authorUsername)}
+                      />
+                    </Td>
                     <Td className="text-xs">{formatDateTime(row.createdAt)}</Td>
                     <Td className="text-right">
                       {!row.deletedAt && (

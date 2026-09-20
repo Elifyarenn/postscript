@@ -928,6 +928,8 @@ export async function listRecentPostsForAdmin(actor: Actor, limit = 150) {
       removedBy: posts.removedBy,
       authorName: users.displayName,
       authorUsername: users.username,
+      authorPenName: users.penName,
+      authorPenNameSlug: users.penNameSlug,
     })
     .from(posts)
     .leftJoin(users, eq(posts.authorId, users.id))

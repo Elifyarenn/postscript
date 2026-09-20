@@ -249,8 +249,12 @@ export async function listReports(actor: Actor, state: "open" | "closed", limit 
       resolutionNote: contentReports.resolutionNote,
       reporterName: reporter.displayName,
       reporterUsername: reporter.username,
+      reporterPenName: reporter.penName,
+      reporterPenNameSlug: reporter.penNameSlug,
       ownerName: owner.displayName,
       ownerUsername: owner.username,
+      ownerPenName: owner.penName,
+      ownerPenNameSlug: owner.penNameSlug,
     })
     .from(contentReports)
     .leftJoin(reporter, eq(contentReports.reporterId, reporter.id))

@@ -4,7 +4,7 @@ import { REPORT_CATEGORY_LABELS, REPORT_TARGET_LABELS } from "@/lib/reports";
 import { cn, formatDateTime } from "@/lib/utils";
 import { listReports } from "@/services/reports";
 import { PanelForm } from "@/components/form";
-import { Card, EmptyState, Field, Input, Select, Table, Td, Th } from "@/components/ui";
+import { Card, EmptyState, Field, Input, PersonName, Select, Table, Td, Th } from "@/components/ui";
 import { accountLabel } from "../account-label";
 import { CommunityAdminHeader } from "../community-admin-header";
 import { resolveReportAction } from "../actions";
@@ -58,8 +58,24 @@ export default async function CommunityReportsPage() {
                     <p className="mt-2 text-xs text-muted">Açıklama: {report.reason}</p>
                   )}
                   <p className="mt-2 text-xs text-muted">
-                    İçerik sahibi: {accountLabel(report.ownerName, report.ownerUsername)} · Bildiren:{" "}
-                    {accountLabel(report.reporterName, report.reporterUsername)}
+                    İçerik sahibi:{" "}
+                    <PersonName
+                      person={{
+                        penName: report.ownerPenName,
+                        penNameSlug: report.ownerPenNameSlug,
+                        username: report.ownerUsername,
+                      }}
+                      name={accountLabel(report.ownerName, report.ownerUsername)}
+                    />{" "}
+                    · Bildiren:{" "}
+                    <PersonName
+                      person={{
+                        penName: report.reporterPenName,
+                        penNameSlug: report.reporterPenNameSlug,
+                        username: report.reporterUsername,
+                      }}
+                      name={accountLabel(report.reporterName, report.reporterUsername)}
+                    />
                   </p>
 
                   <div className="mt-3 max-w-md">

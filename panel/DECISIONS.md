@@ -7883,36 +7883,6 @@ oluşmuyor ve public API'de isimleri anonim görünüyor — bu sonuncusu bilin�
 bir rıza korumasıdır (bkz. `publicByline`), kaldırılmamalıdır.
 
 
-## D-209 — Teknoloji yığını raporu `panel/TEKNOLOJI-RAPORU.md`'de durur
-
-**İstek (ürün sahibi):** "teknoloji [yığını] raporu oluştur" ve ardından "kaç
-yetkili kişi var onu da yaz — çizer, editör, admin, yazar; birden fazla görevi
-olanları ona göre hesapla".
-
-**Karar:** Rapor `panel/TEKNOLOJI-RAPORU.md` olarak depoya yazıldı. Yeri
-tartışmalıydı: `doc/` hukuki metinlerin yeri, `README.md` zaten uzun ve
-kurulum anlatıyor. Rapor bir anlık fotoğraf olduğu için ikisine de karışmadı;
-`DECISIONS.md` ve `README.md` ile aynı seviyede, tarihli ayrı bir dosya.
-
-**Yöntem:** Sürümler `node_modules` içindeki kurulu paketlerden okundu, beyandan
-değil. Kapılar çalıştırıldı: typecheck ve lint temiz, 69 dosyada 685 test geçti.
-
-**Kişi sayıları canlıdan alındı.** Neon `run_sql` izin sisteminde "Production
-Reads" diye reddedildi; sayılar bunun yerine ürün sahibinin tarayıcısındaki
-admin panelinden (`/admin/users`, `/writers`, `/editors`, `/illustrators`)
-okundu. 41 hesap: 2 yönetici, 6 editör, 29 yazar, 4 rolsüz. Çizer işareti 4
-hesapta — 2'si yazar, 2'si rolsüz; yani görevi olan kişi 39, panele girebilen
-37. **Rapora isim, e-posta ve doğum tarihi yazılmadı**, yalnızca sayılar:
-depoya giren bir dosyada kişisel veri tutmanın gereği yok.
-
-**Raporun bulguları (ayrı adımlarda kapatılacak):** `CLAUDE.md` ve `README.md`
-"shadcn/ui" diyor ama bileşenler elle yazılmış; `.env.example` içinde `SITE_URL`
-ve `TURNSTILE_*` yok; `MAIL_TRANSPORT`, `MAIL_DIR`, `PASSWORD_HIBP_CHECK`
-`env.ts` şemasını atlayıp doğrudan `process.env`'den okunuyor; `README.md` test
-sayısı 292'de kalmış (gerçek 685); kodda 119 `§` atıfı hâlâ duruyor (D-077).
-Bu adımda hiçbiri düzeltilmedi — rapor tespit eder, kod değiştirmez.
-
-
 ## D-209 — Bir isim, kişinin profiline giden yoldur
 
 **İstek (ürün sahibi):** D-208'in ardından, "profili olan kullanıcıların
@@ -7989,3 +7959,66 @@ yalnızca sonucu görünür kılıyor.
 
 **Doğrulama:** Kapı: typecheck, lint, 689 test, build. Uyarıların kendisi saf
 görüntü; davranış değişmediği için yeni test yazılmadı.
+
+
+## D-211 — Teknoloji yığını raporu `panel/TEKNOLOJI-RAPORU.md`'de durur
+
+**İstek (ürün sahibi):** "teknoloji [yığını] raporu oluştur" ve ardından "kaç
+yetkili kişi var onu da yaz — çizer, editör, admin, yazar; birden fazla görevi
+olanları ona göre hesapla".
+
+**Karar:** Rapor `panel/TEKNOLOJI-RAPORU.md` olarak depoya yazıldı. Yeri
+tartışmalıydı: `doc/` hukuki metinlerin yeri, `README.md` zaten uzun ve
+kurulum anlatıyor. Rapor bir anlık fotoğraf olduğu için ikisine de karışmadı;
+`DECISIONS.md` ve `README.md` ile aynı seviyede, tarihli ayrı bir dosya.
+
+**Yöntem:** Sürümler `node_modules` içindeki kurulu paketlerden okundu, beyandan
+değil. Kapılar çalıştırıldı: typecheck ve lint temiz, 69 dosyada 685 test geçti.
+
+**Kişi sayıları canlıdan alındı.** Neon `run_sql` izin sisteminde "Production
+Reads" diye reddedildi; sayılar bunun yerine ürün sahibinin tarayıcısındaki
+admin panelinden (`/admin/users`, `/writers`, `/editors`, `/illustrators`)
+okundu. 41 hesap: 2 yönetici, 6 editör, 29 yazar, 4 rolsüz. Çizer işareti 4
+hesapta — 2'si yazar, 2'si rolsüz; yani görevi olan kişi 39, panele girebilen
+37. **Rapora isim, e-posta ve doğum tarihi yazılmadı**, yalnızca sayılar:
+depoya giren bir dosyada kişisel veri tutmanın gereği yok.
+
+**Raporun bulguları (ayrı adımlarda kapatılacak):** `CLAUDE.md` ve `README.md`
+"shadcn/ui" diyor ama bileşenler elle yazılmış; `.env.example` içinde `SITE_URL`
+ve `TURNSTILE_*` yok; `MAIL_TRANSPORT`, `MAIL_DIR`, `PASSWORD_HIBP_CHECK`
+`env.ts` şemasını atlayıp doğrudan `process.env`'den okunuyor; `README.md` test
+sayısı 292'de kalmış (gerçek 685); kodda 119 `§` atıfı hâlâ duruyor (D-077).
+Bu adımda hiçbiri düzeltilmedi — rapor tespit eder, kod değiştirmez.
+
+**Numara düzeltmesi:** Bu karar aynı gün yazılan profil bağlantısı kararıyla
+birlikte D-209 numarasını almıştı; iki karar aynı numaradaydı. Kodda `(D-209)`
+atıfları profil bağlantısı kararına işaret ettiği için numarayı bu karar
+bıraktı ve dosyanın sonuna D-211 olarak taşındı.
+
+
+
+## D-212 — Admin topluluk ekranlarında da isim profile götürür
+
+**İstek (ürün sahibi):** D-209'un sonunda "kalan" diye yazılan işin yapılması:
+admin topluluk sayfaları (`gönderiler`, `raporlar`, `yorumlar`) bir kişiyi
+adıyla anıyor ama isim düz metindi.
+
+**Karar:** Üç sayfa da `PersonName` kullanıyor; gösterilen etiket
+değişmedi (`accountLabel` ile "Ad (@handle)" — yönetici hesabı teşhis ettiği
+için görünen ad önde kalıyor), değişen tek şey profili olanın linklenmesi.
+Adres yine tek yerde, `profileHref`, hesaplanıyor.
+
+**Yorumlar ekranında isim @handle bile taşımıyordu:** `listAllCommentsForAdmin`
+ve `listAllMessagesForAdmin` yalnızca `displayName` döndürüyordu, yani aynı adı
+taşıyan iki hesap ayırt edilemiyordu. Artık kullanıcı adı da geliyor ve etiket
+diğer iki sayfayla aynı biçimde yazılıyor.
+
+**Servislere eklenenler** yalnızca adresi kurmaya yetecek kadar: dört sorguda
+(`listRecentPostsForAdmin`, `listReports`, `listAllCommentsForAdmin`,
+`listAllMessagesForAdmin`) mahlas, mahlas slug'ı ve kullanıcı adı. Yeni bir
+kişisel veri açığa çıkmıyor; her iki profil sayfası da oturum arkasında ve
+bu ekranlara zaten yalnızca yönetici giriyor.
+
+**Doğrulama:** Kapı: typecheck, lint, 689 test, build. Davranış saf görüntü
+(link var/yok) ve kararı veren `profileHref` D-209'da zaten test edildiği için
+yeni test yazılmadı.

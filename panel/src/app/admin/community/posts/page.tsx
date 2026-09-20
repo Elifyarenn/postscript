@@ -3,7 +3,7 @@ import { readCsrfToken } from "@/lib/csrf";
 import { formatDateTime } from "@/lib/utils";
 import { listRecentPostsForAdmin } from "@/services/posts";
 import { PanelForm } from "@/components/form";
-import { Card, EmptyState, Table, Td, Th } from "@/components/ui";
+import { Card, EmptyState, PersonName, Table, Td, Th } from "@/components/ui";
 import { accountLabel } from "../account-label";
 import { CommunityAdminHeader } from "../community-admin-header";
 import { removePostAction } from "../actions";
@@ -47,7 +47,16 @@ export default async function CommunityPostsPage() {
                         </span>
                       )}
                     </Td>
-                    <Td className="text-xs">{accountLabel(row.authorName, row.authorUsername)}</Td>
+                    <Td className="text-xs">
+                      <PersonName
+                        person={{
+                          penName: row.authorPenName,
+                          penNameSlug: row.authorPenNameSlug,
+                          username: row.authorUsername,
+                        }}
+                        name={accountLabel(row.authorName, row.authorUsername)}
+                      />
+                    </Td>
                     <Td className="text-xs">{formatDateTime(row.createdAt)}</Td>
                     <Td className="text-right">
                       {!row.deletedAt && (
