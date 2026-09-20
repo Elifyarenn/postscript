@@ -8022,3 +8022,50 @@ bu ekranlara zaten yalnızca yönetici giriyor.
 **Doğrulama:** Kapı: typecheck, lint, 689 test, build. Davranış saf görüntü
 (link var/yok) ve kararı veren `profileHref` D-209'da zaten test edildiği için
 yeni test yazılmadı.
+
+
+
+## D-213 — `pic/`'teki saç sayfaları görsel saç olarak uygulanır
+
+**İstek (ürün sahibi):** "buradaki saç assetslerini avatar seçimde saçlara
+uygula" — `pic/düz-removebg-preview.png`, `pic/dalgalı-removebg-preview.png`,
+`pic/kivircik-removebg-preview.png` sayfalarındaki saç modelleri avatar
+oluşturucunun saç seçimine girsin.
+
+**Durum (dosyaların incelenmesi):** Her sayfa 612×408, üç model (hücre). Her
+hücre tek saç modeli: taç + kâküller + yan tutamlar; yüz ve gövde bölgesi
+saydam (yüzün kendisi yok, yalnızca saç). Alfa 253–255 (saydamlık yok). D-199'da
+eski sayfaların filigranı ret gerekçesiydi; bu dosyalarda saydam alanlarda
+yarı saydam beyaz iz yok (programatik doğrulandı: hücre araları ve dış
+boşluklarda ~0 piksel). Saç siluetinin kenarındaki yarı saydam beyaz çizgi
+çizimin kendi kenar çizgisi (rim), filigran değil — silueti izliyor, boşlukta
+değil.
+
+**Karar:**
+
+- **D-200 altyapısı kullanıldı:** her hücre 1024×1024 tuvale yerleştirilip
+  `public/avatar-hair/hair-{düz,dalgalı,kıvırcık}-{1..3}.png` olarak kaydedildi
+  ve `IMAGE_HAIR`'e dokuz giriş eklendi ("Görsel: Düz 1"…). Katalog, ön izleme,
+  küçük görsel, PNG/ZIP indirme, admin tablosu değişmeden çalışır.
+- **Yerleşim:** taç tepesi y=40'ta, saç çizgisi ~y=240–285 (alın hizası),
+  hücre merkezi x=512, ölçek üç sayfada tekdüze (2,18) — modeller yalnızca
+  boylarıyla ayrılır. Taç kısmı sayfanın üst kenarında kesilmiş iki model
+  (her sayfanın 2. hücresi) aynı hizaya göre yerleştirilir.
+- **Renk dosyadan gelir:** dokuz model de koyu kahve; oluşturucu "renk
+  uygulanmaz" notunu zaten gösteriyor (D-200). Doku sekmesi bu modelleri
+  etkilemez (D-202 geri alındı, D-207).
+- **Bilinen sınır:** referans sayfalarındaki yüz, bizim avatarın yüzünden çok
+  dar; yan tutamlar bu yüzden göz hizasında yüz kenarına biner. Yerleşim
+  PNG'ye gömülüdür; istenirse yeniden üretilir (üretim komut dosyası oturum
+  dışı temp'te durur, karar içeriği yukarıdaki parametrelerdir).
+
+**Hukuk:** Görseller ürün sahibinden; filigransız; üçüncü taraf filigranı
+görünmüyor. D-199, lisansı belirsiz sayfaların kullanımını ürün sahibinin
+kararına bağlamıştı; bu kararla uygulanıyor. Kaynağın (AI üretimi mi, satın
+alınmış set mi) teyidi yine de hukukçu görüşüne bağlıdır — lisans teyidi
+gelirse D-115'teki gibi buraya kaydedilir. KVKK değişikliği yok: yeni kişisel
+veri alanı doğmadı (seçim yine "saç modeli"dir ve metinde zaten yazılıdır).
+
+**Doğrulama:** Kapı: typecheck, lint, test, build. Görsel: dokuz modelin
+tuvale yerleştirilmiş hâli (taç, saç çizgisi, merkez hizası programatik
+doğrulandı).
