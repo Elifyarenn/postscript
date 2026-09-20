@@ -6,7 +6,9 @@
  * readable. The panel is a working tool, so these are plain and functional.
  */
 import type { ComponentProps, ReactNode } from "react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { profileHref, type Person } from "@/lib/profile-link";
 
 /* ------------------------------------------------------------------ */
 /* Button                                                              */
@@ -157,6 +159,39 @@ export function Alert({
       {title && <p className="font-medium">{title}</p>}
       {children && <div className={cn(title && "mt-1")}>{children}</div>}
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* People                                                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Someone the panel names. Linked to their profile where they have one, plain
+ * text where they do not (D-209) — so a name is never a dead end, and a person
+ * without a profile never becomes a broken link.
+ *
+ * The name shown is what the panel calls them, usually the display name; the
+ * profile it opens may be titled differently (pen name or handle).
+ */
+export function PersonName({
+  person,
+  name,
+  fallback = "—",
+  className,
+}: {
+  person: Person;
+  name: string | null | undefined;
+  fallback?: string;
+  className?: string;
+}) {
+  if (!name) return <>{fallback}</>;
+  const href = profileHref(person);
+  if (!href) return <>{name}</>;
+  return (
+    <Link href={href} className={cn("hover:text-accent hover:underline", className)}>
+      {name}
+    </Link>
   );
 }
 

@@ -19,6 +19,7 @@ import {
   Field,
   Input,
   PageHeader,
+  PersonName,
   Select,
   StatusBadge,
   STATUS_LABELS,
@@ -185,7 +186,16 @@ export default async function EditorArticlesPage({
                         {article.title}
                       </Link>
                     </Td>
-                    <Td className="text-xs">{article.authorName ?? "—"}</Td>
+                    <Td className="text-xs">
+                      <PersonName
+                        person={{
+                          penName: article.authorPenName,
+                          penNameSlug: article.authorPenNameSlug,
+                          username: article.authorUsername,
+                        }}
+                        name={article.authorName}
+                      />
+                    </Td>
                     <Td className="text-xs">{article.category ?? "—"}</Td>
                     <Td className="text-xs">
                       <EditorCell routed={editorForArticle(article, areas, mainEditorName)} />

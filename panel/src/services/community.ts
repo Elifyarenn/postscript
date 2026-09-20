@@ -212,6 +212,10 @@ export type CommentListItem = {
   createdAt: Date;
   authorName: string | null;
   authorRole: Role | null;
+  /** Enough to link the name to the commenter's profile, nothing more (D-209). */
+  authorPenName: string | null;
+  authorPenNameSlug: string | null;
+  authorUsername: string | null;
 };
 
 /**
@@ -242,6 +246,9 @@ export async function listCommentsForArticle(
       createdAt: communityComments.createdAt,
       authorName: communityDisplayName,
       authorRole: users.role,
+      authorPenName: users.penName,
+      authorPenNameSlug: users.penNameSlug,
+      authorUsername: users.username,
     })
     .from(communityComments)
     .leftJoin(users, eq(communityComments.authorId, users.id))

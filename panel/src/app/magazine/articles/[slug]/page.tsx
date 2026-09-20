@@ -16,6 +16,7 @@ import {
   EmptyState,
   Field,
   PageHeader,
+  PersonName,
   StatusBadge,
   Textarea,
 } from "@/components/ui";
@@ -141,7 +142,15 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               <li key={comment.id} className="rounded-md border border-line bg-paper p-4">
                 <div className="mb-1 flex flex-wrap items-center gap-2 text-xs">
                   <span className="font-medium">
-                    {comment.authorName ?? "Silinmiş kullanıcı"}
+                    <PersonName
+                      person={{
+                        penName: comment.authorPenName,
+                        penNameSlug: comment.authorPenNameSlug,
+                        username: comment.authorUsername,
+                      }}
+                      name={comment.authorName}
+                      fallback="Silinmiş kullanıcı"
+                    />
                   </span>
                   {comment.authorRole && <StatusBadge status={comment.authorRole} />}
                   <span className="text-muted">{formatDateTime(comment.createdAt)}</span>

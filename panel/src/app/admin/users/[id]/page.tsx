@@ -8,6 +8,7 @@ import { guardPanel } from "@/lib/auth/guard";
 import { isAppError } from "@/lib/errors";
 import { checkPromotionReadiness, findUserById, getUserOverview } from "@/services/users";
 import { calculateAge } from "@/lib/age";
+import { profileHref } from "@/lib/profile-link";
 import { renderAgreementForWriter } from "@/services/agreements";
 import { listAllWriterAreasWithQuota } from "@/services/writer-areas";
 import { listEditorAreasWithHolders, listEditorCategories } from "@/services/editor-categories";
@@ -90,8 +91,28 @@ export default async function AdminUserDetailPage({
   // The info card shows what this kind of account actually carries (D-087):
   // consent and the application for a reader, areas and output for a writer,
   // duties for an editor, the second factor for staff
+  const href = profileHref(target);
+
   const details: { label: string; value: ReactNode }[] = [
     { label: "E-posta", value: target.email },
+    {
+      label: "Profil",
+      value: href ? (
+        <Link href={href} className="underline">
+          {target.penName && target.penNameSlug ? target.penName : `@${target.username}`}
+        </Link>
+      ) : (
+        "Yok"
+      ),
+    },
+    {
+      label: "Kullanıcı adı",
+      value: target.username ? (
+        <Link href={`/social/u/${target.username}`} className="underline">@{target.username}</Link>
+      ) : (
+        "—"
+      ),
+    },
     {
       label: "E-posta doğrulama",
       value: target.emailVerifiedAt ? formatDateTime(target.emailVerifiedAt) : "Doğrulanmadı",
@@ -123,7 +144,17 @@ export default async function AdminUserDetailPage({
       : []),
     ...(target.role === "writer" || hybrid
       ? [
-          { label: "Mahlas", value: target.penName ?? "—" },
+          {
+            label: "Mahlas",
+            value:
+              target.penName && target.penNameSlug ? (
+                <Link href={`/magazine/authors/${target.penNameSlug}`} className="underline">
+                  {target.penName}
+                </Link>
+              ) : (
+                (target.penName ?? "—")
+              ),
+          },
           { label: "Alan", value: target.writerArea ?? "—" },
           { label: "2. alan", value: target.writerArea2 ?? "—" },
           {

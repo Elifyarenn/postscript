@@ -7911,3 +7911,49 @@ ve `TURNSTILE_*` yok; `MAIL_TRANSPORT`, `MAIL_DIR`, `PASSWORD_HIBP_CHECK`
 `env.ts` şemasını atlayıp doğrudan `process.env`'den okunuyor; `README.md` test
 sayısı 292'de kalmış (gerçek 685); kodda 119 `§` atıfı hâlâ duruyor (D-077).
 Bu adımda hiçbiri düzeltilmedi — rapor tespit eder, kod değiştirmez.
+
+
+## D-209 — Bir isim, kişinin profiline giden yoldur
+
+**İstek (ürün sahibi):** D-208'in ardından, "profili olan kullanıcıların
+profilleri her yerde gözüksün" isteğinin ikinci yarısı: bir kişiyi adıyla anan
+yerler profiline link versin.
+
+**Bulgu:** Panelde hiçbir isim tıklanmıyordu. Editör yazı listesinde yazar
+sütunu düz metin; admin kullanıcı detayında **kullanıcı adı hiç
+gösterilmiyordu**, yani bir hesaptan topluluk profiline yol yoktu; dergi
+yorumlarında yorum sahibinin kullanıcı adı servis katmanından hiç dönmüyordu,
+o yüzden link verilemiyordu. Profil adresini üreten tek yer `/hakkinda`
+listesiydi ve mantık oraya gömülüydü.
+
+**Karar:**
+
+- `src/lib/profile-link.ts` tek karar noktası: `profileHref(person)`. Mahlas
+  **ve** slug varsa dergi yazar sayfası (dergi "profil" derken bunu kastediyor),
+  yoksa kullanıcı adı varsa topluluk profili, ikisi de yoksa `null`.
+  Mahlassız bir slug kabul edilmiyor: yazar sayfası o durumda başlığı
+  "İsimsiz" yazıyor, yani profil sayılmaz.
+- `PersonName` (`components/ui.tsx`) paylaşılan bileşen: profili olanı linkler,
+  olmayanı düz metin bırakır, adı olmayana geri düşer. Böylece bir isim asla
+  çıkmaz sokak olmuyor, profili olmayan da kırık linke dönüşmüyor.
+- Kullanıldığı yerler: editör yazı listesi yazar sütunu, dergi yazısındaki
+  yorumlar, admin kullanıcı detayı (yeni "Profil" ve "Kullanıcı adı" satırları,
+  ayrıca mahlas artık yazar sayfasına link). `/hakkinda` listesi de gömülü
+  mantık yerine aynı yardımcıyı çağırıyor.
+
+**Gösterilen ad değişmedi.** Yorumda hâlâ `communityDisplayName` (mahlas →
+@kullanıcı adı → görünen ad) yazıyor; değişen tek şey onun link olup olmadığı.
+Servise eklenen alanlar yalnızca adresi kurmaya yetecek kadar.
+
+**Hukuk:** Yeni kişisel veri açığa çıkmıyor. Her iki profil sayfası da oturum
+arkasında; `profileHref` public API yanıtlarında kullanılmıyor. Gerçek adın
+dışarı çıkmasını engelleyen `publicByline` kuralına dokunulmadı.
+
+**Doğrulama:** `profile-link.test.ts`: tercih sırası, mahlassız slugın
+reddi, ikisi de olmayan kişi. Kapı: typecheck, lint, 689 test, build.
+
+**Kalan:** Admin topluluk sayfaları (`gönderiler`, `raporlar`, `yorumlar`)
+`accountLabel` ile "Ad (@handle)" basıyor ve hâlâ düz metin; oraya da
+`PersonName` geçirilebilir. Yazısı olan 25 kişiden 8'inin mahlası yok, yani
+profili gerçekten yok — bunun çözümü link değil, mahlas belirlemeleri
+(ayrı adım).

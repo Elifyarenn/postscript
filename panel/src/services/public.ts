@@ -5,6 +5,7 @@
  * an author's e-mail, legal name and birth date never appear in a response.
  * A withdrawn article answers 410, anything else unpublished answers 404.
  */
+import { profileHref } from "@/lib/profile-link";
 import "server-only";
 import { and, asc, count, desc, eq, ilike, isNotNull, isNull, or } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
@@ -375,11 +376,9 @@ export async function listPublicStaff(
           ? row.editorStatus === "suspended"
           : row.writerStatus === "suspended" || row.editorStatus === "suspended";
     if (suspended) return [];
-    if (row.penName && row.penNameSlug) {
-      return [{ name: row.penName, href: `/magazine/authors/${row.penNameSlug}` }];
-    }
-    if (row.username) return [{ name: `@${row.username}`, href: `/social/u/${row.username}` }];
-    return [];
+    const href = profileHref(row);
+    if (!href) return [];
+    return [{ name: row.penName && row.penNameSlug ? row.penName : `@${row.username}`, href }];
   });
 
   return members.sort((a, b) => a.name.localeCompare(b.name, "tr"));

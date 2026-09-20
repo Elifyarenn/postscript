@@ -137,6 +137,10 @@ export async function listArticles(actor: Actor, filters: ArticleFilters = {}) {
       issueId: articles.issueId,
       authorId: articles.authorId,
       authorName: users.displayName,
+      // So the panel can link the name to the person (D-209)
+      authorPenName: users.penName,
+      authorPenNameSlug: users.penNameSlug,
+      authorUsername: users.username,
       dueDate: articles.dueDate,
       scheduledAt: articles.scheduledAt,
       publishedAt: articles.publishedAt,
