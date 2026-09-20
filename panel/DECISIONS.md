@@ -7962,3 +7962,58 @@ geometrinin hiç değişmemesini doğruluyor. İki model dört saç renginde (ko
 kahve, sarı, siyah, bakır) ve dört ten tonunda PNG'ye basılıp gözle kontrol
 edildi; üç geçişte düzeltildi (yüzde asılı kalan tutamlar, fazla kubbeli taç,
 küt perçem ucu, diş gibi uç girintileri).
+
+
+## D-206 — Referans sayfasına göre iki usta model
+
+**İstek (ürün sahibi):** `pic/ChatGPT Image 20 Eyl 2026 14_20_59.png` bir **görsel
+referans** olarak verildi: altı saç modelinin ön/yan/arka/detay görünümleri.
+Açık talimat: görseli uygulamaya asset olarak ekleme, crop etme, gömme,
+base64'e çevirme, piksellerini kopyalama. Yalnızca siluet, oturuş, ayrım,
+çerçeveleme, katman mantığı, tutam yönü ve uzunluk anlaşılsın; sonra **projeye
+özgü, orijinal SVG geometrisi** yazılsın. Önce yalnızca **01 düz orta ayrım**
+ve **03 perdeli**; bunlar "master hair style" referansımız olacak, diğerlerine
+dokunulmayacak. D-205 geometrisi yamanmasın, sıfırdan yazılsın.
+
+**Görselin kullanımı:** Dosya `pic/` altında, depoya **girmedi** ve koda hiçbir
+biçimde kopyalanmadı; yalnızca okunup analiz edildi. Kodda ondan türeyen tek
+şey sayısal koordinatlar — bizim kafa anchor'larımıza göre elle yazılmış
+noktalar (FSEK açısından güvenli taraf: üçüncü taraf görseli yayına girmiyor).
+
+**Referanstan çıkarılan ilkeler:** taç kafatasının üstünde belirgin hacim
+bırakıyor; kütle kulak hizasında kafadan dışa taşıyor; saç çizgisi şakakları
+örtüyor ve alnın ortası yumuşak bir açıklık olarak kalıyor; ayrım ince tek bir
+çizgi; uçlar tek yatay kesim değil yumuşak ve farklı yüksekliklerde; perdelide
+ön parçalar **ayrı bir katman**, arkalarında uzun ana kütle devam ediyor.
+
+**Karar — sıfırdan yazılan geometri:**
+
+- **Taç (`CROWN`).** Kafa yüksekliğinin ~%5–10'u kadar üstte; kendi aynası
+  değil. D-205'te bile fazla kubbeliydi, referansa göre yeniden ölçüldü.
+- **Orta ayrım.** Arkada tek uzun kütle; önde yüzü çerçeveleyen iki kütle.
+  İki kütle ortada **birbirinin üstüne biniyor**; aralarında ince bir boşluk
+  bırakmak alna aşağı doğru sivrilen bir diken çiziyordu. Sol kütle sonra
+  çizildiği için ayrım onun kenarı: merkezin biraz solunda tek bir çizgi.
+- **Uçlar.** Önce iki sivri uç + derin çentik denendi, diş gibi göründü;
+  yumuşak, hafif asimetrik, yuvarlatılmış uçla değiştirildi.
+- **Perdeli.** Ön parçalar ayrımdan çıkıp aşağı, dışarı, sonra elmacık
+  kemiğine dönüyor ve çene hizasında sivrilerek bitiyor. Dış kenarları arkadaki
+  uzun kütlenin **içinde** kalıyor, böylece uzun saç dışarıda ve altta
+  görünüyor; iki katman olarak okunuyor. Alnın ortası orta ayrımdakinden daha
+  geniş açık.
+- **İç çizgiler.** Model başına yedi ince çizgi; ayrımdan dışarı/aşağı ve
+  uzunluk boyunca. Hepsi saç sınırının içinde (D-205'te bir kısmı alında tenin
+  üzerine düşüyordu).
+
+**Sınır:** `sidePart`, `shortStraight`, `wolf`, `pixie` hâlâ D-204
+geometrisinde. Ürün sahibi bu iki modeli onaylamadan diğerleri elden
+geçirilmeyecek.
+
+**Hukuk:** Referans görsel yayınlanmıyor, gömülmüyor, kopyalanmıyor; koddaki
+geometri özgün. Aydınlatma metnini ilgilendiren değişiklik yok.
+
+**Doğrulama:** Kapı: typecheck, lint, 696 test, build. İki model dört saç
+rengi × dört ten tonunda ve ayrıca seçim panelindeki küçük önizleme kırpımında
+(aynı asset, yalnızca kırpılmış) PNG'ye basılıp gözle kontrol edildi; dört
+geçişte düzeltildi (ayrımdaki diken, diş gibi uçlar, yüksek kalan saç çizgisi,
+perdelinin orta ayrımdan ayrışmaması).
