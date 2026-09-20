@@ -7845,3 +7845,70 @@ eski kaydın şapka rengini kıyafetten devralması, ön saç katmanında tek bi
 kırpma yolu olması, ortadan ayrılan modelin kamayı almaması. Kapı: typecheck,
 lint, 690 test, build. Ayrıca 16 saç modeli, örnek avatarlar, şapkalar ve
 askılı üst PNG'ye basılıp gözle kontrol edildi.
+
+
+## D-204 — Saç: tutamlar yerine büyük şekiller
+
+**İstek (ürün sahibi):** `avatarprompt.txt` yeniden yazıldı. Özeti: saç
+modelleri birbirinden kopuk görünüyor, her biri başka bir çizim mantığı
+kullanıyor. Picrew tarzı, aynı kafa tabanı üzerinde çalışan, tutarlı bir SVG
+saç sistemi kurulsun. Yüz, kafa boyutu ve konumu değişmesin. Gerçekçi saç teli,
+onlarca ince çizgi, anime sivri perçem, yüze rastgele tutam, parlak highlight,
+gradient ve 3B görünüm yok. Model başına 3–8 ana şekil, en çok 3–6 detay
+çizgisi. Renk gömülü olmasın. Önce yalnızca altı model: düz orta ayrım, düz yan
+ayrım, kısa düz, perdeli, katlı (wolf), pixie — bunlar düzgün olmadan diğerleri
+elden geçirilmesin.
+
+**Karar:** İkinci bir saç sistemi kuruldu, `assets/hair-shapes.ts`. Bir model
+yalnızca **veri**: kapalı şekillerin nokta listeleri ve birkaç açık çizgi. Tek
+bir çizici (`shapeHairStyle`) bunları katmanlara basar. Altı model bu sistemde;
+kataloğun başında duruyorlar.
+
+**Ortak kafa noktaları.** `face.ts` artık `HEAD_ANCHORS` (headTop,
+foreheadCenter, sol/sağ şakak, sol/sağ kulak üstü, sol/sağ çene, boyun) ve
+`SKULL_RIGHT` (kafatası kenarının sağ yarısı) veriyor. Bütün saç şekilleri
+bunların üzerine kurulu; saç değişince yüz, göz, kaş, burun, ağız, kulak ve
+boyun yerinden oynamıyor.
+
+**Katman sırası.** `LAYER_ORDER`'a dört katman eklendi (brief'in sırasıyla):
+`backHair` → kulaklar → **`baseHair`** → yüz → `sideHair` → `bangs` →
+`hairDetails`. Kritik olan `baseHair`'in **yüzün altında** olması: alın her
+zaman temiz ten kalıyor, saç çizgisini üstteki parçalar çiziyor. Bu, saçın
+kafaya yapıştırılmış peruk gibi durmasını yapısal olarak engelliyor.
+
+**Tek form.** Her ön parça kafatasının kendi kenarından (`SKULL_RIGHT`)
+başlıyor; konturu tabanın konturuyla çakıştığı için aralarında dikiş
+görünmüyor. Ayrıca ayrılmalı modellerde perçem ile yüzü çerçeveleyen parça **tek
+şekil**: parçanın iç kenarı aşağıda yüzü çerçeveliyor, yukarıda saç çizgisine
+dönüşüyor. Önceki denemede bu iki parça ayrıyken birleştikleri yerde çengel
+çıkıyordu.
+
+**Saç çizgisi.** Ayrımdan neredeyse yatay çıkıp şakakta aşağı dönen bir eğri.
+Ayrımdan şakağa düz inen bir çizgi keskin V veriyor ve alnı çadıra çeviriyor;
+brief bunu ayrıca yasaklıyor.
+
+**Renk.** Brief `--hair-color`, `--hair-shadow`, `--hair-line` CSS
+değişkenlerini istiyordu. PNG sunucuda satori/resvg ile üretiliyor ve orada CSS
+özel değişkenleri çözülmüyor; bu yüzden aynı işi mevcut palet görüyor: dolgu
+`palette.hair`, gölge şekilleri `palette.hairShade`, ince çizgiler
+`palette.hairStrand` (koyu saçta açılır, açık saçta koyulur; ortak mürekkep
+kontur zaten `INK`). Geometri renkten tamamen bağımsız — test bunu doğruluyor.
+
+**Değiştirilen modeller.** `sidePart`, `curtain`, `wolf`, `pixie` eski tutam
+sisteminden çıkarılıp aynı kimliklerle yeni sistemde yeniden çizildi; kayıtlı
+avatarlar geçerli kalıyor, yalnızca daha temiz çiziliyorlar. `straightCenter`
+ve `shortStraight` yeni kimlikler. Kataloğun kalan 12 modeli brief'in dediği
+gibi şimdilik eski sistemde (`hair.ts`, D-196…D-203).
+
+**Sınır:** Şekil modelleri saç dokusu (düz/dalgalı/kıvırcık) seçimine uymuyor;
+zaten hepsi düz saç modelleri. `hairFollowsTexture` onları da dışarıda
+bırakıyor, yani oluşturucu doku sekmesini göstermiyor (D-202).
+
+**Hukuk:** Değişiklik yok; çizim bize ait, üçüncü taraf görseli yok.
+
+**Doğrulama:** `team-avatar.test.ts`: altısının katalog başında olması, şekil
+katmanlarına çizmesi, `baseHair`'in yüzün altında kalması, saç rengi değişince
+**tek bir yol dizesinin bile değişmemesi**, doku sekmesinin gizlenmesi. Kapı:
+typecheck, lint, 695 test, build. Ayrıca altı model üç ten/saç renginde
+(siyah/açık ten, kahve/koyu ten, sarı/orta ten) ve kıyafet + şapka + gözlükle
+PNG'ye basılıp yan yana gözle karşılaştırıldı.

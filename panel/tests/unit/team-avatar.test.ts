@@ -313,7 +313,45 @@ describe("hair drawn as one form (D-203)", () => {
   it("closes the crown, so a fringe that parts leaves no hole in the middle", () => {
     expect(frontHair({ hairStyle: "messy" })).toContain("M512 240");
     // A style meant to part in the middle keeps its opening
-    expect(frontHair({ hairStyle: "curtain" })).not.toContain("M512 240");
+    expect(frontHair({ hairStyle: "long" })).not.toContain("M512 240");
+  });
+});
+
+describe("hair built from shapes (D-204)", () => {
+  const layers = (overrides: Record<string, unknown>) =>
+    renderAvatarLayers(avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, ...overrides }));
+  const layerNames = (overrides: Record<string, unknown>) => layers(overrides).map((part) => part.layer);
+
+  it("offers the six styles first, so they lead the catalogue", () => {
+    const ids = FIELDS.hairStyle.options.map((option) => option.id);
+    expect(ids.slice(0, 6)).toEqual(["straightCenter", "sidePart", "shortStraight", "curtain", "wolf", "pixie"]);
+  });
+
+  it("draws into the shape layers and not into the old front hair one", () => {
+    const names = layerNames({ hairStyle: "straightCenter" });
+    expect(names).toContain("baseHair");
+    expect(names).toContain("bangs");
+    expect(names).toContain("hairDetails");
+    expect(names).not.toContain("frontHair");
+  });
+
+  it("puts the volume on the skull under the face, so the forehead stays skin", () => {
+    const names = layerNames({ hairStyle: "pixie" });
+    expect(names.indexOf("baseHair")).toBeLessThan(names.indexOf("face"));
+    expect(names.indexOf("face")).toBeLessThan(names.indexOf("bangs"));
+  });
+
+  it("changes nothing but the colours when the hair colour changes", () => {
+    const geometry = (hairColor: string) =>
+      renderAvatarSvg(avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "curtain", hairColor }))
+        .match(/ d="[^"]+"/g);
+    expect(geometry("blonde")).toEqual(geometry("black"));
+    expect(geometry("blonde")).not.toEqual(null);
+  });
+
+  it("carries its own texture, so the texture tab stays hidden", () => {
+    expect(hairFollowsTexture("straightCenter")).toBe(false);
+    expect(hairFollowsTexture("pixie")).toBe(false);
   });
 });
 

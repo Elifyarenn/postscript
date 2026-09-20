@@ -21,6 +21,7 @@ import { EYEBROWS, EYELASHES, EYES, EYE_COLORS, LIP_COLORS, MOUTHS, NOSES } from
 import { HAIR_COLORS, HAIR_STYLES, HAIR_TEXTURES } from "./assets/hair";
 import { IMAGE_HAIR, imageHairStyle, isImageHair } from "./assets/hair-images";
 import { PATH_HAIR, isPathHair, pathHairStyle } from "./assets/hair-paths";
+import { SHAPE_HAIR, isShapeHair, shapeHairStyle } from "./assets/hair-shapes";
 import type { Asset, ColorOption } from "./assets/types";
 import type { LayerName } from "./canvas";
 
@@ -62,8 +63,14 @@ export const FIELDS = {
   hairStyle: {
     label: "Saç Modeli",
     kind: "asset",
-    // Generated styles, then hand-drawn ones (D-201), then picture sets (D-200)
-    options: [...HAIR_STYLES, ...PATH_HAIR.map(pathHairStyle), ...IMAGE_HAIR.map(imageHairStyle)],
+    // Shape styles first (D-204), then the older generated ones, the
+    // hand-drawn ones (D-201) and any picture sets (D-200)
+    options: [
+      ...SHAPE_HAIR.map(shapeHairStyle),
+      ...HAIR_STYLES,
+      ...PATH_HAIR.map(pathHairStyle),
+      ...IMAGE_HAIR.map(imageHairStyle),
+    ],
     thumb: "hair",
     omit: FEATURE_LAYERS,
   },
@@ -118,12 +125,13 @@ export const CATEGORIES = [
 export type CategoryId = (typeof CATEGORIES)[number]["id"];
 
 /**
- * Whether the hair texture choice means anything for this style. Generated
- * styles are drawn in all four textures; a hand-drawn style or a picture
- * carries its own, so the builder hides the texture tab for them (D-202).
+ * Whether the hair texture choice means anything for this style. The older
+ * generated styles are drawn in all four textures; a shape style (D-204), a
+ * hand-drawn one or a picture carries its own, so the builder hides the
+ * texture tab for them (D-202).
  */
 export function hairFollowsTexture(hairStyleId: string): boolean {
-  return !isPathHair(hairStyleId) && !isImageHair(hairStyleId);
+  return !isShapeHair(hairStyleId) && !isPathHair(hairStyleId) && !isImageHair(hairStyleId);
 }
 
 /* ------------------------------------------------------------------ */
