@@ -19,8 +19,8 @@ import { BLUSH, FACIAL_HAIR, FRECKLES, MOLES, SCARS, UNDER_EYE } from "./assets/
 import { FACES, SKIN_TONES } from "./assets/face";
 import { EYEBROWS, EYELASHES, EYES, EYE_COLORS, LIP_COLORS, MOUTHS, NOSES } from "./assets/features";
 import { HAIR_COLORS, HAIR_STYLES, HAIR_TEXTURES } from "./assets/hair";
-import { IMAGE_HAIR, imageHairStyle } from "./assets/hair-images";
-import { PATH_HAIR, pathHairStyle } from "./assets/hair-paths";
+import { IMAGE_HAIR, imageHairStyle, isImageHair } from "./assets/hair-images";
+import { PATH_HAIR, isPathHair, pathHairStyle } from "./assets/hair-paths";
 import type { Asset, ColorOption } from "./assets/types";
 import type { LayerName } from "./canvas";
 
@@ -115,6 +115,15 @@ export const CATEGORIES = [
 ] as const satisfies readonly { id: string; label: string; fields: readonly FieldKey[] }[];
 
 export type CategoryId = (typeof CATEGORIES)[number]["id"];
+
+/**
+ * Whether the hair texture choice means anything for this style. Generated
+ * styles are drawn in all four textures; a hand-drawn style or a picture
+ * carries its own, so the builder hides the texture tab for them (D-202).
+ */
+export function hairFollowsTexture(hairStyleId: string): boolean {
+  return !isPathHair(hairStyleId) && !isImageHair(hairStyleId);
+}
 
 /* ------------------------------------------------------------------ */
 /* Configuration                                                       */

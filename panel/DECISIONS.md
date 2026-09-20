@@ -7782,3 +7782,24 @@ neyse odur. Üretilmiş modeller dokuya uymaya devam eder.
 **Doğrulama:** `team-avatar.test.ts`: modelin katalogda olması, seçilen saç
 rengiyle boyanması, yolların kafaya ölçeklenmesi. Kapı: typecheck, lint, test,
 build.
+
+
+## D-202 — Doku sekmesi yalnızca dokuya uyan modellerde
+
+**İstek (ürün sahibi):** "Dokuları o modellerde gizle" — elle çizilmiş
+(D-201) ve hazır görsel (D-200) saç modelleri saç dokusu seçimine uymuyordu,
+ama oluşturucu yine de "Saç Dokusu" sekmesini gösteriyordu; seçim hiçbir şeyi
+değiştirmiyordu.
+
+**Karar:** `hairFollowsTexture(hairStyleId)` tek soru noktası oldu: üretilmiş
+modeller için doğru, elle çizilmiş ve görsel modeller için yanlış. Oluşturucu,
+yanlış olduğunda "Saç Dokusu" sekmesini hiç göstermiyor ve Saç kategorisinin
+altında "bu modelin dokusu çiziminden gelir" notunu yazıyor. Doku değeri
+konfigürasyonda kalmaya devam ediyor (kullanıcı üretilmiş bir modele
+döndüğünde son seçimi yerinde bulur).
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:** `team-avatar.test.ts`: `hairFollowsTexture` ayrımı ve elle
+çizilmiş bir modelde doku değişiminin çizimi hiç değiştirmemesi. Kapı:
+typecheck, lint, test, build.

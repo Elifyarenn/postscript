@@ -70,6 +70,11 @@ export function pathHairStyle(hair: PathHair): Asset {
   };
 }
 
+/** True for a style drawn by hand, whose texture is already in its paths. */
+export function isPathHair(styleId: string): boolean {
+  return PATH_HAIR.some((hair) => hair.id === styleId);
+}
+
 /** Hand-drawn styles, in the order they appear in the builder. */
 export const PATH_HAIR: PathHair[] = [
   {

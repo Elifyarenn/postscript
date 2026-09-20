@@ -28,6 +28,7 @@ import {
   DEFAULT_AVATAR_CONFIG,
   FIELDS,
   PRESETS,
+  hairFollowsTexture,
   TEAM_ROLE_SUGGESTIONS,
   randomAvatarConfig,
   type AvatarConfig,
@@ -179,7 +180,12 @@ export function TeamAvatarBuilder({
   }, [saveState, deleteState]);
 
   const category = CATEGORIES.find((entry) => entry.id === view);
-  const choiceFields = (category?.fields ?? []).filter((key) => FIELDS[key].kind !== "color") as FieldKey[];
+  const choiceFields = (category?.fields ?? []).filter(
+    (key) =>
+      FIELDS[key].kind !== "color" &&
+      // A hand-drawn or picture style carries its own texture (D-202)
+      !(key === "hairTexture" && !hairFollowsTexture(config.hairStyle)),
+  ) as FieldKey[];
   const colorFields = (category?.fields ?? []).filter((key) => FIELDS[key].kind === "color") as FieldKey[];
   const activeTab = tab && choiceFields.includes(tab) ? tab : (choiceFields[0] ?? null);
   const viewIndex = VIEWS.indexOf(view);
@@ -395,6 +401,12 @@ export function TeamAvatarBuilder({
                 )}
 
                 {activeTab && <OptionGrid fieldKey={activeTab} config={config} onPick={set} onToggle={toggle} />}
+
+                {view === "hair" && !hairFollowsTexture(config.hairStyle) && (
+                  <p className={styles.hint}>
+                    Bu saç modelinin dokusu çiziminden gelir; doku seçimi bu modelde görünmez.
+                  </p>
+                )}
 
                 {colorFields.map((key) => {
                   const field: Field = FIELDS[key];

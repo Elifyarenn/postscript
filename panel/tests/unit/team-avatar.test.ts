@@ -13,6 +13,7 @@ import {
   avatarConfigSchema,
   avatarFileName,
   describeConfig,
+  hairFollowsTexture,
   parseStoredConfig,
   randomAvatarConfig,
   teamAvatarDetailsSchema,
@@ -220,6 +221,21 @@ describe("renderAvatarSvg", () => {
     const svg = renderAvatarSvg(DEFAULT_AVATAR_CONFIG, { view: "hair", size: 180, omit: ["eyes", "mouth"] });
     expect(svg).toContain('viewBox="92 20 840 840" width="180" height="180"');
     expect(svg).not.toContain('data-layer="eyes"');
+  });
+});
+
+describe("which styles follow the texture choice (D-202)", () => {
+  it("is true for the generated styles and false for drawn or picture ones", () => {
+    expect(hairFollowsTexture("messy")).toBe(true);
+    expect(hairFollowsTexture("long")).toBe(true);
+    expect(hairFollowsTexture("straight01")).toBe(false);
+    expect(hairFollowsTexture("imageSample")).toBe(false);
+  });
+
+  it("does not change what such a style draws", () => {
+    const straight = renderAvatarSvg(avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "straight01", hairTexture: "straight" }));
+    const coily = renderAvatarSvg(avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "straight01", hairTexture: "coily" }));
+    expect(straight).toBe(coily);
   });
 });
 
