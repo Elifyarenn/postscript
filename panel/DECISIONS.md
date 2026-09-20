@@ -7912,3 +7912,53 @@ katmanlarına çizmesi, `baseHair`'in yüzün altında kalması, saç rengi değ
 typecheck, lint, 695 test, build. Ayrıca altı model üç ten/saç renginde
 (siyah/açık ten, kahve/koyu ten, sarı/orta ten) ve kıyafet + şapka + gözlükle
 PNG'ye basılıp yan yana gözle karşılaştırıldı.
+
+
+## D-205 — Şekil saçı organik kütlelere çevirme (önce iki model)
+
+**İstek (ürün sahibi):** D-204'ün altı modeli görsel olarak reddedildi. "Saçlar
+insan saçı gibi değil, kafanın üzerine geçirilmiş katı geometrik kask/peruklar
+gibi." Mimari (ortak koordinat sistemi, tek çizici, renk değişkenleri, aynı
+asset'in küçük önizlemede kullanılması) kalsın, **geometri** yeniden çizilsin.
+Hedef: Picrew / editorial cartoon estetiği — temiz vektör ama geometrik değil,
+organik eğriler, hafif asimetri, gerçek saç kütleleri, birkaç kontrollü tutam.
+"Minimal SVG" tek parça geometrik şekil demek değil; gerekiyorsa model başına
+8–15 yol kullanılabilir. Önce yalnızca **düz orta ayrım** ve **perdeli**;
+bunlar tutmadan sistem genişletilmesin, diğer dörde dokunulmasın.
+
+**Karar — neyi değiştirdik:**
+
+1. **Hacim.** Saç artık kafatasının tam sınırından başlamıyor. `CROWN`, kafa
+   yüksekliğinin birkaç yüzdesi kadar üstte duran, kendi kendisinin aynası
+   olmayan bir taç; yüzün altında kapanıyor. Kafatasına yapışan kontur kaskı
+   doğuruyordu.
+2. **Üst üste binen kütleler.** Tek bir "ön parça" yerine, yüzü çerçeveleyen
+   kütleler + arkadaki uzunluk + (perdelide) ayrı perçem katmanı. Perçem ile
+   uzun saç **aynı şekil değil**; brief bunu ayrıca istiyordu.
+3. **Uçlar.** Tek yatay kesim yok: her kütlenin alt kenarı iki farklı
+   yükseklikte uçla bitiyor. İlk denemede bu girintiler diş gibi sivriydi,
+   sığlaştırıldı.
+4. **Yüzü çerçeveleme.** Kütlelerin iç kenarı elmacık kemiğini ve çene hattını
+   takip ediyor; düz dikey blok değil.
+5. **Perdeli.** Ayrımdan çıkıp aşağı, dışarı, sonra elmacık kemiğine dönen bir
+   eğri; uç sivrilerek bitiyor, gözün dışında ve altında kalıyor. Alnın merkezi
+   açık. Arkasında ana saç kendi katmanında devam ediyor.
+6. **İç çizgiler.** Her modelde altı ince çizgi, saçın aktığı yönü anlatıyor:
+   ayrımdan dışarı ve aşağı. İlk denemede bu çizgiler alında **tenin üzerine**
+   düşüyordu; saç sınırının içine alındı.
+
+**Yan etki:** `straightCenter` artık `bangs` katmanını hiç kullanmıyor — orta
+ayrımda perçem yoktur, ön kütleler `sideHair`'dedir. Test buna göre düzeltildi;
+`curtain` ise perçemi ayrı katmanda tutuyor.
+
+**Dokunulmayanlar:** `sidePart`, `shortStraight`, `wolf`, `pixie` hâlâ D-204
+geometrisinde. Ürün sahibi bu ikisini onaylamadan diğerleri elden geçirilmeyecek.
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:** Kapı: typecheck, lint, 696 test, build. `team-avatar.test.ts`
+şekil katmanlarını, perçemin uzunluğun önünde olmasını ve saç rengi değişince
+geometrinin hiç değişmemesini doğruluyor. İki model dört saç renginde (koyu
+kahve, sarı, siyah, bakır) ve dört ten tonunda PNG'ye basılıp gözle kontrol
+edildi; üç geçişte düzeltildi (yüzde asılı kalan tutamlar, fazla kubbeli taç,
+küt perçem ucu, diş gibi uç girintileri).

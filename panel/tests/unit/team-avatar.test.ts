@@ -330,9 +330,16 @@ describe("hair built from shapes (D-204)", () => {
   it("draws into the shape layers and not into the old front hair one", () => {
     const names = layerNames({ hairStyle: "straightCenter" });
     expect(names).toContain("baseHair");
-    expect(names).toContain("bangs");
+    // A centre parting has no fringe: its front masses are the side pieces
+    expect(names).toContain("sideHair");
     expect(names).toContain("hairDetails");
     expect(names).not.toContain("frontHair");
+  });
+
+  it("keeps a curtain fringe on its own layer, in front of the length", () => {
+    const names = layerNames({ hairStyle: "curtain" });
+    expect(names).toContain("bangs");
+    expect(names.indexOf("sideHair")).toBeLessThan(names.indexOf("bangs"));
   });
 
   it("puts the volume on the skull under the face, so the forehead stays skin", () => {

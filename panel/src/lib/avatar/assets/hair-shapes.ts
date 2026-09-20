@@ -5,13 +5,17 @@
  * locks. It could draw a lot, but each style ended up with its own logic and
  * the catalogue stopped looking like one illustrator's work. This file is the
  * replacement the product owner asked for: a Picrew-style asset set where a
- * style is nothing but geometry — three to eight closed shapes and at most six
- * detail lines — laid over the shared head anchors in `face.ts`.
+ * style is nothing but geometry, laid over the shared head anchors in
+ * `face.ts`.
  *
  * The rules, from the brief:
  *
  * - no hair strands, no anime spikes, no stray locks over the face, no
  *   gradients, no glossy highlights;
+ * - clean vector, but not geometric: eight to fifteen controlled paths per
+ *   style, overlapping masses rather than one shape, organic curves, ends at
+ *   different heights, and the crown carrying a little volume over the skull
+ *   (`CROWN`) — hair that starts exactly on the skull reads as a helmet (D-205);
  * - the outline is the avatar's own line weight, detail lines are thinner;
  * - colour never sits in the geometry: the fill is the chosen hair colour, the
  *   few shadow shapes its shade, the detail lines the palette's line colour
@@ -110,6 +114,21 @@ export function shapeHairStyle(style: ShapeHair): Asset {
 /* Shared pieces                                                       */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The crown: the skull plus the volume hair has on top of it, a few per cent
+ * of the head's height. Hair that starts exactly on the skull reads as a cap
+ * pulled over it. The outline is deliberately not a mirror of itself — one
+ * side rises a little sooner — and it closes under the face, out of sight.
+ */
+const CROWN: Shape = {
+  tension: 0.85,
+  points: [
+    [242, 452], [246, 374], [264, 310], [298, 256], [346, 212], [404, 184], [462, 170],
+    [512, 168], [566, 172], [626, 188], [680, 220], [724, 264], [754, 324], [772, 390], [782, 452],
+    [778, 520], [700, 556], [600, 574], [512, 578], [420, 572], [320, 552], [246, 520],
+  ],
+};
+
 /** The skull, closed under the face where nothing can see it. */
 const cap = (bottom: Point[] = [[770, 520], [660, 552]]): Shape => ({
   points: symmetric([...SKULL_RIGHT, ...bottom]),
@@ -156,26 +175,53 @@ export const SHAPE_HAIR: ShapeHair[] = [
   {
     id: "straightCenter",
     label: "Düz — orta ayrım",
-    back: [{ points: symmetric(LONG_BACK) }],
-    base: [cap()],
-    bangs: [
-      frontPiece(
-        [[790, 540], [806, 700], [800, 850], [780, 944], [752, 980]],
-        [[720, 962], [712, 846], [702, 706], [696, 580]],
-      ),
-      // The left falls a little longer and hangs a little straighter
-      mirrored(
-        frontPiece(
-          [[788, 548], [806, 712], [802, 868], [784, 964], [756, 1000]],
-          [[722, 984], [714, 862], [704, 716], [698, 588]],
-        ),
-      ),
+    back: [
+      {
+        tension: 0.85,
+        points: [
+          [512, 178], [620, 192], [712, 240], [772, 326], [796, 444], [808, 572], [812, 700], [806, 830], [794, 938],
+          [770, 1018], [700, 1044], [610, 1052], [512, 1046], [414, 1054], [330, 1042], [258, 1012],
+          [228, 926], [216, 808], [214, 678], [222, 548], [236, 426], [268, 316], [330, 234], [416, 188],
+        ],
+      },
     ],
+    base: [CROWN],
+    // The masses that frame the face. Each one runs from the parting, opens out
+    // over the temple, follows the cheek and the jaw down, and ends in two
+    // points at different heights rather than on one cut line.
+    side: [
+      {
+        tension: 0.62,
+        points: [
+          [508, 178], [566, 172], [626, 188], [680, 220], [724, 264], [754, 324], [774, 392], [786, 472],
+          [798, 592], [804, 714], [798, 830], [784, 918], [768, 976], [746, 1008],
+          [726, 974], [714, 936],
+          [702, 964], [688, 986],
+          [678, 946], [668, 860], [664, 782], [672, 700], [690, 624], [704, 556], [706, 494],
+          [678, 432], [652, 380], [616, 336], [574, 306], [536, 288], [514, 276], [510, 224],
+        ],
+      },
+      {
+        tension: 0.62,
+        points: [
+          [516, 176], [462, 170], [402, 184], [344, 214], [296, 258], [262, 314], [244, 382], [232, 468],
+          [220, 586], [214, 706], [220, 824], [234, 914], [252, 968], [274, 996],
+          [294, 966], [306, 930],
+          [318, 958], [332, 978],
+          [340, 938], [346, 854], [350, 778], [344, 700], [328, 626], [316, 558], [316, 496],
+          [330, 434], [356, 382], [392, 338], [434, 308], [474, 290], [504, 278], [514, 222],
+        ],
+      },
+    ],
+    // Out of the parting, then down: four short lines at the crown and one
+    // long one down each side
     details: [
-      { points: [[576, 336], [634, 386], [676, 444]] },
-      { points: [[438, 342], [388, 390], [352, 448]] },
-      { points: [[762, 604], [772, 740], [764, 872]] },
-      { points: [[258, 624], [250, 760], [258, 890]] },
+      { points: [[560, 232], [614, 282], [648, 344]] },
+      { points: [[540, 214], [576, 254], [600, 304]] },
+      { points: [[470, 224], [420, 268], [390, 326]] },
+      { points: [[452, 208], [412, 244], [386, 292]] },
+      { points: [[746, 620], [756, 748], [748, 864]] },
+      { points: [[276, 640], [268, 764], [276, 880]] },
     ],
   },
   {
@@ -239,31 +285,64 @@ export const SHAPE_HAIR: ShapeHair[] = [
   {
     id: "curtain",
     label: "Perdeli",
-    back: [{ points: symmetric([[512, 180], [630, 196], [728, 252], [784, 350], [802, 472], [806, 652], [794, 806], [774, 890], [664, 912], [560, 918]]) }],
-    base: [cap()],
-    // The hair that hangs beside the face, behind the curtain
-    side: [
-      sidePiece([[772, 470], [800, 612], [808, 754], [796, 866], [768, 906]], [[734, 884], [722, 756], [710, 618], [704, 496]]),
-      sidePiece([[252, 476], [224, 622], [216, 766], [228, 876], [256, 918]], [[290, 896], [302, 764], [314, 622], [320, 502]]),
+    back: [
+      {
+        tension: 0.85,
+        points: [
+          [512, 178], [618, 192], [710, 240], [770, 326], [794, 442], [804, 568], [806, 690], [796, 800], [778, 874],
+          [700, 906], [606, 918], [512, 914], [416, 920], [330, 904], [262, 870],
+          [236, 788], [224, 674], [224, 550], [238, 428], [270, 316], [332, 234], [418, 188],
+        ],
+      },
     ],
-    // The curtain itself: from the parting, out over the temple and back in to
-    // a point on the cheekbone, clear of the eyes
+    base: [CROWN],
+    // The length behind the curtain, ending in two points a side
+    side: [
+      {
+        tension: 0.62,
+        points: [
+          [770, 430], [796, 544], [808, 664], [806, 778], [792, 856], [774, 896],
+          [754, 872], [740, 844],
+          [726, 868], [712, 884],
+          [706, 840], [702, 756], [700, 656], [704, 546], [710, 456],
+        ],
+      },
+      {
+        tension: 0.62,
+        points: [
+          [254, 440], [228, 556], [216, 674], [218, 784], [232, 860], [250, 894],
+          [270, 868], [284, 840],
+          [298, 864], [312, 878],
+          [318, 834], [322, 748], [324, 652], [320, 544], [314, 460],
+        ],
+      },
+    ],
+    // The curtain: out of the parting, down, out over the temple, then back in
+    // to a point on the cheekbone. It falls in front of the length, so the two
+    // read as separate layers, and the middle of the forehead stays open.
     bangs: [
       {
-        mirror: true,
-        // The lower edge runs on the diagonal, from the temple in to a point on
-        // the cheekbone: that slant is what makes a curtain read as a curtain
+        tension: 0.6,
         points: [
-          ...SKULL_RIGHT, [768, 520], [742, 584], [706, 630],
-          [678, 566], [658, 492], [634, 418], [602, 356], [558, 308], [524, 284],
+          [516, 232], [574, 214], [638, 234], [694, 284], [732, 348], [752, 420], [756, 486], [744, 548], [722, 590], [690, 618], [662, 632],
+          [656, 610], [650, 556], [642, 488], [620, 414], [592, 356], [556, 308], [520, 270],
+        ],
+      },
+      {
+        tension: 0.6,
+        points: [
+          [508, 230], [450, 210], [386, 232], [330, 284], [292, 350], [270, 424], [266, 494], [280, 558], [302, 602], [334, 630], [362, 646],
+          [368, 622], [374, 566], [380, 496], [398, 424], [426, 360], [464, 310], [504, 272],
         ],
       },
     ],
     details: [
-      { points: [[566, 330], [620, 400], [664, 486]] },
-      { points: [[456, 336], [402, 408], [364, 494]] },
-      { points: [[766, 626], [774, 752], [762, 860]] },
-      { points: [[258, 642], [252, 764], [264, 872]] },
+      { points: [[560, 268], [608, 322], [640, 392]] },
+      { points: [[580, 300], [624, 366], [648, 442]] },
+      { points: [[462, 272], [414, 326], [386, 396]] },
+      { points: [[440, 306], [400, 372], [378, 444]] },
+      { points: [[752, 620], [762, 742], [754, 846]] },
+      { points: [[272, 636], [264, 754], [272, 852]] },
     ],
   },
   {
