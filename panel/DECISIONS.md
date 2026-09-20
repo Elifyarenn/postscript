@@ -8022,3 +8022,31 @@ bu ekranlara zaten yalnızca yönetici giriyor.
 **Doğrulama:** Kapı: typecheck, lint, 689 test, build. Davranış saf görüntü
 (link var/yok) ve kararı veren `profileHref` D-209'da zaten test edildiği için
 yeni test yazılmadı.
+
+
+
+## D-214 — 21 Eylül 2026 oturumundaki saç adımları geri alındı
+
+**İstek (ürün sahibi):** "bu session daki adımları sil."
+
+**Kapsam ve yöntem:** Oturumun tek adımı olan `step 133` (D-213, `pic/`'teki
+saç sayfalarının görsel saç olarak uygulanması) **geri alma commit'iyle**
+silindi (force push yok, geçmiş korunuyor) — D-207 ile aynı yöntem.
+
+**Geri alınanlar (`step 133`, commit `161c373`):**
+
+- **D-213** — `pic/`'teki üç saç sayfasının hücrelere ayrılıp 1024² tuvale
+  yerleştirilmesi, dokuz görsel saç modelinin ("Görsel: Düz/Dalgalı/Kıvırcık
+  1–3") kataloğa eklenmesi, dosyaların `public/avatar-hair/` altına girmesi.
+
+**Sonuç:** Saç kataloğu `step 132` hâline döndü: 16 üretilmiş model, elle
+çizilmiş "Düz 01" ve örnek görsel saç. `IMAGE_HAIR` yeniden yalnızca
+`imageSample` içeriyor; `public/avatar-hair/`'deki dokuz PNG silindi.
+Veritabanı şeması değişmediği için migration gerekmedi. Karar metninin
+içeriği `git log` içinde `step 133` commit'inde durur.
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:** Geri alma sonrası ağaç `origin/main`'in `step 132` hâliyle
+bire bir aynı (yalnızca geri alma commit'i ve bu karar eklendi). Kapı:
+typecheck, lint, 689 test.
