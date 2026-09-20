@@ -7881,3 +7881,33 @@ kullanıcı adı servis katmanından hiç dönmüyor, o yüzden link verilemiyor
 Ayrıca yazısı olan 25 kişiden 8'inin mahlası olmadığı için yazar sayfası
 oluşmuyor ve public API'de isimleri anonim görünüyor — bu sonuncusu bilinçli
 bir rıza korumasıdır (bkz. `publicByline`), kaldırılmamalıdır.
+
+
+## D-209 — Teknoloji yığını raporu `panel/TEKNOLOJI-RAPORU.md`'de durur
+
+**İstek (ürün sahibi):** "teknoloji [yığını] raporu oluştur" ve ardından "kaç
+yetkili kişi var onu da yaz — çizer, editör, admin, yazar; birden fazla görevi
+olanları ona göre hesapla".
+
+**Karar:** Rapor `panel/TEKNOLOJI-RAPORU.md` olarak depoya yazıldı. Yeri
+tartışmalıydı: `doc/` hukuki metinlerin yeri, `README.md` zaten uzun ve
+kurulum anlatıyor. Rapor bir anlık fotoğraf olduğu için ikisine de karışmadı;
+`DECISIONS.md` ve `README.md` ile aynı seviyede, tarihli ayrı bir dosya.
+
+**Yöntem:** Sürümler `node_modules` içindeki kurulu paketlerden okundu, beyandan
+değil. Kapılar çalıştırıldı: typecheck ve lint temiz, 69 dosyada 685 test geçti.
+
+**Kişi sayıları canlıdan alındı.** Neon `run_sql` izin sisteminde "Production
+Reads" diye reddedildi; sayılar bunun yerine ürün sahibinin tarayıcısındaki
+admin panelinden (`/admin/users`, `/writers`, `/editors`, `/illustrators`)
+okundu. 41 hesap: 2 yönetici, 6 editör, 29 yazar, 4 rolsüz. Çizer işareti 4
+hesapta — 2'si yazar, 2'si rolsüz; yani görevi olan kişi 39, panele girebilen
+37. **Rapora isim, e-posta ve doğum tarihi yazılmadı**, yalnızca sayılar:
+depoya giren bir dosyada kişisel veri tutmanın gereği yok.
+
+**Raporun bulguları (ayrı adımlarda kapatılacak):** `CLAUDE.md` ve `README.md`
+"shadcn/ui" diyor ama bileşenler elle yazılmış; `.env.example` içinde `SITE_URL`
+ve `TURNSTILE_*` yok; `MAIL_TRANSPORT`, `MAIL_DIR`, `PASSWORD_HIBP_CHECK`
+`env.ts` şemasını atlayıp doğrudan `process.env`'den okunuyor; `README.md` test
+sayısı 292'de kalmış (gerçek 685); kodda 119 `§` atıfı hâlâ duruyor (D-077).
+Bu adımda hiçbiri düzeltilmedi — rapor tespit eder, kod değiştirmez.
