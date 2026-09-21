@@ -19,6 +19,7 @@ import { BLUSH, FACIAL_HAIR, FRECKLES, MOLES, SCARS, UNDER_EYE } from "./assets/
 import { FACES, SKIN_TONES } from "./assets/face";
 import { EYEBROWS, EYELASHES, EYES, EYE_COLORS, LIP_COLORS, MOUTHS, NOSES } from "./assets/features";
 import { HAIR_COLORS, HAIR_STYLES, HAIR_TEXTURES } from "./assets/hair";
+import { HEADSCARF, SCARF_COLORS } from "./assets/headscarf";
 import { IMAGE_HAIR, imageHairStyle } from "./assets/hair-images";
 import type { Asset, ColorOption } from "./assets/types";
 import type { LayerName } from "./canvas";
@@ -61,13 +62,15 @@ export const FIELDS = {
   hairStyle: {
     label: "Saç Modeli",
     kind: "asset",
-    // The corrected styles (D-215) first, then the picture set (D-200)
-    options: [...HAIR_STYLES, ...IMAGE_HAIR.map(imageHairStyle)],
+    // The headscarf first (D-219), then the corrected styles (D-215), then
+    // the picture set (D-200)
+    options: [...HEADSCARF, ...HAIR_STYLES, ...IMAGE_HAIR.map(imageHairStyle)],
     thumb: "hair",
     omit: FEATURE_LAYERS,
   },
   hairTexture: { label: "Saç Dokusu", kind: "asset", options: HAIR_TEXTURES, thumb: "hair", omit: FEATURE_LAYERS },
   hairColor: { label: "Saç Rengi", kind: "color", options: HAIR_COLORS },
+  scarfColor: { label: "Türban Rengi", kind: "color", options: SCARF_COLORS },
   eyes: { label: "Göz Şekli", kind: "asset", options: EYES, thumb: "eyes" },
   eyelashes: { label: "Kirpik", kind: "asset", options: EYELASHES, thumb: "eyes" },
   eyeColor: { label: "Göz Rengi", kind: "color", options: EYE_COLORS },
@@ -98,7 +101,7 @@ export type SingleKey = Exclude<FieldKey, SetKey>;
 
 /** The builder's left-hand navigation, in the reference's order. */
 export const CATEGORIES = [
-  { id: "hair", label: "Saç", fields: ["hairStyle", "hairTexture", "hairColor"] },
+  { id: "hair", label: "Saç", fields: ["hairStyle", "hairTexture", "hairColor", "scarfColor"] },
   { id: "face", label: "Yüz", fields: ["face"] },
   { id: "skin", label: "Ten Rengi", fields: ["skinTone"] },
   { id: "eyes", label: "Gözler", fields: ["eyes", "eyelashes", "eyeColor"] },
@@ -123,11 +126,12 @@ export type CategoryId = (typeof CATEGORIES)[number]["id"];
  * Bumped whenever a stored record must be drawn again: v1 was the first style
  * (D-194), v2 the redesigned parts (D-195), v3 the product-owner-corrected
  * drawings (D-215), v4 the bukle set and colour-following shadows and lines
- * (D-217). A record with an older version is redrawn on download and by
+ * (D-217), v6 the headscarf and its own colour (D-219). A record with an
+ * older version is redrawn on download and by
  * `redrawAllTeamAvatarPngs` (D-216), so the file an admin sees always shows
  * today's art; the choices themselves carry over unchanged.
  */
-export const AVATAR_CONFIG_VERSION = 5;
+export const AVATAR_CONFIG_VERSION = 6;
 
 type IdsOf<K extends FieldKey> = (typeof FIELDS)[K]["options"][number]["id"];
 
@@ -160,6 +164,7 @@ export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
   hairStyle: "messy",
   hairTexture: "curly",
   hairColor: "black",
+  scarfColor: "black",
   eyes: "almond",
   eyelashes: "none",
   eyeColor: "darkBrown",

@@ -67,6 +67,9 @@ export type Palette = {
   lip: string;
   clothing: string;
   clothingShade: string;
+  scarf: string;
+  scarfShade: string;
+  scarfLine: string;
   glasses: string;
   metal: string;
 };
@@ -77,6 +80,7 @@ export function buildPalette(colors: {
   eye: string;
   lip: string | null;
   clothing: string;
+  scarf: string;
   glasses: string;
   metal: string;
 }): Palette {
@@ -96,6 +100,11 @@ export function buildPalette(colors: {
     lip: colors.lip ?? mix(shade(skin, 0.14), "#d0606f", 0.34),
     clothing,
     clothingShade: shade(clothing, luminance(clothing) < 0.05 ? 0.1 : 0.2),
+    scarf: colors.scarf,
+    scarfShade: shade(colors.scarf, luminance(colors.scarf) < 0.05 ? 0.12 : 0.26),
+    // The hem must read on black cloth as well as on cream, so it lightens
+    // where darkening would disappear — the same trick as the hair strands
+    scarfLine: luminance(colors.scarf) < 0.06 ? tint(colors.scarf, 0.28) : shade(colors.scarf, 0.32),
     glasses: colors.glasses,
     metal: colors.metal,
   };
@@ -153,12 +162,16 @@ export function cel(
   shadow: string,
   offset: Point = [-12, -8],
   outline = true,
+  // A shape with a hole in it (the headscarf's face opening, D-219) needs the
+  // rule on the fills and on the clip alike, or the hole fills in
+  evenOdd = false,
 ): string {
   const id = context.id(name);
-  context.def(`<clipPath id="${id}"><path d="${d}"/></clipPath>`);
+  const rule = evenOdd ? ` fill-rule="evenodd"` : "";
+  context.def(`<clipPath id="${id}"><path d="${d}"${evenOdd ? ` clip-rule="evenodd"` : ""}/></clipPath>`);
   return (
-    fill(d, shadow) +
-    `<g clip-path="url(#${id})"><path d="${d}" fill="${base}" transform="translate(${-offset[0]} ${-offset[1]})"/></g>` +
+    fill(d, shadow, rule) +
+    `<g clip-path="url(#${id})"><path d="${d}" fill="${base}"${rule} transform="translate(${-offset[0]} ${-offset[1]})"/></g>` +
     (outline ? stroke(d) : "")
   );
 }

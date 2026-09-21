@@ -8,6 +8,7 @@
 import { CX, INK, bead, cel, fill, inHead, ring, stroke, type DrawContext } from "../canvas";
 import { mix, shade } from "../geometry";
 import { earPoints } from "./face";
+import { coversEars } from "./headscarf";
 import { EYE_LEFT_X, EYE_RIGHT_X, EYE_SCALE, EYE_Y, FACE_ANCHORS } from "./features";
 import { NONE, type Asset, type ColorOption } from "./types";
 
@@ -87,6 +88,7 @@ function earring(id: string, label: string, art: (context: DrawContext, x: numbe
     label,
     layers: {
       earrings: (context) => {
+        if (coversEars(context)) return "";
         const [x, y] = earPoints(context).lobe;
         return inHead(art(context, x, y) + art(context, CX * 2 - x, y));
       },
@@ -124,14 +126,17 @@ function piercing(id: string, label: string, art: (context: DrawContext) => stri
 
 export const PIERCINGS = [
   piercing("helix", "Helix", (c) => {
+    if (coversEars(c)) return "";
     const [x, y] = earPoints(c).rim;
     return ring(`M${x - 10} ${y - 12} A10 10 0 1 0 ${x + 4} ${y - 18}`, c.palette.metal, 4) + ring(`M${x - 6} ${y + 16} A10 10 0 1 0 ${x + 8} ${y + 10}`, c.palette.metal, 4);
   }),
   piercing("industrial", "Industrial", (c) => {
+    if (coversEars(c)) return "";
     const [x, y] = earPoints(c).rim;
     return stroke(`M${x - 44} ${y - 36} L${x + 2} ${y + 6}`, 6.5) + stroke(`M${x - 44} ${y - 36} L${x + 2} ${y + 6}`, 3.5, c.palette.metal) + bead(x - 44, y - 36, 5, c.palette.metal) + bead(x + 2, y + 6, 5, c.palette.metal);
   }),
   piercing("lobeStack", "Kulak memesi", (c) => {
+    if (coversEars(c)) return "";
     const [x, y] = earPoints(c).lobe;
     return bead(x + 6, y - 22, 5, c.palette.metal) + bead(CX * 2 - x - 6, y - 22, 5, c.palette.metal);
   }),

@@ -8192,3 +8192,49 @@ gerekçe) — bu adımda çalıştırılmadı.
 kayıtlı `wavy`'nin Bukleli'ye taşınması), build. Görsel: kızıl saç + kısa
 sakalla üretim PNG yolundan render — bukleler ve sakalın tırtıklı kenarı
 yerinde.
+
+
+## D-219 — Türban, saç listesinin başında
+
+**İstek (ürün sahibi):** "türban ekle bi de saçta en başa."
+
+**Karar:** Türban, saç modeli listesinin **ilk** seçeneği. Aksesuar (`extras`)
+değil, çünkü aksesuarlar birlikte seçilebiliyor; türban ise saçın yerine
+geçiyor. Saç listesinden seçilince hiçbir saç modeli seçili olmuyor, yani
+altından saç görünmüyor — ayrıca bir "saçı gizle" mekanizması gerekmedi.
+
+**Kendi renk listesi var.** Türban ne saç rengini alıyor (kumaş saç değil) ne
+de kıyafet rengini — ürün sahibi daha önce "şapka ve bere kıyafet rengini
+almasın" demişti, aynı gerekçe buraya da geçerli. `scarfColor` alanı 19 kumaş
+tonu sunuyor. Paletteki `scarfLine`, siyah kumaşta koyultmak yerine
+açıyor (saç tellerindeki `hairStrand` ile aynı numara), yoksa kenar dikişi
+siyahta kayboluyordu.
+
+**Builder gereksiz alanı göstermiyor:** türban seçiliyken "Saç Dokusu" ve
+"Saç Rengi" gizleniyor, "Türban Rengi" yalnızca o zaman görünüyor — gözlük
+seçilmeyince "Çerçeve Rengi"nin gizlenmesiyle aynı desen.
+
+**Geometri kafa uzayında (`inHead`), statik saçlar gibi tuvalde değil:** çünkü
+türban yüzü çerçeveliyor ve yüzü takip etmesi gerekiyor. Üç hat var: dış
+siluet (kulakları örter — en geniş yüzde kulak x 786'ya kadar çıkıyor),
+yüz açıklığı ve içteki kenar dikişi. Açıklığın her noktası **en dar yüz
+konturunun içinde** kalıyor; yoksa bazı yüz şekillerinde delikten arka plan
+görünürdü. Çene ucunun hemen üstünden geçiyor, bir türban da öyle durur.
+Delikli tek şekil olduğu için `cel` yardımcısına `evenOdd` parametresi eklendi.
+
+**Kulak takıları türban altında çizilmiyor.** `selected` kümesine saç modeli
+kimliği de eklendi (daha önce yalnızca ekstralar ve piercingler vardı, oysa
+yorum satırı "bir şapka topuzu gizleyebilir" diyordu); küpeler ve kulaktaki
+üç piercing artık `coversEars` ile kendilerini çizmiyor. Aksi hâlde halka
+küpe kumaşın üstünde havada duruyordu.
+
+**`AVATAR_CONFIG_VERSION` 6'ya çıkarıldı:** yeni alan eklendi, kayıtlı PNG'ler
+bayatladı. Eski kayıtlarda `scarfColor` yok; alan bazlı geri düşüş varsayılanı
+veriyor, başka hiçbir seçim değişmiyor.
+
+**Doğrulama:** Kapı: typecheck, lint, 698 test (yeni: listenin başında olması;
+kumaşın kendi rengiyle ve delikli şekil kuralıyla çizilmesi; türban altında
+küpe ve piercing çizilmemesi, açık başta çizilmesi; eski kaydın varsayılan
+kumaş rengini alması), build. Görsel: beş yüz şekli ve beş kumaş renginde
+üretim PNG yolundan render — kulaklar örtülü, delikten arka plan görünmüyor,
+kenar dikişi siyah kumaşta da okunuyor.

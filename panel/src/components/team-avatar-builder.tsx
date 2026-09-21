@@ -41,6 +41,7 @@ import { historyReducer } from "@/lib/avatar/history";
 import { mix, shade } from "@/lib/avatar/geometry";
 import { SKIN_TONES } from "@/lib/avatar/assets/face";
 import { isImageHair } from "@/lib/avatar/assets/hair-images";
+import { isHeadscarf } from "@/lib/avatar/assets/headscarf";
 import { bodyFont, noteFont } from "@/lib/fonts";
 import type { ActionState } from "./form";
 import styles from "./team-avatar-builder.module.css";
@@ -179,8 +180,13 @@ export function TeamAvatarBuilder({
   }, [saveState, deleteState]);
 
   const category = CATEGORIES.find((entry) => entry.id === view);
-  const choiceFields = (category?.fields ?? []).filter((key) => FIELDS[key].kind !== "color") as FieldKey[];
-  const colorFields = (category?.fields ?? []).filter((key) => FIELDS[key].kind === "color") as FieldKey[];
+  // Under a headscarf there is no hair to give a texture or a colour, and the
+  // fabric colour means nothing without one (D-219)
+  const scarfOn = isHeadscarf(config.hairStyle);
+  const relevant = (key: FieldKey) =>
+    key === "scarfColor" ? scarfOn : !(scarfOn && (key === "hairTexture" || key === "hairColor"));
+  const choiceFields = (category?.fields ?? []).filter((key) => FIELDS[key].kind !== "color" && relevant(key)) as FieldKey[];
+  const colorFields = (category?.fields ?? []).filter((key) => FIELDS[key].kind === "color" && relevant(key)) as FieldKey[];
   const activeTab = tab && choiceFields.includes(tab) ? tab : (choiceFields[0] ?? null);
   const viewIndex = VIEWS.indexOf(view);
 

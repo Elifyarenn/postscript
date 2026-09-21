@@ -55,13 +55,15 @@ function prepare(config: AvatarConfig, imageHref: (file: string) => string): Pre
         eye: colorOf("eyeColor", config),
         lip: lip === "" ? null : lip,
         clothing: colorOf("clothingColor", config),
+        scarf: colorOf("scarfColor", config),
         glasses: colorOf("glassesColor", config),
         metal: colorOf("jewelryColor", config),
       }),
       face,
       earShift: face.right[4]![0] - EAR_BASE_X,
       texture: config.hairTexture,
-      selected: new Set([...config.extras, ...config.piercings]),
+      // The hair style is in here too, so ear jewellery can see a scarf over the ears (D-219)
+      selected: new Set([...config.extras, ...config.piercings, config.hairStyle]),
       imageHref,
     },
   };

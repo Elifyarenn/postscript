@@ -264,6 +264,38 @@ describe("corrected static hair (D-215)", () => {
   });
 });
 
+describe("türban (D-219)", () => {
+  const wearing = avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "turban", scarfColor: "navy" });
+
+  it("stands at the head of the hair list, before any hair", () => {
+    expect(FIELDS.hairStyle.options[0]!.id).toBe("turban");
+  });
+
+  it("draws cloth in the hair's place, in its own colour", () => {
+    const front = renderAvatarLayers(wearing).find((part) => part.layer === "frontHair")!.svg;
+    // The fabric colour, not a hair colour: navy is not in the hair palette
+    expect(front).toContain("#2f3f63");
+    // A shape with a hole in it; without the rule the face would be covered
+    expect(front).toContain('fill-rule="evenodd"');
+  });
+
+  it("leaves the ears alone, so no earring floats on the cloth", () => {
+    const withEarrings = avatarConfigSchema.parse({ ...wearing, earrings: "bigHoop", piercings: ["helix"] });
+    const bareHead = avatarConfigSchema.parse({ ...withEarrings, hairStyle: "pixie" });
+    const layerOf = (config: typeof withEarrings, layer: string) =>
+      renderAvatarLayers(config).find((part) => part.layer === layer)?.svg ?? "";
+    expect(layerOf(withEarrings, "earrings")).toBe("");
+    expect(layerOf(withEarrings, "piercings")).toBe("");
+    // The same choices on a bare head still draw
+    expect(layerOf(bareHead, "earrings")).not.toBe("");
+  });
+
+  it("gives an older record the default cloth colour rather than refusing it", () => {
+    const stored = parseStoredConfig({ ...DEFAULT_AVATAR_CONFIG, v: 5, scarfColor: undefined });
+    expect(stored.scarfColor).toBe(DEFAULT_AVATAR_CONFIG.scarfColor);
+  });
+});
+
 describe("picture-based hair (D-200)", () => {
   const config = avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "imageSample" });
 
