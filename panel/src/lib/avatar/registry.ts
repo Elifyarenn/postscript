@@ -122,11 +122,12 @@ export type CategoryId = (typeof CATEGORIES)[number]["id"];
 /**
  * Bumped whenever a stored record must be drawn again: v1 was the first style
  * (D-194), v2 the redesigned parts (D-195), v3 the product-owner-corrected
- * drawings (D-215). A record with an older version is redrawn on download and
- * by `redrawAllTeamAvatarPngs` (D-216), so the file an admin sees always shows
+ * drawings (D-215), v4 the bukle set and colour-following shadows and lines
+ * (D-217). A record with an older version is redrawn on download and by
+ * `redrawAllTeamAvatarPngs` (D-216), so the file an admin sees always shows
  * today's art; the choices themselves carry over unchanged.
  */
-export const AVATAR_CONFIG_VERSION = 3;
+export const AVATAR_CONFIG_VERSION = 4;
 
 type IdsOf<K extends FieldKey> = (typeof FIELDS)[K]["options"][number]["id"];
 
@@ -191,7 +192,7 @@ export const PRESETS: readonly { label: string; config: AvatarConfig }[] = [
   { label: "İki topuz", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "spaceBuns", hairTexture: "wavy", hairColor: "platinum", skinTone: "tone1", eyes: "round", eyeColor: "gray", blush: "rosy", clothing: "hoodie", clothingColor: "gray", mouth: "cat" } },
   { label: "Şapkalı", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "wolf", skinTone: "tone5", extras: ["cap"], clothing: "bomber", clothingColor: "charcoal", eyebrows: "thick", mouth: "smirk" } },
   { label: "Düz siyah", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "longBangs", hairTexture: "straight", glasses: "square", eyes: "cat", clothing: "shirt", clothingColor: "white", face: "oval", eyelashes: "soft" } },
-  { label: "Kıvırcık ve çilli", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "volume", hairTexture: "coily", hairColor: "brown", skinTone: "tone6", freckles: "dense", necklace: "layered", jewelryColor: "gold", earrings: "bigHoop", clothing: "blazer", clothingColor: "rust", face: "round" } },
+  { label: "Kıvırcık ve çilli", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "messy", hairTexture: "curly", hairColor: "brown", skinTone: "tone6", freckles: "dense", necklace: "layered", jewelryColor: "gold", earrings: "bigHoop", clothing: "blazer", clothingColor: "rust", face: "round" } },
   { label: "Kulaklıklı", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "curtain", hairTexture: "wavy", hairColor: "ash", skinTone: "tone7", extras: ["headphones"], piercings: ["eyebrow", "lobeStack"], eyes: "sleepy", clothing: "sweater", clothingColor: "black", scar: "brow" } },
 ];
 
@@ -206,8 +207,8 @@ function fromVersion1(source: Record<string, unknown>): Record<string, unknown> 
   return {
     face: pick({ oval: "oval", round: "round", square: "softSquare", heart: "heart", long: "oval", diamond: "vShape" }, source.faceShape),
     skinTone: source.skinTone,
-    hairStyle: pick({ crop: "shortMessy", quiff: "sidePart", shoulder: "curtain", shag: "wolf", afro: "volume" }, source.hairStyle),
-    hairTexture: source.hairTexture,
+    hairStyle: pick({ crop: "shortMessy", quiff: "sidePart", shoulder: "curtain", shag: "wolf", afro: "messy" }, source.hairStyle),
+    hairTexture: pick({ coily: "curly" }, source.hairTexture),
     hairColor: pick({ lilac: "lilac" }, source.hairColor),
     eyes: pick({ upturned: "cat", downturned: "droopy" }, source.eyeShape),
     eyeColor: source.eyeColor,

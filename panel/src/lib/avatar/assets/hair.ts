@@ -1,11 +1,12 @@
 /**
  * Hair styles, textures and colours (D-195; the drawings themselves became
- * the product-owner-corrected static geometry in D-215).
+ * the product-owner-corrected static geometry in D-215, with the bukle set
+ * added in D-217).
  *
  * The styles live in `hair-static.ts` as template strings drawn straight on
  * the 1024 canvas; this module only lists them, the hair colours and the
- * textures. A static drawing does not follow the texture choice (like D-201's
- * straight01); the texture still shapes the beard (D-195).
+ * textures. The straight texture draws the base set; wavy and curly draw the
+ * "dağınık bukle" set (D-217). The texture also shapes the beard (D-195).
  */
 import type { Asset, ColorOption } from "./types";
 import { HAIR_STATIC, hairStaticStyle } from "./hair-static";
@@ -35,7 +36,6 @@ export const HAIR_TEXTURES = [
   { id: "straight", label: "Düz" },
   { id: "wavy", label: "Dalgalı" },
   { id: "curly", label: "Kıvırcık" },
-  { id: "coily", label: "Sık kıvırcık" },
 ] as const satisfies readonly Asset[];
 
 /** The sixteen corrected styles, plus the bald head that draws nothing. */

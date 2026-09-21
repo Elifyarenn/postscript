@@ -118,8 +118,8 @@ describe("parseStoredConfig", () => {
       skinTone: "tone7",
       face: "softSquare",
       eyes: "cat",
-      hairStyle: "volume",
-      hairTexture: "coily",
+      hairStyle: "messy",
+      hairTexture: "curly",
       hairColor: "copper",
       clothing: "hoodie",
       clothingColor: "navy",
@@ -233,17 +233,24 @@ describe("corrected static hair (D-215)", () => {
   });
 
   it("draws the sheen inside the front shape through a per-layer clip", () => {
-    const svg = renderAvatarSvg(avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "messy" }));
+    const svg = renderAvatarSvg(
+      avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "messy", hairTexture: "straight" }),
+    );
     expect(svg).toContain('<clipPath id="frontHair-surface">');
     expect(svg).toContain('clip-path="url(#frontHair-surface)"');
   });
 
-  it("renders the texture choice without changing a static drawing", () => {
-    const layer = (texture: "straight" | "wavy") =>
+  it("draws the bukle set for wavy and curly, and the base set for straight", () => {
+    const layer = (texture: "straight" | "wavy" | "curly") =>
       renderAvatarLayers({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "long", hairTexture: texture }).find(
         (part) => part.layer === "frontHair",
       )!.svg;
-    expect(layer("straight")).toBe(layer("wavy"));
+    const straight = layer("straight");
+    expect(straight).not.toBe(layer("wavy"));
+    expect(layer("wavy")).toBe(layer("curly"));
+    // The bukle set clips its curl locks per layer; the base set has none
+    expect(straight).not.toContain("curl");
+    expect(layer("wavy")).toContain("curl");
   });
 });
 

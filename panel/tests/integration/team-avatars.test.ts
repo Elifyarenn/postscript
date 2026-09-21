@@ -83,7 +83,7 @@ describe("saveTeamAvatar", () => {
 
     await saveTeamAvatar(
       actorOf(illustrator),
-      input({ teamRole: "Çizer", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "volume" } }),
+      input({ teamRole: "Çizer", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "long" } }),
       noMeta,
     );
     const rows = await db.select().from(teamAvatars);
@@ -94,7 +94,7 @@ describe("saveTeamAvatar", () => {
     expect(storage.objects.size).toBe(1);
 
     const own = await getOwnTeamAvatar(actorOf(illustrator));
-    expect(own?.config.hairStyle).toBe("volume");
+    expect(own?.config.hairStyle).toBe("long");
 
     const actions = await db.select({ action: auditLog.action, entityId: auditLog.entityId }).from(auditLog);
     expect(actions.map((entry) => entry.action)).toEqual(["team_avatar.created", "team_avatar.updated"]);
@@ -172,7 +172,7 @@ describe("records saved in the first style (D-194)", () => {
     await getTeamAvatarPng(actorOf(admin), row!.id);
     const [after] = await db.select().from(teamAvatars).where(eq(teamAvatars.id, row!.id));
     expect(after!.configVersion).toBe(AVATAR_CONFIG_VERSION);
-    expect(after!.config).toMatchObject({ face: "softSquare", hairStyle: "volume", hairTexture: "coily", clothing: "blazer" });
+    expect(after!.config).toMatchObject({ face: "softSquare", hairStyle: "messy", hairTexture: "curly", clothing: "blazer" });
     expect(after!.pngStorageKey).not.toBe(row!.pngStorageKey);
     expect(storage.objects.has(`media:${row!.pngStorageKey}`)).toBe(false);
   }, 60_000);

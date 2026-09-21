@@ -8122,3 +8122,40 @@ yalnızca yeni kaydedilenler değişiyordu.
 
 **Doğrulama:** Kapı: typecheck, lint, 692 test (yeni: `redrawAllTeamAvatarPngs`
 kaydı yeniden çizer, kaydı yeni dosyaya işaret eder, eski dosyayı siler).
+
+
+
+## D-217 — Sık kıvırcık/afro kaldırılır; bukle seti dalgalı ve kıvırcığa eklenir; gölge ve çizgiler renge göre koyulaşır
+
+**İstek (ürün sahibi):** (1) "avatardan sık kıvırcık/afroyu kaldır." (2)
+`pic/sac-daginik-bukle/` klasöründeki saç seti "dalgalı ve kıvırcığa" eklensin.
+(3) "tüm saçlarda gölgeleri ve çizgileri hangi renk seçilirse onun koyusu
+olacak şekilde ayarla, siyah kalmasın."
+
+**Karar:**
+
+- **Sık kıvırcık ve afro kaldırıldı.** `hairTexture`'dan "Sık kıvırcık"
+  (`coily`), saç kataloğundan "Hacimli" (`volume`, afro) çıkarıldı. Eski
+  kayıtlarda bu seçimler `parseStoredConfig`'te tek tek varsayılana döner;
+  birinci sürüm eşlemesi `afro → messy`, `coily → curly` oldu. (Doku
+  mekaniği sakal için kaldı; `coily` seçimi artık katalogda yok.)
+- **Bukle seti dokuya bağlandı.** `sac-daginik-bukle/`deki on beş model
+  (afro hariç) `hair-static.ts`'e ikinci çizim olarak gömüldü: "Düz" dokusu
+  taban seti çizer, "Dalgalı" ve "Kıvırcık" bukle setini çizer. Her stilin
+  iki sürümü vardır; kayıtlı konfigürasyonların anlamı değişmedi.
+- **Gölge ve çizgiler seçilen rengin koyusudur.** Token'lar artık sabit
+  mürekkebi değil, rengin türevlerini basar: arka kütle `hairShade`, teller
+  `shade(saç, 0,35)`, saç konturu `hairDeep` — siyah sabit hiçbir yerde
+  kalmaz; beyaz/platin gibi açık renklerde de kontur o rengin koyusu olur.
+  Kıvırcık kilit klipsleri (`{surface}`, `{curlN}`) katman başına
+  benzersizleşir.
+- **`AVATAR_CONFIG_VERSION` 4'e çıkarıldı:** aynı konfigürasyonun çizimi
+  değiştiği için kayıtlı PNG'ler bayatlar; indirmede yeniden çizilir (D-216)
+  ve üretimde `pnpm redraw-team-avatars` bir kez daha çalıştırılır.
+
+**Hukuk:** Değişiklik yok (çizimler ürün sahibinin; alanlar aynı).
+
+**Doğrulama:** Kapı: typecheck, lint, 692 test (yeni: doku seçiminin set
+değiştirmesi — düz ≠ dalgalı, dalgalı = kıvırcık; bukle kilit klipsleri).
+Görsel: üretim PNG yolundan kahverengi saçla render — kontur `#533330`, teller
+`#5a3830`, arka `#5c3a30` (kahvenin koyuları, siyah değil).
