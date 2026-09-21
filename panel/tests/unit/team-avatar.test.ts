@@ -21,6 +21,7 @@ import {
 import { LAYER_ORDER, renderAvatarLayers, renderAvatarSvg } from "@/lib/avatar/render";
 import { HISTORY_LIMIT, historyReducer, type History } from "@/lib/avatar/history";
 import { isImageHair } from "@/lib/avatar/assets/hair-images";
+import { HAIR_TEXTURES } from "@/lib/avatar/assets/hair";
 import { crc32, uniqueEntryNames, zipToBuffer } from "@/lib/zip";
 import { canCreateTeamAvatar, canManageTeamAvatars, type Actor } from "@/lib/auth/rbac";
 
@@ -240,17 +241,26 @@ describe("corrected static hair (D-215)", () => {
     expect(svg).toContain('clip-path="url(#frontHair-surface)"');
   });
 
-  it("draws the bukle set for wavy and curly, and the base set for straight", () => {
-    const layer = (texture: "straight" | "wavy" | "curly") =>
+  it("offers two textures, one per drawn set (D-218)", () => {
+    // Dalgalı and Kıvırcık drew the same set, so the choice said nothing
+    expect(HAIR_TEXTURES.map((texture) => texture.id)).toEqual(["straight", "curly"]);
+  });
+
+  it("draws the bukle set for bukleli and the base set for düz", () => {
+    const layer = (texture: "straight" | "curly") =>
       renderAvatarLayers({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "long", hairTexture: texture }).find(
         (part) => part.layer === "frontHair",
       )!.svg;
     const straight = layer("straight");
-    expect(straight).not.toBe(layer("wavy"));
-    expect(layer("wavy")).toBe(layer("curly"));
+    expect(straight).not.toBe(layer("curly"));
     // The bukle set clips its curl locks per layer; the base set has none
     expect(straight).not.toContain("curl");
-    expect(layer("wavy")).toContain("curl");
+    expect(layer("curly")).toContain("curl");
+  });
+
+  it("carries a stored dalgalı over to bukleli instead of dropping it (D-218)", () => {
+    const stored = parseStoredConfig({ ...DEFAULT_AVATAR_CONFIG, v: 4, hairTexture: "wavy" });
+    expect(stored.hairTexture).toBe("curly");
   });
 });
 

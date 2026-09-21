@@ -127,7 +127,7 @@ export type CategoryId = (typeof CATEGORIES)[number]["id"];
  * `redrawAllTeamAvatarPngs` (D-216), so the file an admin sees always shows
  * today's art; the choices themselves carry over unchanged.
  */
-export const AVATAR_CONFIG_VERSION = 4;
+export const AVATAR_CONFIG_VERSION = 5;
 
 type IdsOf<K extends FieldKey> = (typeof FIELDS)[K]["options"][number]["id"];
 
@@ -158,7 +158,7 @@ export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
   face: "vShape",
   skinTone: "tone3",
   hairStyle: "messy",
-  hairTexture: "wavy",
+  hairTexture: "curly",
   hairColor: "black",
   eyes: "almond",
   eyelashes: "none",
@@ -187,13 +187,13 @@ export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
 /** Example avatars shown under the builder; a click starts from one of them. */
 export const PRESETS: readonly { label: string; config: AvatarConfig }[] = [
   { label: "Dağınık ve piercingli", config: { ...DEFAULT_AVATAR_CONFIG, mole: "eyeCorner", piercings: ["helix", "industrial"], earrings: "smallHoop" } },
-  { label: "Uzun dalgalı", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "long", hairColor: "darkBrown", eyes: "round", eyelashes: "soft", mouth: "smile", earrings: "drop", clothing: "tank", clothingColor: "black", face: "oval" } },
+  { label: "Uzun bukleli", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "long", hairColor: "darkBrown", eyes: "round", eyelashes: "soft", mouth: "smile", earrings: "drop", clothing: "tank", clothingColor: "black", face: "oval" } },
   { label: "Kızıl ve gözlüklü", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "shortMessy", hairTexture: "curly", hairColor: "red", glasses: "round", skinTone: "tone2", freckles: "light", extras: ["headphones"], clothing: "tshirt" } },
-  { label: "İki topuz", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "spaceBuns", hairTexture: "wavy", hairColor: "platinum", skinTone: "tone1", eyes: "round", eyeColor: "gray", blush: "rosy", clothing: "hoodie", clothingColor: "gray", mouth: "cat" } },
+  { label: "İki topuz", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "spaceBuns", hairTexture: "curly", hairColor: "platinum", skinTone: "tone1", eyes: "round", eyeColor: "gray", blush: "rosy", clothing: "hoodie", clothingColor: "gray", mouth: "cat" } },
   { label: "Şapkalı", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "wolf", skinTone: "tone5", extras: ["cap"], clothing: "bomber", clothingColor: "charcoal", eyebrows: "thick", mouth: "smirk" } },
   { label: "Düz siyah", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "longBangs", hairTexture: "straight", glasses: "square", eyes: "cat", clothing: "shirt", clothingColor: "white", face: "oval", eyelashes: "soft" } },
   { label: "Kıvırcık ve çilli", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "messy", hairTexture: "curly", hairColor: "brown", skinTone: "tone6", freckles: "dense", necklace: "layered", jewelryColor: "gold", earrings: "bigHoop", clothing: "blazer", clothingColor: "rust", face: "round" } },
-  { label: "Kulaklıklı", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "curtain", hairTexture: "wavy", hairColor: "ash", skinTone: "tone7", extras: ["headphones"], piercings: ["eyebrow", "lobeStack"], eyes: "sleepy", clothing: "sweater", clothingColor: "black", scar: "brow" } },
+  { label: "Kulaklıklı", config: { ...DEFAULT_AVATAR_CONFIG, hairStyle: "curtain", hairTexture: "curly", hairColor: "ash", skinTone: "tone7", extras: ["headphones"], piercings: ["eyebrow", "lobeStack"], eyes: "sleepy", clothing: "sweater", clothingColor: "black", scar: "brow" } },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -208,7 +208,7 @@ function fromVersion1(source: Record<string, unknown>): Record<string, unknown> 
     face: pick({ oval: "oval", round: "round", square: "softSquare", heart: "heart", long: "oval", diamond: "vShape" }, source.faceShape),
     skinTone: source.skinTone,
     hairStyle: pick({ crop: "shortMessy", quiff: "sidePart", shoulder: "curtain", shag: "wolf", afro: "messy" }, source.hairStyle),
-    hairTexture: pick({ coily: "curly" }, source.hairTexture),
+    hairTexture: pick({ coily: "curly", wavy: "curly" }, source.hairTexture),
     hairColor: pick({ lilac: "lilac" }, source.hairColor),
     eyes: pick({ upturned: "cat", downturned: "droopy" }, source.eyeShape),
     eyeColor: source.eyeColor,

@@ -7,7 +7,7 @@
  * They sit on the finished 1024 canvas (already on the head), so nothing is
  * transformed a second time.
  *
- * The straight texture draws the base set; wavy and curly draw the bukle
+ * The straight texture draws the base set; bukleli draws the bukle
  * set (D-217). The baked colours of the exports are tokens, replaced with
  * the chosen palette at draw time:
  *   {hair}       the hair colour itself              -> palette.hair

@@ -8159,3 +8159,36 @@ olacak şekilde ayarla, siyah kalmasın."
 değiştirmesi — düz ≠ dalgalı, dalgalı = kıvırcık; bukle kilit klipsleri).
 Görsel: üretim PNG yolundan kahverengi saçla render — kontur `#533330`, teller
 `#5a3830`, arka `#5c3a30` (kahvenin koyuları, siyah değil).
+
+
+## D-218 — Saç dokusu ikiye indi: Düz ve Bukleli
+
+**Bulgu:** D-217 bukle setini dokuya bağlarken "Dalgalı" ve "Kıvırcık"
+seçeneklerinin ikisi de aynı seti çiziyordu; kullanıcı arasında geçiş yapınca
+saçta hiçbir şey değişmiyordu. Elde stil başına iki çizim var (taban + bukle),
+listede üç seçenek vardı — biri anlamsızdı.
+
+**Karar:** Katalog iki seçeneğe indi: **Düz** (taban set) ve **Bukleli**
+(bukle seti). Kalan kimlik `curly`; `wavy` katalogdan çıktı ama doku mekaniği
+`coily` gibi tipte kaldı, çünkü sakal kenarını o tablo çiziyor.
+
+**Neden `curly` kaldı:** Doku, saç çiziminden başka tek yerde daha iş yapıyor —
+sakalın kenar tırtığı (`texturedClosedPath`, D-195). `wavy` yumuşak dalga
+(aralık 64, genlik 6), `curly` sık bukle (36/10). İkisini de render edip
+baktım: "Bukleli" etiketinin altında sakalın da bukleli okunması gerekiyor,
+bu yüzden hayatta kalan kimlik `curly` oldu.
+
+**Kayıtlı `wavy` seçimleri kaybolmuyor:** varsayılan `curly` yapıldı, böylece
+`parseStoredConfig`'in alan bazlı geri düşüşü eski `wavy` kaydını Bukleli'ye
+taşıyor; birinci sürüm eşlemesine de `wavy → curly` yazıldı. Önayarlardaki
+`wavy` seçimleri ve "Uzun dalgalı" önayar adı da güncellendi.
+
+**`AVATAR_CONFIG_VERSION` 5'e çıkarıldı:** `wavy` kayıtlı bir avatarın sakal
+kenarı artık farklı çiziliyor, yani kayıtlı PNG bayatladı. Üretimde
+`pnpm redraw-team-avatars` bir kez çalıştırılmalı (D-216, D-217 ile aynı
+gerekçe) — bu adımda çalıştırılmadı.
+
+**Doğrulama:** Kapı: typecheck, lint, 694 test (yeni: katalogda iki doku;
+kayıtlı `wavy`'nin Bukleli'ye taşınması), build. Görsel: kızıl saç + kısa
+sakalla üretim PNG yolundan render — bukleler ve sakalın tırtıklı kenarı
+yerinde.
