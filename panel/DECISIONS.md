@@ -8238,3 +8238,45 @@ küpe ve piercing çizilmemesi, açık başta çizilmesi; eski kaydın varsayıl
 kumaş rengini alması), build. Görsel: beş yüz şekli ve beş kumaş renginde
 üretim PNG yolundan render — kulaklar örtülü, delikten arka plan görünmüyor,
 kenar dikişi siyah kumaşta da okunuyor.
+
+
+## D-220 — Çalma listesinin tamamı, yanındaki çubukla kaydırılır
+
+**İstek (ürün sahibi):** "albüm kısmında tüm şarkıları çek ve aşağı
+kaydırabilir şekilde yap, yandaki scroll tasarımını kullan."
+
+**Bulgu:** İki şey eksikti. `issue-extras.ts`'te çalma listesinin yalnızca ilk
+iki şarkısı yazılıydı (16 Eylül'de elle kopyalanmış), üstelik çalar onların da
+ilk üçünü basıyordu (`tracks.slice(0, 3)`). Sağdaki ince çubuk ise çizimden
+gelen **sahte** bir süstü: `<span className="player-scroll">`, sabit yerde
+duran bir tutamak, hiçbir şeyi kaydırmıyordu.
+
+**Karar:**
+
+- **Listenin tamamı veriye yazıldı.** Spotify'ın kendi gömülü çalarından 21
+  Eylül 2026'da okundu: 45 şarkı, sıralarıyla, adları ve süreleriyle. Yöntem
+  D-131'deki ile aynı — şarkılar depoda durur, ön yüz Spotify'a istek atmaz;
+  okur "Çal"a basmadan hiç kimsenin IP'si yurt dışına gitmez.
+- **Çalar hepsini basar** ve liste kendi kutusunda kayar. Kutu sabit yükseklikte
+  (7,5rem, tasarımdaki yükseklik), yani 45 şarkı çaları uzatmıyor.
+- **Süs çubuk gerçek kaydırma çubuğu oldu.** Tasarımın çizdiği yerde, aynı
+  görünümde duruyor; tutamağın boyu görünen şarkıların tüm şarkılara oranı,
+  yeri de listenin kaydığı yer. Sürüklenebiliyor. Listenin kendi tarayıcı
+  çubuğu gizlendi, yoksa yan yana iki çubuk olurdu.
+
+**Neden tarayıcının kendi çubuğu biçimlendirilmedi:** Firefox `scrollbar-width`
+dışında bir şey vermiyor; tasarımdaki 1px çerçeveli kutu + kâğıt renkli tutamak
+orada çıkmazdı. Ayrıca çubuk, tasarımda pikap alanının yanına kadar iniyor;
+tarayıcı çubuğu yalnızca listenin boyu kadar olurdu. Çizim olduğu yerde kaldı,
+altına gerçek davranış kondu.
+
+**Erişilebilirlik:** Liste `tabIndex={0}` ile klavyeden odaklanıp ok tuşlarıyla
+kaydırılabiliyor ve odak halkası var; asıl kaydırma yolu bu. Çubuk `aria-hidden`
+kalıyor — fare için bir kolaylık, ekran okuyucu için ikinci bir kopya değil.
+Liste kaydırılamayacak kadar kısaysa tutamak çubuğu dolduruyor; hiç liste
+yoksa (çalma listesi yapılmamış sayılar) çizimdeki kısa tutamak görünüyor.
+
+**Hukuk:** Değişiklik yok. Şarkı adları depoda; ön yüz hâlâ Spotify'a istek
+atmıyor, aydınlatma metnini etkileyen bir veri kalemi eklenmedi.
+
+**Doğrulama:** Kapı: typecheck, lint, 698 test, build. Görsel: canlıda.

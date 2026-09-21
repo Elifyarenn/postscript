@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The front page playlist's player (D-117, D-126, D-127, D-129).
+ * The front page playlist's player (D-117, D-126, D-127, D-129, D-220).
  *
  * Spotify's embedded player is loaded only when the reader presses play. Until
  * then no request reaches Spotify, so opening the front page sends nobody's IP
@@ -20,7 +20,7 @@
  * Spotify's player takes no volume command from the page, so silencing pauses
  * it and turning the sound back on resumes it where it stopped.
  */
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { FastForward, Music, Play, Rewind, Volume2, VolumeX, X } from "lucide-react";
 import type { PlaylistTrack } from "@/lib/issue-extras";
@@ -55,7 +55,7 @@ export function SpotifyPlayer({
   headingId: string;
   /** The playlist's name, shown on the closed player. */
   listName?: string;
-  /** The playlist's songs; the closed player lists the first three. */
+  /** The playlist's songs; the closed player lists them all, scrolling (D-220). */
   tracks?: PlaylistTrack[];
   /** There is a playlist, but only a signed-in member may open it. */
   locked?: boolean;
@@ -68,6 +68,55 @@ export function SpotifyPlayer({
   const frameRef = useRef<HTMLIFrameElement>(null);
   const openButtonRef = useRef<HTMLButtonElement>(null);
   const closedByReader = useRef(false);
+  const listRef = useRef<HTMLOListElement>(null);
+  const dragRef = useRef<{ from: number; top: number; perPixel: number } | null>(null);
+  const [thumb, setThumb] = useState<{ size: number; offset: number } | null>(null);
+
+  // The drawn bar beside the list is the list's scrollbar (D-220): its slug is
+  // as tall a share of the bar as the visible songs are of all of them, and it
+  // sits as far down as the list is scrolled.
+  const measure = useCallback(() => {
+    const list = listRef.current;
+    if (!list) return;
+    const { scrollHeight, clientHeight, scrollTop } = list;
+    const room = scrollHeight - clientHeight;
+    if (room <= 0) {
+      setThumb({ size: 1, offset: 0 });
+      return;
+    }
+    // A slug thinner than this is too small to see, let alone to grab
+    const size = Math.max(0.14, clientHeight / scrollHeight);
+    setThumb({ size, offset: (scrollTop / room) * (1 - size) });
+  }, []);
+
+  useEffect(() => {
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [measure, tracks.length, open]);
+
+  const startDrag = (event: PointerEvent<HTMLSpanElement>) => {
+    const list = listRef.current;
+    if (!list) return;
+    const room = list.scrollHeight - list.clientHeight;
+    const travel = event.currentTarget.getBoundingClientRect().height * (1 - Math.max(0.14, list.clientHeight / list.scrollHeight));
+    if (room <= 0 || travel <= 0) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = { from: event.clientY, top: list.scrollTop, perPixel: room / travel };
+  };
+
+  const dragTo = (event: PointerEvent<HTMLSpanElement>) => {
+    const drag = dragRef.current;
+    const list = listRef.current;
+    if (!drag || !list) return;
+    list.scrollTop = drag.top + (event.clientY - drag.from) * drag.perPixel;
+  };
+
+  const endDrag = (event: PointerEvent<HTMLSpanElement>) => {
+    dragRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
   const soon = embedUrl
     ? "Spotify çalarında kullanılır"
     : locked
@@ -205,8 +254,15 @@ export function SpotifyPlayer({
             {(embedUrl || locked) && tracks.length > 0 ? (
               <>
                 {listName && <p className="player-list-name">{listName}</p>}
-                <ol className="player-track-list" aria-label="İlk şarkılar">
-                  {tracks.slice(0, 3).map((track, index) => (
+                <ol
+                  ref={listRef}
+                  className="player-track-list"
+                  aria-label="Çalma listesindeki şarkılar"
+                  // A scroll box is only reachable by keyboard once it can be focused
+                  tabIndex={0}
+                  onScroll={measure}
+                >
+                  {tracks.map((track, index) => (
                     <li key={`${track.title}-${track.artist}`}>
                       <span aria-hidden>{String(index + 1).padStart(2, "0")}</span>
                       <span>
@@ -237,7 +293,15 @@ export function SpotifyPlayer({
               <p className="player-message">Bu sayının çalma listesi çok yakında burada.</p>
             )}
           </div>
-          <span className="player-scroll" aria-hidden />
+          <span
+            className="player-scroll"
+            aria-hidden
+            style={thumb ? ({ "--scroll-size": thumb.size, "--scroll-offset": thumb.offset } as CSSProperties) : undefined}
+            onPointerDown={startDrag}
+            onPointerMove={dragTo}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+          />
           <Turntable seated={false} playing={false} />
         </div>
       </div>

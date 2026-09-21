@@ -2652,8 +2652,12 @@ html[data-playlist-open] .ps-site .topbar-note {
   padding: 0.9rem 0.9rem 0;
 }
 
+/* A fixed box, so a long playlist scrolls inside it instead of stretching
+   the player (D-220) */
 .ps-site .player-tracks {
-  min-height: 7.5rem;
+  display: flex;
+  flex-direction: column;
+  height: 7.5rem;
 }
 
 .ps-site .player-tracks li {
@@ -2673,14 +2677,23 @@ html[data-playlist-open] .ps-site .topbar-note {
   grid-column: 2;
   grid-row: 1 / span 2;
   border: 1px solid rgb(222 210 199 / 0.6);
+  cursor: grab;
+  /* Dragging the slug must not drag the page along on a touch screen */
+  touch-action: none;
 }
 
+.ps-site .player-scroll:active {
+  cursor: grabbing;
+}
+
+/* The slug's share and place come from the list itself; the defaults are the
+   drawn look, for a player with no list to scroll (D-220) */
 .ps-site .player-scroll::before {
   position: absolute;
-  top: 0.4rem;
+  top: calc(var(--scroll-offset, 0.02) * 100%);
   left: 1px;
   right: 1px;
-  height: 2rem;
+  height: calc(var(--scroll-size, 0.15) * 100%);
   background: var(--site-paper);
   content: "";
 }
@@ -3444,9 +3457,24 @@ html[data-playlist-open] .ps-site .topbar-note {
 }
 
 .ps-site .player-track-list {
+  flex: 1;
+  min-height: 0;
   margin: 0;
   padding: 0;
+  overflow-y: auto;
   list-style: none;
+  /* The drawn bar beside the list is the scrollbar; a second one would be
+     the browser's own (D-220) */
+  scrollbar-width: none;
+}
+
+.ps-site .player-track-list::-webkit-scrollbar {
+  display: none;
+}
+
+.ps-site .player-track-list:focus-visible {
+  outline: 1px solid rgb(222 210 199 / 0.7);
+  outline-offset: 2px;
 }
 
 .ps-site .player-track-list li {
