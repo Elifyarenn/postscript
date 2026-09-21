@@ -64,6 +64,8 @@ export const ADMIN_NAV: NavGroup[] = [
       { href: "/admin/applications", label: "Yazar başvuruları" },
       // Avatars the team sends from the builder (D-194)
       { href: "/admin/team-avatars", label: "Ekip avatarları" },
+      // An admin is on the team too, so the builder is theirs to use (D-221)
+      { href: "/team/avatar", label: "Ekip avatarım" },
     ],
   },
   {

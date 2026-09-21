@@ -126,12 +126,13 @@ export type CategoryId = (typeof CATEGORIES)[number]["id"];
  * Bumped whenever a stored record must be drawn again: v1 was the first style
  * (D-194), v2 the redesigned parts (D-195), v3 the product-owner-corrected
  * drawings (D-215), v4 the bukle set and colour-following shadows and lines
- * (D-217), v6 the headscarf and its own colour (D-219). A record with an
+ * (D-217), v6 the headscarf and its own colour (D-219), v7 the headphone
+ * band moved behind the neck (D-222). A record with an
  * older version is redrawn on download and by
  * `redrawAllTeamAvatarPngs` (D-216), so the file an admin sees always shows
  * today's art; the choices themselves carry over unchanged.
  */
-export const AVATAR_CONFIG_VERSION = 6;
+export const AVATAR_CONFIG_VERSION = 7;
 
 type IdsOf<K extends FieldKey> = (typeof FIELDS)[K]["options"][number]["id"];
 

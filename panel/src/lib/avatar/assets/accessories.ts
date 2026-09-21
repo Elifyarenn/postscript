@@ -188,6 +188,9 @@ function extra(id: string, label: string, layers: Asset["layers"]): Asset {
 
 const onHead = (art: (context: DrawContext) => string) => (context: DrawContext) => inHead(art(context));
 
+/** From one cup, up past the side of the neck and round the back of it (D-222). */
+const HEADPHONE_BAND = "M424 774 C420 736 456 716 512 716 C568 716 604 736 600 774";
+
 export const EXTRAS = [
   extra("cap", "Şapka", {
     accessories: onHead((c) => {
@@ -214,11 +217,15 @@ export const EXTRAS = [
     }),
   }),
   extra("headphones", "Boyunda kulaklık", {
+    // Headphones rest around the neck, so the band passes behind it and only
+    // the cups hang in front. Drawn before the body, it comes out beside the
+    // neck and disappears behind it, instead of crossing the throat (D-222).
+    backHair: () => stroke(HEADPHONE_BAND, 15) + stroke(HEADPHONE_BAND, 8, "#3b3638"),
     accessories: () => {
       const cup = (x: number) =>
         `<ellipse cx="${x}" cy="792" rx="36" ry="44" fill="#2a2627" stroke="${INK}" stroke-width="6"/>` +
         `<ellipse cx="${x}" cy="792" rx="20" ry="27" fill="#4a4648" stroke="${INK}" stroke-width="3"/>`;
-      return stroke("M428 822 C446 880 578 880 596 822", 15) + stroke("M428 822 C446 880 578 880 596 822", 8, "#3b3638") + cup(422) + cup(602);
+      return cup(422) + cup(602);
     },
   }),
   extra("hairClip", "Toka", {

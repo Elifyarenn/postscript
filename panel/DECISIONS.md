@@ -8280,3 +8280,54 @@ yoksa (çalma listesi yapılmamış sayılar) çizimdeki kısa tutamak görünü
 atmıyor, aydınlatma metnini etkileyen bir veri kalemi eklenmedi.
 
 **Doğrulama:** Kapı: typecheck, lint, 698 test, build. Görsel: canlıda.
+
+
+## D-221 — Avatar oluşturucu yönetici panelinde de var
+
+**İstek (ürün sahibi):** "avatar oluşturma kısmını yöneticilere de ekle."
+
+**Bulgu:** Yetki zaten vardı — `canCreateTeamAvatar` yazar ve üstünü kabul
+ediyor, yönetici de bunun içinde; `/team/avatar` yöneticiye açıktı. Eksik olan
+**bağlantıydı**: yazar ve editör kenar çubuklarında "Ekip avatarım" duruyordu,
+yönetici kenar çubuğunda yoktu. Yönetici yalnızca başkalarının avatarlarını
+gördüğü `/admin/team-avatars`'a ulaşabiliyordu.
+
+**Karar:** `ADMIN_NAV`'a "Ekip avatarım" eklendi, "Ekip avatarları"nın hemen
+altına: biri herkesin avatarı, öbürü kendisininki; yan yana durmaları ikisini
+karıştırmayı önlüyor.
+
+**Doğrulama:** Yeni `tests/unit/panel-nav.test.ts`: üç panelin de oluşturucuya
+bağlantı vermesi, ve kilitli yazarda bağlantının kapalı olmaması (kilit yazı
+sayfalarını kapatır, avatarı değil). Kapı: typecheck, lint, 701 test, build.
+
+**Not:** Yönetici kenar çubuğunda `/admin/users` hem üst bağlantı hem ilk alt
+bağlantı olarak iki kez geçiyor; bu bilinçli ("tümü" görünümü). Bunu yakalayan
+bir test yazılmıştı, kural olmadığı anlaşılınca kaldırıldı.
+
+
+## D-222 — Kulaklığın bandı boynun arkasından geçer
+
+**İstek (ürün sahibi):** "avatarlarda kulaklıkta kulaklığın bağlantı kısmı
+gözüküyor, onu arkaya at."
+
+**Bulgu:** "Boyunda kulaklık" ekstrası tek parça hâlinde en üstteki
+`accessories` katmanında çiziliyordu: iki kulaklık ve onları birleştiren band.
+Band boğazın önünden geçen aşağı doğru bir yay olduğu için kolye ya da yaka
+gibi okunuyordu.
+
+**Karar:** Band ayrıldı ve `backHair` katmanına alındı — gövdeden de boyundan
+da önce çizilen tek katman. Yay da yukarı çevrildi: kulaklıklardan çıkıp
+boynun yanından yükseliyor ve boynun arkasında kayboluyor. Kulaklıklar
+`accessories`'te kalıyor, yani kıyafetin üstünde asılı duruyorlar. Önden
+görünen tek şey boynun iki yanındaki kısa uçlar.
+
+**Yanlış alarm:** Yakada kalan koyu şerit kulaklığın değil, kazağın kendi
+yaka örgüsü. Kulaklıksız render'la karşılaştırıp doğrulandı; dokunulmadı.
+
+**`AVATAR_CONFIG_VERSION` 7'ye çıkarıldı:** kulaklık takan bir avatarın çizimi
+değişti, kayıtlı PNG'leri bayat. Üretimde `pnpm redraw-team-avatars` bir kez
+çalıştırılmalı (D-216, D-217, D-219 ile aynı bekleyen iş).
+
+**Doğrulama:** Yeni test: bandın `backHair`'de, kulaklıkların `accessories`'te
+çizilmesi. Görsel: kazaklı ve askılı avatarda üretim PNG yolundan render.
+Kapı: typecheck, lint, 701 test, build.

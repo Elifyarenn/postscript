@@ -264,6 +264,20 @@ describe("corrected static hair (D-215)", () => {
   });
 });
 
+describe("neck headphones (D-222)", () => {
+  const wearing = avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, extras: ["headphones"] });
+  const layerOf = (layer: string) =>
+    renderAvatarLayers(wearing).find((part) => part.layer === layer)?.svg ?? "";
+
+  it("passes the band behind the body and hangs only the cups in front", () => {
+    // Drawn before the body, the band disappears behind the neck instead of
+    // crossing the throat; the cups still sit on top of the clothes
+    expect(layerOf("backHair")).toContain("M424 774");
+    expect(layerOf("accessories")).not.toContain("M424 774");
+    expect(layerOf("accessories")).toContain("<ellipse");
+  });
+});
+
 describe("türban (D-219)", () => {
   const wearing = avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "turban", scarfColor: "navy" });
 
