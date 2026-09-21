@@ -8050,3 +8050,45 @@ içeriği `git log` içinde `step 133` commit'inde durur.
 **Doğrulama:** Geri alma sonrası ağaç `origin/main`'in `step 132` hâliyle
 bire bir aynı (yalnızca geri alma commit'i ve bu karar eklendi). Kapı:
 typecheck, lint, 689 test.
+
+
+
+## D-215 — Saç ve kıyafet çizimleri geometri düzeltilmiş SVG'lerle değiştirilir
+
+**İstek (ürün sahibi):** Önceki oturumda çıkarılan saç ve kıyafet SVG'lerini
+kendi düzeltti: `pic/geometri-duzeltilmis-svg/` klasöründe her modelin "yeni
+hâli" duruyor; bunların avatar sisteminde kullanılması istendi.
+
+**Durum:** O ana kadarki saç ve kıyafet, prosedürel çizimle üretiliyordu
+(saçta yelpaze/tutam matematikleri, D-196…D-201; kıyafette gövde + yaka
+fonksiyonları). Ürün sahibinin düzelttiği dosyalar ise tuvale yerleşik, elle
+düzenlenmiş SVG yolları.
+
+**Karar:**
+
+- **Statik geometri modülleri.** `hair-static.ts` (16 model + Düz 01) ve
+  `clothing-static.ts` (8 model), ürün sahibinin dosyalarından üretildi:
+  `backHair`/`frontHair` (saç) ve `clothing` (kıyafet) katmanları, 1024 tuvale
+  olduğu gibi çizilir — ikinci bir ölçek/yerleştirme yok. `hair.ts` ve
+  `clothing.ts` yalnızca renk/doku listeleri ve katalog hâline indirgendi;
+  `hair-paths.ts` silindi (Düz 01 artık statik listede).
+- **Renkler token'dan gelir.** Dosyalarda pişmiş renkler, seçilen paletle
+  değiştirilir: saçta `{hair}` → saç rengi, `{hairBack}` → `hairShade`,
+  `{hairStrand}` → `hairStrand` (parıltı ve kazınmış saç dahil); kıyafette
+  `{clothing}` → kıyafet rengi, `{clothingLight}` → `tint(kıyafet, 0.09)`
+  (kabartma paneller, yaka). Dikişler, fermuar, bağcık, blazerin gömleği gibi
+  sabit detay renkleri ve mürekkep konturu olduğu gibi durur — her renkte
+  okunur. Parıltı klipsi her katmanda `context.id` ile benzersizleşir.
+- **Doku seçimi artık saçı etkilemez:** statik çizim neyse odur (D-201'deki
+  Düz 01 gibi). Doku alanı duruyor çünkü sakalı hâlâ biçimlendiriyor (D-195);
+  oluşturucu bunu değiştirmedi.
+- "Saçsız" (`bald`) boş model olarak durur; görsel saç örneği (D-200)
+  değişmez.
+
+**Hukuk:** Çizimler ürün sahibinin kendi düzeltmeleri; üçüncü taraf görseli
+yok. KVKK değişikliği yok (alanlar aynı).
+
+**Doğrulama:** Kapı: typecheck, lint, 691 test (yeni: statik saçın parıltı
+klipsi, doku seçiminin çizimi değiştirmemesi). Görsel: üretim PNG yolundan
+render edilen örnekler (`messy`, `long`, `buzz`, `ponytail`, `volume`, kıyafet
+`hoodie`, `blazer`, `tank`, `bomber`) — tam avatar + düzeltilmiş çizimler.

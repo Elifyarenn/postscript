@@ -205,15 +205,13 @@ describe("renderAvatarSvg", () => {
     expect(changed.sort()).toEqual(["backHair", "frontHair"]);
   });
 
-  it("lets straight hair fall in front of the ears and tucks wavy hair behind them", () => {
-    const layer = (texture: "straight" | "wavy", name: string) =>
-      renderAvatarLayers({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "long", hairTexture: texture }).find(
-        (part) => part.layer === name,
-      )!.svg;
-    const count = (svg: string) => svg.split("<path").length;
-    // The side locks move from the back layer to the front one
-    expect(count(layer("straight", "frontHair"))).toBeGreaterThan(count(layer("wavy", "frontHair")));
-    expect(count(layer("straight", "backHair"))).toBeLessThan(count(layer("wavy", "backHair")));
+  it("draws the static back hair behind the head and the front over the face", () => {
+    const parts = renderAvatarLayers({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "long" });
+    const back = parts.find((part) => part.layer === "backHair")!.svg;
+    const front = parts.find((part) => part.layer === "frontHair")!.svg;
+    expect(back).toContain("<path");
+    expect(front).toContain('fill="#241c1e"');
+    expect(front).toContain("clip-path");
   });
 
   it("crops a thumbnail and can leave layers out", () => {
@@ -223,8 +221,8 @@ describe("renderAvatarSvg", () => {
   });
 });
 
-describe("hand-drawn path hair (D-201)", () => {
-  it("is in the catalogue and takes the chosen hair colour", () => {
+describe("corrected static hair (D-215)", () => {
+  it("keeps straight01 in the catalogue and paints it with the chosen hair colour", () => {
     const ids = FIELDS.hairStyle.options.map((option) => option.id);
     expect(ids).toContain("straight01");
 
@@ -232,8 +230,20 @@ describe("hand-drawn path hair (D-201)", () => {
     const black = renderAvatarSvg(avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "straight01", hairColor: "black" }));
     expect(blonde).toContain('fill="#e3c283"');
     expect(black).not.toContain('fill="#e3c283"');
-    // The paths are placed on the head, not left in their own 400 box
-    expect(blonde).toContain("scale(2.62)");
+  });
+
+  it("draws the sheen inside the front shape through a per-layer clip", () => {
+    const svg = renderAvatarSvg(avatarConfigSchema.parse({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "messy" }));
+    expect(svg).toContain('<clipPath id="frontHair-surface">');
+    expect(svg).toContain('clip-path="url(#frontHair-surface)"');
+  });
+
+  it("renders the texture choice without changing a static drawing", () => {
+    const layer = (texture: "straight" | "wavy") =>
+      renderAvatarLayers({ ...DEFAULT_AVATAR_CONFIG, hairStyle: "long", hairTexture: texture }).find(
+        (part) => part.layer === "frontHair",
+      )!.svg;
+    expect(layer("straight")).toBe(layer("wavy"));
   });
 });
 

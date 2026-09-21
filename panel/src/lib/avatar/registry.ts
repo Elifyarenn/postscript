@@ -20,7 +20,6 @@ import { FACES, SKIN_TONES } from "./assets/face";
 import { EYEBROWS, EYELASHES, EYES, EYE_COLORS, LIP_COLORS, MOUTHS, NOSES } from "./assets/features";
 import { HAIR_COLORS, HAIR_STYLES, HAIR_TEXTURES } from "./assets/hair";
 import { IMAGE_HAIR, imageHairStyle } from "./assets/hair-images";
-import { PATH_HAIR, pathHairStyle } from "./assets/hair-paths";
 import type { Asset, ColorOption } from "./assets/types";
 import type { LayerName } from "./canvas";
 
@@ -62,8 +61,8 @@ export const FIELDS = {
   hairStyle: {
     label: "Saç Modeli",
     kind: "asset",
-    // Generated styles, then hand-drawn ones (D-201), then picture sets (D-200)
-    options: [...HAIR_STYLES, ...PATH_HAIR.map(pathHairStyle), ...IMAGE_HAIR.map(imageHairStyle)],
+    // The corrected styles (D-215) first, then the picture set (D-200)
+    options: [...HAIR_STYLES, ...IMAGE_HAIR.map(imageHairStyle)],
     thumb: "hair",
     omit: FEATURE_LAYERS,
   },
