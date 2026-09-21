@@ -119,8 +119,14 @@ export type CategoryId = (typeof CATEGORIES)[number]["id"];
 /* Configuration                                                       */
 /* ------------------------------------------------------------------ */
 
-/** Bumped whenever the drawing changes meaning; v1 was the first style (D-194). */
-export const AVATAR_CONFIG_VERSION = 2;
+/**
+ * Bumped whenever a stored record must be drawn again: v1 was the first style
+ * (D-194), v2 the redesigned parts (D-195), v3 the product-owner-corrected
+ * drawings (D-215). A record with an older version is redrawn on download and
+ * by `redrawAllTeamAvatarPngs` (D-216), so the file an admin sees always shows
+ * today's art; the choices themselves carry over unchanged.
+ */
+export const AVATAR_CONFIG_VERSION = 3;
 
 type IdsOf<K extends FieldKey> = (typeof FIELDS)[K]["options"][number]["id"];
 

@@ -8092,3 +8092,33 @@ yok. KVKK değişikliği yok (alanlar aynı).
 klipsi, doku seçiminin çizimi değiştirmemesi). Görsel: üretim PNG yolundan
 render edilen örnekler (`messy`, `long`, `buzz`, `ponytail`, `volume`, kıyafet
 `hoodie`, `blazer`, `tank`, `bomber`) — tam avatar + düzeltilmiş çizimler.
+
+
+
+## D-216 — Eski avatarlar da yeni çizimle yeniden üretilir
+
+**İstek (ürün sahibi):** D-215 yayınlandıktan sonra: "eski avatarların da
+değişmesi lazım." Kayıt anında üretilen PNG'ler eski çizimi gösteriyordu;
+yalnızca yeni kaydedilenler değişiyordu.
+
+**Karar:**
+
+- **`AVATAR_CONFIG_VERSION` 3'e çıkarıldı.** Sürüm, kaydın "bugünkü stille
+  yeniden çizilmesi" kapısıdır (D-195): eski sürüm kayıt indirilirken
+  yeniden çizilir, seçimleri taşınır. D-215 çizimleri değiştirdiği için
+  kayıtlı PNG'ler bayatladı; sürüm 3 bunu işaretler. Seçimlerin anlamı
+  değişmedi — `parseStoredConfig` v2 kaydı olduğu gibi v3'e taşır, şema
+  değişikliği yok.
+- **Toplu yeniden çizim:** `redrawAllTeamAvatarPngs()` (`src/services/
+  team-avatars.ts`) her kaydı `pngFor`'dan geçirir — indirmedeki yolun aynısı:
+  konfigürasyondan 2048² PNG çiz, yeni nesneyi koy, kaydı işaret et, eski
+  nesneyi sil. `scripts/redraw-team-avatars.ts` ile `pnpm redraw-team-avatars`
+  komutu eklendi; D-215'in deploy'undan sonra üretimde bir kez çalıştırılır.
+  Sitede gösterilen dosyalar da böylece yeni çizimi görür (sıra kayıtların
+  `pngStorageKey`'ini günceller). Denetim: indirmedeki yeniden çizimle aynı
+  davranış, ek kayıt yazılmaz.
+
+**Hukuk:** Değişiklik yok (aynı alanlar; görsel ürün sahibinin düzeltmesi).
+
+**Doğrulama:** Kapı: typecheck, lint, 692 test (yeni: `redrawAllTeamAvatarPngs`
+kaydı yeniden çizer, kaydı yeni dosyaya işaret eder, eski dosyayı siler).

@@ -344,3 +344,18 @@ export async function deleteTeamAvatarAsAdmin(actor: Actor, id: string, meta: Re
     ip: meta.ip,
   });
 }
+
+/**
+ * Draws every stored avatar again in today's style (D-216), so the files the
+ * site shows catch up after a drawing change (D-215). Same path as a download
+ * of an old record: configuration is the source of truth, the old object is
+ * dropped once the record points at the fresh one. Callers run this as a
+ * maintenance script; the rows move exactly as a download would move them.
+ */
+export async function redrawAllTeamAvatarPngs(): Promise<number> {
+  const rows = await db.select().from(teamAvatars);
+  for (const row of rows) {
+    await pngFor(row);
+  }
+  return rows.length;
+}

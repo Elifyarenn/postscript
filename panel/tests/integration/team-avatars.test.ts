@@ -17,6 +17,7 @@ import {
   getOwnTeamAvatar,
   getTeamAvatarPng,
   listTeamAvatars,
+  redrawAllTeamAvatarPngs,
   saveTeamAvatar,
   teamAvatarZipEntries,
 } from "@/services/team-avatars";
@@ -174,6 +175,27 @@ describe("records saved in the first style (D-194)", () => {
     expect(after!.config).toMatchObject({ face: "softSquare", hairStyle: "volume", hairTexture: "coily", clothing: "blazer" });
     expect(after!.pngStorageKey).not.toBe(row!.pngStorageKey);
     expect(storage.objects.has(`media:${row!.pngStorageKey}`)).toBe(false);
+  }, 60_000);
+});
+
+describe("redrawAllTeamAvatarPngs (D-216)", () => {
+  it("redraws every stored avatar, repoints the records and drops the old files", async () => {
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    await saveTeamAvatar(actorOf(writer), input(), noMeta);
+    const [row] = await db.select().from(teamAvatars);
+    const oldKey = row!.pngStorageKey!;
+    // Pretend the file was stored before the drawing change (D-215)
+    await db.update(teamAvatars).set({ configVersion: 2 }).where(eq(teamAvatars.id, row!.id));
+
+    expect(await redrawAllTeamAvatarPngs()).toBe(1);
+
+    const [after] = await db.select().from(teamAvatars).where(eq(teamAvatars.id, row!.id));
+    expect(after!.configVersion).toBe(AVATAR_CONFIG_VERSION);
+    expect(after!.pngStorageKey).not.toBe(oldKey);
+    expect(storage.objects.has(`media:${after!.pngStorageKey}`)).toBe(true);
+    expect(storage.objects.has(`media:${oldKey}`)).toBe(false);
+    const png = storage.objects.get(`media:${after!.pngStorageKey}`)!;
+    expect(png.body.readUInt32BE(16)).toBe(2048);
   }, 60_000);
 });
 
