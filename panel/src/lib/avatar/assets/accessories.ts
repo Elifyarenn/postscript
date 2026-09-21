@@ -21,6 +21,31 @@ export const GLASSES_COLORS = [
   { id: "clear", label: "Şeffaf", hex: "#cfc6ba" },
 ] as const satisfies readonly ColorOption[];
 
+/**
+ * Hats have a colour of their own (D-224). They used to take the clothing
+ * colour, which made every hat match the top whether or not that was wanted.
+ */
+export const HEADWEAR_COLORS = [
+  { id: "black", label: "Siyah", hex: "#26222a" },
+  { id: "charcoal", label: "Antrasit", hex: "#45444a" },
+  { id: "gray", label: "Gri", hex: "#8e8d93" },
+  { id: "cream", label: "Krem", hex: "#efe3cf" },
+  { id: "white", label: "Beyaz", hex: "#f2f0ec" },
+  { id: "sand", label: "Bej", hex: "#d8c3a3" },
+  { id: "camel", label: "Camel", hex: "#bf9563" },
+  { id: "brown", label: "Kahve", hex: "#7a5741" },
+  { id: "burgundy", label: "Bordo", hex: "#75263a" },
+  { id: "red", label: "Kırmızı", hex: "#b8463c" },
+  { id: "rose", label: "Gül kurusu", hex: "#c08492" },
+  { id: "plum", label: "Mürdüm", hex: "#5c3a63" },
+  { id: "navy", label: "Lacivert", hex: "#2f3f63" },
+  { id: "blue", label: "Mavi", hex: "#5b7fb4" },
+  { id: "teal", label: "Petrol", hex: "#3a7d80" },
+  { id: "emerald", label: "Zümrüt", hex: "#3d7a5c" },
+  { id: "olive", label: "Haki", hex: "#6f7346" },
+  { id: "mustard", label: "Hardal", hex: "#c39a3c" },
+] as const satisfies readonly ColorOption[];
+
 export const JEWELRY_COLORS = [
   { id: "silver", label: "Gümüş", hex: "#c3c7cc" },
   { id: "gold", label: "Altın", hex: "#d4a73a" },
@@ -194,7 +219,7 @@ const HEADPHONE_BAND = "M424 774 C420 736 456 716 512 716 C568 716 604 736 600 7
 export const EXTRAS = [
   extra("cap", "Şapka", {
     accessories: onHead((c) => {
-      const color = c.palette.clothing;
+      const color = c.palette.headwear;
       const crown = "M300 344 C286 206 392 128 512 126 C632 128 738 206 724 344 C650 318 374 318 300 344Z";
       const brim = "M286 344 C360 306 664 306 738 344 C720 388 304 388 286 344Z";
       return cel(c, "cap", crown, color, shade(color, 0.22), [-12, -8]) + stroke("M512 130 L512 322", 3.5, shade(color, 0.3)) + fill(brim, shade(color, 0.15)) + stroke(brim) + bead(512, 130, 8, shade(color, 0.2));
@@ -202,7 +227,7 @@ export const EXTRAS = [
   }),
   extra("beanie", "Örgü bere", {
     accessories: onHead((c) => {
-      const color = c.palette.clothing;
+      const color = c.palette.headwear;
       const dome = "M300 350 C282 190 400 104 512 104 C624 104 742 190 724 350Z";
       const cuff = "M286 318 C400 290 624 290 738 318 L744 384 C624 356 400 356 280 384Z";
       const ribs = [340, 380, 420, 460, 500, 540, 580, 620, 660, 700].map((x) => `M${x} ${322 - Math.abs(x - 512) * 0.05} L${x} ${366 - Math.abs(x - 512) * 0.05}`).join(" ");
@@ -211,7 +236,7 @@ export const EXTRAS = [
   }),
   extra("beret", "Bere", {
     accessories: onHead((c) => {
-      const color = c.palette.clothing;
+      const color = c.palette.headwear;
       const d = "M290 306 C268 222 380 140 540 140 C692 140 772 210 750 282 C726 312 640 292 512 294 C390 296 320 324 290 306Z";
       return cel(c, "beret", d, color, shade(color, 0.22), [-10, -10]) + stroke("M540 142 C534 120 552 110 564 120", 7);
     }),

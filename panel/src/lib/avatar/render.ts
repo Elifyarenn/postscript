@@ -56,6 +56,7 @@ function prepare(config: AvatarConfig, imageHref: (file: string) => string): Pre
         lip: lip === "" ? null : lip,
         clothing: colorOf("clothingColor", config),
         scarf: colorOf("scarfColor", config),
+        headwear: colorOf("headwearColor", config),
         glasses: colorOf("glassesColor", config),
         metal: colorOf("jewelryColor", config),
       }),

@@ -13,7 +13,7 @@
  */
 import { z } from "zod";
 import { slugify } from "@/lib/slug";
-import { EARRINGS, EXTRAS, GLASSES, GLASSES_COLORS, HEADWEAR, JEWELRY_COLORS, NECKLACES, PIERCINGS } from "./assets/accessories";
+import { EARRINGS, EXTRAS, GLASSES, GLASSES_COLORS, HEADWEAR, HEADWEAR_COLORS, JEWELRY_COLORS, NECKLACES, PIERCINGS } from "./assets/accessories";
 import { CLOTHING, CLOTHING_COLORS } from "./assets/clothing";
 import { BLUSH, FACIAL_HAIR, FRECKLES, MOLES, SCARS, UNDER_EYE } from "./assets/details";
 import { FACES, SKIN_TONES } from "./assets/face";
@@ -92,7 +92,8 @@ export const FIELDS = {
   jewelryColor: { label: "Takı Rengi", kind: "color", options: JEWELRY_COLORS },
   clothing: { label: "Kıyafet", kind: "asset", options: CLOTHING, thumb: "body" },
   clothingColor: { label: "Kıyafet Rengi", kind: "color", options: CLOTHING_COLORS },
-  extras: { label: "Ekstra", kind: "set", options: EXTRAS, thumb: "full", hint: "İstediğiniz kadarını ekleyin. Şapka ve bere kıyafet rengini alır." },
+  extras: { label: "Ekstra", kind: "set", options: EXTRAS, thumb: "full", hint: "İstediğiniz kadarını ekleyin." },
+  headwearColor: { label: "Şapka Rengi", kind: "color", options: HEADWEAR_COLORS },
 } as const satisfies Record<string, Field>;
 
 export type FieldKey = keyof typeof FIELDS;
@@ -113,7 +114,7 @@ export const CATEGORIES = [
   { id: "piercing", label: "Piercing", fields: ["piercings", "jewelryColor"] },
   { id: "accessory", label: "Aksesuar", fields: ["earrings", "necklace", "jewelryColor"] },
   { id: "clothing", label: "Kıyafet", fields: ["clothing", "clothingColor"] },
-  { id: "extra", label: "Ekstra", fields: ["extras"] },
+  { id: "extra", label: "Ekstra", fields: ["extras", "headwearColor"] },
 ] as const satisfies readonly { id: string; label: string; fields: readonly FieldKey[] }[];
 
 export type CategoryId = (typeof CATEGORIES)[number]["id"];
@@ -127,12 +128,13 @@ export type CategoryId = (typeof CATEGORIES)[number]["id"];
  * (D-194), v2 the redesigned parts (D-195), v3 the product-owner-corrected
  * drawings (D-215), v4 the bukle set and colour-following shadows and lines
  * (D-217), v6 the headscarf and its own colour (D-219), v7 the headphone
- * band moved behind the neck (D-222). A record with an
+ * band moved behind the neck (D-222), v8 the narrowed shoulders (D-223) and
+ * the hats' own colour (D-224). A record with an
  * older version is redrawn on download and by
  * `redrawAllTeamAvatarPngs` (D-216), so the file an admin sees always shows
  * today's art; the choices themselves carry over unchanged.
  */
-export const AVATAR_CONFIG_VERSION = 7;
+export const AVATAR_CONFIG_VERSION = 8;
 
 type IdsOf<K extends FieldKey> = (typeof FIELDS)[K]["options"][number]["id"];
 
@@ -166,6 +168,7 @@ export const DEFAULT_AVATAR_CONFIG: AvatarConfig = {
   hairTexture: "curly",
   hairColor: "black",
   scarfColor: "black",
+  headwearColor: "black",
   eyes: "almond",
   eyelashes: "none",
   eyeColor: "darkBrown",

@@ -70,6 +70,7 @@ export type Palette = {
   scarf: string;
   scarfShade: string;
   scarfLine: string;
+  headwear: string;
   glasses: string;
   metal: string;
 };
@@ -81,6 +82,7 @@ export function buildPalette(colors: {
   lip: string | null;
   clothing: string;
   scarf: string;
+  headwear: string;
   glasses: string;
   metal: string;
 }): Palette {
@@ -105,6 +107,7 @@ export function buildPalette(colors: {
     // The hem must read on black cloth as well as on cream, so it lightens
     // where darkening would disappear — the same trick as the hair strands
     scarfLine: luminance(colors.scarf) < 0.06 ? tint(colors.scarf, 0.28) : shade(colors.scarf, 0.32),
+    headwear: colors.headwear,
     glasses: colors.glasses,
     metal: colors.metal,
   };

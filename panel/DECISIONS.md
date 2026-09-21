@@ -8331,3 +8331,117 @@ değişti, kayıtlı PNG'leri bayat. Üretimde `pnpm redraw-team-avatars` bir ke
 **Doğrulama:** Yeni test: bandın `backHair`'de, kulaklıkların `accessories`'te
 çizilmesi. Görsel: kazaklı ve askılı avatarda üretim PNG yolundan render.
 Kapı: typecheck, lint, 701 test, build.
+
+---
+
+## D-221 — Hukuki uyum raporu `panel/HUKUK-RAPORU.md`'de durur
+
+**İstek (ürün sahibi):** Postscript'in yasal ve sözleşmesel ihtiyaçlarının
+değerlendirilmesi ve uygulanabilir bir yol haritası istendi.
+
+**Karar:** Rapor `panel/HUKUK-RAPORU.md` olarak depoya yazıldı; yeri
+D-211'deki teknoloji raporuyla aynı gerekçeyle `panel/` altı (rapor panelin
+kodunu ve metinlerini anlatıyor, deponun kökündeki statik sayfayı değil).
+Kararların kaynağı bu dosya **değildir**: rapor bir durum tespiti ve iş
+listesidir, karar defteri `DECISIONS.md` olarak kalır. Rapordan çıkan her karar
+buraya kendi numarasıyla girecek.
+
+**Yöntem:** Ürün tarafındaki her olgu koddan, şemadan ve canlı sayfadan okundu
+(D-211'deki "beyan değil fiilî durum" kuralı). Hukuki dayanaklar için
+`mevzuat.gov.tr` bu oturumda TLS hatası verdiği için kanun metinleri **doğrudan
+okunamadı**; KVKK/BTK/EDPB duyuru ve rehberlerine erişildi, kanun maddeleri
+ikincil kaynaklardan alındı ve rapor bunu §9'da açıkça yazıyor.
+
+**Raporun canlıda tespit ettiği, kapatılmayı bekleyen üç şey:**
+
+1. **Canlı aydınlatma metni hâlâ 1. sürüm** (6 Eylül 2026, beş başlık) — 22 Eylül
+   2026'da `postscriptmag.com/kvkk` okunarak doğrulandı. Spotify, Turnstile,
+   iletişim formu, özel mesajlar, anonim kutu, topluluklar ve ekip avatarı canlıda
+   ama metinde yok. Depodaki tam metin hazır; tek engel `[AÇIK ADRES]` (D-125,
+   D-154).
+2. **Yurt dışı aktarım için uygun güvence kurulmamış.** Kurul henüz hiçbir ülke
+   için yeterlilik kararı ilan etmedi; tek yol standart sözleşme + imzadan sonra
+   5 iş günü içinde Kuruma bildirim. Depodaki metin §6.2 bunu olmuş gibi yazıyor
+   (D-083'ün "yayınlanmadan önce doğru olması gerekenler" listesindeki 1. madde
+   hâlâ açık).
+3. **Ekip tarafında yazarlar dışında imzalı hiçbir belge yok:** 6 editörün
+   gizlilik/veri işleme taahhüdü, 4 çizerin çizim ruhsatı ve iki ortak arasındaki
+   ortaklık sözleşmesi yok. İlk ikisi `agreement_versions`'ın tek dokümanlı
+   olması yüzünden **teknik olarak da mümkün değil**; `kind` kolonu migration'ı
+   D-084'te "sonraki adım" diye kaydedilmiş, yapılmadı.
+
+**Rapordaki diğer somut bulgular (dosya işaretiyle):** aydınlatma metni §8 var
+olmayan bir self-servis veri indirme özelliğini anlatıyor (`account/actions.ts`'te
+export action yok, yalnızca `admin/actions.ts:411`); kayıt formunda yaş alt sınırı
+yok ve `isAdult` yalnızca özel mesaj ile anonim kutuda uygulanıyor, yani reşit
+olmayan üye herkese açık gönderi paylaşabiliyor; makale sayfası güncelleme tarihi
+göstermiyor (5187 kapsamına girilirse zorunlu); dış kaldırma başvuruları sistemde
+kayıtlı değil; ekip avatarı yayımı için beyan edilen açık rızanın kaydı tutulmuyor;
+`README.md` "okundu bilgisi yoktur" derken D-188 ile okundu bilgisi eklenmiş
+(README eski).
+
+**Karar verilmeyip kurucuya bırakılanlar (rapor §7.1):** adres/KEP seçimi, hukuki
+yapı (adi ortaklık / dernek), Spotify çalarının kalıp kalmayacağı, yaş alt sınırı,
+afiş ve kapak görsellerinin kaderi, e-bülten, gelir modeli, marka tescili. Bunlar
+muhafazakâr varsayılanla geçilemeyecek kadar ürün sahibinin tercihine bağlı;
+CLAUDE.md'nin "soru sorma, muhafazakâr olanı uygula" kuralı hukuki sonuç doğuran
+bu başlıklarda "muhafazakâr olanı uygula **ve hukukçu görüşü gerekiyor diye yaz**"
+biçiminde işletildi.
+
+**Hukukçuya gidecek 15 soru** rapor §7.2'de, plana etkisine göre sıralı. İlk dört
+tanesi planı değiştirebilecek olanlar: 5187 kapsamı, yurt dışı aktarım yolu ve
+Spotify, BTK yer sağlayıcı bildirimi, afiş/kapak görsellerinde FSEK m. 35.
+
+**Kod:** Değişiklik yok. Rapor ve bu kayıt dışında hiçbir dosyaya dokunulmadı.
+
+
+## D-223 — Omuzlar kıyafetin içine alındı
+
+**İstek (ürün sahibi):** "omuzlar kıyafetlerden taşıyor onu düzelt."
+
+**Bulgu:** Gövde, kıyafetlerden genişti. Ten rengi omuz çizgisi
+(`SHOULDERS_RIGHT`, D-195'ten kalma) en geniş yerinde x 950'ye kadar
+gidiyordu; örten yedi kıyafetin hepsi ise tek ve aynı silueti paylaşıyor
+(`clothing-static.ts`, D-215) ve x 920'de bitiyor. Aradaki 20–40 piksel, her
+iki omzun dışından aşağı inen bir ten şeridi olarak görünüyordu — kolları
+kıyafetin dışında kalmış gibi.
+
+**Karar:** Gövde daraltıldı, kıyafet değil. Gerekçe: kıyafet çizimleri ürün
+sahibinin düzelttiği geometri (D-215); omuz çizgisi ise eski koddan kalma tek
+bir sabit. Yeni çizgi kıyafet siluetinin ~10–20 piksel içinden geçiyor, yani
+örten bir kıyafet gerçekten örtüyor.
+
+**Askılı da düzeldi:** Askılı üstün askısı omzu sarmadan havada bitiyordu —
+oturumun başında bildirilen ama o günkü çalışmayla birlikte geri alınan bir
+şikâyet. Gövde daralınca askı omzun kenarına oturdu; ayrıca bir düzeltme
+gerekmedi.
+
+**Doğrulama:** Yeni test, gövde konturunu örnekleyip (kontrol noktalarını değil,
+eğri üstündeki noktaları) 104…920 aralığında kalmasını arıyor. İlk yazdığım
+sürüm kontrol noktalarına bakıyordu ve 939 görüp patladı; eğri oraya
+çıkmıyordu, test yanlıştı. Görsel: kazak, ceket ve askılı ile render.
+
+
+## D-224 — Şapka ve berenin kendi rengi var
+
+**İstek (ürün sahibi):** "bere şapkaların renklerini ayrı seçebilelim."
+
+**Karar:** `headwearColor` alanı eklendi, 18 renk; şapka, örgü bere ve bere
+artık `palette.clothing` yerine `palette.headwear` kullanıyor. Ekstra
+alanındaki "Şapka ve bere kıyafet rengini alır." açıklaması kaldırıldı — artık
+doğru değil.
+
+Bu, oturumun başındaki "şapka ve bere kıyafet rengini almasın" isteğinin
+kalıcı karşılığı; o günkü çalışma D-207 ile geri alınmıştı.
+
+**Builder gereksiz alanı göstermiyor:** "Şapka Rengi" yalnızca şapkalardan biri
+seçiliyken çıkıyor — gözlüksüzken "Çerçeve Rengi"nin, türbansızken "Türban
+Rengi"nin gizlenmesiyle aynı desen.
+
+**`AVATAR_CONFIG_VERSION` 8'e çıkarıldı** (D-223 ile birlikte): omuz çizgisi
+her avatarın çizimini değiştirdi, şapkalı avatarların rengi de değişebilir.
+Üretimde `pnpm redraw-team-avatars` bir kez çalıştırılmalı.
+
+**Doğrulama:** Yeni test: siyah kazak + kırmızı bere seçiminde kırmızının
+çizime girmesi. Görsel: kırmızı bere/lacivert kazak, hardal şapka/antrasit,
+krem bere/bordo. Kapı: typecheck, lint, 703 test, build.

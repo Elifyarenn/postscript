@@ -22,6 +22,7 @@ import { LAYER_ORDER, renderAvatarLayers, renderAvatarSvg } from "@/lib/avatar/r
 import { HISTORY_LIMIT, historyReducer, type History } from "@/lib/avatar/history";
 import { isImageHair } from "@/lib/avatar/assets/hair-images";
 import { HAIR_TEXTURES } from "@/lib/avatar/assets/hair";
+import { torso } from "@/lib/avatar/assets/face";
 import { crc32, uniqueEntryNames, zipToBuffer } from "@/lib/zip";
 import { canCreateTeamAvatar, canManageTeamAvatars, type Actor } from "@/lib/auth/rbac";
 
@@ -261,6 +262,47 @@ describe("corrected static hair (D-215)", () => {
   it("carries a stored dalgalı over to bukleli instead of dropping it (D-218)", () => {
     const stored = parseStoredConfig({ ...DEFAULT_AVATAR_CONFIG, v: 4, hairTexture: "wavy" });
     expect(stored.hairTexture).toBe("curly");
+  });
+});
+
+describe("the body under the clothes (D-223, D-224)", () => {
+  /** The x of every point along an "M … C … C …" outline, control points aside. */
+  const outlineXs = (d: string): number[] => {
+    const numbers = d.match(/-?\d+(?:\.\d+)?/g)!.map(Number);
+    const xs = [numbers[0]!];
+    let [fromX] = [numbers[0]!];
+    for (let index = 2; index + 5 < numbers.length; index += 6) {
+      const [c1x, , c2x, , toX] = numbers.slice(index, index + 6) as number[];
+      for (let step = 1; step <= 24; step += 1) {
+        const t = step / 24;
+        const u = 1 - t;
+        xs.push(u ** 3 * fromX + 3 * u * u * t * c1x! + 3 * u * t * t * c2x! + t ** 3 * toX!);
+      }
+      fromX = toX!;
+    }
+    return xs;
+  };
+
+  it("keeps the shoulders inside the outline every covering garment shares", () => {
+    const xs = outlineXs(torso([[440, 760], [512, 748], [584, 760]]));
+    // The garments run 104…920 at their widest; a wider body showed as a strip
+    // of bare skin down the outside of both shoulders
+    expect(Math.max(...xs)).toBeLessThanOrEqual(920);
+    expect(Math.min(...xs)).toBeGreaterThanOrEqual(104);
+  });
+
+  it("colours a hat apart from the clothes", () => {
+    const svg = renderAvatarSvg(
+      avatarConfigSchema.parse({
+        ...DEFAULT_AVATAR_CONFIG,
+        extras: ["beanie"],
+        headwearColor: "red",
+        clothing: "sweater",
+        clothingColor: "black",
+      }),
+    );
+    // The hat used to take the clothing colour, so the two could never differ
+    expect(svg).toContain("#b8463c");
   });
 });
 
