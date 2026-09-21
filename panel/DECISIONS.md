@@ -8334,7 +8334,60 @@ Kapı: typecheck, lint, 701 test, build.
 
 ---
 
-## D-221 — Hukuki uyum raporu `panel/HUKUK-RAPORU.md`'de durur
+## D-223 — Omuzlar kıyafetin içine alındı
+
+**İstek (ürün sahibi):** "omuzlar kıyafetlerden taşıyor onu düzelt."
+
+**Bulgu:** Gövde, kıyafetlerden genişti. Ten rengi omuz çizgisi
+(`SHOULDERS_RIGHT`, D-195'ten kalma) en geniş yerinde x 950'ye kadar
+gidiyordu; örten yedi kıyafetin hepsi ise tek ve aynı silueti paylaşıyor
+(`clothing-static.ts`, D-215) ve x 920'de bitiyor. Aradaki 20–40 piksel, her
+iki omzun dışından aşağı inen bir ten şeridi olarak görünüyordu — kolları
+kıyafetin dışında kalmış gibi.
+
+**Karar:** Gövde daraltıldı, kıyafet değil. Gerekçe: kıyafet çizimleri ürün
+sahibinin düzelttiği geometri (D-215); omuz çizgisi ise eski koddan kalma tek
+bir sabit. Yeni çizgi kıyafet siluetinin ~10–20 piksel içinden geçiyor, yani
+örten bir kıyafet gerçekten örtüyor.
+
+**Askılı da düzeldi:** Askılı üstün askısı omzu sarmadan havada bitiyordu —
+oturumun başında bildirilen ama o günkü çalışmayla birlikte geri alınan bir
+şikâyet. Gövde daralınca askı omzun kenarına oturdu; ayrıca bir düzeltme
+gerekmedi.
+
+**Doğrulama:** Yeni test, gövde konturunu örnekleyip (kontrol noktalarını değil,
+eğri üstündeki noktaları) 104…920 aralığında kalmasını arıyor. İlk yazdığım
+sürüm kontrol noktalarına bakıyordu ve 939 görüp patladı; eğri oraya
+çıkmıyordu, test yanlıştı. Görsel: kazak, ceket ve askılı ile render.
+
+
+## D-224 — Şapka ve berenin kendi rengi var
+
+**İstek (ürün sahibi):** "bere şapkaların renklerini ayrı seçebilelim."
+
+**Karar:** `headwearColor` alanı eklendi, 18 renk; şapka, örgü bere ve bere
+artık `palette.clothing` yerine `palette.headwear` kullanıyor. Ekstra
+alanındaki "Şapka ve bere kıyafet rengini alır." açıklaması kaldırıldı — artık
+doğru değil.
+
+Bu, oturumun başındaki "şapka ve bere kıyafet rengini almasın" isteğinin
+kalıcı karşılığı; o günkü çalışma D-207 ile geri alınmıştı.
+
+**Builder gereksiz alanı göstermiyor:** "Şapka Rengi" yalnızca şapkalardan biri
+seçiliyken çıkıyor — gözlüksüzken "Çerçeve Rengi"nin, türbansızken "Türban
+Rengi"nin gizlenmesiyle aynı desen.
+
+**`AVATAR_CONFIG_VERSION` 8'e çıkarıldı** (D-223 ile birlikte): omuz çizgisi
+her avatarın çizimini değiştirdi, şapkalı avatarların rengi de değişebilir.
+Üretimde `pnpm redraw-team-avatars` bir kez çalıştırılmalı.
+
+**Doğrulama:** Yeni test: siyah kazak + kırmızı bere seçiminde kırmızının
+çizime girmesi. Görsel: kırmızı bere/lacivert kazak, hardal şapka/antrasit,
+krem bere/bordo. Kapı: typecheck, lint, 703 test, build.
+
+---
+
+## D-225 — Hukuki uyum raporu `panel/HUKUK-RAPORU.md`'de durur
 
 **İstek (ürün sahibi):** Postscript'in yasal ve sözleşmesel ihtiyaçlarının
 değerlendirilmesi ve uygulanabilir bir yol haritası istendi.
@@ -8394,54 +8447,150 @@ Spotify, BTK yer sağlayıcı bildirimi, afiş/kapak görsellerinde FSEK m. 35.
 
 **Kod:** Değişiklik yok. Rapor ve bu kayıt dışında hiçbir dosyaya dokunulmadı.
 
+---
 
-## D-223 — Omuzlar kıyafetin içine alındı
+## D-226 — Yazar sözleşmesi v2 ve eser bazlı yayın izni taslakları `contracts/taslaklar/` altında
 
-**İstek (ürün sahibi):** "omuzlar kıyafetlerden taşıyor onu düzelt."
+**İstek (ürün sahibi):** Yazılar toplandı; öncelik yazar sözleşmeleri. Mevcut
+sözleşmenin eksikleri çıkarılsın, imza yöntemi ayrıca incelensin, iki tamamlanmış
+taslak hazırlansın, toplanmış yazılar için uygulama planı ve iki yardımcı çıktı
+(boş takip tablosu, yazarlara gönderilmeye hazır mesaj) verilsin.
 
-**Bulgu:** Gövde, kıyafetlerden genişti. Ten rengi omuz çizgisi
-(`SHOULDERS_RIGHT`, D-195'ten kalma) en geniş yerinde x 950'ye kadar
-gidiyordu; örten yedi kıyafetin hepsi ise tek ve aynı silueti paylaşıyor
-(`clothing-static.ts`, D-215) ve x 920'de bitiyor. Aradaki 20–40 piksel, her
-iki omzun dışından aşağı inen bir ten şeridi olarak görünüyordu — kolları
-kıyafetin dışında kalmış gibi.
+**Karar:** Taslaklar `panel/contracts/taslaklar/` altında tutulur. Canlı şablon
+(`contracts/yazar-sozlesmesi-ve-ruhsat-taahhudu.md`) **değiştirilmedi**; kod,
+veritabanı, canlı metinler ve mevcut kabul kayıtlarına dokunulmadı. Klasör
+seçiminin teknik gerekçesi: şablon yükleyicisi dosyayı sabit adla okuduğu için
+(`src/lib/agreement/template.ts:14`, `contracts/<sabit ad>`) alt klasördeki
+taslaklar canlı akışa karışmaz.
 
-**Karar:** Gövde daraltıldı, kıyafet değil. Gerekçe: kıyafet çizimleri ürün
-sahibinin düzelttiği geometri (D-215); omuz çizgisi ise eski koddan kalma tek
-bir sabit. Yeni çizgi kıyafet siluetinin ~10–20 piksel içinden geçiyor, yani
-örten bir kıyafet gerçekten örtüyor.
+**Üretilen dosyalar:**
 
-**Askılı da düzeldi:** Askılı üstün askısı omzu sarmadan havada bitiyordu —
-oturumun başında bildirilen ama o günkü çalışmayla birlikte geri alınan bir
-şikâyet. Gövde daralınca askı omzun kenarına oturdu; ayrıca bir düzeltme
-gerekmedi.
+- `yazar-sozlesmesi-ve-ruhsat-taahhudu-v2-TASLAK.md` — çerçeve sözleşme, 18 madde
+- `eser-bazli-yayin-izni-ve-son-metin-onayi-TASLAK.md` — her yazı için ayrı belge, EK-1'de son metin
+- `UYGULAMA-PLANI.md` — sıra, yazar grupları, işletme usulü, avukat soruları
+- `takip-tablosu.md` + `takip-tablosu.csv` — boş takip tablosu (CSV: BOM + noktalı virgül, Türkçe Excel için)
+- `yazarlara-mesaj.md` — üç mesaj taslağı (mevcut yazar / yeni yazar / eser izni eki). **Gönderilmedi.**
 
-**Doğrulama:** Yeni test, gövde konturunu örnekleyip (kontrol noktalarını değil,
-eğri üstündeki noktaları) 104…920 aralığında kalmasını arıyor. İlk yazdığım
-sürüm kontrol noktalarına bakıyordu ve 939 görüp patladı; eğri oraya
-çıkmıyordu, test yanlıştı. Görsel: kazak, ceket ve askılı ile render.
+**Sözleşmede daraltılan kapsam:** Üründe olmayan mecralar için istenen izinler
+çıkarıldı — **PDF Sayı** mecrası ve onunla birlikte **yayma hakkı (m. 23)**,
+**e-bülten**, ve sosyal medyada **eserin tamamının** yayımlanması. Sosyal medya
+yalnızca tanıtım (başlık + ad + bağlantı + en çok 300 kelime alıntı) olarak
+kaldı; eserin tamamı isteniyorsa eser bazlı belgede ayrı bir kutuyla alınır.
+Hak devri ve münhasırlık eklenmedi. FSEK m. 51 (ileride doğacak haklar ve
+bilinmeyen kullanım biçimleri) ile m. 49 (alt ruhsat ve devir yasağı) kapsam
+dışı olarak yazıldı; yapay zekâ modeli eğitimi açıkça hariç tutuldu.
+
+**İmza yöntemi — ayrı tutulan iki şey:** Paneldeki kutu işaretleme + metin özeti
+(SHA-256) + IP + tarih + PDF kaydı bir **delil** düzenidir ve iyi kurulmuştur;
+FSEK m. 52'deki **yazılı şekil** ise ayrı bir geçerlilik sorusudur. Bir onay
+kutusunun bu şartı karşıladığına dair kaynak bulunamadı; karşılamadığına dair de
+kesin bir kaynak bulunamadı. Bu yüzden taslak ıslak imzayı veya güvenli
+elektronik imzayı esas alır ve panel onayını "imzalı belgenin içeriğini ve
+tarihini destekleyen delil kaydı" olarak konumlandırır (v2 Madde 16). Mevcut 29
+onay **geçerli veya geçersiz ilan edilmedi**; v2 Madde 16.6'ya, geçmişin hukuki
+niteliğine ilişkin kabul veya feragat içermeyen bir **teyit** hükmü konuldu.
+
+**Depodaki eski taslakların durumu:** `doc/01-cerceve-yazar-sozlesmesi.md` ve
+`doc/02-eser-bazli-kullanim-ruhsati-formu.md`, hiç uygulanmamış **iki belgeli**
+bir tasarımdı ve `doc/02` Madde 12'de zaten "Panel üzerinden yalnızca tıklama ile
+verilen onay bu formu yürürlüğe sokmaz" diyordu. Islak imza gereği ilk tasarımda
+görülmüş, birleşik belgeye geçilirken düşmüş (`doc/yazar-sozlesmesi-ve-ruhsat-taahhudu.md`
+ile canlı şablon birebir aynı). Yeni taslak iki belgeli yapıya dönüyor, ama
+çerçeveyi boş bırakmak yerine ruhsat taahhüdünü çerçevede tutuyor.
+
+**Canlı doğrulama (22 Eylül 2026):** `/api/public/issues` boş dönüyor
+(`{"issues":[]}`) — herkese açık yayında sayı ve yazı yok. Ruhsat zinciri ilk
+yayından önce kurulabilir; plandaki "yayımlanmış yazılar" grubu bugün büyük
+olasılıkla boş. Canlı veritabanı okunamadığı için makalelerin panel içi durumları
+editör panelinden kontrol edilecek.
+
+**Sürüm 2 yayınlanırken bilinmesi gereken yan etki:** Yeni sürüm yayınlandığı
+anda 29 aktif yazarın tamamı `pending_agreement`'a düşer ve yazar panelleri
+kilitlenir. Bu yüzden plan, yazarlara mesajın **sürümden önce** gönderilmesini
+şart koşuyor.
+
+**Yer tutucu kısıtı (yeni öğrenilen):** `render.ts` tanımadığı bir `{{...}}`
+gördüğünde sürümü reddediyor ve `OPTIONAL` kümesi yalnızca `yazar.mahlas`'ı
+içeriyor. Yani `{{dergi.adres}}` boşsa hiçbir yazar sözleşmeyi göremez
+("Sözleşme ayarları eksik: dergi.adres"). Taslak bu yüzden yalnızca desteklenen
+18 anahtarı kullanıyor ve şablon gövdesinde tek bir köşeli parantezli yer tutucu
+bırakılmadı — `[...]` şablonda hata vermez, olduğu gibi yayımlanır.
+
+**Numaralandırma düzeltmesi:** Bu oturum çalışırken aynı ağaçta başka bir oturum
+D-221…D-224'ü avatar kararlarına kullanmış ve bu oturumun `HUKUK-RAPORU.md` ile
+taslak dosyalarını kendi commit'ine (0f6ffd8) katıp push etmiş. Çakışan iki kayıt
+yeniden numaralandırıldı: hukuk raporu kaydı D-221 → **D-225**, bu kayıt
+D-222 → **D-226**. (Depoda D-047 ve D-048 mükerrer görünüyor; bunlar bu
+oturumdan önce de böyleydi, dokunulmadı.)
+
+**Kod:** Değişiklik yok.
 
 
-## D-224 — Şapka ve berenin kendi rengi var
+## D-223 eki — omuz payı sıfıra indirildi
 
-**İstek (ürün sahibi):** "bere şapkaların renklerini ayrı seçebilelim."
+**İstek (ürün sahibi):** "avatarda omuzlar kıyafetten taşıyor düzelt şunu" —
+D-223'ten sonra hâlâ görülüyor.
 
-**Karar:** `headwearColor` alanı eklendi, 18 renk; şapka, örgü bere ve bere
-artık `palette.clothing` yerine `palette.headwear` kullanıyor. Ekstra
-alanındaki "Şapka ve bere kıyafet rengini alır." açıklaması kaldırıldı — artık
-doğru değil.
+**Bulgu:** D-223'ün testi yanlış soruyu soruyordu. Gövdenin **en geniş**
+noktasının kıyafetin en geniş noktasını aşmamasına bakıyordu; oysa gövde,
+ikisi de aynı aralıkta kalırken **belirli bir yükseklikte** kıyafetten geniş
+olabilir. Konturları satır satır karşılaştırınca omzun tepesinde, boynun
+yanında 7,7 pikselik bir taşma kaldığı çıktı — 6 piksellik kontur çizgisinin
+altında büyük ölçüde gizlense de duruyordu.
 
-Bu, oturumun başındaki "şapka ve bere kıyafet rengini almasın" isteğinin
-kalıcı karşılığı; o günkü çalışma D-207 ile geri alınmıştı.
+**Karar:** Omuz çizgisi bir tık daha içeri alındı
+(`[[606,752],[668,784],[786,828],[864,900],[896,1060]]`). Örten yedi kıyafetin
+hepsinde, y 760–1020 aralığında her satırda taşma **0 piksel**. Askılı hariç
+tutuldu: o omzu bilerek açıkta bırakıyor.
 
-**Builder gereksiz alanı göstermiyor:** "Şapka Rengi" yalnızca şapkalardan biri
-seçiliyken çıkıyor — gözlüksüzken "Çerçeve Rengi"nin, türbansızken "Türban
-Rengi"nin gizlenmesiyle aynı desen.
+**Test değişti:** Artık gövde konturu ile her kıyafetin kendi konturu dört
+piksellik adımlarla, satır satır karşılaştırılıyor. Eski test bu hatayı
+göremezdi; geçiyordu.
 
-**`AVATAR_CONFIG_VERSION` 8'e çıkarıldı** (D-223 ile birlikte): omuz çizgisi
-her avatarın çizimini değiştirdi, şapkalı avatarların rengi de değişebilir.
-Üretimde `pnpm redraw-team-avatars` bir kez çalıştırılmalı.
+**`AVATAR_CONFIG_VERSION` 9'a çıkarıldı:** 8'in çizimi bir kez yayına girdi,
+bu yüzden arada kaydedilmiş bir avatar eski omuzla v8 damgası taşıyor
+olabilir. Yeni numara onu da bayatlatıyor.
 
-**Doğrulama:** Yeni test: siyah kazak + kırmızı bere seçiminde kırmızının
-çizime girmesi. Görsel: kırmızı bere/lacivert kazak, hardal şapka/antrasit,
-krem bere/bordo. Kapı: typecheck, lint, 703 test, build.
+**Görülen sorunun ikinci yarısı:** Ekip sayfasındaki avatarlar **kayıtlı
+PNG**'dir; kod düzelse de o dosyalar D-216'dan beri yenilenmedi. Orada eski
+omuzlar görünmeye devam eder. Çözüm `pnpm redraw-team-avatars`; Neon OAuth
+anahtarının süresi dolduğu için bu adımda çalıştırılamadı.
+
+
+## D-225 — Kart kaydırıcısının noktaları, ve çalma listesi onunla aynı boyda
+
+**İstek (ürün sahibi):** "çalma listesi kısmını yanındaki sliderla aynı boyda
+yap ve sliderın altına da nokta ekle, kaydırılınca noktalarda kayar şekilde
+gözüksün ve otomatik olarak kaysın 5 sn'de bir."
+
+**Kart sayısı:** İstek "3 nokta" diyordu, ama 1. sayının dört kartı var (film,
+dizi, kitap, eser). Nokta sayısı kart sayısından geliyor: dört kart, dört
+nokta. Sabit üç olsaydı dördüncü karta noktalardan ulaşılamazdı.
+
+**Karar:**
+
+- **Noktalar.** Kart rayı `IssueCardRail` adlı bir istemci bileşenine sarıldı.
+  Kartların kendisi sunucuda çiziliyor ve `children` olarak veriliyor; bileşen
+  yalnızca tarayıcı gerektiren kısmı ekliyor: hangi kartın görüşte olduğu, her
+  karta bir nokta, ve beş saniyelik adım. Ray hâlâ sıradan bir kaydırma
+  kutusu — tekerlek, dokunmatik ve klavye eskisi gibi çalışıyor; noktalar
+  ikinci bir yol, tek yol değil.
+- **Hangi nokta:** Sol kenarı rayın sol kenarına en yakın kart. Kartlar farklı
+  genişlikte (afiş 40rem, tablo 48rem) olduğu için indeks hesabı genişliğe
+  değil, ölçülen konuma bakıyor.
+- **Beş saniyede bir adım**, sondan başa dönerek. Tekrarlayan tek bir zamanlayıcı
+  yerine kart başına bir zamanlayıcı: elle kaydıran ya da noktaya basan okur,
+  indiği kartta tam beş saniye kalıyor.
+- **Çalma listesi rayla aynı boyda.** `align-self: start` kaldırıldı, iki
+  sütunlu yerleşimde (≥1000px) çalar satırın boyuna uzuyor ve artan yer şarkı
+  listesine gidiyor. D-220'de not düştüğüm dar kutu (aynı anda ancak bir buçuk
+  şarkı) böylece kendiliğinden çözüldü. Telefonda tek sütun olduğu için kutu
+  yine sabit 7,5rem.
+- **`position: sticky` kaldırıldı:** iki kutu aynı boydayken yapışacak bir şey
+  yok; ölü kural bırakmamak için silindi.
+
+**Okurun kontrolü:** Ray, okur üzerindeyken durur — imleç girdiğinde ve klavye
+odağı içine düştüğünde. Okunan metnin altından kayması, hiç kaymamasından
+kötüdür. `prefers-reduced-motion: reduce` diyen okurda adım hiç başlamaz.
+
+**Doğrulama:** Kapı: typecheck, lint, test, build. Görsel: canlıda.

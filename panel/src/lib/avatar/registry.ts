@@ -129,12 +129,13 @@ export type CategoryId = (typeof CATEGORIES)[number]["id"];
  * drawings (D-215), v4 the bukle set and colour-following shadows and lines
  * (D-217), v6 the headscarf and its own colour (D-219), v7 the headphone
  * band moved behind the neck (D-222), v8 the narrowed shoulders (D-223) and
- * the hats' own colour (D-224). A record with an
+ * the hats' own colour (D-224), v9 the last of the shoulder overhang
+ * (D-223). A record with an
  * older version is redrawn on download and by
  * `redrawAllTeamAvatarPngs` (D-216), so the file an admin sees always shows
  * today's art; the choices themselves carry over unchanged.
  */
-export const AVATAR_CONFIG_VERSION = 8;
+export const AVATAR_CONFIG_VERSION = 9;
 
 type IdsOf<K extends FieldKey> = (typeof FIELDS)[K]["options"][number]["id"];
 

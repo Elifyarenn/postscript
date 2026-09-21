@@ -23,6 +23,7 @@ import { HISTORY_LIMIT, historyReducer, type History } from "@/lib/avatar/histor
 import { isImageHair } from "@/lib/avatar/assets/hair-images";
 import { HAIR_TEXTURES } from "@/lib/avatar/assets/hair";
 import { torso } from "@/lib/avatar/assets/face";
+import { CLOTHING_STATIC } from "@/lib/avatar/assets/clothing-static";
 import { crc32, uniqueEntryNames, zipToBuffer } from "@/lib/zip";
 import { canCreateTeamAvatar, canManageTeamAvatars, type Actor } from "@/lib/auth/rbac";
 
@@ -266,31 +267,52 @@ describe("corrected static hair (D-215)", () => {
 });
 
 describe("the body under the clothes (D-223, D-224)", () => {
-  /** The x of every point along an "M … C … C …" outline, control points aside. */
-  const outlineXs = (d: string): number[] => {
-    const numbers = d.match(/-?\d+(?:\.\d+)?/g)!.map(Number);
-    const xs = [numbers[0]!];
-    let [fromX] = [numbers[0]!];
-    for (let index = 2; index + 5 < numbers.length; index += 6) {
-      const [c1x, , c2x, , toX] = numbers.slice(index, index + 6) as number[];
-      for (let step = 1; step <= 24; step += 1) {
-        const t = step / 24;
+  /** The on-curve points of an "M … C … C …" outline, control points aside. */
+  const outline = (d: string): [number, number][] => {
+    const n = d.match(/-?\d+(?:\.\d+)?/g)!.map(Number);
+    const points: [number, number][] = [[n[0]!, n[1]!]];
+    let from: [number, number] = [n[0]!, n[1]!];
+    for (let index = 2; index + 5 < n.length; index += 6) {
+      const [c1x, c1y, c2x, c2y, toX, toY] = n.slice(index, index + 6) as number[];
+      for (let step = 1; step <= 40; step += 1) {
+        const t = step / 40;
         const u = 1 - t;
-        xs.push(u ** 3 * fromX + 3 * u * u * t * c1x! + 3 * u * t * t * c2x! + t ** 3 * toX!);
+        points.push([
+          u ** 3 * from[0] + 3 * u * u * t * c1x! + 3 * u * t * t * c2x! + t ** 3 * toX!,
+          u ** 3 * from[1] + 3 * u * u * t * c1y! + 3 * u * t * t * c2y! + t ** 3 * toY!,
+        ]);
       }
-      fromX = toX!;
+      from = [toX!, toY!];
     }
-    return xs;
+    return points;
   };
 
-  it("keeps the shoulders inside the outline every covering garment shares", () => {
-    const xs = outlineXs(torso([[440, 760], [512, 748], [584, 760]]));
-    // The garments run 104…920 at their widest; a wider body showed as a strip
-    // of bare skin down the outside of both shoulders
-    expect(Math.max(...xs)).toBeLessThanOrEqual(920);
-    expect(Math.min(...xs)).toBeGreaterThanOrEqual(104);
-  });
+  /** How far right an outline reaches at a given height. */
+  const rightAt = (points: [number, number][], y: number): number | null => {
+    let best: number | null = null;
+    for (const [x, py] of points) {
+      if (Math.abs(py - y) > 6) continue;
+      if (best === null || x > best) best = x;
+    }
+    return best;
+  };
 
+  it("keeps the shoulders inside every garment that is meant to cover them", () => {
+    const body = outline(torso([[440, 760], [512, 748], [584, 760]]));
+    for (const style of CLOTHING_STATIC) {
+      // The tank top bares the shoulders on purpose; the rest must not
+      if (style.id === "tank") continue;
+      const cloth = outline(style.body.match(/<path d="([^"]+)"/)![1]!.split("Z")[0]! + "Z");
+      for (let y = 760; y <= 1020; y += 4) {
+        const skin = rightAt(body, y);
+        const garment = rightAt(cloth, y);
+        if (skin === null || garment === null) continue;
+        // A wider body showed as a strip of bare skin down the outside of
+        // both shoulders; checked row by row, not just at the widest point
+        expect(skin, `${style.id} at y=${y}`).toBeLessThanOrEqual(garment);
+      }
+    }
+  });
   it("colours a hat apart from the clothes", () => {
     const svg = renderAvatarSvg(
       avatarConfigSchema.parse({

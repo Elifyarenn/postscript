@@ -2653,11 +2653,12 @@ html[data-playlist-open] .ps-site .topbar-note {
 }
 
 /* A fixed box, so a long playlist scrolls inside it instead of stretching
-   the player (D-220) */
+   the player (D-220); beside the rail it grows to the rail's height (D-225) */
 .ps-site .player-tracks {
   display: flex;
-  flex-direction: column;
   height: 7.5rem;
+  min-height: 7.5rem;
+  flex-direction: column;
 }
 
 .ps-site .player-tracks li {
@@ -3207,13 +3208,58 @@ html[data-playlist-open] .ps-site .topbar-note {
 
 .ps-site .issue-extras-row .extra-player {
   width: 100%;
-  align-self: start;
 }
 
+/* The rail and its dots are one column (D-225) */
+.ps-site .extras-slider {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.ps-site .rail-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  padding-top: 0.2rem;
+}
+
+.ps-site .rail-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border: 1px solid var(--site-wine);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.25s ease;
+}
+
+.ps-site .rail-dot[aria-selected="true"] {
+  background: var(--site-wine);
+}
+
+/* The playlist stands as tall as the rail beside it; the extra room goes to
+   the song list, which then shows more than a song and a half (D-225) */
 @media (min-width: 1000px) {
   .ps-site .issue-extras-row .extra-player {
-    position: sticky;
-    top: 1.5rem;
+    align-self: stretch;
+  }
+
+  .ps-site .issue-extras-row .extra-player .player-frame {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+  }
+
+  .ps-site .issue-extras-row .player-body {
+    min-height: 0;
+    flex: 1;
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .ps-site .issue-extras-row .player-tracks {
+    height: auto;
   }
 }
 

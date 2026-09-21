@@ -39,7 +39,7 @@ export const EAR_BASE_X = 732;
  * covers: before D-223 the body was some 30px wider and a strip of skin ran
  * down the outside of both shoulders.
  */
-const SHOULDERS_RIGHT: Point[] = [[606, 752], [688, 780], [792, 826], [866, 898], [898, 1060]];
+const SHOULDERS_RIGHT: Point[] = [[606, 752], [668, 784], [786, 828], [864, 900], [896, 1060]];
 
 /** Shoulders with a given neckline (canvas space), listed left to right across the neck. */
 export function torso(neckline: readonly Point[]): string {

@@ -18,6 +18,7 @@ import seriesYou from "@/assets/design/series-you.webp";
 import type { IssueCard, IssueCardImage, IssueCardKind, IssueExtras } from "@/lib/issue-extras";
 import { formatIssueNumber } from "@/lib/site";
 import { spotifyEmbedUrl } from "@/lib/spotify";
+import { IssueCardRail } from "./issue-card-rail";
 import { SpotifyPlayer } from "./spotify-player";
 import { CategoryCard } from "./category-card";
 import { Sparkle } from "./site-ui";
@@ -145,9 +146,9 @@ export function HomePage({
         // past it; on a phone the playlist drops below the rail (D-119)
         <section className="issue-extras-row" aria-label={`Sayı ${formatIssueNumber(issue.number)} seçkisi`}>
           {cards.length > 0 && (
-            // Opens at the first card; the reader slides on to the rest (D-121). The
-            // focusable region lets a keyboard reach the cards beyond the edge
-            <div className="extras-rail" role="region" aria-label="Sayının kartları" tabIndex={0}>
+            // Opens at the first card; the reader slides on to the rest (D-121).
+            // The rail carries its own dots and moves on by itself (D-225)
+            <IssueCardRail count={cards.length}>
               {cards.map((card) => {
                 const image = CARD_IMAGES[card.image];
                 // Posters and covers stand upright; the painting lies flat and gets a wider card
@@ -174,7 +175,7 @@ export function HomePage({
                   </article>
                 );
               })}
-            </div>
+            </IssueCardRail>
           )}
 
           {extras.playlist && (
