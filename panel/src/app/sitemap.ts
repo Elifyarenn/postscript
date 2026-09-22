@@ -28,7 +28,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .select({ number: issues.number, publishedAt: issues.publishedAt })
       .from(issues)
       .where(
-        and(eq(issues.status, "published"), isNull(issues.deletedAt), isNotNull(issues.publishedAt)),
+        and(
+          eq(issues.status, "published"),
+          eq(issues.adminOnly, false),
+          isNull(issues.deletedAt),
+          isNotNull(issues.publishedAt),
+        ),
       )
       .orderBy(desc(issues.publishedAt)),
   ]);

@@ -105,7 +105,8 @@ export async function listPublishedIssues() {
     })
     .from(issues)
     .leftJoin(media, eq(issues.coverMediaId, media.id))
-    .where(and(eq(issues.status, "published"), isNull(issues.deletedAt)))
+    // The working issue is never public, whatever its status says (D-236)
+    .where(and(eq(issues.status, "published"), eq(issues.adminOnly, false), isNull(issues.deletedAt)))
     .orderBy(desc(issues.number));
 
   return rows;
@@ -121,7 +122,14 @@ export async function getPublishedIssue(number: number) {
       id: issues.id,
     })
     .from(issues)
-    .where(and(eq(issues.number, number), eq(issues.status, "published"), isNull(issues.deletedAt)))
+    .where(
+      and(
+        eq(issues.number, number),
+        eq(issues.status, "published"),
+        eq(issues.adminOnly, false),
+        isNull(issues.deletedAt),
+      ),
+    )
     .limit(1);
 
   const issue = issueRows[0];

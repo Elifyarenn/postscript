@@ -7,14 +7,17 @@
 import { revalidatePath } from "next/cache";
 import { requestMetadata, requireRole } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
-import { runAction, text, type ActionState } from "@/lib/action";
+import { listField, runAction, text, type ActionState } from "@/lib/action";
 import { badRequest } from "@/lib/errors";
 import {
   addIssuePage,
   duplicateIssuePage,
   moveIssuePage,
   removeIssuePage,
+  reorderIssuePages,
+  saveHotspots,
   updateIssuePage,
+  updatePageMeta,
 } from "@/services/issue-pages";
 
 /** A form field that is empty means "nothing", not an empty string. */
@@ -108,5 +111,74 @@ export async function removeIssuePageAction(_state: ActionState, formData: FormD
     await removeIssuePage({ ...user }, text(formData, "pageId"), await requestMetadata());
     refresh(text(formData, "issueId"));
     return { success: "Sayfa kaldırıldı." };
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Designed pages (D-236)                                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The fields the page list edits about an uploaded page. The picture itself
+ * is uploaded through the route handler, because that is the only way the
+ * panel can show progress for several files at once.
+ */
+export async function updatePageMetaAction(_state: ActionState, formData: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+
+    const role = formData.get("template");
+    await updatePageMeta(
+      { ...user },
+      text(formData, "pageId"),
+      {
+        label: optional(formData, "label"),
+        imageAlt: optional(formData, "imageAlt"),
+        transcript: optional(formData, "transcript"),
+        tocTitle: optional(formData, "tocTitle"),
+        inContents: formData.get("inContents") === "1",
+        template:
+          role === "cover" || role === "back_cover" || role === "full_bleed" ? role : undefined,
+      },
+      await requestMetadata(),
+    );
+    refresh(text(formData, "issueId"));
+    return { success: "Sayfa bilgileri kaydedildi." };
+  });
+}
+
+/** The whole order at once, as dragging the list produces it. */
+export async function reorderIssuePagesAction(_state: ActionState, formData: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const issueId = text(formData, "issueId");
+
+    await reorderIssuePages({ ...user }, issueId, listField(formData, "order"), await requestMetadata());
+    refresh(issueId);
+    return { success: "Sıralama kaydedildi." };
+  });
+}
+
+/** Every clickable area of one page, saved as a set. */
+export async function saveHotspotsAction(_state: ActionState, formData: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+
+    const raw = formData.get("areas");
+    let areas: unknown = [];
+    if (typeof raw === "string" && raw.trim() !== "") {
+      try {
+        areas = JSON.parse(raw);
+      } catch {
+        throw badRequest("Etkileşim alanları okunamadı. Sayfayı yenileyip tekrar deneyin.");
+      }
+    }
+
+    await saveHotspots({ ...user }, text(formData, "pageId"), areas, await requestMetadata());
+    refresh(text(formData, "issueId"));
+    return { success: "Etkileşim alanları kaydedildi." };
   });
 }

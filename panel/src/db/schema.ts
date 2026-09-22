@@ -11,6 +11,7 @@ import {
   boolean,
   check,
   date,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -151,6 +152,15 @@ export const pageTemplateEnum = pgEnum("page_template", [
   "ps_closing",
   "back_cover",
 ]);
+
+/** What a clickable area on a page image does when a reader chooses it (D-236). */
+export const hotspotKindEnum = pgEnum("hotspot_kind", ["link", "page", "info", "quiz"]);
+
+/**
+ * The two kinds of quiz (D-236): one with a right answer per question, one
+ * that adds points up and names an outcome for the band the total falls in.
+ */
+export const quizKindEnum = pgEnum("quiz_kind", ["knowledge", "scored"]);
 
 /** The twelve signs, for the team form (D-226); labels live in `src/lib/zodiac.ts`. */
 export const zodiacEnum = pgEnum("zodiac", [
@@ -780,6 +790,13 @@ export const issues = pgTable(
     /** The paragraph the magazines design prints under an issue's name (D-148). */
     blurb: text("blurb"),
     coverMediaId: uuid("cover_media_id").references(() => media.id, { onDelete: "set null" }),
+    /**
+     * A working issue that only the admins may open (D-236). Narrower than
+     * "the editorial team": the sample issue we develop the reader against is
+     * not something an editor or a writer should stumble into, so the door in
+     * `readIssuePages` asks for the admin panel, not the editor panel.
+     */
+    adminOnly: boolean("admin_only").notNull().default(false),
     status: issueStatusEnum("status").notNull().default("planning"),
     plannedPublishDate: date("planned_publish_date"),
     publishedAt: timestamp("published_at", { withTimezone: true }),
@@ -827,6 +844,25 @@ export const issuePages = pgTable(
     imageMediaId: uuid("image_media_id").references(() => media.id, { onDelete: "set null" }),
     caption: text("caption"),
 
+    /**
+     * The designed page, as delivered (D-236). When this is set the page *is*
+     * the picture: the reader shows it whole and puts the clickable areas on
+     * top of it, and the template fields above are left alone.
+     *
+     * The natural size is kept so the reader can reserve the right shape
+     * before the file arrives, and so a replacement whose proportions differ
+     * can be flagged — the areas are stored in fractions of the picture, and
+     * a different shape moves what they sit on.
+     */
+    imageWidth: integer("image_width"),
+    imageHeight: integer("image_height"),
+    /** What this page is called in the panel's list; never shown to a reader. */
+    label: text("label"),
+    /** The page's own alternative text, which beats the media row's. */
+    imageAlt: text("image_alt"),
+    /** Optional plain text of what the page shows, for a screen reader. */
+    transcript: text("transcript"),
+
     /** An article this page shows instead of its own body; never modified by us. */
     articleId: uuid("article_id").references(() => articles.id, { onDelete: "set null" }),
     /** The area this page belongs to, by name, as `writer_areas` spells it. */
@@ -843,6 +879,98 @@ export const issuePages = pgTable(
     uniqueIndex("issue_pages_issue_position_unique").on(t.issueId, t.position),
   ],
 );
+
+/**
+ * A quiz an issue carries (D-236).
+ *
+ * The questions and the outcome bands are JSON because they are a shape, not a
+ * relation: nothing ever queries "every option of every quiz", and keeping one
+ * quiz in one row means the panel saves it in one write and can never leave
+ * half of it behind. `src/lib/issue-quiz.ts` is the only thing that reads the
+ * shape, and it drops whatever no longer parses instead of throwing.
+ *
+ * Nothing about who answered is stored: there is no score archive and no
+ * leaderboard, so a reader can try a quiz without leaving a record anywhere.
+ */
+export const issueQuizzes = pgTable(
+  "issue_quizzes",
+  {
+    id: id(),
+    issueId: uuid("issue_id")
+      .notNull()
+      .references(() => issues.id, { onDelete: "cascade" }),
+    kind: quizKindEnum("kind").notNull(),
+    title: text("title").notNull(),
+    intro: text("intro"),
+    /** `[{ id, text, explanation, options: [{ id, text, correct, points }] }]` */
+    questions: jsonb("questions").notNull().default(sql`'[]'::jsonb`),
+    /** Scored quizzes only: `[{ id, title, body, min, max }]`. */
+    outcomes: jsonb("outcomes").notNull().default(sql`'[]'::jsonb`),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("issue_quizzes_issue_idx").on(t.issueId)],
+);
+
+/**
+ * A clickable area drawn on a page image (D-236).
+ *
+ * Position is stored as fractions of the picture (0..1), never as pixels: the
+ * same rectangle then lands on the same part of the design whatever the
+ * screen, the zoom or the rendered size. The padding around the picture is not
+ * part of the picture, so the reader measures the image element itself.
+ *
+ * A jump points at a page id, never at a page number, so reordering an issue
+ * cannot silently send a reader somewhere else.
+ */
+export const issuePageHotspots = pgTable(
+  "issue_page_hotspots",
+  {
+    id: id(),
+    pageId: uuid("page_id")
+      .notNull()
+      .references(() => issuePages.id, { onDelete: "cascade" }),
+    /** Drawing order within the page; also the tab order for a keyboard. */
+    position: integer("position").notNull(),
+
+    kind: hotspotKindEnum("kind").notNull(),
+    /** What the panel calls it in the list beside the picture. */
+    name: text("name"),
+    /** What a screen reader announces; falls back to the name. */
+    ariaLabel: text("aria_label"),
+    /** Whether a reader sees a hint over the area, or only finds it by trying. */
+    showMarker: boolean("show_marker").notNull().default(false),
+
+    x: doublePrecision("x").notNull(),
+    y: doublePrecision("y").notNull(),
+    w: doublePrecision("w").notNull(),
+    h: doublePrecision("h").notNull(),
+
+    /** `link`: where it goes, and whether it leaves the magazine. */
+    url: text("url"),
+    openInNewTab: boolean("open_in_new_tab").notNull().default(true),
+
+    /** `page`: the page to jump to, by id. */
+    targetPageId: uuid("target_page_id").references((): AnyPgColumn => issuePages.id, {
+      onDelete: "set null",
+    }),
+
+    /** `info`: the little window that opens over the page. */
+    infoTitle: text("info_title"),
+    infoBody: text("info_body"),
+    infoMediaId: uuid("info_media_id").references(() => media.id, { onDelete: "set null" }),
+
+    /** `quiz`: which quiz opens. Several areas may point at the same one. */
+    quizId: uuid("quiz_id").references(() => issueQuizzes.id, { onDelete: "set null" }),
+
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("issue_page_hotspots_page_idx").on(t.pageId, t.position)],
+);
+
+export type IssuePageHotspot = typeof issuePageHotspots.$inferSelect;
+export type IssueQuiz = typeof issueQuizzes.$inferSelect;
 
 /* ------------------------------------------------------------------ */
 /* articles                                                            */

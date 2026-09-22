@@ -5,7 +5,7 @@ import { renderMarkdown } from "@/lib/markdown";
 import { issueExtrasFor } from "@/lib/issue-extras";
 import { templateOf } from "@/lib/issue-templates";
 import type { ReaderExtras, ReaderPage } from "@/lib/issue-reader";
-import { readIssuePages } from "@/services/issue-pages";
+import { pageMediaUrl, readIssuePages } from "@/services/issue-pages";
 import { MagazineReader } from "@/components/magazine-reader";
 
 export const metadata = { title: "Dergi", robots: { index: false, follow: false } };
@@ -18,12 +18,16 @@ const PICK_LABELS: Record<string, string> = {
 };
 
 /**
- * The magazine reader (D-234).
+ * The magazine reader (D-234, D-236).
  *
- * The markdown is turned into sanitised HTML here, on the server, so the
- * browser carries no parser and meets nothing that was not cleaned first.
  * Whether this reader may be opened at all is decided in `readIssuePages`, not
- * here: an unpublished issue answers 404 to everyone outside the panel.
+ * here: an unpublished issue answers 404 to everyone outside the panel, and
+ * the working issue answers 404 to everyone but an admin. The pictures are
+ * fetched through the page's own guarded route, so they are as closed as the
+ * issue is.
+ *
+ * Markdown belongs to the older template pages and is turned into sanitised
+ * HTML here, on the server, so the browser carries no parser.
  */
 export default async function IssueReaderPage({
   params,
@@ -85,7 +89,12 @@ export default async function IssueReaderPage({
         section: page.section,
         imageUrl: page.imageUrl,
         imageAlt: page.imageAlt,
+        imageWidth: page.imageWidth,
+        imageHeight: page.imageHeight,
+        label: page.label,
+        transcript: page.transcript,
         blocks: page.blocks,
+        hotspots: page.hotspots,
         article: page.article
           ? {
               title: page.article.title,
@@ -94,11 +103,15 @@ export default async function IssueReaderPage({
               bodyHtml: page.article.body ? await renderMarkdown(page.article.body) : null,
             }
           : null,
-        // Block pictures are served by the same guarded media route
+        // Block pictures go through the page's own guarded route as well
         mediaUrls: Object.fromEntries(
           page.blocks.flatMap((block) => {
-            if (block.kind === "zoom" && block.mediaId) return [[block.mediaId, `/api/media/${block.mediaId}`]];
-            if (block.kind === "gallery") return block.mediaIds.map((id) => [id, `/api/media/${id}`]);
+            if (block.kind === "zoom" && block.mediaId) {
+              return [[block.mediaId, pageMediaUrl(page.id, block.mediaId)]];
+            }
+            if (block.kind === "gallery") {
+              return block.mediaIds.map((id) => [id, pageMediaUrl(page.id, id)]);
+            }
             return [];
           }),
         ),
@@ -113,7 +126,9 @@ export default async function IssueReaderPage({
       issueTitle={reader.issue.title}
       theme={reader.issue.theme}
       pages={pages}
+      quizzes={reader.quizzes}
       preview={reader.preview}
+      adminOnly={reader.issue.adminOnly}
       startPageId={query.s ?? null}
       backHref={`/magazine/issues/${reader.issue.number}`}
     />

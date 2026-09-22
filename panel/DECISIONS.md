@@ -9173,3 +9173,207 @@ görünüm eşiği 1100px'ten 960px'e indirildi, böylece küçük dizüstü ekr
 formayı açık görüyor. Telefon akışı (≤700px) değişmedi.
 
 **Doğrulama:** typecheck, lint, sayı testleri (21), build.
+
+---
+
+## D-236 — Sözleşme paketleri üretildi: iki belge, çoklu eser eki, kişiye özel paketler depo dışında
+
+**İstek (ürün sahibi):** Yeni rapor değil, gönderilebilir paket. Her yazara tek
+seferde gidecek paket (çerçeve sözleşme + o yazarın bütün teslim edilmiş
+yazılarını tek tek gösteren eser eki), alıntı tercihi aynı ekte isteğe bağlı
+bölüm, sonraki yazılar için yalnızca yeni ek, imzalı belgelerin depo dışında
+hazırlanması.
+
+**Yapılmayanlar:** Mesaj gönderilmedi, sürüm 2 yayımlanmadı, alınmamış onay
+alınmış gibi kaydedilmedi, kod/rol/kabul kaydı/üretim verisi değişmedi. Veritabanı
+yalnızca salt okunur sorgulandı.
+
+**Üretimden doğrulanan eşleşme (23 Eylül 2026):** **34 canlı yazı, 26 yazar.**
+Hepsinin `author_id` dolu. Bütün yazarlar aktif, e-postası doğrulanmış ve
+**18 yaşını doldurmuş** (en genç doğum tarihi 30.06.2008). **Hiçbir yazıda görsel
+yok**, bu yüzden eklerdeki görsel satırı "Yazıda görsel kullanılmamıştır" olarak
+önceden dolduruldu. Veri bir gün içinde değişti (22 Eylül'de 32 yazı, 23 Eylül'de
+34) — "anlık görüntü" uyarısının somut karşılığı.
+
+**Belge düzeni ikiye indi:**
+
+- **Yazar Sözleşmesi** — yazar başına **bir kez**. Madde 9.2 açıkça şunu söylüyor:
+  sonraki yazılar için yalnızca yeni bir Eser Eki imzalanır, sözleşme yeniden
+  imzalanmaz. Madde 9.7: yeni bir sürümün yayımlanması Yazar'ı yeniden imzalamaya
+  zorlamaz, yalnızca imzaladığı tarihten sonraki ekler için geçerli olur.
+- **Eser Eki (çoklu)** — A bölümü bütün yazılar için ortak şartları **bir kez**
+  yazıyor; B bölümünde her yazı kendi başlığı, panel kaydı, sürüm numarası ve EK
+  harfiyle ayrı bir blok. Her yazı için ayrı **izin kutusu**, ayrı **ad/mahlas
+  tercihi** ve ayrı **alıntı izni kutusu** var. İşaretlenmeyen yazı ek kapsamında
+  değil; bir yazının izni yoksa yalnızca o yazı bekler.
+
+**Alıntı izni:** ayrı belge çıkarılmadı, her yazının kendi bloğunda. Boş
+bırakılırsa izin verilmemiş sayılır ve **dergide yayını engellemez**. Yazının
+tamamı varsayılana eklenmedi; ayrı kutu + paraf ister. İşaretlenen hesaplarda
+aynı metnin tekrar tekrar paylaşılması için yeni imza gerekmez.
+
+**İmza yöntemi bilerek boş bırakıldı.** Belgelere kargo, iki nüsha, her tarafta
+bir asıl veya her paylaşımda yeniden imza gibi yükümlülük **konmadı**; şekil
+maddesi "yazılı olarak düzenlenir ve imzalanır" ile sınırlı. Hangi yolun yeterli
+olduğu (panel onayı / imzalı tarama / güvenli e-imza) avukata tek bir karar
+sorusu olarak gidiyor; soruda hangilerinin hukuken gerekli, hangilerinin tercih
+olduğu ayrıca soruluyor. Yazar mesajındaki tek satır `[[İMZA VE İLETME YOLU]]`
+olarak bekliyor. Doğrulanmamış hiçbir yöntem yeterli ilan edilmedi.
+
+**Depo dışı konum:** `C:\Users\USER\Project\postscript-sozlesmeler\` — hiçbir git
+deposunun içinde değil (doğrulandı). Altında `uret.mjs` (üretici betik),
+`paketler/<yazar>/` (26 paket: kapak + sözleşme + eser eki) ve
+`takip/takip-listesi.md`+`.csv` (dolu liste, yazar başına tek satır). Depoda
+yalnızca kişisel veri içermeyenler kaldı: iki şablon, kontrol listesi, yazar
+mesajı, avukat mesajı, boş takip kolon tanımı.
+
+**Paketlerde önceden doldurulanlar:** yazarın adı, doğum tarihi, e-postası,
+mahlası; ortak adları, dergi e-postası ve alan adı (künyeden okunan kamuya açık
+değerler); sözleşme sürümü 2; yazıların başlıkları, panel kayıtları ve bugünkü
+sürüm numaraları. **Uydurulmayanlar** her pakette `[[DOLDURULACAK]]` ve kapakta
+beş maddelik eksik listesi olarak duruyor: bildirim adresi, imzalayacak kişiler ve
+temsil dayanağı, aydınlatma metni sürümü, imza/iletme yolu, her yazının son metni.
+Hiçbir paket "imzaya hazır" ilan edilmedi.
+
+**Panel sürümüyle eşleşme — en küçük değişiklik:** belgeler kesinleşince gereken
+tek şey **sıralamadır**. Sürüm 2 panelde yayımlanır, **ancak ondan sonra**
+editörler makaleleri "kabul edildi" yapar; böylece panelin açtığı Eser Onayı
+kaydı (`rights_grants.agreement_version_id`) imzalı belgeyle aynı sürümü gösterir.
+Kod değişikliği, veri düzeltmesi veya kayıt güncellemesi gerekmez. Sıra
+kaçırılırsa kayıt elle düzeltilmez; imzalı belgedeki sürüm esas alınır ve takip
+listesine not düşülür.
+
+**Kod:** Değişiklik yok.
+
+---
+
+## D-236 — Dergi sayfa görselleri + üzerine etkileşim alanları
+
+**Karar:** Dergi modeli değişti. Bir sayfa artık şablondan kurulan bir yerleşim
+değil, **tasarımcının teslim ettiği görselin kendisi**; panelin eklediği şey bu
+görselin üzerine konan **tıklanabilir alanlar**. Başlık, yazı, illüstrasyon ve
+kolaj görselin içindedir; PDF yoktur, her tasarım için ayrı HTML şablonu yoktur,
+metinler ikinci kez girilmez.
+
+**Gerekçe:** Tasarım ekibi sayfaları bitmiş görsel olarak veriyor. D-234'ün
+şablon modeli her tasarım için yeni bir yerleşim ve metnin tekrar girilmesini
+gerektiriyordu; teslim biçimiyle örtüşmüyordu. Görsel + alan modeli teslim
+edilen şeyi olduğu gibi yayımlıyor, üstüne yalnızca etkileşimi ekliyor.
+
+**Veri:** `issue_pages`'e `image_width`, `image_height`, `label`, `image_alt`,
+`transcript`; yeni `issue_page_hotspots` (alanlar) ve `issue_quizzes` (testler)
+tabloları; `issues.admin_only`. Migration `0044` tamamen ekleyicidir — hiçbir
+kolon düşürülmedi, hiçbir satır silinmedi.
+
+**Eski şablon sayfaları korundu:** Görseli olmayan sayfa hâlâ yerleşiminden
+çizilir (`page.imageUrl === null` ise `IssuePageSheet`). Sayı 01'in 16 boş
+şablon sayfası duruyor; panelde "Şablondan sayfa ekle" bölümü de duruyor.
+
+### Alanların koordinatı
+
+Dikdörtgen, görselin **kendi** ölçüsüne oranla (0..1) saklanır; piksel değil.
+Okur tarafında ölçüm `<img>` elemanının kendi kutusundan alınır, çerçevesinden
+değil — böylece alan her ekranda, her yakınlaştırmada ve tam ekranda tasarımın
+aynı yerine oturur. Dergi içi geçiş **sayfa kimliğine** bağlanır, sayfa
+numarasına değil; sıralama değişince bağlantı yine doğru sayfayı açar.
+
+### Dört etkileşim türü
+
+`link` (yalnızca http/https — `javascript:` ve `data:` `safeExternalUrl`'de
+reddedilir), `page` (aynı sayının sayfası), `info` (başlık + açıklama + isteğe
+bağlı görsel), `quiz`. Hedefi eksik bir alan okura **hiç gönderilmez**; panelde
+ise durur ve neyin eksik olduğu yazılır. Ölü görünen bir alan, hiç olmayan bir
+alandan kötüdür.
+
+### Testler
+
+İki tür: doğru cevaplı bilgi testi ve puan aralıklı eğlence testi. Bir test
+**sayıya** aittir, sayfaya değil; aynı test birden çok alandan açılabilir,
+ikinci kez yazılmaz. Cevap anahtarı (`correct`, `points`) sunucudan hiç
+çıkmaz: okura `stripAnswers` ile arındırılmış hâli gider, değerlendirme
+`POST /api/issue-quizzes/:id/answer` ile sunucuda yapılır. Hiçbir deneme
+kaydedilmez — kişisel sonuç arşivi, liderlik tablosu ve yeni üyelik zorunluluğu
+yok. Aralıkların çakışması, boşluk bırakması ve ulaşılabilir bir puanın hiçbir
+aralığa girmemesi `outcomeProblems` ile yakalanır; eksik test kaydedilebilir
+ama açılmaz.
+
+### Örnek sayının kapısı: `issues.admin_only`
+
+Projede admin rolü fiilen tam olarak iki hesaba ait (canlıda
+`elifyarenckc@gmail.com` ve `tuannademir11@gmail.com`; yeni admin açılmıyor),
+bu yüzden ayrı bir kimlik listesi değil mevcut rol sistemi kullanıldı —
+`mayReadIssue` `admin_only` sayı için `canAccessAdminPanel` ister.
+
+Arayüzde gizlemek değil, veri katmanında kapatmak:
+
+| Yer | Kapı |
+| --- | --- |
+| Okuyucu, sayı sayfası, içindekiler | `readIssuePages` → 404 |
+| Panel sayfa listesi | `listIssuePages` → 403 |
+| Sayfa görselleri ve küçük önizlemeler | `readPageMedia` → 404 |
+| Testler ve doğru cevaplar | `answerQuiz` → 404 |
+| Sayı listeleri (panel) | `listIssues` editöre göstermez |
+| Public API, ana sayfa, sitemap | `admin_only = false` şartı |
+
+Yanıt "bulunamadı"dır, "yasak" değil: sayının var olduğu bile doğrulanmaz.
+Görseller `/api/issue-pages/:id/media/:mediaId` üzerinden, `private, no-store`
+ile verilir — kalıcı herkese açık dosya adresi yok, ortak önbellek yok. Rota
+ayrıca görselin **gerçekten o sayfaya ait** olmasını arar, yoksa bir sayfa
+tüm medya kitaplığına açılan kapı olurdu.
+
+Ana sayfadaki herkese açık "OBSESSION — Çok yakında" tanıtımı `src/app/page.tsx`
+içinde sabit; sayının içeriğini veya önizleme bağlantısını açığa vurmuyor,
+olduğu gibi kaldı.
+
+### Yükleme
+
+`POST /api/editor/issues/:id/pages` — server action değil rota, çünkü panel
+birden çok dosyayı aynı anda yükleyip her birinin ilerlemesini gösteriyor;
+bunun için tarayıcının izleyebileceği dosya başına bir istek gerekiyor.
+Aynı origin, çift gönderim jetonu ve admin rolü rotada da aranır. Tür dosyanın
+**baytlarından** belirlenir, adından değil. Sınır 25 MB (kitaplığın 10 MB'ı
+değil): okunabilir küçük puntolu bir sayfa büyük dosyadır ve tam da ona aşırı
+sıkıştırma uygulanmamalı. Çift sayfa görseli otomatik bölünmez; panel "ortadan
+böl" seçeneği sunar, kesim çizgisi önizlemede ayarlanır ve iki yarım tarayıcıda
+PNG olarak kesilip iki sayfa olarak yüklenir. Görsel değiştirilince alanlar
+korunur; yeni görselin oranı farklıysa panel "alanları yeniden kontrol edin"
+uyarısı verir (`sameAspect`, %1 tolerans).
+
+### Okuyucu
+
+Site başlığı, hesap menüsü ve footer kaldırıldı: okuyucu `app/(reader)`
+rota grubuna taşındı, adres aynı kaldı (`/magazine/issues/1/oku`). Sığdırma
+varsayılan; −/sığdır/+ düğmeleri, `ctrl`+tekerlek, `+`/`-`/`0` tuşları;
+yakınlaştırınca sahne kayar (fare ile sürükleyerek, dokunmatikte doğal
+kaydırma, `touch-action: pinch-zoom` ile doğal sıkıştırma). Sayfa çevrilince
+yakınlaştırma sıfırlanır ve başa dönülür. Masaüstünde tek/çift sayfa düğmesi;
+çiftte **kapak tek başına**, sonra (2,3), (4,5) — `spreadStartFor`. Sürükleme
+6 pikseli geçmişse bağlantı açılmaz (`suppressClicks`). Pencere açıkken ok
+tuşları dergiyi çevirmez. "Kaldığınız yerden devam edin" yalnızca ilk açılışta
+ve `?s=` verilmemişse önerilir; okur bir kez hareket ettiyse bir daha çıkmaz —
+adresle verilen sayfa, hatırlanan yerden önce gelir.
+
+**Erişilebilirlik:** her sayfada zorunlu olmayan `image_alt` ve isteğe bağlı
+`transcript` (ekran okuyucuya okunur, sayfanın yüklenmesi ona bağlı değil).
+Alanlar `<button>`/`<a>`; okurda şeffaf ama klavye odağı her zaman görünür.
+Dış bağlantı gerçek bir `<a>`, böylece orta tık ve "adresi kopyala" çalışır.
+
+**KVKK:** Bu adım kişisel veri toplamıyor. Test denemeleri, cevaplar ve
+sonuçlar hiçbir yere yazılmıyor; sayfa görselleri derginin kendi eseri.
+Aydınlatma metninde değişiklik gerekmedi (D-084 kuralı gereği kontrol edildi).
+
+**Doğrulama:** 18 birim testi (PNG/JPEG/WEBP başlığından ölçü okuma, oran
+karşılaştırma, `safeExternalUrl`, alan hazırlığı, çakışma ve sınırlama
+geometrisi, iki test türünün değerlendirilmesi, aralık doğrulaması, cevap
+anahtarının okura gitmemesi) ve 26 entegrasyon testi (admin-only sayının
+okuyucuya/listeye/görsele/teste kapalılığı — editör, yazar, üye ve oturumsuz
+için ayrı ayrı; yayımlansa bile kapalı kalması; yükleme ve baytla tür
+reddi; sıralamanın kalıcılığı; görsel değişince alanların korunması ve oran
+uyarısı; alan kümesinin kaydı; sayı dışına geçiş reddi; sıralama sonrası
+hedefin sabit kalması; testin birden çok alandan açılması; test silinince
+alanın okura gitmemesi). Kapı: typecheck, lint, test, build.
+
+**Kalan:** Gerçek tasarım görselleri henüz teslim edilmedi; akış, yalnızca
+adminlere görünen tarafsız deneme sayfalarıyla doğrulandı
+(`pnpm sample-issue-pages -- 1 --pages 6`). Sahte makale, yazar veya alıntı
+üretilmedi.

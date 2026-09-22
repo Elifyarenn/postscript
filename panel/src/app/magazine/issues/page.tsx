@@ -77,7 +77,11 @@ export default async function IssuesPage() {
               <Link key={issue.id} href={`/magazine/issues/${issue.number}`} className="issue-draft">
                 <p className="issue-draft-number">Sayı {formatIssueNumber(issue.number)}</p>
                 <p className="issue-draft-title">{issue.theme ?? issue.title}</p>
-                <p className="issue-draft-state">Hazırlanıyor</p>
+                {/* The working issue reaches this list only for an admin;
+                    `listIssues` leaves it out of everybody else's (D-236) */}
+                <p className="issue-draft-state">
+                  {issue.adminOnly ? "Örnek sayı · yalnızca yöneticiler" : "Hazırlanıyor"}
+                </p>
               </Link>
             ))}
           </div>

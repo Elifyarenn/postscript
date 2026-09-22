@@ -30,11 +30,13 @@ export const issueInputSchema = z.strictObject({
 
 export async function listIssues(actor: Actor) {
   if (!canAccessEditorPanel(actor)) throw forbidden();
-  return db
-    .select()
-    .from(issues)
-    .where(isNull(issues.deletedAt))
-    .orderBy(desc(issues.number));
+  // The working issue is the admins' own; an editor is not shown that it
+  // exists, here or anywhere else (D-236)
+  const visible = canAccessAdminPanel(actor)
+    ? isNull(issues.deletedAt)
+    : and(isNull(issues.deletedAt), eq(issues.adminOnly, false));
+
+  return db.select().from(issues).where(visible).orderBy(desc(issues.number));
 }
 
 export async function findIssue(issueId: string): Promise<Issue> {

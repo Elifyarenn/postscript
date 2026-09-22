@@ -55,7 +55,9 @@ export default async function IssuePage({ params }: { params: Promise<{ number: 
       {reader.preview && (
         <section className="issues-section">
           <p className="issue-preview-note">
-            Bu sayı hazırlanıyor; yalnızca dergi ekibine görünür. Yayımlanmadan okurlara açılmaz.
+            {reader.issue.adminOnly
+              ? "Bu bir örnek/geliştirme sayısıdır; yalnızca yönetici hesaplarına açıktır. Editörler, yazarlar ve üyeler göremez."
+              : "Bu sayı hazırlanıyor; yalnızca dergi ekibine görünür. Yayımlanmadan okurlara açılmaz."}
           </p>
         </section>
       )}
