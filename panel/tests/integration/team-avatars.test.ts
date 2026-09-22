@@ -25,6 +25,7 @@ import {
   countTeamForms,
   teamFormPrompt,
   listTeamMembersMissing,
+  setTeamAvatarProcessed,
   teamAvatarZipEntries,
 } from "@/services/team-avatars";
 import { anonymiseUser } from "@/services/users";
@@ -376,4 +377,71 @@ describe("who still owes an avatar or the form (D-230)", () => {
     const writer = await createUser({ role: "writer", writerStatus: "active" });
     await expectStatus(listTeamMembersMissing(actorOf(writer)), 403);
   });
+});
+
+describe("the admin's own tick (D-232)", () => {
+  const laterThan = (date: Date) => new Date(date.getTime() + 1000);
+
+  it("moves a ticked avatar to the bottom and back up when the member changes it", async () => {
+    const admin = await createUser({ role: "admin" });
+    const first = await createUser({ role: "writer", writerStatus: "active" });
+    const second = await createUser({ role: "writer", writerStatus: "active" });
+    await saveTeamAvatar(actorOf(first), input({ displayName: "Birinci" }), noMeta);
+    await saveTeamAvatar(actorOf(second), input({ displayName: "İkinci" }), noMeta);
+
+    const before = await listTeamAvatars(actorOf(admin));
+    const birinci = before.find((row) => row.displayName === "Birinci")!;
+    expect(birinci.processedAt).toBeNull();
+    expect(birinci.updatedSince).toBe(false);
+
+    await setTeamAvatarProcessed(actorOf(admin), birinci.id, true, noMeta);
+    const ticked = await listTeamAvatars(actorOf(admin));
+    // Done, so it sits at the bottom
+    expect(ticked.at(-1)!.displayName).toBe("Birinci");
+    expect(ticked.at(-1)!.processedAt).not.toBeNull();
+
+    // The member changes the avatar after the tick
+    await db
+      .update(teamAvatars)
+      .set({ updatedAt: laterThan(ticked.at(-1)!.processedAt!) })
+      .where(eq(teamAvatars.id, birinci.id));
+
+    const after = await listTeamAvatars(actorOf(admin));
+    expect(after[0]!.displayName).toBe("Birinci");
+    expect(after[0]!.updatedSince).toBe(true);
+  }, 90_000);
+
+  it("takes the tick back", async () => {
+    const admin = await createUser({ role: "admin" });
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    await saveTeamAvatar(actorOf(writer), input(), noMeta);
+    const [row] = await listTeamAvatars(actorOf(admin));
+
+    await setTeamAvatarProcessed(actorOf(admin), row!.id, true, noMeta);
+    await setTeamAvatarProcessed(actorOf(admin), row!.id, false, noMeta);
+    const [again] = await listTeamAvatars(actorOf(admin));
+    expect(again!.processedAt).toBeNull();
+  }, 60_000);
+
+  it("does not look like a member's own change", async () => {
+    const admin = await createUser({ role: "admin" });
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    await saveTeamAvatar(actorOf(writer), input(), noMeta);
+    const [row] = await listTeamAvatars(actorOf(admin));
+    const updatedAt = row!.updatedAt;
+
+    await setTeamAvatarProcessed(actorOf(admin), row!.id, true, noMeta);
+    const [after] = await listTeamAvatars(actorOf(admin));
+    // Touching updatedAt here would mark the card as changed by its owner
+    expect(after!.updatedAt.getTime()).toBe(updatedAt.getTime());
+    expect(after!.updatedSince).toBe(false);
+  }, 60_000);
+
+  it("is the admin's tick alone", async () => {
+    const admin = await createUser({ role: "admin" });
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    await saveTeamAvatar(actorOf(writer), input(), noMeta);
+    const [row] = await listTeamAvatars(actorOf(admin));
+    await expectStatus(setTeamAvatarProcessed(actorOf(writer), row!.id, true, noMeta), 403);
+  }, 60_000);
 });

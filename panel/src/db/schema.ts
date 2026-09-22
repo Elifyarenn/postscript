@@ -1484,6 +1484,14 @@ export const teamAvatars = pgTable(
     /** When the form was last answered; null means it never was. */
     teamFormAt: timestamp("team_form_at", { withTimezone: true }),
 
+    /**
+     * The admin's own tick: they have made this member's post (D-232). It is a
+     * time rather than a flag so that a later `updated_at` tells us the member
+     * changed the avatar after the tick, and the card can come back up marked
+     * as changed. Nobody but the admin sees or sets it.
+     */
+    processedAt: timestamp("processed_at", { withTimezone: true }),
+
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

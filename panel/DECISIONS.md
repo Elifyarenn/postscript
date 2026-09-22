@@ -9014,3 +9014,40 @@ public API'ye girmiyor.
 **Doğrulama:** `whatsapp.test.ts`: üç uluslararası biçim, sıfırlı yerel biçim,
 çıplak on hane, yabancı numaranın korunması, okunamayanın reddi, bağlantının
 kaçışlanması, mesajsız biçim ve iki mesajın metni. Kapı: typecheck, lint, test, build.
+
+
+## D-232 — Yöneticinin kendi işaret kutusu: "Postunu yaptım"
+
+**İstek (ürün sahibi):** "ekip avatarları kısmında kendim kontrol etmem için
+'postunu yaptım' gibi bir kutucuk yap; yaptıklarımı alta at; kullanıcı
+tarafından güncellenirse 'güncellendi' olarak üste at."
+
+**Karar:** `team_avatars` tablosuna `processed_at` eklendi. Bayrak değil
+**zaman** olarak tutuluyor; işaretin kendisinden sonra `updated_at` ilerlerse
+üye avatarı değiştirmiş demektir ve kart "Güncellendi" rozetiyle en üste
+dönüyor. Bayrak olsaydı bu ayrım yapılamazdı.
+
+**Sıralama üç kuşak:** (1) işaretten sonra değişenler, (2) hiç işaretlenmemişler,
+(3) yapılmışlar — her kuşağın içinde en yeni üstte. Sıralama SQL'de değil
+kodda: kuşak iki kolonun karşılaştırmasından çıkıyor ve satır sayısı birkaç
+düzine.
+
+**İşaret üyenin değişikliği gibi görünmüyor.** `setTeamAvatarProcessed`
+`updated_at`'e dokunmuyor; dokunsaydı her işaret kartı kendi kendine
+"güncellendi" yapardı. Testi var.
+
+**İç içe form sorunu:** Kartlar ZIP indirme formunun içindeydi ve HTML iç içe
+forma izin vermiyor. ZIP formu yalnızca kendi düğmesini saracak şekilde
+küçültüldü, karttaki ZIP kutuları ona `form="zip-form"` ile bağlandı. Böylece
+her kart kendi işaret formunu taşıyabiliyor. İki kutu iki ayrı şey yapıyor:
+biri seçim, öbürü işaret.
+
+**Görünüm:** yapılmış kart soluk, güncellenmiş kart vurgulu çerçeveli ve
+rozetli. İşareti geri almak da mümkün.
+
+**Migration:** `0042_avatar_processed.sql` — tek nullable kolon.
+
+**Doğrulama:** Yeni entegrasyon testleri: işaretlenenin alta inmesi,
+üye değiştirince üste dönüp `updatedSince` olması, işaretin geri alınması,
+işaretin `updated_at`'i kirletmemesi ve yalnızca yöneticiye açık olması.
+Kapı: typecheck, lint, test, build.

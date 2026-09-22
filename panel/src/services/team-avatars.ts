@@ -366,6 +366,10 @@ export type TeamAvatarListItem = {
   fileName: string;
   /** The team form's answers, null until it is answered (D-226). */
   form: OwnTeamForm;
+  /** When the admin ticked "post is done"; null while it is not (D-232). */
+  processedAt: Date | null;
+  /** The member changed the avatar after that tick, so it needs looking at again. */
+  updatedSince: boolean;
   user: {
     id: string;
     displayName: string;
@@ -388,6 +392,7 @@ const listColumns = {
   motto: teamAvatars.motto,
   teamByline: teamAvatars.teamByline,
   zodiac: teamAvatars.zodiac,
+  processedAt: teamAvatars.processedAt,
   userId: users.id,
   userDisplayName: users.displayName,
   userEmail: users.email,
@@ -408,6 +413,7 @@ type ListRow = {
   motto: string | null;
   teamByline: "real_name" | "pen_name" | null;
   zodiac: string | null;
+  processedAt: Date | null;
   userId: string;
   userDisplayName: string;
   userEmail: string;
@@ -427,6 +433,8 @@ function toListItem(row: ListRow): TeamAvatarListItem {
     updatedAt: row.updatedAt,
     fileName: avatarFileName(row.displayName),
     form: { answered: row.answered, motto: row.motto, teamByline: row.teamByline, zodiac: row.zodiac },
+    processedAt: row.processedAt,
+    updatedSince: row.processedAt !== null && row.updatedAt.getTime() > row.processedAt.getTime(),
     user: {
       id: row.userId,
       displayName: row.userDisplayName,
@@ -438,6 +446,17 @@ function toListItem(row: ListRow): TeamAvatarListItem {
   };
 }
 
+/**
+ * The admin's working order (D-232): the ones changed since the tick first,
+ * because they were done and are not any more; then everything still waiting;
+ * then the finished ones at the bottom. Newest first within each band.
+ */
+function workOrder(item: TeamAvatarListItem): number {
+  if (item.updatedSince) return 0;
+  if (item.processedAt === null) return 1;
+  return 2;
+}
+
 export async function listTeamAvatars(actor: Actor): Promise<TeamAvatarListItem[]> {
   assertAdmin(actor);
   const rows = await db
@@ -445,7 +464,40 @@ export async function listTeamAvatars(actor: Actor): Promise<TeamAvatarListItem[
     .from(teamAvatars)
     .innerJoin(users, eq(teamAvatars.userId, users.id))
     .orderBy(desc(teamAvatars.updatedAt));
-  return rows.map(toListItem);
+  // Sorted here rather than in SQL: the band depends on comparing two columns,
+  // and there are a few dozen rows
+  return rows.map(toListItem).sort((a, b) => workOrder(a) - workOrder(b));
+}
+
+/** The admin's tick that this member's post is made, or the taking back of it. */
+export async function setTeamAvatarProcessed(
+  actor: Actor,
+  id: string,
+  done: boolean,
+  meta: RequestMeta,
+): Promise<void> {
+  assertAdmin(actor);
+  if (!z.uuid().safeParse(id).success) throw notFound("Avatar bulunamadı.");
+
+  const now = new Date();
+  const updated = await db
+    .update(teamAvatars)
+    // Not `updatedAt`: that one belongs to the member's own changes, and the
+    // tick must not look like one
+    .set({ processedAt: done ? now : null })
+    .where(eq(teamAvatars.id, id))
+    .returning({ id: teamAvatars.id });
+
+  if (!updated[0]) throw notFound("Avatar bulunamadı.");
+
+  await writeAudit({
+    actorId: actor.id,
+    action: done ? "team_avatar.processed" : "team_avatar.unprocessed",
+    entityType: "team_avatars",
+    entityId: id,
+    after: { processedAt: done ? now.toISOString() : null },
+    ip: meta.ip,
+  });
 }
 
 export async function getTeamAvatar(actor: Actor, id: string): Promise<TeamAvatarListItem> {

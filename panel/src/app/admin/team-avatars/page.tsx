@@ -4,6 +4,8 @@ import { Alert, Card, EmptyState, PageHeader } from "@/components/ui";
 import { TEAM_BYLINE_LABELS, teamBylineName, zodiacLabel } from "@/lib/zodiac";
 import { avatarDataUri } from "@/lib/avatar/render";
 import { listTeamAvatars, listTeamMembersMissing, type MissingTeamMember } from "@/services/team-avatars";
+import { readCsrfToken } from "@/lib/csrf";
+import { ProcessedToggle } from "./processed-toggle";
 import { chaseMessage, whatsappHref } from "@/lib/whatsapp";
 
 export const metadata = { title: "Ekip avatarları" };
@@ -85,12 +87,14 @@ export default async function TeamAvatarsPage({
   searchParams: Promise<{ deleted?: string }>;
 }) {
   const { user } = await guardPanel("admin");
-  const [avatars, missing, params] = await Promise.all([
+  const [avatars, missing, params, csrf] = await Promise.all([
     listTeamAvatars({ ...user }),
     // Who still owes something (D-230)
     listTeamMembersMissing({ ...user }),
     searchParams,
+    readCsrfToken(),
   ]);
+  const csrfToken = csrf ?? "";
   const withoutAvatar = missing.filter((person) => !person.hasAvatar);
   const withoutForm = missing.filter((person) => person.hasAvatar);
 
@@ -153,8 +157,8 @@ export default async function TeamAvatarsPage({
       {avatars.length === 0 ? (
         <EmptyState>Henüz gönderilmiş bir ekip avatarı yok.</EmptyState>
       ) : (
-        <form method="get" action="/api/admin/team-avatars/zip">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <>
+          <form method="get" action="/api/admin/team-avatars/zip" id="zip-form" className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-muted">Toplu indirmek için kartlardaki kutuları işaretleyin.</p>
             <button
               type="submit"
@@ -162,19 +166,33 @@ export default async function TeamAvatarsPage({
             >
               Seçilenleri ZIP indir
             </button>
-          </div>
+          </form>
 
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {avatars.map((avatar) => (
               <li key={avatar.id}>
-                <Card className="flex h-full flex-col gap-3 p-4">
+                <Card
+                  className={`flex h-full flex-col gap-3 p-4 ${
+                    avatar.updatedSince
+                      ? "border-accent"
+                      : avatar.processedAt !== null
+                        ? "opacity-60"
+                        : ""
+                  }`}
+                >
                   <div className="flex items-start justify-between gap-2">
                     <label className="flex items-center gap-2 text-sm text-muted">
-                      <input type="checkbox" name="id" value={avatar.id} className="h-4 w-4" />
+                      <input type="checkbox" name="id" value={avatar.id} form="zip-form" className="h-4 w-4" />
                       Seç
                     </label>
                     <span className="text-xs text-muted">{dateFormat.format(avatar.createdAt)}</span>
                   </div>
+
+                  {avatar.updatedSince && (
+                    <p className="rounded-md bg-accent/10 px-2 py-1 text-xs font-medium text-accent">
+                      Güncellendi — postu yaptıktan sonra değiştirildi
+                    </p>
+                  )}
 
                   <Link
                     href={`/admin/team-avatars/${avatar.id}`}
@@ -245,7 +263,13 @@ export default async function TeamAvatarsPage({
                     </p>
                   )}
 
-                  <div className="mt-auto flex flex-wrap gap-2">
+                  <div className="mt-auto space-y-3">
+                    <ProcessedToggle
+                      avatarId={avatar.id}
+                      csrfToken={csrfToken}
+                      done={avatar.processedAt !== null && !avatar.updatedSince}
+                    />
+                    <div className="flex flex-wrap gap-2">
                     <a
                       href={`/api/admin/team-avatars/${avatar.id}/png`}
                       className="rounded-md border border-accent bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent/90"
@@ -258,12 +282,13 @@ export default async function TeamAvatarsPage({
                     >
                       Avatarı Görüntüle
                     </Link>
+                    </div>
                   </div>
                 </Card>
               </li>
             ))}
           </ul>
-        </form>
+        </>
       )}
     </>
   );
