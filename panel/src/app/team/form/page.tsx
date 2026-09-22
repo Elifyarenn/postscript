@@ -3,9 +3,11 @@ import Link from "next/link";
 import { requireSession } from "@/lib/auth/guard";
 import { readCsrfToken } from "@/lib/csrf";
 import { MOTTO_MAX, ZODIAC_SIGNS } from "@/lib/zodiac";
-import { getOwnTeamAvatar, getOwnTeamForm, isTeamMember } from "@/services/team-avatars";
+import { mottoGroupsFor } from "@/lib/motto-suggestions";
+import { getOwnTeamAvatar, getOwnTeamForm, isTeamMember, teamDutyOf } from "@/services/team-avatars";
 import { PanelForm } from "@/components/form";
-import { Alert, Card, Field, Input, Select } from "@/components/ui";
+import { Alert, Card, Field, Select } from "@/components/ui";
+import { MottoField } from "@/components/motto-field";
 import { saveTeamFormAction } from "./actions";
 
 export const metadata: Metadata = {
@@ -36,9 +38,11 @@ export default async function TeamFormPage() {
     );
   }
 
-  const [avatar, form, csrfToken] = await Promise.all([
+  const [avatar, form, duty, csrfToken] = await Promise.all([
     getOwnTeamAvatar({ ...user }),
     getOwnTeamForm({ ...user }),
+    // The ready lines follow what the person does (D-227)
+    teamDutyOf({ ...user }),
     readCsrfToken(),
   ]);
 
@@ -79,13 +83,10 @@ export default async function TeamFormPage() {
                 htmlFor="motto"
                 hint={`Ekip sayfasında adınızın yanında yer alacak. En çok ${MOTTO_MAX} karakter.`}
               >
-                <Input
-                  id="motto"
-                  name="motto"
-                  maxLength={MOTTO_MAX}
-                  required
+                <MottoField
+                  groups={mottoGroupsFor(duty)}
                   defaultValue={form?.motto ?? ""}
-                  placeholder="Tek cümle, sizden bir şey"
+                  max={MOTTO_MAX}
                 />
               </Field>
 

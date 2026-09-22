@@ -8853,3 +8853,34 @@ kayda yazılması ve zaman damgası, 55 karakter sınırı ve bilinmeyen burcun
 reddi, denetim kaydında sözün geçmemesi, yöneticiye çizim + yanıt + görev
 olarak dönmesi, uyarının üç durumu ve okura hiç çıkmaması. Kapı: typecheck,
 lint, test, build.
+
+
+## D-227 — Ekip formundaki söze göreve göre hazır öneriler
+
+**İstek (ürün sahibi):** "kendinizden bir söz kısmına görevlerine göre öneri
+sun" — ve yirmi bir hazır cümle, üç başlık altında: yazarlar, tasarımcılar ve
+çizerler, editörler.
+
+**Karar:** Cümleler `src/lib/motto-suggestions.ts`'te ürün sahibinin yazdığı
+gibi duruyor. Alan serbest metin olarak kalıyor; bir öneriye tıklamak yalnızca
+alanı dolduruyor, üzerinde oynanabiliyor. Alanın yanına bir de sayaç kondu —
+55 karakter, insanın çarpabileceği kadar kısa.
+
+**Öneriler hangi gruba göre seçiliyor:** hesabın rolü ve çizer işareti.
+Avatardaki "görev" alanı serbest metin ("Genel Yayın Yönetmeni", "çizer",
+"Çizer/Yazar" …), yani eşleştirmeye elverişli değil; rol ve çizer işareti ise
+yapısal.
+
+- `writer` → Yazarlar
+- çizer işaretli → Tasarımcılar ve çizerler
+- `editor` ve `admin` → Editörler
+
+**İki görevi olana iki liste birden gösteriliyor.** Canlıda dört hesapta çizer
+işareti var ve ikisi aynı zamanda yazar; birini seçip öbürünü saklamak yerine
+ikisi de başlıklarıyla listeleniyor. Rolsüz ama çizer işaretli iki hesap da
+kendi listesini görüyor. Hiçbiri tutmazsa üç liste birden gösteriliyor — hiç
+öneri göstermemektense.
+
+**Doğrulama:** Yeni birim testleri: **her cümlenin `MOTTO_MAX`'a sığması** (bir
+öneri sınırı aşsaydı, tıklayan kişinin formu reddedilirdi), baştaki/sondaki
+boşluk olmaması, ve altı grup eşleşmesi. Kapı: typecheck, lint, test, build.

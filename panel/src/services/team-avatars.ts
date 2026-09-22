@@ -119,6 +119,16 @@ export async function getOwnTeamForm(actor: Actor): Promise<OwnTeamForm | null> 
   return rows[0] ?? null;
 }
 
+/**
+ * What the form's suggestions are picked by (D-227): the account role and the
+ * illustrator mark, which is where "what this person does" is actually
+ * recorded. The team role on the avatar is free text and cannot be matched on.
+ */
+export async function teamDutyOf(actor: Actor): Promise<{ role: string; isIllustrator: boolean }> {
+  await assertTeamMember(actor);
+  return { role: actor.role, isIllustrator: await isIllustrator(actor.id) };
+}
+
 /** How far the team form has got, for the admin overview (D-226). */
 export async function countTeamForms(actor: Actor): Promise<{ total: number; answered: number }> {
   assertAdmin(actor);
