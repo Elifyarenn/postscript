@@ -8942,3 +8942,32 @@ hiçbir şey eklenmedi, `publicByline` kuralına dokunulmadı.
 **Doğrulama:** `team-byline.test.ts`: iki tercihin karşılığı, mahlassız
 durumda null dönmesi, ve form yanıtlanmadan null dönmesi. Kapı: typecheck,
 lint, test, build.
+
+
+## D-230 — Eksikler listesi: avatarı ya da formu olmayanlar
+
+**İstek (ürün sahibi):** "avatarını oluşturmayan veya formu doldurmayan
+üyeleri listele; adminleri sayma, onları özel olarak aldım."
+
+**Karar:** Liste tek seferlik bir sorgu olarak değil, `/admin/team-avatars`
+sayfasının başına konan bir "Eksikler" kartı olarak yapıldı — ürün sahibi bunu
+bir kez değil, insanları takip ettiği sürece soracak. İki sütun: avatarını
+oluşturmayanlar ve avatarı olup formu doldurmayanlar. Her isim hesap sayfasına
+bağlanıyor, yanında görevi yazıyor.
+
+**Neden kalıcı ekran:** Aynı soruyu canlı veritabanından çekmeyi üç kez
+denedim, üçünde de Neon OAuth anahtarının süresi dolmuştu. Ekranda duran bir
+liste hem anahtara hem bana bağlı olmaktan çıkarıyor.
+
+**Kimler sayılıyor:** Avatar oluşturucunun açık olduğu herkes —
+`canCreateTeamAvatar` ile aynı kural: yazar, editör, yönetici rolleri ve çizer
+işaretli hesaplar. Silinmiş ve yasaklı hesaplar dışarıda.
+
+**Yöneticiler listelenmiyor**, ürün sahibinin talimatı: iki kişiler ve onları
+kendisi takip ediyor. Kart bunu açıkça yazıyor ("Yöneticiler bu listede yok"),
+yoksa listeye bakan biri eksik birini gözden kaçırdığını sanabilirdi.
+
+**Doğrulama:** Yeni entegrasyon testleri: iki eksik türünün ayrılması, ikisini
+de tamamlayanın listede olmaması, yöneticinin ve okurun sayılmaması, rolsüz
+çizerin sayılması, yasaklının sayılmaması, ve listenin yalnızca yöneticiye
+açık olması. Kapı: typecheck, lint, test, build.

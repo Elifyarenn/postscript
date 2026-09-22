@@ -24,6 +24,7 @@ import {
   getOwnTeamForm,
   countTeamForms,
   teamFormPrompt,
+  listTeamMembersMissing,
   teamAvatarZipEntries,
 } from "@/services/team-avatars";
 import { anonymiseUser } from "@/services/users";
@@ -330,4 +331,49 @@ describe("a writer's areas on the admin card (D-228)", () => {
     const [listed] = await listTeamAvatars(actorOf(admin));
     expect(listed!.user.areas).toEqual(["Müzik"]);
   }, 60_000);
+});
+
+describe("who still owes an avatar or the form (D-230)", () => {
+  it("lists the two kinds of missing member and leaves out the admins", async () => {
+    const admin = await createUser({ role: "admin", displayName: "Yönetici" });
+    const noAvatar = await createUser({ role: "writer", writerStatus: "active", displayName: "Avatarsız" });
+    const noForm = await createUser({ role: "editor", displayName: "Formsuz" });
+    const done = await createUser({ role: "writer", writerStatus: "active", displayName: "Tamam" });
+    const reader = await createUser({ role: "user", displayName: "Okur" });
+
+    await saveTeamAvatar(actorOf(noForm), input({ displayName: "Formsuz" }), noMeta);
+    await saveTeamAvatar(actorOf(done), input({ displayName: "Tamam" }), noMeta);
+    await saveTeamForm(actorOf(done), { motto: "Bir söz.", teamByline: "real_name", zodiac: "leo" }, noMeta);
+
+    const missing = await listTeamMembersMissing(actorOf(admin));
+    const names = missing.map((person) => person.displayName);
+
+    expect(names).toContain("Avatarsız");
+    expect(names).toContain("Formsuz");
+    // Both done, so nothing is owed
+    expect(names).not.toContain("Tamam");
+    // The product owner handles the admins herself
+    expect(names).not.toContain("Yönetici");
+    // A reader is not on the team at all
+    expect(names).not.toContain("Okur");
+    expect(reader.role).toBe("user");
+
+    expect(missing.find((person) => person.displayName === "Avatarsız")!.hasAvatar).toBe(false);
+    expect(missing.find((person) => person.displayName === "Formsuz")!.hasAvatar).toBe(true);
+  }, 90_000);
+
+  it("counts an illustrator with no role as team, and a banned one not at all", async () => {
+    const admin = await createUser({ role: "admin" });
+    await createUser({ role: "user", isIllustrator: true, displayName: "Çizer" });
+    await createUser({ role: "writer", writerStatus: "active", isBanned: true, displayName: "Yasaklı" });
+
+    const names = (await listTeamMembersMissing(actorOf(admin))).map((person) => person.displayName);
+    expect(names).toContain("Çizer");
+    expect(names).not.toContain("Yasaklı");
+  });
+
+  it("is the admin's list alone", async () => {
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    await expectStatus(listTeamMembersMissing(actorOf(writer)), 403);
+  });
 });

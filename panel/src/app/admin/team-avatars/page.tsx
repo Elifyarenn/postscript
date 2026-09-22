@@ -3,7 +3,7 @@ import { guardPanel } from "@/lib/auth/guard";
 import { Alert, Card, EmptyState, PageHeader } from "@/components/ui";
 import { TEAM_BYLINE_LABELS, teamBylineName, zodiacLabel } from "@/lib/zodiac";
 import { avatarDataUri } from "@/lib/avatar/render";
-import { listTeamAvatars } from "@/services/team-avatars";
+import { listTeamAvatars, listTeamMembersMissing, type MissingTeamMember } from "@/services/team-avatars";
 
 export const metadata = { title: "Ekip avatarları" };
 
@@ -18,13 +18,60 @@ const dateFormat = new Intl.DateTimeFormat("tr-TR", {
  * the saved configuration on the page itself; the PNG and ZIP buttons fetch
  * the stored files. The selection form is a plain GET, so it needs no script.
  */
+/** One side of the Eksikler card: a heading, a count and the names (D-230). */
+function MissingList({
+  title,
+  people,
+  empty,
+}: {
+  title: string;
+  people: MissingTeamMember[];
+  empty: string;
+}) {
+  return (
+    <div>
+      <h3 className="mb-2 text-sm font-medium">
+        {title} ({people.length})
+      </h3>
+      {people.length === 0 ? (
+        <p className="text-xs text-muted">{empty}</p>
+      ) : (
+        <ul className="space-y-1 text-xs">
+          {people.map((person) => (
+            <li key={person.id}>
+              <Link href={`/admin/users/${person.id}`} className="underline">
+                {person.displayName}
+              </Link>
+              <span className="text-muted"> · {dutyLabel(person)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** What the person does, from the role and the illustrator mark (D-227). */
+function dutyLabel(person: MissingTeamMember): string {
+  const duties = person.role === "writer" ? ["yazar"] : person.role === "editor" ? ["editör"] : [];
+  if (person.isIllustrator) duties.push("çizer");
+  return duties.length > 0 ? duties.join(", ") : "ekip";
+}
+
 export default async function TeamAvatarsPage({
   searchParams,
 }: {
   searchParams: Promise<{ deleted?: string }>;
 }) {
   const { user } = await guardPanel("admin");
-  const [avatars, params] = await Promise.all([listTeamAvatars({ ...user }), searchParams]);
+  const [avatars, missing, params] = await Promise.all([
+    listTeamAvatars({ ...user }),
+    // Who still owes something (D-230)
+    listTeamMembersMissing({ ...user }),
+    searchParams,
+  ]);
+  const withoutAvatar = missing.filter((person) => !person.hasAvatar);
+  const withoutForm = missing.filter((person) => person.hasAvatar);
 
   return (
     <>
@@ -47,6 +94,26 @@ export default async function TeamAvatarsPage({
         <div className="mb-4">
           <Alert tone="success">Avatar silindi.</Alert>
         </div>
+      )}
+
+      {/* Who is still owed (D-230); the product owner chases the admins herself */}
+      {missing.length > 0 && (
+        <Card className="mb-6">
+          <h2 className="mb-1 font-serif text-lg">Eksikler ({missing.length})</h2>
+          <p className="mb-4 text-xs text-muted">Yöneticiler bu listede yok.</p>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <MissingList
+              title="Avatarını oluşturmayanlar"
+              people={withoutAvatar}
+              empty="Herkes avatarını gönderdi."
+            />
+            <MissingList
+              title="Formu doldurmayanlar"
+              people={withoutForm}
+              empty="Avatarı olan herkes formu doldurdu."
+            />
+          </div>
+        </Card>
       )}
 
       <Card className="mb-6">

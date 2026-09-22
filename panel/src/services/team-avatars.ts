@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { count, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
 import { teamAvatars, users, type TeamAvatar } from "@/db/schema";
@@ -139,6 +139,60 @@ export async function countTeamForms(actor: Actor): Promise<{ total: number; ans
     })
     .from(teamAvatars);
   return { total: totals?.total ?? 0, answered: totals?.answered ?? 0 };
+}
+
+export type MissingTeamMember = {
+  id: string;
+  displayName: string;
+  penName: string | null;
+  role: string;
+  isIllustrator: boolean;
+  /** False when the avatar is what is missing; true when only the form is. */
+  hasAvatar: boolean;
+};
+
+/**
+ * Who on the team still owes an avatar or the form (D-230).
+ *
+ * Administrators are left out on the product owner's instruction — there are
+ * two of them and she follows those up herself — so the screen says as much
+ * rather than leaving a reader to wonder who is missing from the list.
+ */
+export async function listTeamMembersMissing(actor: Actor): Promise<MissingTeamMember[]> {
+  assertAdmin(actor);
+  const rows = await db
+    .select({
+      id: users.id,
+      displayName: users.displayName,
+      penName: users.penName,
+      role: users.role,
+      isIllustrator: users.isIllustrator,
+      avatarId: teamAvatars.id,
+      answered: teamAvatars.teamFormAt,
+    })
+    .from(users)
+    .leftJoin(teamAvatars, eq(teamAvatars.userId, users.id))
+    .where(
+      and(
+        // Who the builder is open to, the same rule as `canCreateTeamAvatar`
+        or(inArray(users.role, ["writer", "editor", "admin"]), eq(users.isIllustrator, true)),
+        ne(users.role, "admin"),
+        isNull(users.deletedAt),
+        eq(users.isBanned, false),
+        // Nothing owed once both are in
+        or(isNull(teamAvatars.id), isNull(teamAvatars.teamFormAt)),
+      ),
+    )
+    .orderBy(asc(users.displayName));
+
+  return rows.map((row) => ({
+    id: row.id,
+    displayName: row.displayName,
+    penName: row.penName,
+    role: row.role,
+    isIllustrator: row.isIllustrator,
+    hasAvatar: row.avatarId !== null,
+  }));
 }
 
 export type TeamFormPrompt = {
