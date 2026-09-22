@@ -4,6 +4,7 @@ import { pendingAcknowledgements } from "@/services/announcements";
 import { listApprovalsForWriter } from "@/services/rights";
 import { listArticlesForWriter } from "@/services/articles";
 import { getCurrentAgreement, listAcceptancesForUser } from "@/services/agreements";
+import { teamFormPrompt } from "@/services/team-avatars";
 import { Alert, Card, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
 
@@ -12,12 +13,14 @@ export const metadata = { title: "Yazar paneli" };
 export default async function WriterDashboard() {
   const { user } = await guardPanel("writer");
 
-  const [pending, approvals, articles, current, acceptances] = await Promise.all([
+  const [pending, approvals, articles, current, acceptances, teamForm] = await Promise.all([
     pendingAcknowledgements({ ...user }),
     listApprovalsForWriter({ ...user }),
     listArticlesForWriter({ ...user }),
     getCurrentAgreement(),
     listAcceptancesForUser(user.id),
+    // Everyone on the team answers the same three questions (D-226)
+    teamFormPrompt({ ...user }),
   ]);
 
   const pendingApprovals = approvals.filter((approval) => approval.status === "pending");
@@ -55,6 +58,25 @@ export default async function WriterDashboard() {
           </Alert>
         )}
 
+        {teamForm.show && (
+          <Alert tone="info" title="Ekip formu sizi bekliyor">
+            Üç soru, bir dakika: kendinizden bir söz, ekip sayfasında adınızın mı mahlasınızın
+            mı yazacağı ve burcunuz.{" "}
+            {teamForm.needsAvatar ? (
+              <>
+                Formu doldurabilmek için önce{" "}
+                <Link href="/team/avatar" className="underline">
+                  ekip avatarınızı oluşturun
+                </Link>
+                .
+              </>
+            ) : (
+              <Link href="/team/form" className="underline">
+                Formu doldurun
+              </Link>
+            )}
+          </Alert>
+        )}
         {pending.length > 0 && (
           <Alert tone="warning" title="Onayınız bekleyen duyuru var">
             <Link href="/writer/announcements" className="underline">

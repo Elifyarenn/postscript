@@ -128,6 +128,22 @@ export const grantStatusEnum = pgEnum("grant_status", ["pending", "signed", "dec
 /** How the author is credited on a given work (§7, contract art. 7). */
 export const bylineChoiceEnum = pgEnum("byline_choice", ["real_name", "pen_name"]);
 
+/** The twelve signs, for the team form (D-226); labels live in `src/lib/zodiac.ts`. */
+export const zodiacEnum = pgEnum("zodiac", [
+  "aries",
+  "taurus",
+  "gemini",
+  "cancer",
+  "leo",
+  "virgo",
+  "libra",
+  "scorpio",
+  "sagittarius",
+  "capricorn",
+  "aquarius",
+  "pisces",
+]);
+
 /** Whether an edit stayed inside contract art. 6.2 or changed the work (§7.5). */
 export const changeKindEnum = pgEnum("change_kind", ["correction", "content_change"]);
 
@@ -1452,6 +1468,22 @@ export const teamAvatars = pgTable(
     configVersion: integer("config_version").notNull(),
     /** The transparent PNG in object storage; regenerated from `config` if it goes missing. */
     pngStorageKey: text("png_storage_key"),
+
+    /* The team form (D-226). Null until the member fills it in; it is asked
+       for separately from the avatar and is not required to keep one. */
+
+    /** A line of their own for the team page, at most 55 characters. */
+    motto: text("motto"),
+    /**
+     * How they want to be named on the team page. This is NOT the article
+     * byline: that one is signed per work on `rights_grants.byline_choice`
+     * (FSEK), and neither may be read for the other.
+     */
+    teamByline: bylineChoiceEnum("team_byline"),
+    zodiac: zodiacEnum("zodiac"),
+    /** When the form was last answered; null means it never was. */
+    teamFormAt: timestamp("team_form_at", { withTimezone: true }),
+
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

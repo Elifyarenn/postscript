@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { guardPanel } from "@/lib/auth/guard";
 import { Alert, Card, EmptyState, PageHeader } from "@/components/ui";
+import { TEAM_BYLINE_LABELS, zodiacLabel } from "@/lib/zodiac";
 import { avatarDataUri } from "@/lib/avatar/render";
 import { listTeamAvatars } from "@/services/team-avatars";
 
@@ -114,6 +115,33 @@ export default async function TeamAvatarsPage({
                       <p className="text-xs text-muted">Güncellendi: {dateFormat.format(avatar.updatedAt)}</p>
                     )}
                   </div>
+
+                  {/* The team form's answers, beside the drawing and the duty (D-226) */}
+                  {avatar.form.answered ? (
+                    <dl className="space-y-1 rounded-md border border-line bg-paper p-3 text-xs">
+                      <div>
+                        <dt className="text-muted">Sözü</dt>
+                        <dd className="text-ink">&ldquo;{avatar.form.motto}&rdquo;</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted">Ekip sayfasında</dt>
+                        <dd className="text-ink">
+                          {TEAM_BYLINE_LABELS[avatar.form.teamByline ?? ""] ?? "—"}
+                          {avatar.form.teamByline === "pen_name" && avatar.user.penName === null && (
+                            <span className="text-danger"> (mahlası yok)</span>
+                          )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted">Burcu</dt>
+                        <dd className="text-ink">{zodiacLabel(avatar.form.zodiac) ?? "—"}</dd>
+                      </div>
+                    </dl>
+                  ) : (
+                    <p className="rounded-md border border-dashed border-line p-3 text-xs text-muted">
+                      Ekip formunu henüz doldurmadı.
+                    </p>
+                  )}
 
                   <div className="mt-auto flex flex-wrap gap-2">
                     <a

@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { desc, eq, inArray } from "drizzle-orm";
+import { count, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
 import { teamAvatars, users, type TeamAvatar } from "@/db/schema";
@@ -18,6 +18,7 @@ import {
 import { renderAvatarPng } from "@/lib/avatar/png";
 import { getStorage } from "@/lib/storage";
 import { uniqueEntryNames, type ZipEntry } from "@/lib/zip";
+import { MOTTO_MAX, ZODIAC_IDS } from "@/lib/zodiac";
 import type { RequestMeta } from "./auth";
 
 /**
@@ -74,6 +75,112 @@ export async function getOwnTeamAvatar(actor: Actor): Promise<OwnTeamAvatar | nu
     config: parseStoredConfig(row.config),
     updatedAt: row.updatedAt,
   };
+}
+
+/* ------------------------------------------------------------------ */
+/* The team form (D-226)                                               */
+/* ------------------------------------------------------------------ */
+
+export type OwnTeamForm = {
+  /** Null when the avatar exists but the form has not been answered. */
+  answered: Date | null;
+  motto: string | null;
+  teamByline: "real_name" | "pen_name" | null;
+  zodiac: string | null;
+};
+
+export const teamFormSchema = z.strictObject({
+  motto: z
+    .string()
+    .trim()
+    .min(1, "Bir söz yazın.")
+    .max(MOTTO_MAX, `En çok ${MOTTO_MAX} karakter.`),
+  teamByline: z.enum(["real_name", "pen_name"], "Adınız mı mahlasınız mı yazsın, seçin."),
+  zodiac: z.enum(ZODIAC_IDS, "Burcunuzu seçin."),
+});
+
+/**
+ * The form is only open to a member who has already made and sent an avatar:
+ * the answers belong to that record, and there is nothing to attach them to
+ * without one.
+ */
+export async function getOwnTeamForm(actor: Actor): Promise<OwnTeamForm | null> {
+  await assertTeamMember(actor);
+  const rows = await db
+    .select({
+      answered: teamAvatars.teamFormAt,
+      motto: teamAvatars.motto,
+      teamByline: teamAvatars.teamByline,
+      zodiac: teamAvatars.zodiac,
+    })
+    .from(teamAvatars)
+    .where(eq(teamAvatars.userId, actor.id))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/** How far the team form has got, for the admin overview (D-226). */
+export async function countTeamForms(actor: Actor): Promise<{ total: number; answered: number }> {
+  assertAdmin(actor);
+  const [totals] = await db
+    .select({
+      total: count(),
+      answered: count(teamAvatars.teamFormAt),
+    })
+    .from(teamAvatars);
+  return { total: totals?.total ?? 0, answered: totals?.answered ?? 0 };
+}
+
+export type TeamFormPrompt = {
+  /** Whether the panels should nudge this member at all. */
+  show: boolean;
+  /** True when the avatar is the missing step, not the answers. */
+  needsAvatar: boolean;
+};
+
+/** What the panel overviews ask before nudging someone about the form (D-226). */
+export async function teamFormPrompt(actor: Actor): Promise<TeamFormPrompt> {
+  if (!(await isTeamMember(actor))) return { show: false, needsAvatar: false };
+  const rows = await db
+    .select({ answered: teamAvatars.teamFormAt })
+    .from(teamAvatars)
+    .where(eq(teamAvatars.userId, actor.id))
+    .limit(1);
+  const row = rows[0];
+  if (!row) return { show: true, needsAvatar: true };
+  return { show: row.answered === null, needsAvatar: false };
+}
+
+export async function saveTeamForm(actor: Actor, rawInput: unknown, meta: RequestMeta): Promise<void> {
+  await assertTeamMember(actor);
+
+  const parsed = teamFormSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    throw badRequest("Formu kontrol edin.", z.flattenError(parsed.error).fieldErrors);
+  }
+
+  const now = new Date();
+  const updated = await db
+    .update(teamAvatars)
+    .set({ ...parsed.data, teamFormAt: now, updatedAt: now })
+    .where(eq(teamAvatars.userId, actor.id))
+    .returning({ id: teamAvatars.id });
+
+  const row = updated[0];
+  // No avatar, nothing to attach the answers to; the page says so first, but
+  // the rule lives here, where every caller passes
+  if (!row) throw badRequest("Önce ekip avatarınızı oluşturup gönderin.");
+
+  await writeAudit({
+    actorId: actor.id,
+    action: "team_avatar.form_saved",
+    entityType: "team_avatars",
+    entityId: row.id,
+    // The answers themselves are the member's own words and choices; the log
+    // records that they were given, not what they said
+    after: { answered: now.toISOString() },
+    ip: meta.ip,
+  });
 }
 
 const saveSchema = teamAvatarDetailsSchema.extend({ config: avatarConfigSchema });
@@ -189,6 +296,8 @@ export type TeamAvatarListItem = {
   createdAt: Date;
   updatedAt: Date;
   fileName: string;
+  /** The team form's answers, null until it is answered (D-226). */
+  form: OwnTeamForm;
   user: { id: string; displayName: string; email: string; role: string; penName: string | null };
 };
 
@@ -199,6 +308,10 @@ const listColumns = {
   config: teamAvatars.config,
   createdAt: teamAvatars.createdAt,
   updatedAt: teamAvatars.updatedAt,
+  answered: teamAvatars.teamFormAt,
+  motto: teamAvatars.motto,
+  teamByline: teamAvatars.teamByline,
+  zodiac: teamAvatars.zodiac,
   userId: users.id,
   userDisplayName: users.displayName,
   userEmail: users.email,
@@ -213,6 +326,10 @@ type ListRow = {
   config: unknown;
   createdAt: Date;
   updatedAt: Date;
+  answered: Date | null;
+  motto: string | null;
+  teamByline: "real_name" | "pen_name" | null;
+  zodiac: string | null;
   userId: string;
   userDisplayName: string;
   userEmail: string;
@@ -229,6 +346,7 @@ function toListItem(row: ListRow): TeamAvatarListItem {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     fileName: avatarFileName(row.displayName),
+    form: { answered: row.answered, motto: row.motto, teamByline: row.teamByline, zodiac: row.zodiac },
     user: {
       id: row.userId,
       displayName: row.userDisplayName,

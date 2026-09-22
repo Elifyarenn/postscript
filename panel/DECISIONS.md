@@ -8594,3 +8594,262 @@ odağı içine düştüğünde. Okunan metnin altından kayması, hiç kaymamas�
 kötüdür. `prefers-reduced-motion: reduce` diyen okurda adım hiç başlamaz.
 
 **Doğrulama:** Kapı: typecheck, lint, test, build. Görsel: canlıda.
+
+---
+
+## D-227 — Sözleşme taslakları gönderim öncesi incelemeden geçti; sosyal medya izni daraltıldı, imza yolları ayrıştırıldı
+
+**İstek (ürün sahibi):** Taslaklar yazarlara gönderim öncesi son incelemeden
+geçirilsin. İki metin birlikte kontrol edilsin; kamuya açık arşivde yayım ile
+delil amaçlı kapalı kopya ayrı düzenlensin; "en çok 300 kelime" sınırı
+kaldırılsın; imza yolları kesin ifadelerle ayrılsın; mevcut kabul kayıtları
+korunsun; toplanmış yazılar için en kısa süreç çıkarılsın.
+
+**Yapılmayanlar (açıkça):** Sürüm 2 **yayımlanmadı**, yazar rolleri ve
+`writer_status` değerleri değiştirilmedi, hiçbir panel kilitlenmedi, yazarlara
+mesaj gönderilmedi, mevcut kabul kayıtlarına dokunulmadı, canlı şablon
+değiştirilmedi, kod değişmedi. Veritabanına yalnızca **salt okunur** sorgu
+yapıldı.
+
+**Üretimden doğrulanan durum (22 Eylül 2026, salt okunur SQL):** 32 canlı makale
+(`in_review` 14, `pending_admin_approval` 17, `revision_requested` 1) + 2 yumuşak
+silinmiş. **34 satırın hiçbirinde `published_at` dolu değil** — yani hiçbir eser
+hiç yayımlanmadı; bu, "yayımlanmış sayı yok" çıkarımından değil doğrudan makale
+kayıtlarından geliyor. `rights_grants` = 0, `agreement_acceptances` = **1**,
+`agreement_versions` = 1. Yazabilen 33 kişiden (32 aktif yazar + 1 hibrit editör)
+yalnızca **1'inin** sözleşme kaydı var.
+
+**D-226'daki bir yanlışın düzeltmesi:** D-226 "29 yazar sürüm 1'i panelde
+onaylamış" ve "sürüm 2 yayınlanınca 32 aktif yazar `pending_agreement`'a düşer ve
+panelleri kilitlenir" diyordu. **İkisi de yanlıştı.** Gerçek: yazarlar
+`writer_status = active` değerini doğrudan yönetici terfisiyle alıyor, sözleşme
+kabulü ön koşul değil (D-050); `publishAgreementVersion` kimseyi
+`pending_agreement`'a düşürmüyor, yalnızca önceki kabulleri `superseded_at` ile
+işaretliyor; `pending_agreement`'ı yazan tek yer yöneticinin elle seçimi.
+`panel/README.md` hâlâ eski davranışı anlatıyor.
+
+**Ayrıca doğrulanan, süreci belirleyen iki teknik olgu:**
+
+1. **`/writer/agreement` boş bir yer tutucu** ("Sözleşme metni şu anda hazır
+   değil; size ayrıca iletilecek"); metni okumuyor, onay düğmesi yok. Yani
+   **hiçbir yazar bugün panelde hiçbir sözleşme sürümünü kabul edemez.** Süreç
+   bu yüzden tamamen imzalı belge üzerine kuruldu; panel geliştirmesi ön koşul
+   değil, zaten mümkün değil.
+2. **Son metin özetini (SHA-256) editöre gösteren ekran yok**; yalnızca yazarın
+   `/writer/approvals` satırında ve ancak onay kaydı açıldıysa görünüyor. Bu
+   yüzden eser bazlı belgede bağlayıcı olan **EK-1'deki metnin kendisi** yapıldı,
+   özet zorunlu tutulmadı; isteyene `normalise.ts` ile aynı sonucu veren tek
+   satırlık komut plana yazıldı.
+
+**Belgelerde yapılan içerik değişiklikleri:**
+
+- **Sosyal medya izni daraltıldı.** "En çok 300 kelime alıntı" kaldırıldı (kısa
+  bir eserin tamamını kapsayabiliyordu). Varsayılan izin artık yalnızca
+  **başlık + ad/mahlas tercihi + eserin sayfasına bağlantı**. Alıntı veya eserin
+  tamamı için **yeni ve isteğe bağlı** bir belge tasarlandı:
+  `tanitim-izni-EK-TASLAK.md` — paylaşılacak somut metin parçası EK-1'de aynen
+  yazılıyor, paylaşılacak hesap tek tek işaretleniyor (X, Instagram, TikTok,
+  Pinterest; `SOCIAL_LINKS`'ten), izin her zaman geri alınabiliyor. **Bu düzen
+  kurucu onayına sunuldu, canlıya uygulanmadı.**
+- **Kamuya açık arşiv (Madde 10) ile delil amaçlı kapalı kopya (Madde 11) ayrı
+  maddelere bölündü.** Geri çekme ve fesih birincisini sona erdiriyor, ikincisini
+  erdirmiyor; kapalı kopya bir yayın değil, kimseye açılmıyor. Kapalı kopya için
+  hem yazarın sınırlı çoğaltma izni alındı hem de mevzuattan doğan saklama
+  yükümlülüğüne atıf yapıldı (hangisinin yeterli olduğu avukat sorusu).
+- **İmza yolları dörde ayrıldı ve eşit sayılmadı** (Madde 17): ıslak imzalı
+  **asıl** (kabul edilir), **güvenli elektronik imzalı dosya** (kabul edilir),
+  aslın **taraması/fotoğrafı** (ara kayıt, aslın yerine geçmez), **panel onayı**
+  (imza değil, destekleyici kayıt). "PDF'i e-postayla imzalatmak" gibi belirsiz
+  ifadeler kaldırıldı; iki nüsha / her tarafta bir asıl düzeni getirildi.
+- **Yayın koşulu ayrı madde oldu** (Madde 18): çerçeve imzası ulaşmış + eser izni
+  ulaşmış + EK-1 metni ile yayımlanacak metin aynı.
+- **Teyit hükmü daraltıldı** (Madde 17.7): geçmiş panel onayları hakkında kabul,
+  ikrar veya feragat oluşturmadığı ve her eser için ayrı belge imzalanacağı
+  yazıldı. Genel bir teyit maddesinin geçmişin eksiğini kendiliğinden gidereceği
+  varsayımından kaçınıldı.
+- Çelişkiler giderildi: süre/fesih/arşiv atıfları iki belgede birebir aynı
+  yapıldı; hak tabloları özdeş; "esaslı değişiklikte belge hükümsüz kalır" yerine
+  "değiştirilmiş metni kapsamaz" kullanıldı; ad/mahlas tercihinin sonradan
+  değiştirilmesi (çerçeve m. 7.4) ile "tercih sabitlenir" ifadesi uyumlandı;
+  Madde 1.5'teki çelişki kuralı Tanıtım İzni'ni geçersiz kılmayacak şekilde
+  düzeltildi; Madde 16.2'deki gerçek olmayan panel kilidi vaadi kaldırıldı.
+
+**Sürüm 2'nin panelde yayımlanması — karar kurucuya bırakıldı.** Yayımlamak
+kimseyi kilitlemiyor ama panelde kabul edilemediği için bir şey de kazandırmıyor;
+tek etkisi mevcut tek kabulü `superseded` işaretlemek. Buna karşılık bir editör
+makaleyi "kabul edildi" yaptığında panel açtığı Eser Onayı kaydına **o an güncel
+olan** sürümü yazıyor (`rights_grants.agreement_version_id`); sürüm 2
+yayımlanmazsa panel kaydı sürüm 1'i gösterirken imzalı belge sürüm 2 olur.
+Plandaki öneri: makaleler kabul edilmeden önce sürüm 2'yi yayımlamak. Uygulanmadı.
+
+**İmzaya engel üç eksik** (hiçbiri hakkında varsayım yapılmadı): sözleşmede
+Dergi'nin bildirim adresi olarak yazılacak değer (`{{dergi.adres}}` zorunlu alan,
+boşsa render hata veriyor), Dergi adına imzalayacak kişi veya kişiler (imza bloğu
+**iki ortaklı geçici taslak**), `{{kvkk.version}}` atfının hangi sürümü
+göstereceği. Adresin **kamuya açıklanması** ile **sözleşmede taraf adresi olarak
+kullanılması** ayrı sorular olarak ele alındı; şablonda tek alan olduğu için
+ikisinin farklı değer alması ürün değişikliği gerektirir.
+
+**Taslakların dağıtım durumu:** Taslaklar başka bir oturumun commit'leriyle
+`main`'e push edildi. `gh repo view` çıktısı `"visibility": "PUBLIC"` diyor —
+`github.com/Elifyarenn/postscript` herkese açık, dolayısıyla taslaklar ve
+`HUKUK-RAPORU.md` şu anda herkese açık okunabilir. **Bu, yürürlükteki sözleşmenin
+yayımlanması değildir:** yürürlükteki metin `agreement_versions` tablosundan gelir
+ve orada tek sürüm (sürüm 1) vardır. Depo görünürlüğü kararı kurucuya bırakıldı;
+hiçbir dosya taşınmadı, silinmedi, geçmiş yeniden yazılmadı.
+
+**Numaralandırma notu:** Bu oturum sırasında başka bir oturum `9e95d0b` ile
+**D-225'i ikinci kez** kullandı (kart kaydırıcısı kararı); defterde şu an iki
+D-225 var. Bu kez başka oturumun kaydına dokunulmadı — ürün sahibinin talimatı
+gereği. Mükerrer numaraların hangisinin yeniden numaralandırılacağı ürün
+sahibinin kararı. (D-047 ve D-048 de eskiden beri mükerrer.)
+
+**Kod:** Değişiklik yok.
+
+---
+
+## D-228 — Sözleşme paketi sadeleştirildi: iki ana belge, alıntı izni eser belgesinin içinde, imza hükümleri hukuki sonuç iddiasından arındırıldı
+
+**İstek (ürün sahibi):** Tam metinler birlikte incelenip çelişkiler giderilsin,
+dil sadeleştirilsin, süreç **iki ana belge** etrafında toplansın, sosyal medya
+alıntı izni eser belgesinde isteğe bağlı bir bölüm olsun, imza değerlendirmesindeki
+kesinlik çelişkisi düzeltilsin, eksik bilgiler uydurulmasın, sıra tek sayfalık
+kontrol listesine dönsün.
+
+**Yapılmayanlar:** Sürüm 2 **yayımlanmadı**, kod değişmedi, roller ve
+`writer_status` değişmedi, kabul kayıtlarına dokunulmadı, üretim verisi
+değişmedi, mesaj gönderilmedi, dosya silinmedi/taşınmadı, depo görünürlüğü
+değişmedi, Git geçmişi yeniden yazılmadı, commit/push yapılmadı. Veritabanına
+yalnızca salt okunur sorgu yapıldı.
+
+**Üç belge yerine iki belge.** `tanitim-izni-EK-TASLAK.md` içeriği eser bazlı
+belgenin **Madde 7'sine** taşındı; dosya silinmedi, kayıt olsun diye kısa bir
+birleştirme notuna dönüştürüldü. Madde 7'nin kurgusu: bölüm boş bırakılırsa
+**alıntı izni verilmemiş sayılır**; paylaşılacak metin bölümün içinde aynen
+yazılır; hesaplar tek tek işaretlenir; **her paylaşım için yeni imza gerekmez** —
+izin, işaretlenen hesaplarda aynı metnin birden çok kez paylaşılmasını kapsar ve
+yeni imza yalnızca kapsam değişirse gerekir (farklı alıntı, işaretlenmemiş hesap,
+yazının tamamı). Yazının tamamı **varsayılan izne eklenmedi**; ayrı kutu ve paraf
+ister. "En çok 300 kelime" ölçüsü kalktı (D-227).
+
+**İmza: kesinlik çelişkisi giderildi.** Önceki taslaklar "tarama aslın yerine
+geçmez" ve "panel onayı imza değildir" diye **hukuki sonuç** yazıyor, sonra aynı
+paketin başka yerinde bunun doğrulanamadığını söylüyordu. Artık sözleşmede hukuki
+sonuç iddiası yok; yalnızca tarafların iradesi ve derginin iç işleyişi var:
+
+- "Dergi, el yazısıyla imzalanmış nüshayı **veya** güvenli elektronik imzalı
+  dosyayı teslim almadan yazıyı yayımlamaz. Taraflar bunun Dergi'nin kendi iç
+  yayın koşulu olduğunu kabul eder."
+- "Taraflar, taranmış kopyanın imzalı nüshanın **yerine geçmesini amaçlamaz**."
+- "Panel'de verilen onay, belgenin yerine geçmek üzere düzenlenmemiştir; Taraflar
+  arasında imzalı belge esas alınır."
+- Ve açık bir çekince: "**Bu madde, sayılan imza yollarının kanun karşısındaki
+  geçerliliği hakkında bir beyan içermez.**"
+
+Hukuki sonuç / delil niteliği / operasyonel tedbir ayrımı sözleşmeden çıkarıldı
+ve avukat mesajındaki tek bir tabloya taşındı; aynı soru artık birden fazla yerde
+tekrarlanmıyor. Belge içi "avukata sorular" listeleri kaldırıldı, sorular yalnızca
+`avukata-inceleme-mesaji.md`'de (7 soru).
+
+**Eksik bilgiler görünür kılındı, gizlenmedi.** Üç alan `[[DOLDURULACAK — …]]`
+biçiminde işaretlendi ve iki belgenin başında "⚠ TASLAK — İMZAYA HAZIR DEĞİL"
+bandı var: Dergi'nin bildirim adresi, Dergi adına imzalayacak kişi(ler) **ve
+temsil dayanağı**, atıf yapılacak aydınlatma metni sürümü. Önceki taslakta
+şablonun teknik zorunluluğu (`render.ts` tanımadığı `{{...}}`'i reddeder,
+`OPTIONAL` yalnızca `yazar.mahlas`) gerekçe gösterilerek `{{dergi.adres}}`
+bırakılmıştı; bu, künyedeki ilçe düzeyindeki değeri sessizce yeterli saymak
+anlamına geliyordu. Artık alan boş ve işaretli; yayına alma adımlarında yer
+tutucuya çevrilmesi gerektiği yazılı. İmza bloğu iki ortaklı **geçici** taslak
+olarak kaldı.
+
+**"Hiç yayın yapılmadı" iddiasının sınırı kayda geçti.** `published_at` 34 makale
+satırının hiçbirinde dolu değil; kod bu alanı geri çekmede temizlemiyor
+(`src/services/articles.ts:750`); `audit_log`'daki 58 durum değişikliğinin hedefi
+yalnızca `in_review`, `pending_admin_approval`, `revision_requested`. Buna karşın
+`article.created_by_author` denetim kaydı **35**, mevcut satır **34** — bir satır
+sayıca eksik; panel dışı SQL işlemleri denetim kaydı bırakmak zorunda değil; ve
+sorgular anlık görüntü. Sonuç: güçlü gösterge, **kesin ispat değil.** Böyle bir
+beyan verilmemeli.
+
+**Sürüm 2 geçiş adımları yazıldı, uygulanmadı** (`UYGULAMA-PLANI.md` §2). Kritik
+sıra: metin kesinleşir → `[[DOLDURULACAK]]` alanları çözülür → `site_settings`
+doldurulur → dosya yerine konur → **sürüm 2 yayımlanır** → **ancak bundan sonra**
+editörler makaleleri kabul eder. Gerekçe: panel, Eser Onayı kaydını açarken o
+anda güncel olan sürümü yazıyor (`rights_grants.agreement_version_id`); sıra
+kaçırılırsa kayıt v1'i, imzalı belge v2'yi gösterir.
+
+**Tek sayfalık kontrol listesi:** `YAYIN-ONCESI-KONTROL-LISTESI.md` — A (yazar
+başına çerçeve), B (son metin), C (eser izni), D (yayın anındaki üç koşul).
+Mevcut **tek** panel kabul kaydı olan yazar için ayrı bir kutu bloğu var: kayıt
+olduğu gibi korunur, panel onayı imzanın yerine konmaz, takip tablosuna not
+düşülür.
+
+**Depo herkese açık — bulgular bildirildi, değerler tekrarlanmadı.**
+`gh repo view` → `"visibility": "PUBLIC"`. `panel/DECISIONS.md` iki satırda
+serbest sağlayıcı kişisel e-posta adresi, iki satırda nesne depolama uç adresi
+(hesap tanımlayıcısı içeren), altı satırda veritabanı dal/uç tanımlayıcısı
+taşıyor; `panel/README.md` altı satırda demo/seed şifresi taşıyor (bilinçli,
+"yalnızca yerel" notlu). Taslaklarda yazar kişisel verisi ve gerçek adres yok;
+önceki turda taslakta geçen ilçe düzeyindeki adres değeri kaldırıldı. Takip
+tablosunun **dolu hâli ve imzalı belgeler depoya konmayacak**; bu kural her iki
+belgenin not bloğuna ve kontrol listesine yazıldı. Geçmiş zaten push edilmiş
+olduğu için bugün bir değeri çıkarmak onu geçmişten silmiyor — ne yapılacağı
+kurucunun kararı.
+
+**Kod:** Değişiklik yok.
+
+
+## D-226 — Ekip formu: bir söz, ad mı mahlas mı, burç
+
+**İstek (ürün sahibi):** "panellere hızlı bi form gönderelim; yalnızca
+avatarlarını oluşturup gönderenler doldurabilsin. Kendilerinden bir söz iste,
+55 karakter sınırı olsun; isim mi mahlas mı yayınlansın onu iste; bir de
+burçlarını iste. Admin panelinde sonucu avatarları, formda aldığımız bilgiler
+ve görevleri olarak sun."
+
+**Karar:** Üç alan `team_avatars` tablosuna eklendi (`motto`, `team_byline`,
+`zodiac`) ve yanıtın ne zaman verildiğini tutan `team_form_at`. Ayrı tablo
+açılmadı: form avatar kaydının üstünde yaşıyor, çünkü zaten ona bağlı.
+
+**Kapı, ürün sahibinin istediği gibi, kuralın kendisi:** yanıtlar `UPDATE`
+ile yazılıyor; avatar kaydı yoksa güncellenecek satır da yok ve servis
+reddediyor. Sayfa bunu önden söylüyor ama kural servis katmanında, her
+çağıranın geçtiği yerde.
+
+**"İsim mi mahlas mı" ile devir formu karıştırılmadı.** `rights_grants`
+tablosunda zaten bir `byline_choice` var; o **eser başına imzalanan** FSEK
+belgesinin parçası ve yazının künyesini o belirliyor (`publicByline`). Buradaki
+tercih yalnızca **ekip sayfası** içindir. İkisi ayrı kolonlarda duruyor, biri
+öbürü yerine okunmuyor; form da bunu okura yazıyla söylüyor. Şema yorumunda da
+yazılı.
+
+**Panellere "gönderme" şu üç parçadan ibaret:** üç panelin de kenar çubuğunda
+"Ekip formu" bağlantısı; yazar ve editör genel bakışında, formu yanıtlamamış
+olana çıkan bir uyarı (avatarı yoksa uyarı önce avatara yönlendiriyor); ve
+yönetici genel bakışında kaç kişinin yanıtladığını gösteren kart. E-posta
+gönderilmedi — panelde görünen uyarı bilgilendirir, zorlamaz (D-210 ile aynı
+gerekçe).
+
+**Yöneticiye sunum:** `/admin/team-avatars` kartları artık çizimin ve görevin
+yanında formun yanıtlarını da gösteriyor. Mahlasını seçen ama hesabında mahlası
+olmayan biri kırmızıyla işaretleniyor; yoksa ekip sayfasında adı boş kalırdı.
+
+**Denetim kaydına yanıtların kendisi yazılmıyor**, yalnızca yanıtlandığı an.
+Söz kişinin kendi cümlesi; `audit_log` yalnızca eklenir ve silinmez, oraya
+yazmak gereksiz bir kalıcılık olurdu. Testi var.
+
+**KVKK:** Aydınlatma metni aynı adımda güncellendi — veri envanterine söz,
+ad/mahlas tercihi, burç ve yanıt zamanı; amaç satırına ekip sayfasının
+hazırlanması; saklama satırına yeni alanlar. Burç doğum tarihinden türeyen bir
+bilgi olduğu için metinde açıkça sayıldı. Kayıt, avatar kaydıyla birlikte
+silinir; ayrı bir saklama süresi yok.
+
+**Migration:** `0041_team_form.sql` — yalnızca ekleme: bir enum ve dört
+nullable kolon. Var olan 19 kayıt olduğu gibi geçerli kalıyor. Üretime koddan
+önce uygulandı (D-079).
+
+**Doğrulama:** Yeni entegrasyon testleri: avatarsız yanıtın reddi, yanıtların
+kayda yazılması ve zaman damgası, 55 karakter sınırı ve bilinmeyen burcun
+reddi, denetim kaydında sözün geçmemesi, yöneticiye çizim + yanıt + görev
+olarak dönmesi, uyarının üç durumu ve okura hiç çıkmaması. Kapı: typecheck,
+lint, test, build.

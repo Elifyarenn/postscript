@@ -11,6 +11,7 @@ import { auditLog, teamAvatars } from "@/db/schema";
 import { AVATAR_CONFIG_VERSION, DEFAULT_AVATAR_CONFIG } from "@/lib/avatar/registry";
 import { isAppError } from "@/lib/errors";
 import { MemoryStorageAdapter, setStorageAdapter } from "@/lib/storage";
+import { MOTTO_MAX } from "@/lib/zodiac";
 import {
   deleteOwnTeamAvatar,
   deleteTeamAvatarAsAdmin,
@@ -19,6 +20,10 @@ import {
   listTeamAvatars,
   redrawAllTeamAvatarPngs,
   saveTeamAvatar,
+  saveTeamForm,
+  getOwnTeamForm,
+  countTeamForms,
+  teamFormPrompt,
   teamAvatarZipEntries,
 } from "@/services/team-avatars";
 import { anonymiseUser } from "@/services/users";
@@ -225,4 +230,74 @@ describe("deletion", () => {
     expect(await db.select().from(teamAvatars)).toHaveLength(0);
     expect(storage.objects.size).toBe(0);
   }, 60_000);
+});
+
+describe("the team form (D-226)", () => {
+  const answers = { motto: "Okumak, en sessiz isyandır.", teamByline: "pen_name", zodiac: "scorpio" };
+
+  it("refuses answers from someone who has not sent an avatar yet", async () => {
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    // Nothing to attach them to: the form lives on the avatar record
+    await expectStatus(saveTeamForm(actorOf(writer), answers, noMeta), 400);
+    expect(await getOwnTeamForm(actorOf(writer))).toBeNull();
+  });
+
+  it("keeps the answers on the avatar and marks when they were given", async () => {
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    await saveTeamAvatar(actorOf(writer), input(), noMeta);
+    await saveTeamForm(actorOf(writer), answers, noMeta);
+
+    const form = await getOwnTeamForm(actorOf(writer));
+    expect(form).toMatchObject({ motto: answers.motto, teamByline: "pen_name", zodiac: "scorpio" });
+    expect(form!.answered).toBeInstanceOf(Date);
+  }, 60_000);
+
+  it("refuses a line longer than the limit and an unknown sign", async () => {
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    await saveTeamAvatar(actorOf(writer), input(), noMeta);
+
+    await expectStatus(saveTeamForm(actorOf(writer), { ...answers, motto: "x".repeat(MOTTO_MAX + 1) }, noMeta), 400);
+    await expectStatus(saveTeamForm(actorOf(writer), { ...answers, zodiac: "ophiuchus" }, noMeta), 400);
+    // Neither attempt wrote anything
+    expect((await getOwnTeamForm(actorOf(writer)))!.answered).toBeNull();
+  }, 60_000);
+
+  it("logs that the form was answered, not what it said", async () => {
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    await saveTeamAvatar(actorOf(writer), input(), noMeta);
+    await saveTeamForm(actorOf(writer), answers, noMeta);
+
+    const entries = await db.select().from(auditLog).where(eq(auditLog.action, "team_avatar.form_saved"));
+    expect(entries).toHaveLength(1);
+    // The member's own words stay out of the append-only log
+    expect(JSON.stringify(entries[0]!.after)).not.toContain(answers.motto);
+  }, 60_000);
+
+  it("hands the answers to the admin beside the drawing and the duty", async () => {
+    const admin = await createUser({ role: "admin" });
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    await saveTeamAvatar(actorOf(writer), input(), noMeta);
+    await saveTeamForm(actorOf(writer), answers, noMeta);
+
+    const [listed] = await listTeamAvatars(actorOf(admin));
+    expect(listed!.teamRole).toBe("Genel Yayın Yönetmeni");
+    expect(listed!.form).toMatchObject({ motto: answers.motto, teamByline: "pen_name", zodiac: "scorpio" });
+    expect(await countTeamForms(actorOf(admin))).toEqual({ total: 1, answered: 1 });
+  }, 60_000);
+
+  it("nudges a member who has no avatar towards the builder first", async () => {
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    expect(await teamFormPrompt(actorOf(writer))).toEqual({ show: true, needsAvatar: true });
+
+    await saveTeamAvatar(actorOf(writer), input(), noMeta);
+    expect(await teamFormPrompt(actorOf(writer))).toEqual({ show: true, needsAvatar: false });
+
+    await saveTeamForm(actorOf(writer), answers, noMeta);
+    expect(await teamFormPrompt(actorOf(writer))).toEqual({ show: false, needsAvatar: false });
+  }, 60_000);
+
+  it("says nothing to a reader, who is not on the team", async () => {
+    const reader = await createUser({ role: "user" });
+    expect(await teamFormPrompt(actorOf(reader))).toEqual({ show: false, needsAvatar: false });
+  });
 });
