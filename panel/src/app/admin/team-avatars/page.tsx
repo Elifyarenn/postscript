@@ -4,6 +4,7 @@ import { Alert, Card, EmptyState, PageHeader } from "@/components/ui";
 import { TEAM_BYLINE_LABELS, teamBylineName, zodiacLabel } from "@/lib/zodiac";
 import { avatarDataUri } from "@/lib/avatar/render";
 import { listTeamAvatars, listTeamMembersMissing, type MissingTeamMember } from "@/services/team-avatars";
+import { chaseMessage, whatsappHref } from "@/lib/whatsapp";
 
 export const metadata = { title: "Ekip avatarları" };
 
@@ -23,10 +24,12 @@ function MissingList({
   title,
   people,
   empty,
+  missing,
 }: {
   title: string;
   people: MissingTeamMember[];
   empty: string;
+  missing: "avatar" | "form";
 }) {
   return (
     <div>
@@ -37,14 +40,32 @@ function MissingList({
         <p className="text-xs text-muted">{empty}</p>
       ) : (
         <ul className="space-y-1 text-xs">
-          {people.map((person) => (
-            <li key={person.id}>
-              <Link href={`/admin/users/${person.id}`} className="underline">
-                {person.displayName}
-              </Link>
-              <span className="text-muted"> · {dutyLabel(person)}</span>
-            </li>
-          ))}
+          {people.map((person) => {
+            // Opens WhatsApp with the message ready; the admin presses send (D-231)
+            const href = whatsappHref(person.phone, chaseMessage(missing));
+            return (
+              <li key={person.id}>
+                <Link href={`/admin/users/${person.id}`} className="underline">
+                  {person.displayName}
+                </Link>
+                <span className="text-muted"> · {dutyLabel(person)}</span>
+                {href !== null && (
+                  <>
+                    {" · "}
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-accent underline"
+                      title="WhatsApp'ta hazır mesajla aç"
+                    >
+                      WhatsApp
+                    </a>
+                  </>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
@@ -106,11 +127,13 @@ export default async function TeamAvatarsPage({
               title="Avatarını oluşturmayanlar"
               people={withoutAvatar}
               empty="Herkes avatarını gönderdi."
+              missing="avatar"
             />
             <MissingList
               title="Formu doldurmayanlar"
               people={withoutForm}
               empty="Avatarı olan herkes formu doldurdu."
+              missing="form"
             />
           </div>
         </Card>

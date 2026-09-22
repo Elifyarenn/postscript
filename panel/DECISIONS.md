@@ -8971,3 +8971,46 @@ yoksa listeye bakan biri eksik birini gözden kaçırdığını sanabilirdi.
 de tamamlayanın listede olmaması, yöneticinin ve okurun sayılmaması, rolsüz
 çizerin sayılması, yasaklının sayılmaması, ve listenin yalnızca yöneticiye
 açık olması. Kapı: typecheck, lint, test, build.
+
+
+## D-231 — Eksik üyeye WhatsApp'tan tek tıkla ulaşma
+
+**İstek (ürün sahibi):** "bu yazarlarda hızlıca numaraya WhatsApp'a gitme
+yapabilir miyiz" — Eksikler listesindekileri takip ederken.
+
+**Karar:** Eksikler listesinde her ismin yanında, numarası varsa, bir
+**WhatsApp** bağlantısı. Bağlantı sohbeti hazır bir mesajla açıyor ve metin
+eksik olan şeye göre değişiyor. Ayrıca yönetici kullanıcı sayfasındaki
+"Telefon" satırı da tıklanabilir oldu — orada hazır mesaj yok, sadece sohbeti
+açıyor, çünkü oraya her sebeple gelinir.
+
+**Mesajlar ürün sahibinin kendi cümleleri:** "Selam, avatarı yapıp formu
+doldurur musun?" ve "Selam, formu doldurur musun?". İlk hâlinde isimle hitap
+ve ilgili sayfanın adresi vardı; ürün sahibi kısa olanı istedi, ikisi de
+çıkarıldı. Avatarı olmayan kişi zaten formu da dolduramadığı için ona giden
+mesaj iki adımı birden istiyor.
+
+**Hiçbir şey gönderilmiyor.** Bağlantı WhatsApp'ı numara ve metin hazır hâlde
+açıyor; gönder tuşuna yönetici basıyor. Sunucudan hiçbir yere istek gitmiyor.
+
+**Numaranın biçimi tahmin edilmiyor, okunuyor.** Numaralar üyenin yazdığı gibi
+saklanıyor (`normalisePhone` yalnızca boşluk, parantez ve tireyi atıyor), yani
+depoda "+90 532…", "0532…" ve "532…" hepsi var. `whatsappNumber` bunları tek
+bir uluslararası numaraya çeviriyor:
+
+- `+` ya da `00` ile başlıyorsa önek atılıyor, gerisi olduğu gibi kalıyor —
+  yabancı numaraya Türkiye kodu eklemek yabancı birini aramak olurdu;
+- `0` ile başlıyorsa yerel arama biçimidir, sıfır ülke koduna dönüyor;
+- on haneli çıplak numaraya `90` ekleniyor.
+
+Okunamayan numara için **bağlantı hiç basılmıyor**; yanlış bir numarayı açmak
+yerine düz metin kalıyor.
+
+**Hukuk:** Yeni bir açığa çıkarma yok. Telefon zaten yöneticinin gördüğü bir
+alan (`/admin/users/<id>`, "Telefon") ve bu ekranlar yalnızca yöneticiye açık;
+aydınlatma metninde telefonun amacı zaten iletişim olarak yazılı. Numara
+public API'ye girmiyor.
+
+**Doğrulama:** `whatsapp.test.ts`: üç uluslararası biçim, sıfırlı yerel biçim,
+çıplak on hane, yabancı numaranın korunması, okunamayanın reddi, bağlantının
+kaçışlanması, mesajsız biçim ve iki mesajın metni. Kapı: typecheck, lint, test, build.

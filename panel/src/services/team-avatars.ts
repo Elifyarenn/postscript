@@ -147,6 +147,8 @@ export type MissingTeamMember = {
   penName: string | null;
   role: string;
   isIllustrator: boolean;
+  /** As the member typed it at registration; null when none was given (D-231). */
+  phone: string | null;
   /** False when the avatar is what is missing; true when only the form is. */
   hasAvatar: boolean;
 };
@@ -167,6 +169,7 @@ export async function listTeamMembersMissing(actor: Actor): Promise<MissingTeamM
       penName: users.penName,
       role: users.role,
       isIllustrator: users.isIllustrator,
+      phone: users.phone,
       avatarId: teamAvatars.id,
       answered: teamAvatars.teamFormAt,
     })
@@ -191,6 +194,7 @@ export async function listTeamMembersMissing(actor: Actor): Promise<MissingTeamM
     penName: row.penName,
     role: row.role,
     isIllustrator: row.isIllustrator,
+    phone: row.phone,
     hasAvatar: row.avatarId !== null,
   }));
 }

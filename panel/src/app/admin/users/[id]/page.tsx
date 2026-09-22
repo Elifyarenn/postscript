@@ -8,6 +8,7 @@ import { guardPanel } from "@/lib/auth/guard";
 import { isAppError } from "@/lib/errors";
 import { checkPromotionReadiness, findUserById, getUserOverview } from "@/services/users";
 import { calculateAge } from "@/lib/age";
+import { whatsappHref } from "@/lib/whatsapp";
 import { profileHref } from "@/lib/profile-link";
 import { renderAgreementForWriter } from "@/services/agreements";
 import { listAllWriterAreasWithQuota } from "@/services/writer-areas";
@@ -92,6 +93,7 @@ export default async function AdminUserDetailPage({
   // consent and the application for a reader, areas and output for a writer,
   // duties for an editor, the second factor for staff
   const href = profileHref(target);
+  const phoneHref = whatsappHref(target.phone);
 
   const details: { label: string; value: ReactNode }[] = [
     { label: "E-posta", value: target.email },
@@ -117,7 +119,17 @@ export default async function AdminUserDetailPage({
       label: "E-posta doğrulama",
       value: target.emailVerifiedAt ? formatDateTime(target.emailVerifiedAt) : "Doğrulanmadı",
     },
-    { label: "Telefon", value: target.phone ?? "—" },
+    {
+      label: "Telefon",
+      // The number opens the chat; a number too broken to read stays plain text (D-231)
+      value: phoneHref ? (
+        <a href={phoneHref} target="_blank" rel="noopener noreferrer" className="underline">
+          {target.phone}
+        </a>
+      ) : (
+        (target.phone ?? "—")
+      ),
+    },
     {
       label: "Doğum tarihi",
       value: target.birthDate
