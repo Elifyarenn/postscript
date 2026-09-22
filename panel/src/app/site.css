@@ -4770,8 +4770,23 @@ html:has(.profile-editor[open]) {
   overflow-y: auto;
 }
 
+/* A real spread: the two pages touch at the gutter, as they would in print */
+.ps-site .reader-stage[data-spread] {
+  gap: 0;
+}
+
 .ps-site .reader-stage[data-spread] .page-sheet {
   width: min(32rem, 50%);
+}
+
+/* The only thing left between them is the fold — a shadow, not a gap. Guarded
+   with :not(), so the last odd page standing alone keeps flat edges */
+.ps-site .reader-stage[data-spread] .page-sheet:first-child:not(:last-child) {
+  box-shadow: inset -16px 0 22px -22px rgb(0 0 0 / 55%);
+}
+
+.ps-site .reader-stage[data-spread] .page-sheet:last-child:not(:first-child) {
+  box-shadow: inset 16px 0 22px -22px rgb(0 0 0 / 55%);
 }
 
 .ps-site .page-sheet[data-bleed] {

@@ -9152,3 +9152,24 @@ koddan önce uygulandı (D-079).
 
 **Kalan:** Kapak görseli yüklenmedi; kapak sayfası tipografik yer tutucu olarak
 duruyor, çünkü bu sayı için tanımlanmış bir kapak görseli yok.
+
+---
+
+## D-235 — Açık sayfa gerçek bir forma: iki sayfa bitişik
+
+**Karar:** Okuyucuda iki sayfa yan yana dururken aralarındaki boşluk kaldırıldı;
+sayfalar basılı bir dergide olduğu gibi cilt payında birbirine değiyor. Araya
+boşluk yerine yalnızca kıvrım gölgesi konuldu (`inset` gölge, sol sayfanın
+sağında, sağ sayfanın solunda).
+
+**Gerekçe:** Aradaki `gap`, iki ayrı kâğıt izlenimi veriyordu; dergi açık bir
+formadır, iki ayrı kart değil. Gölge, sayfaların nerede ayrıldığını boşluk
+olmadan da gösteriyor.
+
+**Ayrıntı:** Tek başına kalan son tek sayfaya gölge uygulanmasın diye seçiciler
+`:first-child:not(:last-child)` ve `:last-child:not(:first-child)` ile
+sınırlandı. Boşluk gittiği için çift sayfa daha az yer kaplıyor; yan yana
+görünüm eşiği 1100px'ten 960px'e indirildi, böylece küçük dizüstü ekranlar da
+formayı açık görüyor. Telefon akışı (≤700px) değişmedi.
+
+**Doğrulama:** typecheck, lint, sayı testleri (21), build.

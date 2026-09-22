@@ -83,7 +83,9 @@ export function MagazineReader({
   // Two pages side by side only where they genuinely fit; a phone gets the
   // same words as one column instead of a page shrunk past reading size
   useEffect(() => {
-    const wide = window.matchMedia("(min-width: 1100px)");
+    // Lower than it was: with the gutter gap gone the pair needs less room,
+    // so a small laptop gets the spread too (D-234)
+    const wide = window.matchMedia("(min-width: 960px)");
     const narrow = window.matchMedia("(max-width: 700px)");
     const sync = () => {
       setSpread(wide.matches);
