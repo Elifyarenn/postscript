@@ -301,3 +301,33 @@ describe("the team form (D-226)", () => {
     expect(await teamFormPrompt(actorOf(reader))).toEqual({ show: false, needsAvatar: false });
   });
 });
+
+describe("a writer's areas on the admin card (D-228)", () => {
+  it("lists both areas in slot order, and nothing for someone with none", async () => {
+    const admin = await createUser({ role: "admin" });
+    const writer = await createUser({
+      role: "writer",
+      writerStatus: "active",
+      writerArea: "Edebiyat",
+      writerArea2: "Sinema",
+    });
+    const illustrator = await createUser({ isIllustrator: true });
+    await saveTeamAvatar(actorOf(writer), input(), noMeta);
+    await saveTeamAvatar(actorOf(illustrator), input({ displayName: "Çizer" }), noMeta);
+
+    const listed = await listTeamAvatars(actorOf(admin));
+    const byName = (name: string) => listed.find((row) => row.displayName === name)!;
+    expect(byName("Elif Yaren Çekiç").user.areas).toEqual(["Edebiyat", "Sinema"]);
+    // An illustrator holds no writing area; the card then shows no line at all
+    expect(byName("Çizer").user.areas).toEqual([]);
+  }, 60_000);
+
+  it("leaves out an empty second area rather than a gap", async () => {
+    const admin = await createUser({ role: "admin" });
+    const writer = await createUser({ role: "writer", writerStatus: "active", writerArea: "Müzik" });
+    await saveTeamAvatar(actorOf(writer), input(), noMeta);
+
+    const [listed] = await listTeamAvatars(actorOf(admin));
+    expect(listed!.user.areas).toEqual(["Müzik"]);
+  }, 60_000);
+});

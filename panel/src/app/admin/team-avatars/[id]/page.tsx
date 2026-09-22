@@ -4,6 +4,7 @@ import { readCsrfToken } from "@/lib/csrf";
 import { ActionButton } from "@/components/form";
 import { Card, PageHeader, Table, Td, Th } from "@/components/ui";
 import { describeConfig } from "@/lib/avatar/registry";
+import { TEAM_BYLINE_LABELS, teamBylineName, zodiacLabel } from "@/lib/zodiac";
 import { getTeamAvatar } from "@/services/team-avatars";
 import { deleteTeamAvatarAction } from "../actions";
 
@@ -74,6 +75,13 @@ export default async function TeamAvatarDetailPage({ params }: { params: Promise
               <dd>{avatar.displayName}</dd>
               <dt className="text-muted">Rol</dt>
               <dd>{avatar.teamRole}</dd>
+              {/* Where the magazine records what a writer covers (D-228) */}
+              {avatar.user.areas.length > 0 && (
+                <>
+                  <dt className="text-muted">Alanları</dt>
+                  <dd>{avatar.user.areas.join(", ")}</dd>
+                </>
+              )}
               <dt className="text-muted">Hesap</dt>
               <dd>
                 <Link href={`/admin/users/${avatar.user.id}`} className="text-accent underline">
@@ -85,6 +93,35 @@ export default async function TeamAvatarDetailPage({ params }: { params: Promise
               <dd>{dateFormat.format(avatar.createdAt)}</dd>
               <dt className="text-muted">Son güncelleme</dt>
               <dd>{dateFormat.format(avatar.updatedAt)}</dd>
+              {/* The team form's answers, beside the record they belong to (D-226) */}
+              {avatar.form.answered ? (
+                <>
+                  <dt className="text-muted">Sözü</dt>
+                  <dd>&ldquo;{avatar.form.motto}&rdquo;</dd>
+                  <dt className="text-muted">Ekip sayfasında</dt>
+                  <dd>
+                    {TEAM_BYLINE_LABELS[avatar.form.teamByline ?? ""] ?? "—"}
+                    {/* The name that choice lands on, not only the preference (D-229) */}
+                    {teamBylineName(avatar.form.teamByline, avatar.user) !== null ? (
+                      <span className="text-muted">
+                        {" "}
+                        ({teamBylineName(avatar.form.teamByline, avatar.user)})
+                      </span>
+                    ) : (
+                      avatar.form.teamByline === "pen_name" && (
+                        <span className="text-danger"> (mahlası yok)</span>
+                      )
+                    )}
+                  </dd>
+                  <dt className="text-muted">Burcu</dt>
+                  <dd>{zodiacLabel(avatar.form.zodiac) ?? "—"}</dd>
+                </>
+              ) : (
+                <>
+                  <dt className="text-muted">Ekip formu</dt>
+                  <dd className="text-muted">Doldurmadı</dd>
+                </>
+              )}
             </dl>
           </Card>
 

@@ -33,5 +33,19 @@ export const TEAM_BYLINE_LABELS: Record<string, string> = {
   pen_name: "Mahlasım",
 };
 
+/**
+ * The name that choice actually resolves to, so the admin reads the name the
+ * team page will carry rather than only the preference (D-229). Null when the
+ * choice has no name behind it — a pen name that was never set.
+ */
+export function teamBylineName(
+  choice: string | null,
+  person: { displayName: string; penName: string | null },
+): string | null {
+  if (choice === "real_name") return person.displayName;
+  if (choice === "pen_name") return person.penName;
+  return null;
+}
+
 /** The longest a member's line may be, as the product owner set it. */
 export const MOTTO_MAX = 55;

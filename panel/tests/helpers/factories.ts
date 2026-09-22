@@ -25,6 +25,9 @@ export type UserOverrides = {
   displayName?: string;
   /** The çizer mark (D-151); independent of the role. */
   isIllustrator?: boolean;
+  /** The writing areas a writer holds; the second only comes from the panel (D-057). */
+  writerArea?: string | null;
+  writerArea2?: string | null;
 };
 
 /** An adult, verified, consented account: the shape that passes the §6 checks. */
@@ -47,6 +50,8 @@ export async function createUser(overrides: UserOverrides = {}): Promise<User> {
       birthDate: overrides.birthDate === undefined ? "1995-05-05" : overrides.birthDate,
       isBanned: overrides.isBanned ?? false,
       isIllustrator: overrides.isIllustrator ?? false,
+      writerArea: overrides.writerArea ?? null,
+      writerArea2: overrides.writerArea2 ?? null,
     })
     .returning();
 

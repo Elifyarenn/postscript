@@ -8884,3 +8884,61 @@ kendi listesini görüyor. Hiçbiri tutmazsa üç liste birden gösteriliyor —
 **Doğrulama:** Yeni birim testleri: **her cümlenin `MOTTO_MAX`'a sığması** (bir
 öneri sınırı aşsaydı, tıklayan kişinin formu reddedilirdi), baştaki/sondaki
 boşluk olmaması, ve altı grup eşleşmesi. Kapı: typecheck, lint, test, build.
+
+
+## D-228 — Yazarın alanları ekip kartında
+
+**İstek (ürün sahibi):** "yazarların alanlarını da göster" — ekip formu
+sonuçlarının görüldüğü yerde.
+
+**Karar:** Yazarın yazı alanları (`users.writer_area` ve `writer_area_2`)
+yönetici panelindeki ekip kartlarına ve tek avatar sayfasına eklendi; görevin
+hemen altında "Alanları: X, Y" olarak. Böylece kart, ürün sahibinin istediği
+dört şeyi bir arada veriyor: çizim, görev, formun yanıtları ve alanlar.
+
+**Neden bu iki kolon:** Yazarın alanı `users` üzerinde iki kolonda duruyor —
+kayıtta seçilen birinci alan (D-051) ve yalnızca yönetici panelinden verilen
+ikinci alan (D-057). Editörlerin alanları ise ayrı bir tabloda
+(`editor_categories`); istek yazarlar için olduğu için oraya dokunulmadı.
+
+**Boş ikinci alan satır açmıyor:** iki kolon okunup null olanlar eleniyor, yani
+tek alanı olan kişide "Edebiyat, " gibi sarkan bir virgül kalmıyor. Hiç alanı
+olmayanda (çizerler, rolsüz hesaplar) satır hiç basılmıyor.
+
+**Tek avatar sayfası da tamamlandı:** oraya formun yanıtları da kondu; D-226'da
+yalnızca liste kartlarına eklenmişti, detay sayfasını açan kişi eksik bilgi
+görüyordu.
+
+**Test kurgusu genişletildi:** `createUser` fabrikası yazı alanlarını
+kabul etmiyordu, bu yüzden ilk yazdığım iki test boş dizi görüp patladı.
+Fabrikaya iki alan eklendi; testler alanların sırasını, tek alanlı kişiyi ve
+hiç alanı olmayanı ayrı ayrı doğruluyor.
+
+**Doğrulama:** Kapı: typecheck, lint, test, build.
+
+
+## D-229 — Ekip sayfasında yazacak ad, tercihle birlikte gösterilir
+
+**İstek (ürün sahibi):** "adının gösterilmesini seçen yazarların adını da
+göster."
+
+**Bulgu:** Kart yalnızca tercihi basıyordu — "Adım" ya da "Mahlasım". Hangi ad
+olduğunu görmek için hesap sayfasına gitmek gerekiyordu; üstelik kartın hesap
+satırı `mahlas ?? görünen ad` bastığı için mahlası olan birinin adı hiç
+görünmüyordu.
+
+**Karar:** Tercihin yanında o tercihin karşılığı olan ad da yazıyor:
+"Adım (Elif Yaren Çekiç)", "Mahlasım (Kedyumi)". Karşılığı `teamBylineName`
+tek yerde hesaplıyor; hem liste kartı hem tek avatar sayfası onu çağırıyor.
+
+**Mahlası olmayan hâlâ kırmızıyla işaretli:** "Mahlasım" seçip mahlası olmayan
+kişide parantez basılmıyor, yerine uyarı çıkıyor — boş bir parantez yerine
+sorunun kendisi görünüyor.
+
+**Hukuk:** Yeni bir açıklama değil. Gerçek ad zaten yöneticinin gördüğü bir
+veri (`/admin/users`) ve bu ekran da yalnızca yöneticiye açık; public API'ye
+hiçbir şey eklenmedi, `publicByline` kuralına dokunulmadı.
+
+**Doğrulama:** `team-byline.test.ts`: iki tercihin karşılığı, mahlassız
+durumda null dönmesi, ve form yanıtlanmadan null dönmesi. Kapı: typecheck,
+lint, test, build.

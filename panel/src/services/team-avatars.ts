@@ -308,7 +308,15 @@ export type TeamAvatarListItem = {
   fileName: string;
   /** The team form's answers, null until it is answered (D-226). */
   form: OwnTeamForm;
-  user: { id: string; displayName: string; email: string; role: string; penName: string | null };
+  user: {
+    id: string;
+    displayName: string;
+    email: string;
+    role: string;
+    penName: string | null;
+    /** The writing areas a writer holds, in slot order; empty for anyone else (D-228). */
+    areas: string[];
+  };
 };
 
 const listColumns = {
@@ -327,6 +335,8 @@ const listColumns = {
   userEmail: users.email,
   userRole: users.role,
   userPenName: users.penName,
+  userArea: users.writerArea,
+  userArea2: users.writerArea2,
 };
 
 type ListRow = {
@@ -345,6 +355,8 @@ type ListRow = {
   userEmail: string;
   userRole: string;
   userPenName: string | null;
+  userArea: string | null;
+  userArea2: string | null;
 };
 
 function toListItem(row: ListRow): TeamAvatarListItem {
@@ -363,6 +375,7 @@ function toListItem(row: ListRow): TeamAvatarListItem {
       email: row.userEmail,
       role: row.userRole,
       penName: row.userPenName,
+      areas: [row.userArea, row.userArea2].filter((area): area is string => area !== null),
     },
   };
 }

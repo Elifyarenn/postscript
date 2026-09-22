@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { guardPanel } from "@/lib/auth/guard";
 import { Alert, Card, EmptyState, PageHeader } from "@/components/ui";
-import { TEAM_BYLINE_LABELS, zodiacLabel } from "@/lib/zodiac";
+import { TEAM_BYLINE_LABELS, teamBylineName, zodiacLabel } from "@/lib/zodiac";
 import { avatarDataUri } from "@/lib/avatar/render";
 import { listTeamAvatars } from "@/services/team-avatars";
 
@@ -104,6 +104,10 @@ export default async function TeamAvatarsPage({
                   <div>
                     <p className="font-serif text-lg text-ink">{avatar.displayName}</p>
                     <p className="text-sm text-muted">{avatar.teamRole}</p>
+                    {/* A writer's areas, where the magazine records what they cover (D-228) */}
+                    {avatar.user.areas.length > 0 && (
+                      <p className="text-xs text-muted">Alanları: {avatar.user.areas.join(", ")}</p>
+                    )}
                     <p className="mt-1 text-xs text-muted">
                       Hesap:{" "}
                       <Link href={`/admin/users/${avatar.user.id}`} className="underline">
@@ -127,8 +131,16 @@ export default async function TeamAvatarsPage({
                         <dt className="text-muted">Ekip sayfasında</dt>
                         <dd className="text-ink">
                           {TEAM_BYLINE_LABELS[avatar.form.teamByline ?? ""] ?? "—"}
-                          {avatar.form.teamByline === "pen_name" && avatar.user.penName === null && (
-                            <span className="text-danger"> (mahlası yok)</span>
+                          {/* The name that choice lands on, not only the preference (D-229) */}
+                          {teamBylineName(avatar.form.teamByline, avatar.user) !== null ? (
+                            <span className="text-muted">
+                              {" "}
+                              ({teamBylineName(avatar.form.teamByline, avatar.user)})
+                            </span>
+                          ) : (
+                            avatar.form.teamByline === "pen_name" && (
+                              <span className="text-danger"> (mahlası yok)</span>
+                            )
                           )}
                         </dd>
                       </div>
