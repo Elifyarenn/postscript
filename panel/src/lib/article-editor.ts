@@ -12,13 +12,20 @@
 import type { ArticleStatus } from "@/db/schema";
 
 /** An area and the editor holding it, as `listEditorAreasWithHolders` returns. */
-export type AreaEditor = { name: string; holderEditorName: string | null };
+export type AreaEditor = {
+  name: string;
+  holderEditorId: string | null;
+  holderEditorName: string | null;
+};
+
+/** Whoever the article is with, named and identified (D-233). */
+export type Person = { id: string; displayName: string };
 
 export type ArticleEditor =
   /** The category editor the article lands on. */
-  | { kind: "editor"; name: string }
+  | { kind: "editor"; id: string; name: string }
   /** The second stage: the main editor, who may not be appointed yet. */
-  | { kind: "main"; name: string | null }
+  | { kind: "main"; person: Person | null }
   /** The article has an area, but nobody holds it. */
   | { kind: "unassigned" }
   /** No category yet, so the article is routed to nobody. */
@@ -32,11 +39,11 @@ function key(name: string): string {
 export function editorForArticle(
   article: { category: string | null; status: ArticleStatus },
   areas: readonly AreaEditor[],
-  mainEditorName: string | null,
+  mainEditor: Person | null,
 ): ArticleEditor {
   // The second stage is the main editor's whatever the area is (D-059)
   if (article.status === "pending_admin_approval") {
-    return { kind: "main", name: mainEditorName };
+    return { kind: "main", person: mainEditor };
   }
 
   const category = article.category?.trim();
@@ -45,7 +52,7 @@ export function editorForArticle(
   const area = areas.find((candidate) => key(candidate.name) === key(category));
   // An unknown area name and an area with no editor read the same to a reader
   // of the list: nobody is responsible for this article yet
-  if (!area?.holderEditorName) return { kind: "unassigned" };
+  if (!area?.holderEditorName || !area.holderEditorId) return { kind: "unassigned" };
 
-  return { kind: "editor", name: area.holderEditorName };
+  return { kind: "editor", id: area.holderEditorId, name: area.holderEditorName };
 }

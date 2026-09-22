@@ -92,16 +92,17 @@ export async function listEditorAreasWithHolders(): Promise<EditorAreaRow[]> {
 }
 
 /**
- * The main editor's name, for the queue waiting on their second approval
- * (D-152). Null when nobody carries the flag yet.
+ * The main editor, for the queue waiting on their second approval (D-152).
+ * Null when nobody carries the flag yet. The id comes along so the list can
+ * lead to their account (D-233).
  */
-export async function getMainEditorName(): Promise<string | null> {
+export async function getMainEditor(): Promise<{ id: string; displayName: string } | null> {
   const rows = await db
-    .select({ displayName: users.displayName })
+    .select({ id: users.id, displayName: users.displayName })
     .from(users)
     .where(and(eq(users.isMainEditor, true), isNull(users.deletedAt)))
     .limit(1);
-  return rows[0]?.displayName ?? null;
+  return rows[0] ?? null;
 }
 
 /** The areas an editor already holds, keyed by slot. */

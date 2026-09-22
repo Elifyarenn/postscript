@@ -9051,3 +9051,34 @@ rozetli. İşareti geri almak da mümkün.
 üye değiştirince üste dönüp `updatedSince` olması, işaretin geri alınması,
 işaretin `updated_at`'i kirletmemesi ve yalnızca yöneticiye açık olması.
 Kapı: typecheck, lint, test, build.
+
+
+## D-233 — Yazı kuyruğunda editör adı hesabına gider
+
+**İstek (ürün sahibi):** "yazılar kuyruğu sayfasından editörlerin de
+hesaplarına gidebileyim."
+
+**Bulgu:** `/editor/articles` listesinde "Editör" sütunu düz metindi. Yazar
+sütunu D-209'dan beri linkli; editörünki değildi, çünkü `editorForArticle`
+yalnızca **ad** taşıyordu. Kimlik zaten veritabanından geliyordu
+(`listEditorAreasWithHolders` `holderEditorId` döndürüyor), yalnızca hücreye
+kadar taşınmıyordu.
+
+**Karar:** Kimlik hücreye kadar taşındı. `ArticleEditor`'ın iki dalı da artık
+kimlik içeriyor; `getMainEditorName` yerini `getMainEditor`'a bıraktı ve ad
+yerine `{ id, displayName }` döndürüyor.
+
+**Bağlantı yalnızca yöneticiye çıkıyor.** Hesap sayfaları
+(`/admin/users/<id>`) yöneticinin; editöre link vermek açamayacağı bir kapıyı
+göstermek olurdu. Editör aynı sayfada adı düz metin olarak görüyor.
+
+**Yazar profiline, editör hesabına gidiyor** — biri okurun da görebileceği
+profil (D-209), öbürü yönetim kaydı. İkisi farklı şeyler; aynı sütunda
+buluşmaları gerekmiyor.
+
+**Kimliksiz bir isim "atanmamış" sayılıyor:** veritabanının üretmediği bir
+durum, ama hücrenin hiçbir yere gitmeyen bir link kurmaması için kural
+yazıldı ve testi var.
+
+**Doğrulama:** `article-editor.test.ts` kimlikle güncellendi, kimliksiz ad
+durumu için yeni bir test eklendi. Kapı: typecheck, lint, test, build.

@@ -7,7 +7,7 @@ import { listArticles } from "@/services/articles";
 import { listIssues } from "@/services/issues";
 import {
   getEditorAssignment,
-  getMainEditorName,
+  getMainEditor,
   listEditorAreasWithHolders,
 } from "@/services/editor-categories";
 import { editorForArticle, type ArticleEditor } from "@/lib/article-editor";
@@ -34,15 +34,29 @@ import { createArticleAction } from "../actions";
 
 export const metadata = { title: "Kategoriye düşen yazılar" };
 
-/** The "Editör" cell: whose desk the article is on right now (D-152). */
-function EditorCell({ routed }: { routed: ArticleEditor }) {
+/**
+ * The "Editör" cell: whose desk the article is on right now (D-152). The
+ * name leads to the account, but only for an admin — the account pages are
+ * theirs, and an editor would be handed a link they cannot open (D-233).
+ */
+function EditorCell({ routed, canOpenAccounts }: { routed: ArticleEditor; canOpenAccounts: boolean }) {
+  const named = (id: string, name: string) =>
+    canOpenAccounts ? (
+      <Link href={`/admin/users/${id}`} className="hover:text-accent hover:underline">
+        {name}
+      </Link>
+    ) : (
+      <>{name}</>
+    );
+
   switch (routed.kind) {
     case "editor":
-      return <>{routed.name}</>;
+      return named(routed.id, routed.name);
     case "main":
-      return routed.name ? (
+      return routed.person ? (
         <>
-          {routed.name} <span className="text-muted">· ana editör</span>
+          {named(routed.person.id, routed.person.displayName)}{" "}
+          <span className="text-muted">· ana editör</span>
         </>
       ) : (
         <span className="text-warning">Ana editör atanmamış</span>
@@ -70,7 +84,7 @@ export default async function EditorArticlesPage({
     ? (filters.status as ArticleStatus)
     : undefined;
 
-  const [articles, issues, writers, areas, mainEditorName] = await Promise.all([
+  const [articles, issues, writers, areas, mainEditor] = await Promise.all([
     listArticles(actor, {
       status,
       issueId: filters.issueId,
@@ -87,7 +101,7 @@ export default async function EditorArticlesPage({
       .orderBy(users.displayName),
     // Which editor holds which area, so the list can say where a yazı went
     listEditorAreasWithHolders(),
-    getMainEditorName(),
+    getMainEditor(),
   ]);
 
   return (
@@ -198,7 +212,7 @@ export default async function EditorArticlesPage({
                     </Td>
                     <Td className="text-xs">{article.category ?? "—"}</Td>
                     <Td className="text-xs">
-                      <EditorCell routed={editorForArticle(article, areas, mainEditorName)} />
+                      <EditorCell routed={editorForArticle(article, areas, mainEditor)} canOpenAccounts={isAdmin} />
                     </Td>
                     <Td>
                       <StatusBadge status={article.status} />
