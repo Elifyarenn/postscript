@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { guardAdminWithinEditor } from "@/lib/auth/guard";
 import { listIssueArticles, listIssues } from "@/services/issues";
 import { listMedia } from "@/services/media";
@@ -87,7 +88,22 @@ export default async function EditorIssuesPage() {
                 <h2 className="font-serif text-lg">
                   Sayı {issue.number} · {issue.title}
                 </h2>
-                <StatusBadge status={issue.status} />
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusBadge status={issue.status} />
+                  {/* Where the issue is laid out page by page (D-234) */}
+                  <Link
+                    href={`/editor/issues/${issue.id}/sayfalar`}
+                    className="rounded-md border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:bg-paper"
+                  >
+                    Sayfalar
+                  </Link>
+                  <Link
+                    href={`/magazine/issues/${issue.number}/oku`}
+                    className="rounded-md border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:bg-paper"
+                  >
+                    Okuyucuda önizle
+                  </Link>
+                </div>
               </div>
 
               <div className="grid gap-6 lg:grid-cols-2">

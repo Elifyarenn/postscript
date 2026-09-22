@@ -2,7 +2,9 @@ import Link from "next/link";
 import { ArrowRight, Heart } from "lucide-react";
 import issuesBanner from "@/assets/design/banner-issues.webp";
 import { requireSession } from "@/lib/auth/guard";
+import { canAccessEditorPanel } from "@/lib/auth/rbac";
 import { listPublishedIssues } from "@/services/public";
+import { listIssues } from "@/services/issues";
 import { SiteBanner, Sparkle } from "@/components/site-ui";
 import { IssueCountdown } from "@/components/issue-countdown";
 import { formatReleaseMoment } from "@/lib/countdown";
@@ -26,8 +28,15 @@ const PLACEHOLDER_SLOTS = [1, 2, 3];
  * yet, so the heart is drawn without a count (D-116).
  */
 export default async function IssuesPage() {
-  await requireSession();
+  const { user } = await requireSession();
   const issues = await listPublishedIssues();
+
+  // Issues still being put together are the team's business only; a reader
+  // never sees them here and cannot reach them by guessing a number either,
+  // because the issue's own pages refuse (D-234)
+  const drafts = canAccessEditorPanel({ ...user })
+    ? (await listIssues({ ...user })).filter((issue) => issue.status !== "published" && issue.status !== "archived")
+    : [];
   // The countdown stays until the issue is published, then the issue's own card takes over
   const release = issues.some((issue) => issue.number === UPCOMING_ISSUE)
     ? null
@@ -53,6 +62,26 @@ export default async function IssuesPage() {
           title={release.title}
           momentText={formatReleaseMoment(release.at)}
         />
+      )}
+
+      {drafts.length > 0 && (
+        <section className="issues-section" aria-labelledby="drafts-title">
+          <div className="site-section-head">
+            <h2 id="drafts-title" className="site-caps-title fit-line">
+              Hazırlanan sayılar
+            </h2>
+          </div>
+          <p className="issue-blurb-empty">Yalnızca dergi ekibine görünür.</p>
+          <div className="issue-drafts">
+            {drafts.map((issue) => (
+              <Link key={issue.id} href={`/magazine/issues/${issue.number}`} className="issue-draft">
+                <p className="issue-draft-number">Sayı {formatIssueNumber(issue.number)}</p>
+                <p className="issue-draft-title">{issue.theme ?? issue.title}</p>
+                <p className="issue-draft-state">Hazırlanıyor</p>
+              </Link>
+            ))}
+          </div>
+        </section>
       )}
 
       <section id="one-cikan-sayilar" className="issues-section" aria-labelledby="issues-title">

@@ -9082,3 +9082,73 @@ yazıldı ve testi var.
 
 **Doğrulama:** `article-editor.test.ts` kimlikle güncellendi, kimliksiz ad
 durumu için yeni bir test eklendi. Kapı: typecheck, lint, test, build.
+
+
+## D-234 — Dergi, sayfa sayfa: okuyucu ve sayı hazırlama
+
+**İstek (ürün sahibi):** Mevcut siteye entegre, PDF'siz bir dergi deneyimi:
+sayının sayfalarını web bileşenlerinden kuran bir okuyucu, boş ama tasarlanmış
+şablonlar ve sayıyı panelden hazırlama akışı. İçerik henüz yok; şimdilik
+sonradan doldurulacak boş sayfalar isteniyor.
+
+**PDF yok, sayfa var.** Sayfa bir dosya değil, bir yerleşim artı o yerleşimin
+istediği sözler ve görseller: metin seçilebilir kalıyor, görseller ayrı
+öğeler, her sayfa sıradan işaretlemeden oluşuyor. `issue_pages` tablosu bunu
+tutuyor; on altı yerleşim `page_template` enum'unda, etiketleri ve hangi
+alanları istedikleri `src/lib/issue-templates.ts`'te.
+
+**Her alan isteğe bağlı**, bilerek: bir sayının biçimi içeriği yazılmadan önce
+tasarlanıyor ve boş bir sayfanın da bakmaya değer olması gerekiyor. Boş alan
+önizlemede "[Başlık]", "[Metin alanı]" gibi işaretli bir boşluk olarak
+görünüyor — uydurma metin değil, titreşen iskelet de değil; yayımlanmış
+görünümde boş isteğe bağlı blok hiç basılmıyor.
+
+**Erişim kuralı sayfada değil serviste.** `readIssuePages` tek kapı: yayımlanmış
+sayı oturumu olan her okura açık, yayımlanmamış sayı yalnızca editör paneline;
+başka herkese **404** — eksik bir sayının verdiği yanıtın aynısı, yani sayının
+varlığı bile doğrulanmıyor. Paylaşım bağlantısı, arama ya da sayfa verisi
+üzerinden sızmıyor. Testi var.
+
+**Bağlı yazıya dokunulmuyor.** Bir sayfa var olan bir yazıya bağlanabiliyor;
+bu yazının metnini de durumunu da değiştirmiyor. Yayımlanmamış bir yazının
+gövdesi okurun kopyasına hiç girmiyor (panelde önizleyen editör görebiliyor,
+çünkü dizdiği şey o). İkisinin de testi var.
+
+**Okuyucu:** geniş ekranda yan yana iki sayfa, ortada tek sayfa, telefonda aynı
+içerik tek sütun — küçültülmüş sayfa değil. Yalnızca ekrandaki sayfalar
+monte ediliyor, yani bir sayının bütün görselleri açılışta inmiyor. Klavye
+(ok tuşları, Home/End, Escape) yazarken ve metin seçerken devreye girmiyor.
+Tam ekran destekleniyor, desteklenmediğinde okuyucu olduğu yerde kalıyor.
+
+**Kaldığı yer hatırlanıyor ama zorlanmıyor:** yerel kayıttan okunan sayfa
+"Kaldığınız yerden devam edin" düğmesi olarak öneriliyor. Kendiliğinden
+zıplamak, okuyanın altından sayfa çekmek olurdu. Adres satırındaki `?s=<sayfa>`
+ise doğrudan açıyor — o bir prop olduğu için sunucu ve tarayıcı aynı ilk
+sayfayı çiziyor, `useSyncExternalStore` de yerel kaydı render sırasında state
+yazmadan okuyor.
+
+**Sıralama sürükle-bırak değil, düğme.** Yukarı/aşağı düğmeleri klavyeyle de
+çalışıyor; erişilebilir bir alternatif aramak yerine baştan erişilebilir olan
+seçildi. Kaldırma sonrası numaralar sıkıştırılıyor, yani 1..n hiç bozulmuyor.
+
+**Kategoriler mevcut kaynaktan:** bölüm alanı `writer_areas`'tan geliyor, yeni
+bir kategori listesi üretilmedi. Seçki ve çalma listesi de `issue-extras`'tan;
+ikinci bir kopya tutulmuyor.
+
+**Sayı 01 taslak olarak kuruldu.** Üretimde hiç sayı kaydı yoktu; ana sayfanın
+yıllardır bastığı sabit metinle aynı değerlerle (Obsession · Bırakamadıklarımız)
+`planning` durumunda bir sayı ve on altı boş sayfa açıldı. `pnpm
+seed-issue-pages` tekrar çalıştırılabilir: eksik yerleşimi ekler, var olan
+sayfaya dokunmaz, ikinci bir sayı oluşturmaz. **Hiçbir şey yayımlanmadı** —
+ana sayfa yalnızca *yayımlanmış* bir sayıya geçtiği için görünümü değişmedi.
+
+**Doğrulama:** 13 entegrasyon testi (okurun taslağı görememesi, editörün
+önizlemesi, sıralamanın sıkışması, kenar durumlarında taşımanın hata vermemesi,
+kopyanın yazı bağını taşımaması, yazının değişmemesi, yayımlanmamış gövdenin
+sızmaması, bilinmeyen yerleşim ve bloğun reddi) ve 8 birim testi (yerleşim
+listesinin enum ile bire bir olması, yarım bloğun hazır sayılmaması).
+Kapı: typecheck, lint, test, build. Migration `0043_issue_pages.sql` üretime
+koddan önce uygulandı (D-079).
+
+**Kalan:** Kapak görseli yüklenmedi; kapak sayfası tipografik yer tutucu olarak
+duruyor, çünkü bu sayı için tanımlanmış bir kapak görseli yok.

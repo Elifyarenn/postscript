@@ -128,6 +128,30 @@ export const grantStatusEnum = pgEnum("grant_status", ["pending", "signed", "dec
 /** How the author is credited on a given work (§7, contract art. 7). */
 export const bylineChoiceEnum = pgEnum("byline_choice", ["real_name", "pen_name"]);
 
+/**
+ * The page layouts an issue is built from (D-234). Labels and the fields each
+ * one asks for live in `src/lib/issue-templates.ts`; this list only fixes the
+ * stored values.
+ */
+export const pageTemplateEnum = pgEnum("page_template", [
+  "cover",
+  "masthead",
+  "editorial",
+  "contents",
+  "theme_opening",
+  "section_opening",
+  "article_opening",
+  "article_continued",
+  "visual_article",
+  "collage_opening",
+  "full_bleed",
+  "picks",
+  "playlist",
+  "interactive",
+  "ps_closing",
+  "back_cover",
+]);
+
 /** The twelve signs, for the team form (D-226); labels live in `src/lib/zodiac.ts`. */
 export const zodiacEnum = pgEnum("zodiac", [
   "aries",
@@ -764,6 +788,60 @@ export const issues = pgTable(
     deletedAt: deletedAt(),
   },
   (t) => [uniqueIndex("issues_number_unique").on(t.number).where(sql`${t.deletedAt} is null`)],
+);
+
+/**
+ * The pages an issue is laid out from (D-234).
+ *
+ * A page is a layout plus the words and pictures that layout asks for, not a
+ * file: the magazine is read as web pages, so the text stays selectable and
+ * the pictures stay separate things. A page may instead point at an article
+ * that already exists, and then it shows that article's own words — linking
+ * one never changes the article or its status.
+ *
+ * Every field is optional on purpose: the shape of an issue is designed before
+ * its contents exist, and an empty page still has to be worth looking at.
+ */
+export const issuePages = pgTable(
+  "issue_pages",
+  {
+    id: id(),
+    issueId: uuid("issue_id")
+      .notNull()
+      .references(() => issues.id, { onDelete: "cascade" }),
+    /** Order within the issue, dense from 1; the service keeps it that way. */
+    position: integer("position").notNull(),
+    template: pageTemplateEnum("template").notNull(),
+
+    /** What the contents page calls this page; falls back to the heading. */
+    tocTitle: text("toc_title"),
+    /** Kept out of the contents when the page is a divider or a picture. */
+    inContents: boolean("in_contents").notNull().default(true),
+
+    heading: text("heading"),
+    /** The standfirst the design sets under a heading. */
+    standfirst: text("standfirst"),
+    byline: text("byline"),
+    body: text("body"),
+
+    imageMediaId: uuid("image_media_id").references(() => media.id, { onDelete: "set null" }),
+    caption: text("caption"),
+
+    /** An article this page shows instead of its own body; never modified by us. */
+    articleId: uuid("article_id").references(() => articles.id, { onDelete: "set null" }),
+    /** The area this page belongs to, by name, as `writer_areas` spells it. */
+    section: text("section"),
+
+    /** Optional interaction blocks, validated by `issuePageBlocksSchema`. */
+    blocks: jsonb("blocks").notNull().default(sql`'[]'::jsonb`),
+
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("issue_pages_issue_position_idx").on(t.issueId, t.position),
+    uniqueIndex("issue_pages_issue_position_unique").on(t.issueId, t.position),
+  ],
 );
 
 /* ------------------------------------------------------------------ */
@@ -1532,6 +1610,7 @@ export type NewUser = typeof users.$inferInsert;
 export type Session = typeof sessions.$inferSelect;
 export type Article = typeof articles.$inferSelect;
 export type Issue = typeof issues.$inferSelect;
+export type IssuePage = typeof issuePages.$inferSelect;
 export type RightsGrant = typeof rightsGrants.$inferSelect;
 export type WriterApplication = typeof writerApplications.$inferSelect;
 export type MediaRow = typeof media.$inferSelect;

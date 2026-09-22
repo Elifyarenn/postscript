@@ -21,6 +21,7 @@
     "send-reminders": "tsx --tsconfig scripts/tsconfig.json scripts/send-reminders.ts",
     "process-deletions": "tsx --tsconfig scripts/tsconfig.json scripts/process-deletions.ts",
     "purge-unverified": "tsx --tsconfig scripts/tsconfig.json scripts/purge-unverified.ts",
+    "seed-issue-pages": "tsx --tsconfig scripts/tsconfig.json scripts/seed-issue-pages.ts",
     "redraw-team-avatars": "tsx --tsconfig scripts/tsconfig.json scripts/redraw-team-avatars.ts",
     "prune-community": "tsx --tsconfig scripts/tsconfig.json scripts/prune-community.ts",
     "housekeeping": "tsx --tsconfig scripts/tsconfig.json scripts/housekeeping.ts"

@@ -232,3 +232,28 @@ export function ActionButton({
     </form>
   );
 }
+
+/**
+ * The feedback and the submit button of a form that manages its own action
+ * state — a page-layout form, say, where the fields are built by hand (D-234).
+ */
+export function SubmitRow({
+  state,
+  label,
+  variant = "primary",
+}: {
+  state: ActionState;
+  label: string;
+  variant?: "primary" | "secondary" | "danger";
+}) {
+  return (
+    <div className="space-y-3">
+      {state?.error && <Alert tone="danger">{state.error}</Alert>}
+      {state?.success && <Alert tone="success">{state.success}</Alert>}
+      {state?.fieldErrors && <FieldErrors fieldErrors={state.fieldErrors} />}
+      <div className="flex items-center gap-3 pt-1">
+        <SubmitButton variant={variant}>{label}</SubmitButton>
+      </div>
+    </div>
+  );
+}

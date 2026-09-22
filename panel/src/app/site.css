@@ -4582,3 +4582,892 @@ html:has(.profile-editor[open]) {
 .ps-site .profile-editor-status:empty {
   margin: 0;
 }
+
+/* ════════════════ The magazine reader (D-234) ════════════════ */
+
+.ps-site .reader {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  background: var(--site-wine);
+  color: var(--site-paper);
+}
+
+.ps-site .reader:fullscreen {
+  height: 100vh;
+}
+
+.ps-site .reader-bar {
+  position: sticky;
+  z-index: 3;
+  top: 0;
+  display: grid;
+  align-items: center;
+  padding: 0.55rem clamp(0.6rem, 2vw, 1.2rem);
+  border-bottom: 1px solid rgb(222 210 199 / 0.25);
+  background: var(--site-strip);
+  gap: 0.75rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.ps-site .reader-bar-side {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ps-site .reader-bar-end {
+  justify-content: flex-end;
+}
+
+.ps-site .reader-icon {
+  display: grid;
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: inherit;
+  cursor: pointer;
+  place-items: center;
+}
+
+.ps-site .reader-icon:hover,
+.ps-site .reader-icon:focus-visible {
+  border-color: rgb(222 210 199 / 0.5);
+}
+
+.ps-site .reader-icon svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.ps-site .reader-title {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.ps-site .reader-issue {
+  font-size: 0.68rem;
+  letter-spacing: 0.22em;
+  opacity: 0.75;
+  text-transform: uppercase;
+}
+
+.ps-site .reader-name {
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+}
+
+.ps-site .reader-flag {
+  padding: 0.1rem 0.45rem;
+  border: 1px solid rgb(222 210 199 / 0.5);
+  border-radius: 999px;
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* The contents drawer */
+.ps-site .reader-contents {
+  position: sticky;
+  z-index: 2;
+  top: 3.2rem;
+  max-height: 60vh;
+  padding: 1rem clamp(0.8rem, 3vw, 2rem) 1.4rem;
+  border-bottom: 1px solid rgb(222 210 199 / 0.25);
+  background: var(--site-night);
+  overflow-y: auto;
+}
+
+.ps-site .reader-contents-title {
+  margin-bottom: 0.7rem;
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 0.75rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.ps-site .reader-contents ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ps-site .reader-contents li + li {
+  border-top: 1px solid rgb(222 210 199 / 0.15);
+}
+
+.ps-site .reader-contents button {
+  display: flex;
+  width: 100%;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  color: inherit;
+  cursor: pointer;
+  gap: 1rem;
+  text-align: left;
+}
+
+.ps-site .reader-contents button:hover,
+.ps-site .reader-contents button:focus-visible {
+  color: #fff;
+}
+
+.ps-site .reader-contents button[aria-current] {
+  font-weight: 600;
+}
+
+.ps-site .reader-contents-page {
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+.ps-site .reader-contents-empty {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+/* The stage the pages stand on */
+.ps-site .reader-stage {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(0.8rem, 2.5vw, 2rem);
+  gap: clamp(0.6rem, 1.6vw, 1.6rem);
+}
+
+.ps-site .reader-flow {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 0.8rem;
+  gap: 0.8rem;
+}
+
+.ps-site .page-sheet {
+  position: relative;
+  display: flex;
+  width: min(42rem, 100%);
+  max-width: 42rem;
+  flex-direction: column;
+  padding: clamp(1.4rem, 3vw, 2.6rem);
+  background: var(--site-paper);
+  color: var(--site-ink);
+  overflow: hidden;
+}
+
+.ps-site .reader-stage .page-sheet {
+  aspect-ratio: 3 / 4;
+  max-height: calc(100vh - 11rem);
+  overflow-y: auto;
+}
+
+.ps-site .reader-stage[data-spread] .page-sheet {
+  width: min(32rem, 50%);
+}
+
+.ps-site .page-sheet[data-bleed] {
+  padding: 0;
+}
+
+.ps-site .page-folio {
+  position: absolute;
+  right: 1rem;
+  bottom: 0.7rem;
+  font-size: 0.7rem;
+  opacity: 0.5;
+}
+
+.ps-site .page-sheet[data-bleed] .page-folio {
+  color: var(--site-paper);
+  mix-blend-mode: difference;
+}
+
+/* Words on a page */
+.ps-site .page-heading {
+  margin-bottom: 0.6rem;
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: clamp(1.5rem, 3.4vw, 2.3rem);
+  line-height: 1.12;
+}
+
+.ps-site .page-standfirst {
+  margin-bottom: 0.9rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+.ps-site .page-byline {
+  margin-bottom: 1.1rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.ps-site .page-section-name {
+  margin-bottom: 0.5rem;
+  color: var(--site-wine);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.ps-site .page-running-head {
+  margin-bottom: 1rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--color-line);
+  font-size: 0.66rem;
+  letter-spacing: 0.2em;
+  opacity: 0.6;
+  text-transform: uppercase;
+}
+
+.ps-site .page-body {
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+.ps-site .page-body > * + * {
+  margin-top: 0.8rem;
+}
+
+.ps-site .page-body h2,
+.ps-site .page-body h3 {
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 1.1rem;
+}
+
+.ps-site .page-gap {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border: 1px dashed var(--color-line);
+  color: var(--site-muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+}
+
+.ps-site .page-column {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+/* Pictures */
+.ps-site .page-frame {
+  margin: 0.9rem 0 0;
+  border: 1px solid var(--color-line);
+}
+
+.ps-site .page-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.ps-site .page-frame figcaption {
+  padding: 0.4rem 0.55rem;
+  border-top: 1px solid var(--color-line);
+  font-size: 0.72rem;
+  opacity: 0.75;
+}
+
+.ps-site .page-frame-empty {
+  display: grid;
+  min-height: 9rem;
+  border-style: dashed;
+  place-items: center;
+}
+
+/* Cover and back cover */
+.ps-site .page-cover {
+  position: relative;
+  display: flex;
+  min-height: 100%;
+  flex: 1;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: clamp(1.4rem, 3vw, 2.6rem);
+  background: var(--site-night);
+  color: var(--site-paper);
+  gap: 1rem;
+}
+
+.ps-site .page-cover-art {
+  position: absolute;
+  z-index: 0;
+  border: 0;
+  inset: 0;
+  opacity: 0.55;
+}
+
+.ps-site .page-cover-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ps-site .page-cover-words {
+  position: relative;
+  z-index: 1;
+}
+
+.ps-site .page-cover-mark {
+  margin-bottom: 0.5rem;
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 0.8rem;
+  letter-spacing: 0.4em;
+  text-transform: lowercase;
+}
+
+.ps-site .page-cover .page-heading,
+.ps-site .page-cover .page-standfirst {
+  color: var(--site-paper);
+}
+
+.ps-site .page-cover .page-heading {
+  font-size: clamp(2rem, 6vw, 3.4rem);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ps-site .page-back {
+  justify-content: center;
+  text-align: center;
+}
+
+/* Theme and section openings */
+.ps-site .page-theme,
+.ps-site .page-section {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.ps-site .page-theme .page-heading {
+  font-size: clamp(2rem, 5.5vw, 3rem);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Full bleed */
+.ps-site .page-bleed {
+  position: relative;
+  display: flex;
+  flex: 1;
+}
+
+.ps-site .page-bleed-art {
+  margin: 0;
+  border: 0;
+  flex: 1;
+}
+
+.ps-site .page-bleed-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ps-site .page-bleed-words {
+  position: absolute;
+  right: 1.2rem;
+  bottom: 1.4rem;
+  left: 1.2rem;
+  color: var(--site-paper);
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 1.3rem;
+  text-shadow: 0 1px 12px rgb(0 0 0 / 0.5);
+}
+
+/* Visual-led and collage layouts */
+.ps-site .page-visual {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ps-site .page-visual-art {
+  margin: 0;
+}
+
+.ps-site .page-collage {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ps-site .page-collage-star {
+  position: absolute;
+  top: -0.2rem;
+  right: 0.4rem;
+  width: 1.4rem;
+  height: 1.4rem;
+  background: var(--site-wine);
+  clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  opacity: 0.8;
+}
+
+.ps-site .page-collage-rule {
+  position: absolute;
+  top: 2.2rem;
+  left: -1.2rem;
+  width: 4.5rem;
+  height: 1px;
+  background: var(--site-wine);
+  opacity: 0.6;
+}
+
+.ps-site .page-collage-art {
+  transform: rotate(-1.2deg);
+}
+
+/* Contents, picks, masthead */
+.ps-site .page-contents-note,
+.ps-site .page-block-empty {
+  padding: 0.5rem 0.7rem;
+  border: 1px dashed var(--color-line);
+  color: var(--site-muted);
+  font-size: 0.78rem;
+}
+
+.ps-site .page-picks ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ps-site .page-picks li + li {
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--color-line);
+}
+
+.ps-site .page-picks-kind {
+  color: var(--site-wine);
+  font-size: 0.62rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.ps-site .page-picks-title {
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 1rem;
+}
+
+.ps-site .page-picks-text {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+/* Blocks */
+.ps-site .page-blocks > * {
+  margin-top: 1rem;
+}
+
+.ps-site .page-quote {
+  margin: 1.2rem 0;
+  padding-left: 1rem;
+  border-left: 2px solid var(--site-wine);
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 1.15rem;
+  line-height: 1.4;
+}
+
+.ps-site .page-quote cite {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.72rem;
+  font-style: normal;
+  letter-spacing: 0.14em;
+  opacity: 0.7;
+  text-transform: uppercase;
+}
+
+.ps-site .page-aside button,
+.ps-site .page-media button,
+.ps-site .page-zoom button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.ps-site .page-aside {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--color-line);
+  font-size: 0.85rem;
+}
+
+.ps-site .page-aside svg {
+  width: 1rem;
+  height: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.ps-site .page-aside svg[data-open] {
+  transform: rotate(180deg);
+}
+
+.ps-site .page-aside p {
+  margin-top: 0.5rem;
+  line-height: 1.55;
+}
+
+.ps-site .page-zoom button {
+  position: relative;
+  display: block;
+}
+
+.ps-site .page-zoom img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--color-line);
+  transition: transform 0.25s ease;
+}
+
+.ps-site .page-zoom img[data-open] {
+  transform: scale(1.35);
+}
+
+.ps-site .page-zoom-hint {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.45rem;
+  background: var(--site-strip);
+  color: var(--site-paper);
+  font-size: 0.68rem;
+  gap: 0.3rem;
+}
+
+.ps-site .page-zoom-hint svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.ps-site .page-gallery img {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--color-line);
+}
+
+.ps-site .page-gallery-dots {
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem 0;
+  gap: 0.4rem;
+}
+
+.ps-site .page-gallery-dots button {
+  width: 0.5rem;
+  height: 0.5rem;
+  border: 1px solid var(--site-wine);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.ps-site .page-gallery-dots button[aria-current] {
+  background: var(--site-wine);
+}
+
+.ps-site .page-media button {
+  justify-content: center;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid var(--site-wine);
+  color: var(--site-wine);
+}
+
+.ps-site .page-media audio,
+.ps-site .page-media video {
+  width: 100%;
+}
+
+.ps-site .page-quiz {
+  padding: 0.8rem;
+  border: 1px solid var(--color-line);
+}
+
+.ps-site .page-quiz-question {
+  margin-bottom: 0.6rem;
+  font-weight: 600;
+}
+
+.ps-site .page-quiz ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ps-site .page-quiz li + li {
+  margin-top: 0.35rem;
+}
+
+.ps-site .page-quiz li button {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--color-line);
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.ps-site .page-quiz li button[data-state="right"] {
+  border-color: var(--site-wine);
+  background: var(--site-wine);
+  color: var(--site-paper);
+}
+
+.ps-site .page-quiz li button[data-state="wrong"] {
+  opacity: 0.5;
+}
+
+.ps-site .page-quiz-note {
+  margin-top: 0.6rem;
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+.ps-site .page-playlist ol,
+.ps-site .page-related {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ps-site .page-playlist li {
+  display: grid;
+  padding: 0.25rem 0;
+  font-size: 0.82rem;
+  gap: 0.5rem;
+  grid-template-columns: 1.8rem 1fr auto;
+}
+
+.ps-site .page-playlist small {
+  display: block;
+  opacity: 0.7;
+}
+
+.ps-site .page-playlist-name {
+  margin-bottom: 0.4rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.ps-site .page-related a {
+  color: var(--site-wine);
+  text-decoration: underline;
+}
+
+/* The foot: paging and progress */
+.ps-site .reader-foot {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem clamp(0.6rem, 2vw, 1.2rem);
+  border-top: 1px solid rgb(222 210 199 / 0.25);
+  background: var(--site-strip);
+  gap: 0.8rem;
+}
+
+.ps-site .reader-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid rgb(222 210 199 / 0.5);
+  color: inherit;
+  cursor: pointer;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+}
+
+.ps-site .reader-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.ps-site .reader-button svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.ps-site .reader-progress {
+  position: relative;
+  width: min(18rem, 40vw);
+  height: 2px;
+  background: rgb(222 210 199 / 0.3);
+}
+
+.ps-site .reader-progress span {
+  display: block;
+  height: 100%;
+  background: var(--site-paper);
+  transition: width 0.25s ease;
+}
+
+.ps-site .reader-count {
+  min-width: 5rem;
+  font-size: 0.78rem;
+  opacity: 0.8;
+  text-align: center;
+}
+
+.ps-site .reader-empty {
+  display: grid;
+  min-height: 60vh;
+  padding: 2rem;
+  gap: 1rem;
+  place-content: center;
+  text-align: center;
+}
+
+/* On a phone the issue becomes one readable column, not a shrunken page */
+.ps-site .reader[data-flow] .page-sheet {
+  width: 100%;
+  max-width: none;
+  aspect-ratio: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ps-site .page-zoom img,
+  .ps-site .reader-progress span,
+  .ps-site .page-aside svg {
+    transition: none;
+  }
+}
+
+.ps-site .reader-resume {
+  padding: 0.5rem 1rem 0;
+  text-align: center;
+}
+
+.ps-site .reader-resume button {
+  padding: 0.3rem 0.8rem;
+  border: 1px solid rgb(222 210 199 / 0.5);
+  border-radius: 999px;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.78rem;
+}
+
+.ps-site .reader-resume button:hover,
+.ps-site .reader-resume button:focus-visible {
+  background: rgb(222 210 199 / 0.12);
+}
+
+/* ════════════════ An issue's own page (D-234) ════════════════ */
+
+.ps-site .issue-preview-note {
+  padding: 0.6rem 0.9rem;
+  border: 1px dashed var(--site-rule);
+  color: var(--site-ink);
+  font-size: 0.85rem;
+}
+
+.ps-site .issue-blurb {
+  max-width: 44rem;
+  margin-bottom: 1.1rem;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.ps-site .issue-blurb-empty {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border: 1px dashed var(--site-rule);
+  color: var(--site-muted);
+  font-size: 0.85rem;
+}
+
+.ps-site .issue-page-list {
+  max-width: 44rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ps-site .issue-page-list li + li {
+  border-top: 1px solid var(--site-rule);
+}
+
+.ps-site .issue-page-list a {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0.55rem 0;
+  gap: 1rem;
+}
+
+.ps-site .issue-page-list a:hover,
+.ps-site .issue-page-list a:focus-visible {
+  color: var(--site-wine);
+}
+
+.ps-site .issue-page-number {
+  font-size: 0.78rem;
+  opacity: 0.6;
+}
+
+/* Issues still being put together, listed for the team alone */
+.ps-site .issue-drafts {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+}
+
+.ps-site .issue-draft {
+  display: block;
+  padding: 0.9rem 1rem;
+  border: 1px dashed var(--site-rule);
+}
+
+.ps-site .issue-draft:hover,
+.ps-site .issue-draft:focus-visible {
+  border-style: solid;
+  border-color: var(--site-wine);
+}
+
+.ps-site .issue-draft-number {
+  font-size: 0.66rem;
+  letter-spacing: 0.24em;
+  opacity: 0.7;
+  text-transform: uppercase;
+}
+
+.ps-site .issue-draft-title {
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 1.05rem;
+}
+
+.ps-site .issue-draft-state {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
