@@ -9583,60 +9583,38 @@ oturumun dosyalarında), `pnpm test` **80 dosya / 819 test geçti**.
 
 ## D-241 — Çalma listesi kutusu boyunu slider'dan alır, kendi içeriğinden değil
 
-**Karar:** Geniş ekranda çalma listesi kutusunun yüksekliğini artık yanındaki
-sayı kartları slider'ı belirliyor. Şarkı listesi (`.player-track-list`) geniş
-ekranda `height: 0; flex: 1 1 0` alıyor: boyu sorma hakkını bırakıyor, kalan
-yeri dolduruyor, gerisi içinde kayıyor.
+**Karar:** Geniş ekranda (≥1000px) oynatıcının tamamı akıştan çıkarıldı.
+Gövdesi tek bir `.player-shell` kabuğuna alındı ve bu kabuk
+`position: absolute; inset: 0` ile konumlandırıldı. Mutlak konumlanmış bir
+çocuk yükseklik **istemez**; böylece satırın boyunu yalnızca yanındaki sayı
+kartları slider'ı belirliyor, kabuk o boyu birebir dolduruyor ve şarkı listesi
+kendi içinde kayıyor.
 
-**Sorun:** D-225'te kutuya `align-self: stretch` verilmişti ama `.player-tracks`
-geniş ekranda `height: auto` idi ve listede 45 şarkı vardı. `overflow-y: auto`
-bir kutuyu kaydırılabilir yapar; tarayıcı satır yüksekliğini hesaplarken o
-kutunun "içeriğim kadar uzun olmak istiyorum" demesini **engellemez**. Bu
-yüzden satırın boyunu slider değil çalma listesi belirliyordu: kutu aşağı
-doğru uzuyordu — istenenin tam tersi.
+**Sorun:** D-225'te kutuya `align-self: stretch` verilmişti ama listede 45
+şarkı vardı ve `.player-tracks` geniş ekranda `height: auto` idi.
+`overflow-y: auto` bir kutuyu kaydırılabilir yapar; tarayıcı satır
+yüksekliğini hesaplarken o kutunun "içeriğim kadar uzun olmak istiyorum"
+demesini **engellemez**. Satırın boyunu slider değil çalma listesi
+belirliyordu: kutu aşağı doğru uzuyordu — istenenin tam tersi.
 
-**Neden `height: 0`:** `flex-basis: 0` tek başına yeterli değil; kapsayıcının
-max-content hesabına öğenin içeriği yine karışabiliyor. Kesin (definite) bir
-yükseklik ise o katkıyı sıfırlar. `.player-tracks` üzerindeki
-`min-height: 7.5rem` taban olarak duruyor, yani slider beklenmedik biçimde
-kısalırsa liste yok olmuyor.
+**Önce yanlış denendi:** Listeye `height: 0; flex: 1 1 0` verildi. Yetmedi ve
+bu hâliyle canlıya çıktı. `flex-grow` taşıyan bir flex öğesi, kesin bir
+yüksekliği olsa bile kapsayıcının max-content hesabına kendi içerik boyunu
+sunmaya devam ediyor. Canlıda Playwright ile ölçülünce satır hâlâ 1965px'ti ve
+liste hiç kaymıyordu (`scrollHeight === clientHeight`, 45 şarkı). Ölçüm
+olmasaydı "düzeldi" diye rapor edilecekti. Doğru çözüm boyu küçültmek değil,
+öğeyi hesabın dışına çıkarmak.
 
-**Kapsam:** Yalnızca `@media (min-width: 1000px)` bloğu. Telefonda kutu zaten
-slider'ın altına düşüyor ve sabit 7.5rem'lik kutusuyla kayıyor (D-119, D-220).
+**Kapsam:** Yalnızca `@media (min-width: 1000px)`. Telefonda kutu zaten
+slider'ın altına düşüyor ve sabit 7.5rem'lik kutusuyla kayıyor (D-119, D-220);
+kabuk orada sade bir sarmalayıcı, yerleşim değişmiyor. Oynatıcıya
+`min-height: 20rem` taban bırakıldı: slider beklenmedik biçimde kısalırsa
+kontroller taşmasın.
 
-**Doğrulama:** Yayına alındıktan sonra canlıda Playwright ile ölçüldü —
-1280×900'de slider sütunu ile çalma listesi kutusunun yükseklikleri
-karşılaştırıldı ve listenin gerçekten kendi içinde kaydığı doğrulandı.
+**Ders:** Yerleşim iddiası ölçülmeden doğru sayılmaz. Bu oturumda aynı kutu
+için ikinci kez yanlış çıkarım yapıldı; ikisinde de "kaydırılabilir yaptım"
+demek, "boyu artık içerik belirlemiyor" demek değildi.
 
----
-
-## D-242 — Aydınlatma metni, gönderimle doğan izin ve üç görev işaretini anlatacak şekilde güncellendi
-
-**Sorun:** `CLAUDE.md`'nin ihlal edilemez kuralı, kişisel veri saklayan bir
-değişiklikte aydınlatma metninin **aynı adımda** güncellenmesini istiyor. D-238 ve
-D-239'da bu yapılmadı: metin hâlâ yalnızca çizer işaretini ve "onaylanan metnin
-SHA-256 özeti"ni anlatıyordu. Oysa artık (a) hukuk danışmanı ve asistan
-işaretleri var, (b) `rights_grants.accepted_body_markdown` ile **gönderilen
-metnin tam hâli** saklanıyor, (c) izin eser onayı ekranıyla değil gönderim
-işlemiyle doğuyor.
-
-**Yapılan (`data/kvkk-aydinlatma-metni.md`):**
-
-- §2'ye **"Yayın izni"** satırı: gönderim anındaki metnin tam hâli ve özeti,
-  yazının sürüm numarası, dayandığı sözleşme sürümü, hesap, tarih-saat, IP ve
-  tarayıcı bilgisi; yeniden gönderimde önceki beyanın kayıt olarak kalması.
-- §2'ye **"Görev işareti"** satırı: çizer, hukuk danışmanı, asistan — rol
-  olmadığı, görevi kaydettiği ve avatar oluşturucusunu açtığı yazılı. Çizer
-  ifadesi "Yazarlık" satırından buraya taşındı.
-- §2 "Sözleşme" satırı: kabul edilen metnin **tam hâlinin** de saklandığı eklendi
-  (kod `agreement_acceptances.rendered_markdown` ile bunu zaten yapıyordu, metin
-  yalnızca özetten söz ediyordu).
-- §3'e iki amaç satırı: her yazı için yayın izninin kurulması ve ispatı; görev
-  işaretinin kaydı. §4'te toplama yöntemi olarak "yazıyı editöre gönderme
-  işlemi". §7'de saklama satırları buna göre.
-
-**Yayımlanma durumu değişmedi:** canlı metin hâlâ 1. sürüm (6 Eylül). Depodaki
-tam metnin yayımlanması `[AÇIK ADRES]` yer tutucusuna bağlı ve o karar ürün
-sahibinde; bu güncelleme metni yayına hazır hâle getirmenin bir adımı.
-
-**Kod:** Değişiklik yok.
+**Doğrulama:** Yayına alındıktan sonra canlıda, 1280×900'de Playwright ile
+ölçüldü: slider ve kutu yükseklikleri ile listenin gerçekten kendi içinde
+kayması (`scrollHeight > clientHeight`).

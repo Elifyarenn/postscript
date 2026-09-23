@@ -3260,21 +3260,36 @@ html[data-playlist-open] .ps-site .topbar-note {
 
   .ps-site .issue-extras-row .player-tracks {
     height: auto;
+    min-height: 0;
   }
 
   /**
-   * The list fills what is left over; it does not decide how much there is.
+   * The player's height comes from the rail beside it, never from its own
+   * song list (D-241).
    *
-   * `overflow-y: auto` makes a box scroll, but it does not stop the box
-   * asking to be as tall as its contents when the browser works out how tall
-   * the row should be — so forty-five songs were setting the row's height and
-   * the player ran down the page instead of ending where the slider ends.
-   * A height of nothing removes that request; `flex` then hands the list
-   * every pixel the slider’s height leaves over, and the rest scrolls (D-241).
+   * `overflow-y: auto` makes a box scroll, but it does not stop that box
+   * asking to be as tall as its contents while the browser decides how tall
+   * the row should be. Forty-five songs were therefore setting the row's
+   * height and the player ran on down the page, which is the opposite of
+   * standing level with the slider. Shrinking the list did not help: a flex
+   * item still offers its content height to that calculation.
+   *
+   * So the whole player is lifted out of the flow. An absolutely positioned
+   * child asks for nothing, the row is measured from the rail alone, and the
+   * shell then fills exactly that height — with the list scrolling inside it.
    */
-  .ps-site .issue-extras-row .player-track-list {
-    height: 0;
-    flex: 1 1 0;
+  .ps-site .issue-extras-row .extra-player {
+    position: relative;
+    /* A floor, in case the rail is ever shorter than the player's controls */
+    min-height: 20rem;
+  }
+
+  .ps-site .issue-extras-row .player-shell {
+    position: absolute;
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    inset: 0;
   }
 }
 

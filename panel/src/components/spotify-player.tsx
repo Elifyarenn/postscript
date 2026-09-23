@@ -224,29 +224,34 @@ export function SpotifyPlayer({
 
   if (embedUrl && open) {
     return (
-      <div className="player-frame">
-        {bar}
-        <div className="player-embed">
-          <iframe
-            ref={frameRef}
-            src={embedUrl}
-            title={title}
-            width="100%"
-            height="352"
-            loading="lazy"
-            // The reader has already pressed play here; autoplay lets that press start the music
-            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-          />
-        </div>
-        <div className="player-deck">
-          <Turntable seated={seated} playing={playing} />
+      <div className="player-shell">
+        <div className="player-frame">
+          {bar}
+          <div className="player-embed">
+            <iframe
+              ref={frameRef}
+              src={embedUrl}
+              title={title}
+              width="100%"
+              height="352"
+              loading="lazy"
+              // The reader has already pressed play here; autoplay lets that press start the music
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+            />
+          </div>
+          <div className="player-deck">
+            <Turntable seated={seated} playing={playing} />
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <>
+    /* One shell around the whole player (D-241). Beside the rail it is taken
+       out of the flow, so the player asks for no height of its own and the
+       row is sized by the rail; the shell then fills whatever that is. */
+    <div className="player-shell">
       <div className="player-frame">
         {bar}
         <div className="player-body">
@@ -327,6 +332,6 @@ export function SpotifyPlayer({
         <span className="player-slider" aria-hidden />
         <Music aria-hidden className="player-note" />
       </div>
-    </>
+    </div>
   );
 }
