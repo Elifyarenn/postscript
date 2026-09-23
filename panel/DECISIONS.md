@@ -9610,7 +9610,7 @@ karşılaştırıldı ve listenin gerçekten kendi içinde kaydığı doğruland
 
 ---
 
-## D-240 — Aydınlatma metni, gönderimle doğan izin ve üç görev işaretini anlatacak şekilde güncellendi
+## D-242 — Aydınlatma metni, gönderimle doğan izin ve üç görev işaretini anlatacak şekilde güncellendi
 
 **Sorun:** `CLAUDE.md`'nin ihlal edilemez kuralı, kişisel veri saklayan bir
 değişiklikte aydınlatma metninin **aynı adımda** güncellenmesini istiyor. D-238 ve
