@@ -18,6 +18,7 @@ import {
   setBirthDateAsAdmin,
   setEditorStatus,
   setIllustrator,
+  setLegalAdvisor,
   setWriterStatus,
 } from "@/services/users";
 import { createVersionFromTemplate, publishAgreementVersion } from "@/services/agreements";
@@ -161,6 +162,23 @@ export async function setIllustratorAction(
     // The about page lists the çizers by name (D-151)
     revalidatePath("/hakkinda");
     return { success: "Çizer işareti güncellendi." };
+  });
+}
+
+export async function setLegalAdvisorAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
+
+    const targetId = text(formData, "userId");
+    await setLegalAdvisor({ ...user }, targetId, text(formData, "legalAdvisor") === "evet", meta);
+
+    revalidatePath(`/admin/users/${targetId}`);
+    return { success: "Hukuk danışmanı işareti güncellendi." };
   });
 }
 

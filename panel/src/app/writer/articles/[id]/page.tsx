@@ -124,6 +124,15 @@ export default async function WriterArticleDetailPage({
                 Yazı, seçtiğiniz kategorinin editörüne düşer; editör onayladıktan
                 sonra ana editör, son olarak yönetici inceleyecektir.
               </p>
+              {/* The declaration itself, so it has to be visible before the click (D-238) */}
+              <p className="mb-4 text-sm">
+                Göndererek bu yazının{" "}
+                <Link href="/writer/agreement" className="text-accent underline">
+                  yazar sözleşmesindeki
+                </Link>{" "}
+                koşullarla yayımlanmasına izin verirsiniz. İzin, derginin yazıyı
+                yayımlama taahhüdü değildir.
+              </p>
               <PanelForm action={submitArticleAction} csrfToken={csrfToken} submitLabel="İncelemeye gönder">
                 <input type="hidden" name="articleId" value={article.id} />
               </PanelForm>

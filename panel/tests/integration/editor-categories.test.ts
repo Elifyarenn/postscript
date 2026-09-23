@@ -33,7 +33,7 @@ import {
   teardownTestDatabase,
 } from "../helpers/db";
 import { actorOf, createUser, noMeta } from "../helpers/factories";
-import { publishContract } from "../helpers/factories";
+import { acceptCurrentContract, publishContract } from "../helpers/factories";
 
 let database: Database;
 
@@ -190,6 +190,8 @@ describe("the staged review chain", () => {
     const otherEditor = await createUser({ role: "editor" });
     const writer = await createUser({ role: "writer", writerStatus: "active" });
     await db.update(users).set({ writerArea: "Sanat & Edebiyat" }).where(eq(users.id, writer.id));
+    // Submitting is the licence declaration, so the contract comes first (D-238)
+    await acceptCurrentContract(writer);
 
     await setEditorDuties(
       actorOf(admin),
@@ -242,9 +244,12 @@ describe("the staged review chain", () => {
     const stage4 = await transitionArticle(actorOf(admin), draft.id, "accepted", noMeta);
     expect(stage4.status).toBe("awaiting_rights");
 
+    // The writer's own submit already declared the licence, so nothing is
+    // pending by the time the admin accepts the article (D-238)
     const { findLiveApproval } = await import("@/services/rights");
     const approval = await findLiveApproval(draft.id);
-    expect(approval?.status).toBe("pending");
+    expect(approval?.status).toBe("signed");
+    expect(approval?.acceptedBodyMarkdown).toBe("Gövde.");
   });
 
   it("stores the author's slug and validates it (D-069)", async () => {

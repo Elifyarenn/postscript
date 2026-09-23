@@ -42,6 +42,7 @@ import {
   setEditorStatusAction,
   setHybridWriterRoleAction,
   setIllustratorAction,
+  setLegalAdvisorAction,
   setWriterAreasAction,
   setWriterStatusAction,
 } from "../../actions";
@@ -281,6 +282,42 @@ export default async function AdminUserDetailPage({
               />
               <p className="text-sm">
                 Şu an: {target.isIllustrator ? "Çizer olarak işaretli." : "Çizer değil."}
+              </p>
+            </>
+          </PanelForm>
+        </Card>
+
+        <Card>
+          <h2 className="mb-1 font-serif text-lg">Hukuk danışmanı</h2>
+          <p className="mb-4 text-sm text-muted">
+            Derginin hukuk danışmanını işaretler. Çizer işareti gibi ayrı bir rol
+            değildir: hesabın rolü değişmez, hiçbir panele giriş vermez ve içerik
+            üzerinde yetki tanımaz. Tek etkisi, işaretli hesabın ekip avatarı
+            oluşturucusuna girebilmesi ve bu etiketi taşımasıdır. Kayıtlı her üye
+            gibi topluluğu da kullanabilir; bunun için işaret gerekmez.
+          </p>
+          <PanelForm
+            action={setLegalAdvisorAction}
+            csrfToken={csrfToken}
+            submitLabel={
+              target.isLegalAdvisor
+                ? "Hukuk danışmanı işaretini kaldır"
+                : "Hukuk danışmanı olarak işaretle"
+            }
+            submitVariant="secondary"
+          >
+            <>
+              <input type="hidden" name="userId" value={target.id} />
+              <input
+                type="hidden"
+                name="legalAdvisor"
+                value={target.isLegalAdvisor ? "hayir" : "evet"}
+              />
+              <p className="text-sm">
+                Şu an:{" "}
+                {target.isLegalAdvisor
+                  ? "Hukuk danışmanı olarak işaretli."
+                  : "Hukuk danışmanı değil."}
               </p>
             </>
           </PanelForm>

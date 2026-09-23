@@ -473,9 +473,22 @@ describe("team avatar permissions", () => {
     expect(canCreateTeamAvatar(actor(), false)).toBe(false);
   });
 
+  it("opens the builder to the legal adviser mark as well (D-238)", () => {
+    // A reader with the mark gets in; the mark does not touch the role
+    expect(canCreateTeamAvatar(actor(), false, true)).toBe(true);
+    // No mark at all stays out, and the default keeps old callers unchanged
+    expect(canCreateTeamAvatar(actor(), false)).toBe(false);
+    expect(canCreateTeamAvatar(actor(), false, false)).toBe(false);
+  });
+
   it("closes it to banned and unverified accounts", () => {
     expect(canCreateTeamAvatar(actor({ role: "writer", isBanned: true }), false)).toBe(false);
     expect(canCreateTeamAvatar(actor({ emailVerifiedAt: null }), true)).toBe(false);
+  });
+
+  it("closes it to a banned or unverified legal adviser too", () => {
+    expect(canCreateTeamAvatar(actor({ isBanned: true }), false, true)).toBe(false);
+    expect(canCreateTeamAvatar(actor({ emailVerifiedAt: null }), false, true)).toBe(false);
   });
 
   it("lets only admins manage the avatars", () => {

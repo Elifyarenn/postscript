@@ -9377,3 +9377,154 @@ alanın okura gitmemesi). Kapı: typecheck, lint, test, build.
 adminlere görünen tarafsız deneme sayfalarıyla doğrulandı
 (`pnpm sample-issue-pages -- 1 --pages 6`). Sahte makale, yazar veya alıntı
 üretilmedi.
+
+---
+
+## D-237 — Kurucu kararları uygulandı; panel onayı için en küçük değişiklik hazırlandı
+
+**Kurucu kararları (23 Eylül 2026):** taraf adları **Elif Yaren Çekiç** ve
+**Fatma Tuanna Demir**; tek başına temsil yetkisi varsayılmaz; fiziksel adres
+verilemiyor; tercih **her şeyin panel üzerinden onaylatılması**, ıslak
+imza/kargo süreci kurulmaması.
+
+**Belgelerde yapılanlar:** Taraf adları tam hâliyle yazıldı ve her iki belge
+**her iki ortak** tarafından imzalanacak biçimde düzenlendi (imza bloğundaki
+"[[DOLDURULACAK]]" kalktı; "ortaklardan birinin tek başına temsil yetkisi
+bulunduğu varsayılmaz" ifadesi eklendi). **Sözleşmeden adres alanı çıkarıldı**,
+yerine "Bildirim kanalı: e-posta" geldi ve Madde 8.1 bildirimlerin e-posta ile
+yapılmasını kararlaştırdı — ilçe adı adres sayılmadı, adres uydurulmadı. Aydınlatma
+metni atfı `{{kvkk.version}}` ile yürürlükteki sürümü gösteriyor. Böylece üç
+eksik kapandı; paketlerde artık hiç `[[DOLDURULACAK]]` yok. 26 paket yeniden
+üretildi.
+
+**Yan etki (uygulanmadı):** `{{dergi.ortak_2}}` panelde `site_settings`
+değerinden geliyor ve orada kısa ad yazılı; sürüm 2 panelde yayımlanmadan önce tam
+ad girilmeli. Ayrıca sözleşme artık `{{dergi.adres}}` kullanmadığı için render'ın
+o alanı zorunlu tutması ortadan kalktı (`render.ts` yalnızca **kullanılan** yer
+tutucuları denetliyor) — adres eksikliği artık sürüm yayımlamayı engellemiyor.
+
+**Araştırma sonucu — panel onayı:** İkincil kaynaklara göre TBK m. 14 yazılı
+şekilde imzayı zorunlu kılıyor, TBK m. 15 imzanın el yazısıyla atılmasını
+istiyor ve güvenli elektronik imzayı el yazısı imzaya eşitliyor; güvenli
+elektronik imzayla oluşturulan veri HMK m. 205 anlamında senet sayılıyor. Buna
+karşılık basit/gelişmiş elektronik imzalar ve **tıklama ile kabul** imza yerine
+geçmiyor; elektronik veri HMK m. 199 uyarınca **belge** (delil) sayılıyor.
+Dolayısıyla panel kaydının **delil** oluşturduğu güçlü, **geçerlilik şartını**
+karşıladığı ise kuşkulu. Bir yüksek lisans tezi (Fidan, telifhaklaridernegi.org)
+m. 52 şekil şartının basit ruhsata da uygulandığı görüşünü ağırlıklı, aksi görüşü
+azınlık olarak aktarıyor; şekil eksikliğinin sonucunun butlan olduğunu ve sonradan
+düzenlenen yazılı belgenin eksikliği giderebileceğini söylüyor.
+**Resmî metinlere erişilemedi** (mevzuat.gov.tr ve resmigazete.gov.tr TLS hatası);
+hiçbir yöntem yeterli ilan edilmedi.
+
+**Araştırma sonucu — adres:** Sözleşmenin geçerliliği için fiziksel adres arayan
+bir kural bulunamadı; yazılı şeklin unsurları TBK m. 14–15'te imza üzerinden
+tanımlanıyor, FSEK m. 52 ise yazılılık ve hakların ayrı ayrı gösterilmesini
+istiyor. Bildirim kanalı taraflarca kararlaştırılabilir. Bu, künye (5651 m. 3) ve
+aydınlatma metnindeki veri sorumlusu bilgileri ile **aynı şey değil**; onlar
+kamuya açık mevzuat yükümlülükleri, sözleşmenin geçerlilik şartı değil.
+
+**Panelde en küçük değişiklik (`PANEL-EN-KUCUK-DEGISIKLIK.md`, uygulanmadı):**
+Kodda zaten hazır olanlar — `acceptAgreement` servisi (tam metni
+`rendered_markdown` olarak saklıyor, PDF üretip yazara yolluyor),
+`acceptAgreementAction`, okuma kilitli `accept-form.tsx`, `approveWork`,
+yayın kapısı (`article-status.ts`: imzalı izin yoksa `scheduled`/`published`
+reddediliyor) ve yazarın kendi PDF'ine erişimi (`ownsContract`). Eksik üç şey:
+**(1)** `/writer/agreement` sayfası yer tutucu olduğu için kimse panelde kabul
+edemiyor → sayfa geri getirilecek (~50 satır, yeni servis/action/tablo yok);
+**(2)** `rights_grants` kabul edilen metni saklamıyor, yalnızca hash tutuyor →
+`accepted_body_markdown` kolonu + iki satır servis kodu; **(3)** eser onayı
+ekranı metni göstermiyor, yalnızca özeti → metin onay kutusunun üstünde
+gösterilecek.
+
+**Kod:** Değişiklik yok. Canlıya dokunulmadı, onay toplanmadı, sürüm
+yayımlanmadı, commit/push yapılmadı.
+
+---
+
+## D-238 — Hukuk danışmanı işareti; yayın izni yazarın "İncelemeye gönder" işlemiyle doğar
+
+### Hukuk danışmanı işareti
+
+**İstek (ürün sahibi):** "Dergide yetkili kişi ekle, sadece tag'i olsun; avatar ve
+foruma erişip kaydolabilsin — hukuk danışmanımızı eklememiz lazım."
+
+**Karar:** Çizer işaretinin (D-151) aynı kalıbı: `users.is_legal_advisor`, **rol
+değil**, rolün yanında duran bir işaret. Hiçbir panele giriş vermiyor, içerik
+üzerinde yetki tanımıyor, `role` değişmiyor. İki etkisi var: "Hukuk Danışmanı"
+rozeti ve **ekip avatarı oluşturucusuna** erişim
+(`canCreateTeamAvatar`'a üçüncü ve varsayılanlı bir parametre eklendi, böylece
+mevcut çağıranlar değişmedi). Yönetici kullanıcı sayfasından açıp kapatıyor;
+değişiklik `user.legal_advisor_changed` olarak denetim kaydına yazılıyor.
+
+**Forum için ek bir şey gerekmedi:** topluluk zaten her kayıtlı üyeye açık.
+İlgili hesap (`nehirkarakas772@gmail.com`) 22 Eylül'de kendi kaydolmuş ve
+e-postası doğrulanmış durumda; işaret yönetici tarafından açılacak, hesap
+oluşturulmadı.
+
+**Hakkında sayfası:** çizerlerden farklı olarak işaret kamuya açık listeye
+eklenmedi — ürün sahibi "sadece tag" dedi.
+
+### Yayın izni: gönderim = beyan
+
+**İstek (ürün sahibi):** Yazara her eser için tekrar sözleşme veya onay kutusu
+gösterilmesin. Çerçeve sözleşme bir kez kabul edilsin; bundan sonra yazarın kendi
+hesabından "Editöre gönder" dediği her yazı için, sözleşmede tanımlı kapsamda
+yayın izni verdiği anlatılsın.
+
+**Karar:** Eser başına ayrı onay ekranı kaldırıldı. İzin, yazarın kendi
+gönderimiyle doğuyor ve o gönderime ait bir **izin beyanı** kaydı oluşuyor.
+
+**Kurulan kurallar ve karşılıkları:**
+
+| Kural | Nerede |
+|---|---|
+| Çerçeve sözleşme bir kez kabul edilir | `/writer/agreement` sayfası geri getirildi; `acceptAgreement` servisi, `acceptAgreementAction` ve okuma kilitli `accept-form.tsx` zaten duruyordu, yalnızca sayfa yer tutucuydu (D-050) |
+| Taslak oluşturma ve kaydetme izin sayılmaz | Hiçbir kayıt yazılmıyor; testle sabitlendi |
+| Gönderim, yalnızca o anki esere yönelik beyandır | `transitionArticle`, `to === "in_review" && article.authorId === actor.id` iken `recordSubmissionDeclaration` çağırıyor |
+| Düğmenin yanında görünür açıklama, ek kutu yok | `/writer/articles/[id]` gönder kartına tek paragraf eklendi |
+| Tam metin, eser sürümü, sözleşme sürümü, kullanıcı ve tarih saklanır | `rights_grants`'a `accepted_body_markdown` ve `accepted_version` kolonları (migration 0045); `agreement_version_id`, `signed_at`, `signed_ip`, `signed_user_agent` zaten vardı |
+| Editör/yönetici işlemi yazarın beyanı sayılmaz | Aynı koşuldaki `authorId === actor.id` kontrolü; `recordSubmissionDeclaration` ayrıca kendisi de reddediyor |
+| Esaslı değişiklikte son metin onayı istisnası korunur | `reopenApprovalAfterContentChange` değişmedi: onay iptal edilip yazara `pending` beyan açılıyor, `approveWork` yalnızca bu hâlde kullanılıyor |
+| Sözleşme kabulünden önce gönderilmiş eserler kendiliğinden kapsama girmez | `listUncoveredSubmissions` + `confirmUncoveredSubmissions`; sözleşme sayfasında tek ekranda listelenip topluca teyit ediliyor |
+| Sözleşme değişimi eski kabulü yeni koşullara taşımaz | `hasAcceptedCurrentAgreement` güncel sürümü arıyor; yeni sürüm yayımlanınca gönderim kapanıyor ve sayfa yeni metni yeniden kabule sunuyor |
+| İzin, yayımlama taahhüdü değil | Sözleşme m. 1.8 ve m. 4.1; gönder kartındaki not |
+
+**Yeniden gönderim:** Önceki beyan `revoked` olarak kayda geçiyor ve yeni metin
+için yeni beyan oluşuyor; bir beyan her zaman tek bir gövdeye işaret ediyor.
+
+**Ad/mahlas:** Eser başına ekran kalmadığı için tercih profilden geliyor
+(`penName` varsa mahlas). Yazar bir yazı için farklı tercih isterse göndermeden
+önce Dergi'ye bildiriyor (sözleşme m. 5.1).
+
+**Sözleşme metni:** `contracts/taslaklar/yazar-sozlesmesi-ve-ruhsat-taahhudu-v2-TASLAK.md`
+Madde 1 baştan yazıldı (1.2 gönderim = izin, 1.3 izin vermeyen işlemler, 1.4
+kaydedilenler, 1.5 yeniden gönderim, **1.6 henüz yazılmamış yazılar üzerinde
+peşin hak devri yok**, 1.7 sözleşmeden önce gönderilenler, 1.8 yayımlama taahhüdü
+değil). "Eser Eki" imzalama modeli metinden tümüyle çıktı (19 atıf); çoklu eser
+eki artık yalnızca geçmiş gönderimlerin kâğıt üzerinde teyidi için anlamlı.
+
+**Hukuki değerlendirme — varsayılmadı:** Bu akış FSEK m. 52'deki yazılı şekil ve
+imza şartını **karşılamıyor olabilir**. İkincil kaynaklara göre yazılı şekil imza
+gerektiriyor (TBK m. 14), imza el yazısı veya güvenli elektronik imza olmalı
+(TBK m. 15) ve tıklama ile kabul imza yerine geçmiyor; buna karşılık elektronik
+kayıt HMK m. 199 anlamında **belge/delil**. Yani bu düzen delil bakımından güçlü,
+geçerlilik bakımından kuşkulu. Resmî metinlere erişilemedi (mevzuat.gov.tr TLS
+hatası). En az zahmetli ve aynı kullanıcı deneyimini koruyan alternatif:
+**yalnızca çerçeve sözleşmenin bir kez imzalanması** (yazar başına tek imza),
+gönderim beyanlarının panelde kalması. Karar avukat cevabına bağlı; kod her iki
+hâlde de aynı çalışıyor.
+
+**Doğrulama:** `pnpm typecheck` temiz, `pnpm lint` 0 hata (5 uyarı başka bir
+oturumun dosyalarında), `pnpm test` **80 dosya / 819 test geçti**. Yeni dosya:
+`tests/integration/submission-licence.test.ts` (8 senaryo). İki mevcut test
+yeni akışa göre güncellendi (`article-history`, `editor-categories`); denetim
+geçmişine `work_licence.declared_on_submit` etiketi eklendi.
+
+**Migration 0045** üç kolon ekliyor: `users.is_legal_advisor` (D-238 öncesi aynı
+turda eklenen hukuk danışmanı işareti), `rights_grants.accepted_body_markdown`,
+`rights_grants.accepted_version`. Üçü de boş bırakılabilir veya varsayılanlı;
+veri taşımıyor. **Üretime uygulanmadı, push edilmedi.**
+
+**Yapılmayanlar:** Canlıya yayımlanmadı, üretim kaydı değiştirilmedi, onay
+toplanmadı, sürüm 2 yayımlanmadı, commit/push yapılmadı.

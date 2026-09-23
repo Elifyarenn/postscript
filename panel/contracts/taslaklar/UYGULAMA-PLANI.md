@@ -1,257 +1,174 @@
-# Yazar sözleşmeleri ve eser izinleri — uygulama planı
+# Uygulama notları
 
-**Tarih:** 22 Eylül 2026 · **Durum:** taslak süreç önerisi, avukat onayına tabi
-**İlgili taslaklar:** `yazar-sozlesmesi-ve-ruhsat-taahhudu-v2-TASLAK.md`,
-`eser-bazli-yayin-izni-ve-son-metin-onayi-TASLAK.md`
+**23 Eylül 2026** (veri bugün yeniden okundu). Süreç adımları için `YAYIN-ONCESI-KONTROL-LISTESI.md`; avukata
+gidecek sorular için `avukata-inceleme-mesaji.md`. Bu dosya yalnızca o ikisinde
+olmayanı tutar: doğrulanan durum ve sınırı, sürüm 2 geçiş adımları, depo notu.
 
-> Bu plan **panel geliştirmesini ön koşul saymaz.** Aşağıdaki adımların tamamı,
-> bugünkü panel ve e-posta ile yürütülebilir. Panel iyileştirmeleri §6'da ayrı
-> tutuldu; hiçbiri belgelerin hazırlanmasını veya imzalanmasını beklemez.
-
----
-
-## 1. Doğru sıra
-
-Her eser için sıra **değişmez**:
-
-```
-1. ÇERÇEVE SÖZLEŞME        Yazar, sürüm 2'yi imzalar (ıslak veya e-imza)
-        ↓                   → bir kez; her eser için tekrarlanmaz
-2. SON METİN DONDURMA      Editör metni son hâle getirir, başka düzenleme yapmaz
-        ↓                   → sürüm no + SHA-256 özeti sabitlenir
-3. ESER İZNİ               Belge doldurulur, EK-1'e son metin konur, Yazar imzalar
-        ↓                   → her eser için ayrı
-4. İMZALI KOPYA ULAŞIR     Dergi belgeyi teslim alır ve arşivler
-        ↓
-5. YAYIN                   Editör eseri yayımlar
-```
-
-**İki kural:**
-
-- **Adım 1 olmadan adım 3 olmaz.** Çerçeve sözleşmeyi imzalamamış bir yazardan
-  eser izni istenmez; izin belgesi dayanak sözleşmeye atıf yapıyor.
-- **Adım 4 olmadan adım 5 olmaz.** Eserin teslim edilmiş, panelde "kabul edildi"
-  görünmesi veya bir sayıya yerleştirilmiş olması yayın izni değildir.
-
-**Adım 2 neden ayrı bir adım:** Bugün paneldeki onay ekranı yazara yalnızca
-metnin SHA-256 özetini gösteriyor, metni göstermiyor
-(`src/app/writer/approvals/approval-row.tsx`). İmza atılacak belgede metnin
-kendisi EK-1 olarak yer alacağı için metnin **imzadan önce dondurulması**
-gerekiyor. Adım 3 başladıktan sonra yapılan her esaslı değişiklik belgeyi
-hükümsüz kılar ve baştan imza gerektirir.
+> **Bu turda hiçbir şey uygulanmadı.** Sürüm 2 yayımlanmadı, kod değişmedi,
+> roller ve `writer_status` değerleri değişmedi, kabul kayıtlarına
+> dokunulmadı, üretim verisi değişmedi, mesaj gönderilmedi. Veritabanına yalnızca
+> **salt okunur** sorgu yapıldı.
 
 ---
 
-## 2. Yazar grupları ve her biri için işlem
+## 1. Doğrulanan durum ve bulgunun sınırı
 
-### Grup A — Sürüm 1'i panelde onaylamış aktif yazarlar
+Üretim veritabanına salt okunur SQL ile bakıldı:
 
-**Kim:** 20 Eylül 2026 itibarıyla **29 yazar**, hepsi "Aktif"
-(`panel/TEKNOLOJI-RAPORU.md` §7). Bu hesaplar yazar terfisi sırasında sürüm 1'i
-panelde onay kutusuyla kabul etmiş; onay kaydı, metin özeti, tarih ve IP
-`agreement_acceptances` tablosunda duruyor.
-
-**İşlem:**
-
-1. Yazarlara duyuru + `yazarlara-mesaj.md`'deki mesaj gönderilir (henüz sürüm 2
-   yayınlanmadan).
-2. Sürüm 2, admin "Sistem" sayfasından yayınlanır.
-3. Her yazar sürüm 2'yi **hem** panelde onaylar (delil kaydı + panel kilidinin
-   açılması için) **hem** imzalı kopyasını gönderir.
-4. İmzalı kopya ulaşana kadar o yazardan eser izni istenmez.
-
-> **Zamanlamayı bilerek yapın:** Sürüm 2 yayınlandığı anda **29 aktif yazarın
-> tamamı `pending_agreement` durumuna düşer ve yazar panelleri kilitlenir**;
-> yeni sürümü onaylayana kadar bekleyen eser onaylarını da veremezler
-> (`panel/README.md`, e2e senaryosu; `src/app/writer/approvals/page.tsx:40`).
-> Bu beklenen davranıştır, arıza değil — ama önce haber vermezseniz 29 kişi aynı
-> anda kilitli panelle karşılaşır. **Bu yüzden mesaj sürümden önce gider.**
-
-### Grup B — Henüz sözleşme kabul etmemişler
-
-**Kim:** Yazar olmayan kayıtlı hesaplar (20 Eylül itibarıyla 4 rolsüz hesap) ve
-bundan sonra yazar olacaklar.
-
-**İşlem:** Mevcut akış korunur — yazar terfisi zaten yayınlanmış bir sözleşme
-sürümünün onayını şart koşuyor. Buna **imzalı kopya** eklenir:
-
-1. Terfi/başvuru akışı tamamlanır, sürüm 2 panelde onaylanır.
-2. İmzalı kopya gönderilir.
-3. İkisi tamamlanmadan yazara eser atanmaz.
-
-### Grup C — Yayımlanmış yazılar
-
-**Doğrulanan durum (22 Eylül 2026):** `https://www.postscriptmag.com/api/public/issues`
-**boş dönüyor** (`{"issues":[]}`) — yani herkese açık yayında **hiçbir sayı ve
-dolayısıyla hiçbir yazı yok.** D-110'da canlıdaki iki yazı yumuşak silinmiş.
-
-**Bunun anlamı:** Ruhsat zinciri, ilk yayından **önce** tamamlanabilir. Bu, bu
-işin en büyük şansı: geçmişi düzeltmek yerine doğru sırayı baştan kurmak
-mümkün.
-
-**Yine de kontrol edilmesi gereken (canlı veritabanı okunamadı, izin sistemi
-üretim okumalarını reddediyor):** Editör panelinden `/editor/articles` açılıp
-durumu `published`, `scheduled` veya `archived` olan makale var mı bakılır.
-
-- **Yoksa:** Grup C boştur, yapılacak bir şey yok.
-- **Varsa,** her biri için iki seçenek:
-  - **(a) Muhafazakâr:** Eser yayından geri çekilir, imzalı eser izni alınır,
-    sonra yeniden yayımlanır.
-  - **(b) Hızlı:** Eser yayında kalır, imzalı eser izni **bugünün tarihiyle**
-    alınır ve belgeye, eserin daha önce yayımlandığını teyit eden bir satır
-    eklenir. **Geriye dönük tarihli belge düzenlenmez.**
-  - Hangisinin seçileceği avukata sorulacak (§5, soru 5). Görüş gelene kadar
-    muhafazakâr olan (a) uygulanır.
-
----
-
-## 3. Adım adım işletme usulü (panel geliştirmesi olmadan)
-
-### 3.1. Çerçeve sözleşme (bir kez, yazar başına)
-
-| # | Kim | Ne yapar |
+| Ölçü | 22 Eylül | **23 Eylül** |
 |---|---|---|
-| 1 | Kurucu | `{{dergi.adres}}` değerine karar verir ve `/admin/settings`'e yazar. Bu olmadan sözleşme eksik adresle imzalanır |
-| 2 | Kurucu | v2 taslağındaki "TASLAK NOTU" bloğunu siler, metni `panel/contracts/yazar-sozlesmesi-ve-ruhsat-taahhudu.md` üzerine yazar |
-| 3 | Kurucu | Yazarlara `yazarlara-mesaj.md`'deki mesajı gönderir (panel duyurusu + e-posta) |
-| 4 | Kurucu | `/admin/agreements` → "şablondan sürüm oluştur" → sürüm 2 yayınlanır |
-| 5 | Yazar | Panelde sürüm 2'yi okur ve onaylar → panel kilidi açılır, delil kaydı ve PDF oluşur |
-| 6 | Yazar | Panelin ürettiği PDF'i indirir, imzalar (ıslak veya e-imza), Dergi'ye e-posta ile gönderir |
-| 7 | Kurucu | İmzalı kopyayı arşive koyar, takip tablosuna işler |
+| Canlı makale | 32 | **34** (`in_review` 13, `pending_admin_approval` 21) |
+| Yumuşak silinmiş makale | 2 | 2 |
+| `published_at` dolu olan makale | 0 | **0** |
+| Yayımlanmış sayı | 0 | **0** |
+| Eser Onayı kaydı (`rights_grants`) | 0 | **0** |
+| Sözleşme sürümü / kabul kaydı | 1 / 1 | **1 / 1** |
+| Yazısı olan yazar | — | **26** |
 
-**Not:** 6. adımda panelin ürettiği PDF kullanılabilir; içeriği imzalanacak metinle
-aynıdır ve metin özetini (SHA-256) taşır. Ayrı bir belge hazırlamak gerekmez.
+İki gün arasındaki fark (32 → 34), panelde çalışmanın sürdüğünü gösteriyor ve
+aşağıdaki "anlık görüntü" uyarısının somut karşılığıdır.
 
-### 3.2. Eser izni (her yazı için)
+**Destekleyici olgu:** kod, `published_at` alanını yayında bir kez yazıyor ve
+geri çekmede **temizlemiyor** (`src/services/articles.ts:750`). Yani bir makale
+bir kez yayımlanmış olsaydı bu alan hâlâ dolu olurdu. Denetim kaydı
+(`audit_log`) da yalnızca eklenir ve veritabanı trigger'ıyla korunur; orada
+`published` veya `scheduled` hedefli tek bir durum değişikliği yok.
 
-| # | Kim | Ne yapar |
+**Bulgunun sınırı — bu, "geçmişte hiç yayın yapılmadı"nın kesin ispatı
+değildir:**
+
+- 22 Eylül'de `article.created_by_author` denetim kaydı **35**, makale satırı
+  **34**'tü; bir satır sayıca eksikti ve nedeni belirlenmedi.
+- Panel dışından doğrudan SQL ile yapılan işlemler denetim kaydı bırakmak zorunda
+  değil. D-110'daki yumuşak silme panel dışından yapılmış ve denetim satırları
+  elle yazılmış.
+- Sorgular tek bir ana ait anlık görüntüdür.
+
+**Sonuç olarak:** eldeki bütün kayıtlar hiçbir yazının yayımlanmadığını
+gösteriyor; bu güçlü bir göstergedir, kesin bir ispat değildir. Süreç bu
+göstergeye göre kurulabilir, ama "hiç yayın olmadı" diye bir beyan verilmemeli.
+
+---
+
+## 2. Sürüm 2 geçiş adımları — yazıldı, uygulanmadı
+
+**Sürüm 2, metin kesinleşmeden yayımlanmaz.**
+
+> **En küçük değişiklik.** Belgeler kesinleşince panel kayıtlarının imzalı
+> belgeyle aynı sürümü göstermesi için gereken tek şey **sıralamadır**: sürüm 2
+> panelde yayımlanır, **ancak ondan sonra** editörler makaleleri "kabul edildi"
+> yapar. Kod değişikliği, veri düzeltmesi veya kayıt güncellemesi gerekmez.
+> Sıra kaçırılırsa da veri elle düzeltilmez (aşağıya bakın).
+
+Sıra şöyle olmalı:
+
+1. **Metin kesinleşir:** avukat incelemesi tamamlanır ve belgedeki üç
+   `[[DOLDURULACAK]]` alan gerçek değerle kapatılır.
+2. **Yer tutucular çözülür:** `[[DOLDURULACAK]]` alanları gerçek değerle ya da
+   şablonun tanıdığı bir yer tutucuyla değiştirilir. Şablon gövdesinde köşeli
+   parantezli hiçbir metin kalmadığı kontrol edilir — böyle bir metin hata
+   vermez, **olduğu gibi yayımlanır**.
+3. **`site_settings` doldurulur:** `{{dergi.adres}}` zorunlu bir alandır; boşsa
+   render "Sözleşme ayarları eksik" hatası verir ve hiçbir yazar sözleşmeyi
+   göremez. Yalnızca `yazar.mahlas` boş kalabilir.
+4. **Dosya yerine konur:** taslağın not bloğu silinir, metin
+   `panel/contracts/yazar-sozlesmesi-ve-ruhsat-taahhudu.md` üzerine yazılır.
+5. **Sürüm 2 panelde yayımlanır** (`/admin/agreements` → şablondan sürüm
+   oluştur → yayınla).
+6. **Ancak bundan sonra** editörler makaleleri "kabul edildi" yapar. Sıra bu
+   yüzden önemli: panel bir makale kabul edildiğinde açtığı Eser Onayı kaydına
+   **o anda güncel olan** sözleşme sürümünü yazıyor
+   (`rights_grants.agreement_version_id`). Sürüm 2 yayımlanmadan bir makale kabul
+   edilirse kayıt sürüm 1'i gösterir, imzalı belge ise sürüm 2 olur.
+
+**Yayımlamanın bilinen etkileri:** önceki kabuller `superseded_at` ile
+işaretlenir; roller ve `writer_status` **değişmez**; kimse kilitlenmez; kilit
+e-postası gitmez. Mevcut tek kabul kaydı silinmez ve değiştirilmez.
+
+**Sıra kaçırılırsa:** o Eser Onayı kaydının sürümü v1 kalır. Kaydı elle
+değiştirmek yerine imzalı belgedeki sürüm esas alınır ve takip tablosunun Not
+kolonuna yazılır.
+
+**Bir şey yayımlamak çözmez:** `/writer/agreement` bugün boş bir yer tutucudur
+(metni okumaz, onay düğmesi yok), bu yüzden sürüm 2 yayımlansa da yazarlar
+panelde kabul edemez. İmzalar her hâlde kâğıt veya e-imza ile toplanır. Panelde
+sözleşme akışını yeniden açmak ayrı bir ürün işidir ve bu sürecin ön koşulu
+değildir.
+
+---
+
+## 3. Son metin özetini panel beklemeden üretmek
+
+Özet zorunlu değil. İstenirse panelin kullandığı normalleştirmenin aynısı
+uygulanmalı (`src/lib/agreement/normalise.ts`): satır sonları `\n`'e indirilir,
+her satır sonundaki boşluk ve sekmeler silinir, baştaki ve sondaki boş satırlar
+atılır, sonra UTF-8 metnin SHA-256'sı alınır. Girdi makalenin **markdown
+gövdesi** olmalı, ekrandaki HTML değil:
+
+```bash
+node -e "const fs=require('fs'),c=require('crypto');const t=fs.readFileSync(process.argv[1],'utf8').replace(/\r\n?/g,'\n').split('\n').map(l=>l.replace(/[ \t]+$/,'')).join('\n').trim();console.log(c.createHash('sha256').update(t,'utf8').digest('hex'))" son-metin-<slug>-v<N>.md
+```
+
+Editöre özeti gösteren bir panel ekranı yok; bu yüzden eser ekinde bağlayıcı olan,
+her yazının EK bölümündeki metnin kendisidir.
+
+---
+
+## 4. Depo herkese açık — bulgular
+
+`gh repo view` → `"visibility": "PUBLIC"` (`github.com/Elifyarenn/postscript`).
+Taslaklar başka bir oturumun commit'leriyle `main`'e push edilmiş durumda.
+
+**Bu, yürürlükteki sözleşmenin yayımlanması değildir.** Yürürlükteki metin
+veritabanındaki `agreement_versions` tablosundan gelir ve orada tek sürüm
+(sürüm 1) vardır. Bir taslağın depoda bulunması onu yürürlüğe sokmaz, hiçbir
+yazara göstermez ve hiçbir kabul kaydı yaratmaz.
+
+**Depo dışındaki konum.** Kişiye özel paketler, dolu takip listesi ve üretici
+betik `C:\Users\USER\Project\postscript-sozlesmeler\` altındadır — bu klasör
+hiçbir git deposunun içinde değil (doğrulandı). Depoda yalnızca kişisel veri
+içermeyen şablonlar, kontrol listesi ve mesaj taslakları durur.
+
+**Taramada bulunanlar** (değerler burada tekrarlanmadı; yalnızca yer ve tür):
+
+| Yer | Ne | Değerlendirme |
 |---|---|---|
-| 1 | Editör | Metni son hâle getirir ve **düzenlemeyi durdurur** |
-| 2 | Editör | Makaleyi "kabul edildi" olarak işaretler → panel Eser Onayı kaydını açar ve yazara bildirim gider |
-| 3 | Editör | Panelden değerleri okur: başlık, sürüm no, SHA-256 özeti, görsel sayısı ve lisansları, sözleşme sürümü ve özeti |
-| 4 | Editör | `eser-bazli-yayin-izni-ve-son-metin-onayi-TASLAK.md`'yi doldurur, **EK-1'e son metni koyar**, PDF'e çevirir |
-| 5 | Editör | Belgeyi yazara e-posta ile gönderir |
-| 6 | Yazar | EK-1'i okur, ad/mahlas tercihini ve varsa ek izin kutusunu işaretler, imzalar, geri gönderir |
-| 7 | Yazar | Ayrıca panelde Eser Onayı'nı verir (delil kaydı + panelin durum makinesinin ilerlemesi için) |
-| 8 | Editör | İmzalı kopyayı arşive koyar, takip tablosuna işler |
-| 9 | Editör | Eseri yayımlar |
+| `panel/DECISIONS.md` — 2 satır | Serbest sağlayıcı (gmail vb.) **kişisel e-posta adresi** | Kişisel veri, herkese açık depoda. Gözden geçirilmeli |
+| `panel/DECISIONS.md` — 2 satır | Nesne depolama uç adresi (hesap tanımlayıcısı içeriyor) | Altyapı tanımlayıcısı |
+| `panel/DECISIONS.md` — 6 satır | Yönetilen veritabanı dal ve uç tanımlayıcıları | Altyapı tanımlayıcısı |
+| `panel/README.md` — 6 satır | Demo/seed hesap şifreleri | Belgede "yalnızca yerel" olduğu yazılı ve bilinçli bir tercih; yine de herkese açık |
+| `panel/README.md` — 7 satır, `panel/data/kvkk-aydinlatma-metni.md` — 2 satır | Demo `@postscript.local` adresleri ve derginin kendi iletişim adresi | Sorun değil; dergi adresi zaten künyede kamuya açık |
+| `panel/HUKUK-RAPORU.md` — 3 satır | Künyedeki ilçe düzeyindeki adres değeri | Zaten kamuya açık künyede duruyor |
+| Bu klasördeki taslaklar | Yazar kişisel verisi **yok**; ortak adları yalnızca yer tutucu; gerçek adres **yok** | Önceki turda taslakta geçen ilçe düzeyindeki adres değeri bu turda kaldırıldı |
 
-**7. adım neden gerekli:** Panelin durum makinesi, onaylanmış bir Eser Onayı
-olmadan makaleyi `scheduled`/`published` yapmıyor — bu bir güvenlik kuralı ve
-değiştirilmiyor. Yani panel onayı **teknik ön koşul**, imzalı belge **hukuki
-dayanak**. İkisi birbirinin yerine geçmez.
-
-**Metin 5. adımdan sonra değişirse:** Belge hükümsüzdür. Editör metni düzeltir,
-3. adımdan yeniden başlar; panel tarafında da onay iptal olur ve yenisi açılır
-(esaslı değişiklik kaydedildiğinde panel bunu kendiliğinden yapıyor).
-
-### 3.3. İmzalı belgelerin arşivlenmesi
-
-- İmzalı PDF'ler tek bir yerde, yazar adı ve eser başlığıyla adlandırılarak
-  tutulur: `yazar-<ad>-sozlesme-v2.pdf`, `eser-izni-<eser-slug>-<yazar>.pdf`.
-- Bu belgeler kişisel veri içerir (ad, doğum tarihi, e-posta, imza). Aydınlatma
-  metni saklama süresini "sözleşme ilişkisi sona erdikten sonra 10 yıl (TBK
-  m. 146)" olarak açıklıyor; aynı süre uygulanır.
-- Belgeler herkese açık bir yere konmaz; panelde sözleşme PDF'lerini yalnızca
-  admin görebiliyor (editör göremiyor) — aynı ayrım arşivde de korunur.
+**Önemli sınır:** geçmiş zaten push edilmiş olduğu için bugün bir değeri
+dosyadan çıkarmak onu depo geçmişinden silmez. Hiçbir dosya silinmedi,
+taşınmadı; depo görünürlüğü değiştirilmedi, Git geçmişi yeniden yazılmadı,
+commit/push yapılmadı. **Ne yapılacağı kurucunun kararı.**
 
 ---
 
-## 4. Yapılmaması gerekenler
+## 5. Kaynak notu
 
-| Yapılmaz | Neden |
-|---|---|
-| Geriye dönük tarihli izin belgesi | Belgenin tarihi imzanın fiilen atıldığı tarihtir. Geriye dönük tarih, belgenin tamamının güvenilirliğini yitirmesine yol açar |
-| "Yazı gönderdi, demek ki izin verdi" varsayımı | Teslim izin değildir; her iki taslakta da açıkça yazılı |
-| Panel onayını imzalı belgenin yerine koymak | Panel onayı delil kaydıdır; FSEK m. 52'deki yazılı şekli karşıladığı tartışmalıdır (§5, soru 1) |
-| Mevcut panel onaylarını "geçersiz" ilan edip sıfırdan başlamak | Geçerlilik konusunda karar vermek avukatın işi. Taslaklar geçmişi teyit yoluyla yazılı zemine alıyor (v2 Madde 16.6) |
-| Sürüm 2'yi yazarlara haber vermeden yayınlamak | 29 aktif yazarın paneli aynı anda kilitlenir |
-| İmzalı kopya beklemeden yayımlamak | Zincirin tek anlamı bu; aksi hâlde belge düzeni kâğıt üstünde kalır |
-| Eksik doldurulmuş belgeyi imzaya göndermek | Boş `[...]` alanı kalan belge imzalanmaz |
+Resmî mevzuat metinlerine erişilemedi: `mevzuat.gov.tr` ve
+`resmigazete.gov.tr` bu oturumda da TLS sertifikası doğrulanamadığı için
+açılmadı. FSEK m. 52 lafzı ve yazılı şeklin bir geçerlilik şartı olduğu
+değerlendirmesi ikincil kaynaklara dayanıyor
+([Tokar Hukuk](https://mehmettokar.av.tr/fsek-madde/madde-52/),
+[Erdem&Erdem](https://www.erdem-erdem.av.tr/bilgi-bankasi/eser-sahibinin-mali-haklarinin-devri));
+5070 s. K. m. 5 için de aynı durum
+([LEXPERA](https://www.lexpera.com.tr/mevzuat/kanunlar/elektronik-imza-kanunu-5070)).
 
----
+**Doğrulanamayan üç nokta** — taslaklarda hüküm olarak yazılmadı, avukat
+sorularına dönüştürüldü: bir onay kutusunun yazılı şekli karşılayıp
+karşılamadığı; taramanın şekil ve ispat bakımından imzalı nüshanın yerine geçip
+geçmediği; FSEK m. 52'deki yazılı şeklin güvenli elektronik imzayla
+karşılanabilir olup olmadığı.
 
-## 5. Avukat kontrolü gereken noktalar
-
-Her iki taslağın sonunda belge bazlı sorular var. Bunların üstünde, **süreci
-bütün olarak etkileyen** ve önce cevaplanması gerekenler:
-
-1. **Paneldeki onay kutusu FSEK m. 52'deki yazılı şekli karşılar mı?**
-   FSEK m. 52 doğrudan resmî metinden okunamadı (bkz. §7); ikincil kaynaklara
-   göre hüküm "Mali haklara dair sözleşme ve tasarrufların yazılı olması ve
-   konuları olan hakların ayrı ayrı gösterilmesi şarttır" biçiminde ve yazılı
-   şekil bir **geçerlilik** şartı olarak niteleniyor. Bir onay kutusunun bu
-   şartı karşıladığına dair kaynak bulunamadı. **Cevaba göre bütün süreç
-   değişir:** karşılıyorsa imza toplamaya gerek yok; karşılamıyorsa ıslak/e-imza
-   zorunlu.
-2. **Güvenli elektronik imza bu sözleşme için kullanılabilir mi?** 5070 sayılı
-   Kanun m. 5, güvenli elektronik imzanın elle atılan imza ile aynı hukuki
-   sonucu doğurduğunu, ancak kanunların **resmî şekle veya özel bir merasime**
-   tabi tuttuğu işlemlerde kullanılamayacağını söylüyor. FSEK m. 52'deki yazılı
-   şekil "adi yazılı şekil" mi, yoksa özel merasim mi? Adi yazılı şekilse e-imza
-   yeterlidir.
-3. **Mevcut 29 onayın durumu.** v2 Madde 16.6'daki teyit ifadesi, geçmişi
-   geçerli/geçersiz ilan etmeden yazılı zemine almayı amaçlıyor. Bu yeterli mi,
-   yoksa her yazar için ayrı bir teyit belgesi mi gerekir?
-4. **İki belgeli düzen mi, tek belge mi?** Çerçeve sözleşme + eser bazlı izin
-   yapısı korunmalı mı, yoksa her eser için kendi kendine yeten tek bir sözleşme
-   daha güvenli mi?
-5. **Yayımlanmış eser varsa** (Grup C): geri çekip imza almak mı, yayında
-   bırakıp bugünün tarihiyle imza almak mı?
-6. **EK-1 zorunlu mu?** Son metnin belgeye eklenmesi mi gerekir, SHA-256 özetiyle
-   tanımlamak yeterli mi? Cevap "özet yeterli" ise belgeler çok kısalır ve süreç
-   hızlanır.
-7. **Dergi tarafında kaç imza?** Adi ortaklıkta yazılı ortaklık sözleşmesi
-   olmadığı için tek ortağın imzası yeterli mi, iki imza mı gerekir?
-8. **Çizerler.** Bu plan yalnızca yazılı eserleri kapsıyor. 4 çizer hesabı var ve
-   çizimler için hiçbir belge yok; çizer sözleşmesi ayrı bir iş olarak
-   sıralanmalı (bkz. `panel/HUKUK-RAPORU.md` B9).
-
----
-
-## 6. Panel iyileştirmeleri (bu işin ön koşulu değil)
-
-Aşağıdakiler süreci kolaylaştırır; **hiçbiri belge hazırlığını veya imza
-toplamayı beklemez.** Öncelikleri ayrı değerlendirilir.
-
-| # | İyileştirme | Bugünkü durum | Kazanç |
-|---|---|---|---|
-| P1 | Onay ekranında **son metnin kendisi** gösterilsin | Yalnızca SHA-256 özeti gösteriliyor | Yazar imzaladığı metni aynı ekranda görür |
-| P2 | Eser İzni belgesi panelde **otomatik doldurulup PDF üretilsin** (EK-1 dahil) | Panel PDF'i metni ve hak listesini içermiyor | Elle doldurma ortadan kalkar |
-| P3 | **İmzalı belge yükleme alanı** (yazar veya editör yükler, durum "izin alındı") | Yükleme yolu yok; e-posta kullanılıyor | Zincirin kanıtı panelde tek yerde toplanır |
-| P4 | Onay PDF'ine **verilen hakların ve mecraların listesi** yazılsın | "Sözleşme'nin 4. maddesi"ne atıf var | Belge kendi kendine yeter |
-| P5 | Takip tablosunun panel raporu hâline getirilmesi | Tablo elle tutulacak | 29 yazar × n eser elle takip edilmez |
-
----
-
-## 7. Kaynak ve doğrulama notu
-
-- **Resmî mevzuat metinlerine erişilemedi:** `mevzuat.gov.tr` ve
-  `resmigazete.gov.tr` bu oturumda TLS sertifikası doğrulanamadığı için
-  açılamadı. FSEK m. 52'nin lafzı ikincil bir kaynaktan alındı
-  ([Tokar Hukuk — FSEK m. 52](https://mehmettokar.av.tr/fsek-madde/madde-52/)):
-  *"Mali haklara dair sözleşme ve tasarrufların yazılı olması ve konuları olan
-  hakların ayrı ayrı gösterilmesi şarttır."* **Madde metinleri ve numaraları
-  avukat tarafından resmî metinden teyit edilmelidir.**
-- Yazılı şeklin bir **geçerlilik şartı** olduğu ve ruhsatları da kapsadığı
-  yönündeki değerlendirme ikincil kaynaklara dayanıyor
-  ([Erdem&Erdem](https://www.erdem-erdem.av.tr/bilgi-bankasi/eser-sahibinin-mali-haklarinin-devri),
-  [Öngören & Karali](https://ongoren.av.tr/fikir-ve-sanat-eserleri-uzerindeki-haklarin-devri/)).
-  Bir onay kutusunun bu şartı karşılayıp karşılamadığına dair kaynak
-  **bulunamadı**; bu nedenle §5 soru 1 açık bırakıldı.
-- 5070 sayılı Kanun m. 5'in lafzı da resmî metinden okunamadı; ikincil kaynağa
-  dayanıyor ([LEXPERA konsolide metin](https://www.lexpera.com.tr/mevzuat/kanunlar/elektronik-imza-kanunu-5070)).
-- **Ürün tarafındaki her olgu koddan ve canlı uçtan doğrulandı:** şablon
-  yükleyicisi (`src/lib/agreement/template.ts:14`), yer tutucu sözlüğü ve hata
-  davranışı (`src/lib/agreement/render.ts:180`), sabit ruhsat kapsamı
-  (`src/services/rights.ts` `LICENCE_TERMS`), onay ekranı içeriği
-  (`src/app/writer/approvals/approval-row.tsx`), onay PDF'inin içeriği
-  (`src/services/rights.ts`), `rights_grants` şeması, yayımlanmış sayı olmadığı
-  (`/api/public/issues` → `{"issues":[]}`, 22 Eylül 2026).
-- **Okunamayanlar:** canlı veritabanı (üretim okumaları izin sistemi tarafından
-  reddediliyor), dolayısıyla makalelerin bugünkü durumları, hangi yazarın hangi
-  sözleşme sürümünü kabul ettiği ve bekleyen eser onayları. Bunlar editör/admin
-  panelinden okunmalı.
-- `panel/HUKUK-RAPORU.md`'deki değerlendirmeler **doğrulanmış hukuki sonuç
-  değildir**; bu plan o raporu kaynak değil, başlangıç noktası olarak kullandı ve
-  sözleşmeye ilişkin her tespiti dosyalardan yeniden okudu.
+**Ürün tarafında doğrulananlar:** şablon yükleyici ve yer tutucu doğrulaması
+(`src/lib/agreement/template.ts`, `render.ts`), sürüm yayınlama davranışı
+(`src/services/agreements.ts`), `/writer/agreement`'ın boş yer tutucu olması,
+onay ekranındaki arayüz kilidi (`src/app/writer/approvals/page.tsx`), sunucu
+tarafı imza kontrolünün sözleşmeye bakmaması (`src/lib/auth/rbac.ts`),
+`published_at`'in geri çekmede temizlenmemesi (`src/services/articles.ts:750`),
+hash normalleştirmesi (`src/lib/agreement/normalise.ts`), üretim verisi (§1).

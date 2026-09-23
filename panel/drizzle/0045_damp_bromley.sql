@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "is_legal_advisor" boolean DEFAULT false NOT NULL;

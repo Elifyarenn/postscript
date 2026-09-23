@@ -9,7 +9,7 @@ import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
 import { articles, users } from "@/db/schema";
 import { addComment, createArticle, setPlagiarismStatus, transitionArticle } from "@/services/articles";
-import { approveWork, articleHash, findLiveApproval } from "@/services/rights";
+import { findLiveApproval } from "@/services/rights";
 import { listArticleHistory } from "@/services/article-history";
 import { isAppError } from "@/lib/errors";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
@@ -85,18 +85,6 @@ async function reviewedArticle() {
   await addComment(editorActor, article.id, "Başlığı kısaltalım.", noMeta);
   await transitionArticle(adminActor, article.id, "accepted", noMeta);
 
-  const approval = await findLiveApproval(article.id);
-  const [current] = await db.select().from(articles).where(eq(articles.id, article.id));
-  await approveWork(
-    writerActor,
-    {
-      grantId: approval!.id,
-      articleHash: articleHash(current!.bodyMarkdown),
-      bylineChoice: "real_name",
-      acknowledged: true,
-    },
-    noMeta,
-  );
 
   return { admin: adminActor, editor: editorActor, writer: writerActor, article };
 }
@@ -111,8 +99,12 @@ describe("listArticleHistory for editorial staff", () => {
     expect(labels[0]).toBe("Makale kaydı açıldı");
     expect(labels).toContain("İntihal kontrolü: temiz");
     expect(labels).toContain("Editöryal not eklendi");
-    expect(labels).toContain("Eser Onayı yazara açıldı");
-    expect(labels.at(-1)).toBe("Yazar Eser Onayını imzaladı (yayın adı: gerçek ad)");
+    // The licence is declared by the writer's own submit, not a later step (D-238)
+    expect(labels.some((label) => label.startsWith("Yazar gönderimle yayın izni verdi"))).toBe(
+      true,
+    );
+    expect(labels).not.toContain("Eser Onayı yazara açıldı");
+    expect(labels.at(-1)).toBe("Durum değişti");
 
     const transitions = steps.filter((step) => step.label === "Durum değişti");
     expect(transitions.map((step) => step.toStatus)).toEqual([
@@ -130,7 +122,12 @@ describe("listArticleHistory for editorial staff", () => {
       actor: "Efe Ana Editör",
     });
     expect(transitions.find((step) => step.toStatus === "accepted")?.actor).toBe("Ayşe Admin");
-    expect(steps.at(-1)?.actor).toBe("Ada Yazar");
+    // The last step is now the admin's acceptance chain, not a separate writer
+    // approval: the writer's licence step sits where they submitted (D-238)
+    expect(steps.at(-1)?.actor).toBe("Ayşe Admin");
+    expect(
+      steps.find((step) => step.label.startsWith("Yazar gönderimle yayın izni verdi"))?.actor,
+    ).toBe("Ada Yazar");
   });
 
   it("gives a main editor the same full history as the admin", async () => {

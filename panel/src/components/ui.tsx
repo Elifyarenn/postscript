@@ -227,6 +227,8 @@ export const STATUS_LABELS: Record<string, string> = {
   writer: "Yazar",
   // Not a role but a second hat a writer may also wear (D-151)
   illustrator: "Çizer",
+  // Also a mark, not a role: the magazine's legal adviser (D-238)
+  legal_advisor: "Hukuk Danışmanı",
   editor: "Editör",
   admin: "Yönetici",
   // What an admin is called inside the community (D-179)
@@ -252,6 +254,7 @@ const BADGE_TONES: Record<string, string> = {
   pending_admin_approval: "bg-accent-soft text-accent border-accent/30",
   editor_writer: "bg-accent-soft text-accent border-accent/30",
   illustrator: "bg-accent-soft text-accent border-accent/30",
+  legal_advisor: "bg-accent-soft text-accent border-accent/30",
   community_admin: "bg-accent-soft text-accent border-accent/30",
   withdrawn: "bg-danger-soft text-danger border-danger/30",
   declined: "bg-danger-soft text-danger border-danger/30",

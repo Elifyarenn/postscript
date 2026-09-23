@@ -93,6 +93,16 @@ export function describeStep(row: AuditRow): HistoryStep {
       const label = status ? (PLAGIARISM_LABELS[status] ?? status) : "—";
       return { ...base, label: `İntihal kontrolü: ${label}`, note: field(row.after, "note") };
     }
+    // The declaration a writer makes by sending the work in (D-238)
+    case "work_licence.declared_on_submit": {
+      const version = field(row.after, "acceptedVersion");
+      return {
+        ...base,
+        label: version
+          ? `Yazar gönderimle yayın izni verdi (sürüm ${version})`
+          : "Yazar gönderimle yayın izni verdi",
+      };
+    }
     case "work_approval.opened":
       return { ...base, label: "Eser Onayı yazara açıldı" };
     case "work_approval.signed": {

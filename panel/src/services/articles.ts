@@ -36,11 +36,13 @@ import { triggerRevalidate } from "@/lib/revalidate";
 import { slugify, uniqueSlug } from "@/lib/slug";
 import * as templates from "@emails/templates";
 import { allMediaLicensed } from "./media";
+import { hasAcceptedCurrentAgreement } from "./agreements";
 import { getEditorAssignment, selectableWriterCategories } from "./editor-categories";
 import {
   declineWork,
   findLiveApproval,
   openApprovalForArticle,
+  recordSubmissionDeclaration,
   revokeApproval,
 } from "./rights";
 import type { RequestMeta } from "./auth";
@@ -714,6 +716,17 @@ export async function transitionArticle(
     throw forbidden("Bu durum geçişi için yetkiniz yok.");
   }
 
+  // The declaration rests on the contract, so there is nothing to declare until
+  // the writer has accepted the version that is current now (D-238).
+  if (to === "in_review" && article.authorId === actor.id) {
+    if (!(await hasAcceptedCurrentAgreement(actor.id))) {
+      throw conflict(
+        "Yazınızı göndermeden önce yazar sözleşmesini kabul etmeniz gerekiyor. " +
+          "Sözleşme sayfasından okuyup kabul edebilirsiniz.",
+      );
+    }
+  }
+
   const grant = await findLiveApproval(article.id);
 
   const check = checkTransition(article.status, to, {
@@ -725,6 +738,12 @@ export async function transitionArticle(
   if (!check.ok) throw conflict(check.reason);
 
   const updated = await applyStatus(article, to, actor.id, meta, options);
+
+  // Sending one's own work to the editors is the licence declaration for that
+  // work (D-238). An editor moving the same article along the chain is not.
+  if (to === "in_review" && article.authorId === actor.id) {
+    await recordSubmissionDeclaration(updated, actor, meta);
+  }
 
   // `accepted` immediately becomes `awaiting_rights` and opens the form (§7.2)
   const next = autoTransitionAfter(to);

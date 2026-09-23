@@ -68,6 +68,8 @@ export type UserListRow = {
   isMainEditor: boolean;
   /** Whether the account also draws for the magazine (D-151). */
   isIllustrator: boolean;
+  /** Whether the account is the magazine's legal adviser (D-238). */
+  isLegalAdvisor: boolean;
   /** Only whether 2FA is on; the secret never leaves the service. */
   totpEnabled: boolean;
   kvkkConsentAt: Date | null;

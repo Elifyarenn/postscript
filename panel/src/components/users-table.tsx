@@ -33,7 +33,8 @@ type ColumnId =
   | "age"
   | "kvkk"
   | "application"
-  | "illustrator";
+  | "illustrator"
+  | "legalAdvisor";
 
 type Column = { label: string; className?: string; cell: (row: UserListRow) => ReactNode };
 
@@ -171,6 +172,11 @@ const COLUMNS: Record<ColumnId, Column> = {
     className: "text-xs whitespace-nowrap",
     cell: (row) => (row.isIllustrator ? <StatusBadge status="illustrator" /> : "—"),
   },
+  legalAdvisor: {
+    label: "Hukuk danışmanı",
+    className: "text-xs whitespace-nowrap",
+    cell: (row) => (row.isLegalAdvisor ? <StatusBadge status="legal_advisor" /> : "—"),
+  },
   application: {
     label: "Yazar başvurusu",
     cell: (row) =>
@@ -181,7 +187,17 @@ const COLUMNS: Record<ColumnId, Column> = {
 /** The columns each list offers, and the ones shown before the admin picks. */
 const SEGMENT_COLUMNS: Record<UserSegment, { available: ColumnId[]; defaults: ColumnId[] }> = {
   all: {
-    available: ["name", "email", "role", "illustrator", "status", "areas", "birthDate", "createdAt"],
+    available: [
+      "name",
+      "email",
+      "role",
+      "illustrator",
+      "legalAdvisor",
+      "status",
+      "areas",
+      "birthDate",
+      "createdAt",
+    ],
     defaults: ["name", "email", "role", "status", "areas", "createdAt"],
   },
   writers: {
@@ -198,7 +214,18 @@ const SEGMENT_COLUMNS: Record<UserSegment, { available: ColumnId[]; defaults: Co
     defaults: ["name", "email", "role", "createdAt"],
   },
   readers: {
-    available: ["name", "email", "verified", "age", "birthDate", "kvkk", "application", "status", "createdAt"],
+    available: [
+      "name",
+      "email",
+      "verified",
+      "age",
+      "birthDate",
+      "kvkk",
+      "application",
+      "legalAdvisor",
+      "status",
+      "createdAt",
+    ],
     defaults: ["name", "email", "verified", "age", "kvkk", "application", "createdAt"],
   },
 };

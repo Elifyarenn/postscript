@@ -15,7 +15,7 @@ import {
   transitionArticle,
   updateArticleAsWriter,
 } from "@/services/articles";
-import { approveWork } from "@/services/rights";
+import { approveWork, confirmUncoveredSubmissions } from "@/services/rights";
 import { requestMetadata, requireRole } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
 import { checkbox, optionalText, runAction, text, type ActionState } from "@/lib/action";
@@ -179,6 +179,33 @@ export async function updateArticleAsWriterAction(
     revalidatePath(`/writer/articles/${articleId}`);
     revalidatePath("/writer/articles");
     return { success: "Yazı kaydedildi." };
+  });
+}
+
+/**
+ * Confirms, in one deliberate step, the works that were already submitted
+ * before the writer accepted the contract (D-238). Accepting the contract does
+ * not cover them on its own.
+ */
+export async function confirmUncoveredSubmissionsAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("writer");
+    const meta = await requestMetadata();
+
+    const count = await confirmUncoveredSubmissions({ ...user }, meta);
+
+    revalidatePath("/writer/agreement");
+    revalidatePath("/writer/articles");
+    return {
+      success:
+        count === 0
+          ? "Teyit bekleyen yazı kalmadı."
+          : `${count} yazı için yayın izni beyanı kaydedildi.`,
+    };
   });
 }
 

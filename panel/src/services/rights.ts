@@ -8,15 +8,17 @@
  * body and the contract version it rests on.
  */
 import "server-only";
-import { and, desc, eq, inArray, lt, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
 import {
   agreementVersions,
   articles,
+  articleVersions,
   rightsGrants,
   users,
   type Article,
+  type ArticleStatus,
   type RightsGrant,
   type User,
 } from "@/db/schema";
@@ -30,7 +32,7 @@ import { sendMail } from "@/lib/mail/transport";
 import { renderDocumentPdf } from "@/lib/pdf";
 import * as templates from "@emails/templates";
 import { storeGeneratedPdf } from "./media";
-import { getCurrentAgreement } from "./agreements";
+import { getCurrentAgreement, hasAcceptedCurrentAgreement } from "./agreements";
 import type { RequestMeta } from "./auth";
 
 /**
@@ -169,6 +171,164 @@ export async function findGrant(grantId: string): Promise<RightsGrant> {
 }
 
 /** The approval that currently governs an article: pending or signed (§7.5). */
+/** The highest `article_versions` number, or null when nothing is snapshotted. */
+async function latestVersionOf(articleId: string): Promise<number | null> {
+  const rows = await db
+    .select({ version: articleVersions.version })
+    .from(articleVersions)
+    .where(eq(articleVersions.articleId, articleId))
+    .orderBy(desc(articleVersions.version))
+    .limit(1);
+  return rows[0]?.version ?? null;
+}
+
+/**
+ * The licence declaration a writer makes by sending a work to the editors
+ * (D-238).
+ *
+ * There is no per-work checkbox: the framework contract states that submitting
+ * a work from the writer's own account is the declaration for that work, in the
+ * scope the contract fixes. So the submit action is what gets recorded, and it
+ * is recorded per submission — text, version, contract version, who and when.
+ *
+ * Only the author's own submit reaches this. An editor moving the same article
+ * along the chain is not the writer's declaration, which is why the caller
+ * checks `authorId === actor.id` before calling.
+ *
+ * A resubmission after a revision supersedes the previous declaration: the old
+ * row is revoked and a new one records the new text, so a declaration always
+ * points at exactly one body.
+ */
+export async function recordSubmissionDeclaration(
+  article: Article,
+  actor: Actor,
+  meta: RequestMeta,
+): Promise<RightsGrant> {
+  if (article.authorId !== actor.id) {
+    throw forbidden("Yayın izni beyanını yalnızca eserin yazarı verebilir.");
+  }
+
+  const agreement = await getCurrentAgreement();
+  if (!agreement) {
+    throw conflict("Yayınlanmış bir sözleşme sürümü yok; yayın izni beyanı kaydedilemez.");
+  }
+
+  // The previous declaration covered the previous text, so it does not carry over
+  await revokeApproval(article.id, actor.id, meta);
+
+  const writer = await findWriter(article.authorId);
+  const declaredAt = new Date();
+  const hash = articleHash(article.bodyMarkdown);
+
+  const [grant] = await db
+    .insert(rightsGrants)
+    .values({
+      articleId: article.id,
+      grantorId: article.authorId,
+      agreementVersionId: agreement.id,
+      // No per-work screen asks, so the profile's preference decides (D-238)
+      bylineChoice: writer.penName ? "pen_name" : "real_name",
+      grantType: LICENCE_TERMS.grantType,
+      rightAdaptation: LICENCE_TERMS.rightAdaptation,
+      rightReproduction: LICENCE_TERMS.rightReproduction,
+      rightDistribution: LICENCE_TERMS.rightDistribution,
+      rightCommunicationToPublic: LICENCE_TERMS.rightCommunicationToPublic,
+      channels: [...LICENCE_TERMS.channels],
+      territory: LICENCE_TERMS.territory,
+      exclusivityMonths: LICENCE_TERMS.exclusivityMonths,
+      consideration: LICENCE_TERMS.consideration,
+      commercialUseIncluded: LICENCE_TERMS.commercialUseIncluded,
+      formTextHash: hash,
+      acceptedBodyMarkdown: article.bodyMarkdown,
+      acceptedVersion: await latestVersionOf(article.id),
+      status: "signed",
+      signedAt: declaredAt,
+      signedIp: meta.ip,
+      signedUserAgent: meta.userAgent,
+    })
+    .returning();
+
+  await writeAudit({
+    actorId: actor.id,
+    action: "work_licence.declared_on_submit",
+    entityType: "rights_grants",
+    entityId: grant!.id,
+    after: {
+      articleId: article.id,
+      articleHash: hash,
+      agreementVersion: agreement.version,
+      acceptedVersion: grant!.acceptedVersion,
+    },
+    ip: meta.ip,
+  });
+
+  return grant!;
+}
+
+/**
+ * Works the writer submitted before accepting the framework contract, so no
+ * declaration covers them (D-238). Accepting the contract does not sweep them
+ * in: they are listed on one screen and confirmed deliberately.
+ */
+export async function listUncoveredSubmissions(
+  actor: Actor,
+): Promise<{ id: string; title: string; status: ArticleStatus; version: number | null }[]> {
+  const rows = await db
+    .select({
+      id: articles.id,
+      title: articles.title,
+      status: articles.status,
+      grantStatus: rightsGrants.status,
+    })
+    .from(articles)
+    .leftJoin(
+      rightsGrants,
+      and(
+        eq(rightsGrants.articleId, articles.id),
+        inArray(rightsGrants.status, ["pending", "signed"]),
+      ),
+    )
+    .where(
+      and(
+        eq(articles.authorId, actor.id),
+        isNull(articles.deletedAt),
+        // Anything already sent to the editors; a draft is not a submission
+        ne(articles.status, "draft"),
+        isNull(rightsGrants.status),
+      ),
+    )
+    .orderBy(asc(articles.title));
+
+  return Promise.all(
+    rows.map(async (row) => ({
+      id: row.id,
+      title: row.title,
+      status: row.status,
+      version: await latestVersionOf(row.id),
+    })),
+  );
+}
+
+/**
+ * Confirms every uncovered submission in one deliberate step. Each work still
+ * gets its own declaration row with its own text, so the record stays per work.
+ */
+export async function confirmUncoveredSubmissions(
+  actor: Actor,
+  meta: RequestMeta,
+): Promise<number> {
+  if (!(await hasAcceptedCurrentAgreement(actor.id))) {
+    throw conflict("Önce yazar sözleşmesini kabul etmeniz gerekiyor.");
+  }
+
+  const pending = await listUncoveredSubmissions(actor);
+  for (const item of pending) {
+    const article = await findArticle(item.id);
+    await recordSubmissionDeclaration(article, actor, meta);
+  }
+  return pending.length;
+}
+
 export async function findLiveApproval(articleId: string): Promise<RightsGrant | null> {
   const rows = await db
     .select()

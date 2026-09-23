@@ -1,349 +1,175 @@
-# TASLAK NOTU — BELGENİN KENDİSİ DEĞİLDİR
+<!-- ŞABLON NOTU — paket üretilirken bu blok silinir.
+Bu şablon **çoklu eser ekidir**: bir yazarın birden çok yazısı tek ekte toplanır,
+her yazı kendi bölümünde ayrıca tanımlanır ve izin her yazı için ayrı işaretlenir.
+Sonraki yazılar için yalnızca yeni bir Eser Eki imzalanır; çerçeve sözleşme
+yeniden imzalanmaz.
+Üretici bu işaretleri kullanır: [EK_NO] [TARIH] [YAZAR_AD] [YAZAR_DOGUM]
+[YAZAR_EPOSTA] [YAZAR_MAHLAS] [SOZLESME_SURUM] ve
+<!-- YAZI-BLOGU-BASI/SONU --> ile <!-- METIN-BLOGU-BASI/SONU --> arasındaki
+blokları her yazı için tekrarlar.
+İmza ve iletme yolu bilerek yazılmadı; avukat görüşüne bağlı.
+-->
 
-> **AVUKAT İNCELEMESİNE SUNULACAK TASLAKTIR. İMZAYA HAZIR DEĞİLDİR.**
->
-> Bu belge **her yazı için bir kez** düzenlenir ve Yazar tarafından imzalanır.
-> Çerçeve sözleşmenin (`yazar-sozlesmesi-ve-ruhsat-taahhudu-v2-TASLAK.md`)
-> Madde 5'inde tanımlanan "Eser İzni" belgesidir ve o sözleşmenin **ekidir**.
->
-> **Panel bu belgeyi üretmiyor.** Paneldeki mevcut "Eser Onayı" akışı bir onay
-> kutusu + metin özeti + IP + tarih kaydı tutuyor ve tek sayfalık bir PDF
-> üretiyor (`src/services/rights.ts`); o PDF **eserin metnini ve verilen hakların
-> listesini içermiyor**, "Sözleşme'nin 4. maddesi"ne atıf yapıyor. Bu belge o
-> boşluğu kapatır. Belge, panel geliştirmesi beklenmeden **elle doldurulup**
-> kullanılabilir: değerler panelden okunur, belge doldurulur, PDF'e çevrilir,
-> Yazar imzalar, imzalı kopya Dergi'ye ulaşır.
->
-> **Alanların panel karşılıkları** (dolduran kişi için):
->
-> | Belgedeki alan | Panelde nerede |
-> |---|---|
-> | Eser başlığı | `/editor/articles/<id>` — başlık |
-> | Son metin sürüm no | `/editor/articles/<id>/versions` — en yüksek sürüm |
-> | Son metin özeti (SHA-256) | `/writer/approvals` — "Kabul edilen metnin özeti" |
-> | Çerçeve sözleşme sürümü ve özeti | `/writer/agreement` üst bilgi |
-> | Görsel sayısı ve lisansları | `/editor/media` + makaleye bağlı medya |
-> | Panel kaydı (Eser Onayı no) | `rights_grants.id` — editör panelinde onay satırı |
->
-> **Doldurulmadan imzaya gönderilmemesi gerekenler** köşeli parantezle
-> gösterildi: `[...]`. Boş bırakılan bir alan varsa belge imzaya gönderilmez.
+# POSTSCRIPT DERGİSİ — ESER EKİ (YAYIN İZNİ VE SON METİN ONAYI)
+
+**Ek no:** [EK_NO] · **Tarih:** [TARIH]
+
+Bu Ek, **Yazar Sözleşmesi**'nin (sürüm [SOZLESME_SURUM]) parçasıdır ve aşağıda
+tek tek gösterilen yazılar için yayın izni verir. İzin her yazı için **ayrı
+ayrı** doğar: bir yazı için işaretlenen izin diğerlerini kapsamaz.
+
+**Yazar:** [YAZAR_AD] — Doğum tarihi: [YAZAR_DOGUM] — E-posta: [YAZAR_EPOSTA]
+Mahlas: [YAZAR_MAHLAS]
+
+**Dergi:** Postscript Dergisi — [ORTAK_1] ve [ORTAK_2] arasındaki adi ortaklık.
+Bildirim kanalı: e-posta.
 
 ---
 
-<!-- BELGE BAŞLANGICI — kullanıma alınırken bu satırdan öncesi silinir -->
+## A. Bütün yazılar için geçerli ortak şartlar
 
-# POSTSCRIPT DERGİSİ — ESER BAZLI YAYIN İZNİ VE SON METİN ONAYI
+Bu bölüm, Ek'teki her yazı için aynıdır ve çerçeve sözleşmenin 3. maddesiyle
+aynı çerçeveyi tekrarlar.
 
-**Belge no:** [BELGE NO]
-**Düzenlenme tarihi:** [GG/AA/YYYY]
-**Şablon sürümü:** [ŞABLON SÜRÜMÜ]
-**Panel kaydı (Eser Onayı):** [PANEL KAYIT NO]
+**A.1. İznin türü:** basit izin (FSEK m. 56/1). Yazıların mali hakları Yazar'da
+kalır. Hak devri yapılmaz, münhasırlık verilmez.
 
-Bu belge, 5846 sayılı Fikir ve Sanat Eserleri Kanunu'nun (FSEK) 48, 49, 51, 52 ve
-56. maddeleri uyarınca düzenlenmiştir. İzin verilen mali haklar aşağıda **ayrı
-ayrı** gösterilmiştir; burada gösterilmeyen hiçbir hak bu belgeyle verilmiş
-sayılmaz.
+**A.2. Verilen haklar:**
 
-Bu belge, Taraflar arasındaki **Yazar Sözleşmesi ve Kullanım Ruhsatı
-Taahhüdü**'nün ekidir ve onunla birlikte yorumlanır.
-
----
-
-## 1. Taraflar
-
-**Ruhsat alan (Dergi):** Postscript Dergisi
-
-*Postscript Dergisi, [ORTAK 1 AD SOYAD] ve [ORTAK 2 AD SOYAD] arasındaki adi
-ortaklıktır ve tüzel kişiliği yoktur. Bu belge her iki ortak adına ve hesabına
-düzenlenir.*
-
-Tebligat adresi: [DERGİ TEBLİGAT ADRESİ VEYA KEP ADRESİ]
-E-posta: [DERGİ E-POSTA]
-İnternet adresi: [DERGİ ALAN ADI]
-
-**Ruhsat veren (Yazar / Eser sahibi):** [YAZAR AD SOYAD]
-
-Doğum tarihi: [GG/AA/YYYY] — E-posta: [YAZAR E-POSTA]
-Mahlas (varsa): [MAHLAS]
-
-## 2. Dayanak sözleşme
-
-| | |
-|---|---|
-| Çerçeve sözleşme | Yazar Sözleşmesi ve Kullanım Ruhsatı Taahhüdü |
-| Sürüm | [SÜRÜM NO] |
-| Sözleşme metin özeti (SHA-256) | [SÖZLEŞME HASH] |
-| Yazar'ın imza tarihi | [GG/AA/YYYY] |
-
-Yazar, yukarıdaki sürümü imzaladığını ve bu belgenin o sözleşmenin Madde 5'i
-uyarınca düzenlendiğini kabul eder.
-
-## 3. Eser
-
-| | |
-|---|---|
-| Başlık | [ESER BAŞLIĞI] |
-| Tür / alan | [TÜR] |
-| Kategori | [KATEGORİ] |
-| Kelime sayısı | [KELİME SAYISI] |
-| Eserde kullanılan görsel sayısı | [GÖRSEL SAYISI] |
-| Panel kaydı (makale) | [MAKALE KAYIT NO] |
-
-## 4. Son Metin Onayı
-
-| | |
-|---|---|
-| Son metin sürüm numarası | [SÜRÜM NO] |
-| Son metnin özeti (SHA-256) | [METİN HASH] |
-| Son metnin bu belgeye eklenmiş hâli | **EK-1** |
-
-4.1. Yazar, **EK-1'de yer alan metnin yayımlanacak son hâli** olduğunu ve
-yukarıdaki özetin bu metne karşılık geldiğini beyan eder.
-
-4.2. Yazar, EK-1'deki metni bu belgeyi imzalamadan önce okumuş ve son hâliyle
-onaylamıştır.
-
-4.3. Bu belge yalnızca EK-1'deki metin için geçerlidir. Metnin Madde 8'de
-tanımlanan biçimde esaslı olarak değişmesi hâlinde bu belge hükümsüz kalır ve
-yeni bir belge düzenlenir.
-
-## 5. İzin verilen mali haklar
-
-Aşağıdaki haklar, yalnızca **"Evet"** yazan satırlarla ve yazılı kapsamla sınırlı
-olmak üzere, Madde 6'daki mecralar ile Madde 7'deki yer ve süre içinde Dergi'ye
-**basit ruhsat** olarak verilir. Bu belge ile mali hak **devri yapılmamakta** ve
-**münhasırlık verilmemektedir** (FSEK m. 56/1).
-
-| Hak | FSEK | Kapsam | Verildi mi |
+| Hak | FSEK | Ne için | Verildi mi |
 |---|---|---|---|
-| Çoğaltma | m. 22 | Eserin dijital ortamda kopyalanması ve Dergi'nin sunucularında/nesne depolamasında barındırılması; yedekleme ve teknik kopyalar | **Evet** |
-| Umuma iletim | m. 25 | Eserin Dergi'nin internet sitesinde erişime sunulması ve Madde 6'daki sınırlı tanıtım kullanımı | **Evet** |
-| İşleme | m. 21 | Yalnızca: (a) yazım, noktalama ve dil düzeltmesi; (b) tanıtım için 300 kelimeyi aşmayan alıntı çıkarılması; (c) sayfa düzeni, biçim ve ekran boyutuna uyarlama dönüşümleri | **Evet — yalnızca bu üç işlem** |
+| Çoğaltma | m. 22 | Yazının dijital olarak kopyalanması, Dergi'nin sunucularında barındırılması, yedeklenmesi | **Evet — yalnızca bunlar için** |
+| Umuma iletim | m. 25 | Yazının Dergi'nin internet sitesinde okunmaya açılması ve A.3'teki sosyal medya kullanımı | **Evet** |
+| İşleme | m. 21 | Yalnızca (a) yazım, noktalama ve dil düzeltmesi, (b) sayfa düzeni, biçim ve ekran boyutuna uyarlama | **Evet — yalnızca bu ikisi** |
 | Yayma | m. 23 | — | **Hayır** |
 | Temsil | m. 24 | — | **Hayır** |
 
-Eserin çevrilmesi, dramatize edilmesi, seslendirilmesi, sesli kitap veya podcast
-hâline getirilmesi, kısaltılmış ya da genişletilmiş biçimde yeniden yazılması,
-başka bir eser türüne dönüştürülmesi, basılı olarak çoğaltılıp dağıtılması ve
-bir yapay zekâ modelinin eğitiminde kullanılması bu belge kapsamı **dışındadır**.
+Çeviri, seslendirme, sesli kitap veya podcast, dramatize etme, kısaltılmış ya da
+genişletilmiş biçimde yeniden yazma, başka bir eser türüne dönüştürme, basılı
+olarak çoğaltıp dağıtma ve bir yapay zekâ modelinin eğitiminde kullanma kapsam
+dışıdır (FSEK m. 51 dahil).
 
-Bu belge, düzenlendiği tarihte mevzuatın tanımadığı hakları ve o tarihte
-bilinmeyen kullanım biçimlerini kapsamaz (FSEK m. 51).
+**A.3. Mecralar:** Dergi'nin internet sitesinde yazının tamamı; Dergi'nin sosyal
+medya hesaplarında yalnızca başlık, ad/mahlas tercihi ve yazının sayfasına
+bağlantı. **Yazı metninden bir bölümün sosyal medyada paylaşılması yalnızca
+ilgili yazının "alıntı izni" kutusu doldurulduysa mümkündür.** Doldurulmaması
+yazının dergide yayımlanmasını etkilemez. Burada sayılmayan mecralar (basılı
+yayın, PDF sayı, e-bülten, üçüncü taraf platformlar) kapsam dışıdır.
 
-## 6. Mecralar
+**A.4. Yer, süre, bedel, ticari kullanım, devir:** dünya geneli; süresiz (geri
+çekme ve fesih hükümleri saklı); **bedel yok**; ticari kullanım **hariç**; Dergi
+izni Yazar'ın yazılı onayı olmadan devredemez ve alt izin veremez (FSEK m. 49).
 
-| Mecra | Dahil mi | Sınır |
-|---|---|---|
-| Dergi'nin internet sitesi | **Evet** | Eserin tamamı |
-| Dergi'nin sosyal medya hesapları — tanıtım | **Evet** | Eser başlığı, yazar adı/mahlası, eserin sayfasına bağlantı ve 300 kelimeyi aşmayan alıntı |
+**A.5. Esaslı değişiklik:** Bir yazının metni, A.2'deki iki işlemin dışında
+değişirse o yazı için verilen izin değişmiş metni kapsamaz; yeni metin için yeni
+bir Eser Eki imzalanır. Yayımlanmış bir yazının metni yerinde değiştirilmez.
 
-**Ek izin — yalnızca Yazar işaretlerse geçerlidir:**
+**A.6. Geri çekme:** Yazar, yayımlanmış bir yazısının kaldırılmasını isteyebilir;
+Dergi en geç 15 gün içinde kaldırır. Yazının adresi, geri çekildiği bilgisiyle
+açık kalır.
 
-☐ Eserin **tamamının** Dergi'nin sosyal medya hesaplarında paylaşılmasına izin
-veriyorum.
+**A.7. Açık arşiv ve kapalı kayıtlar:** Yayımlanan yazı, geri çekilmediği sürece
+sitede okunmaya açık kalır. Bunun yanında Dergi; bu Ek'i, onaylanan metinlerin
+birer kopyasını ve panel kayıtlarını **kimseye açmadan**, yalnızca ispat ve
+hukuki yükümlülük amacıyla saklar. Bu kayıtlar bir yayın değildir ve geri çekme
+ile fesih bunları sona erdirmez. Ayrıntısı çerçeve sözleşmenin 6. maddesindedir.
 
-Yukarıdaki kutu işaretlenmemişse eserin tamamı sosyal medyada paylaşılmaz.
+**A.8. Yazar'ın beyanları:** Yazar, çerçeve sözleşmenin 2. maddesindeki
+beyanlarını bu Ek'teki yazıların tamamı için yeniden eder. Ayrıca: yazıların
+tamamı kendi özgün çalışmasıdır; alıntılar kaynak gösterilerek yapılmıştır;
+yazılar üçüncü kişilerin haklarını ihlal etmez; bu yazılar üzerinde üçüncü bir
+kişiye çelişen bir münhasır izin verilmemiş, hak devredilmemiştir.
 
-Burada sayılmayan mecralar — basılı yayın, PDF sayı, e-bülten, üçüncü taraf
-platformlar ve benzeri — **kapsam dışıdır** ve her biri için Yazar'ın ayrıca
-yazılı izni gerekir.
+**A.9. Yayın koşulu:** Bir yazının Dergi'ye gönderilmiş veya panelde "kabul
+edildi" görünmesi yayın izni sayılmaz. Yazı, ancak çerçeve sözleşme imzalanmış,
+bu Ek'te o yazı için izin işaretlenmiş ve onaylanan metin ile yayımlanacak metin
+aynı olduğunda yayımlanır. Belgedeki tarih, imzanın fiilen atıldığı tarihtir.
 
-## 7. Yer, süre, bedel ve ticari kullanım
+---
+
+## B. Yazılar
+
+<!-- YAZI-BLOGU-BASI -->
+### Yazı [N] — [BASLIK]
 
 | | |
 |---|---|
-| Yer | Dünya geneli (eser internet üzerinden erişime sunulduğu için coğrafi sınır uygulanamaz) |
-| Süre | Süresiz; Madde 9 (geri çekme) ve çerçeve sözleşmenin fesih hükümleri saklıdır |
-| Münhasırlık | **Yok** — basit ruhsat |
-| Bedel | **Yok** — ruhsat bedelsizdir |
-| Ticari kullanım | **Hariç** — eser; ücret karşılığı satılan, ödeme duvarı arkasına konulan, reklam geliri elde eden veya sponsorlu bir yayında kullanılamaz |
-| Alt ruhsat / devir | **Yasak** — Dergi bu ruhsatı Yazar'ın yazılı izni olmadan üçüncü kişiye devredemez, alt ruhsat veremez (FSEK m. 49) |
+| Başlık | **[BASLIK]** |
+| Panel kaydı | `[MAKALE_ID]` |
+| Onaya esas son metin sürümü | **[SURUM]** |
+| Onaya esas metnin tam hâli | **EK-[EK_HARF]** |
+| Yazıda kullanılan görsel | Yazıda görsel kullanılmamıştır |
 
-## 8. Ad gösterimi tercihi
+**İzin.** Yukarıdaki yazı için, A bölümündeki şartlarla yayın izni veriyorum ve
+EK-[EK_HARF]'deki metnin yayımlanacak son hâli olduğunu onaylıyorum:
 
-Yazar, bu eserin aşağıdaki adla yayımlanmasını **seçer** (yalnızca birini
-işaretleyiniz):
+☐ **Evet, bu yazı için izin veriyorum.**
 
-☐ **Gerçek adımla:** [YAZAR AD SOYAD]
+**Yayımlanacak ad** (birini işaretleyin):
 
-☐ **Mahlasımla:** [MAHLAS]
+☐ Gerçek adım: [YAZAR_AD]  ☐ Mahlasım: [YAZAR_MAHLAS]
 
-8.1. Tercih bu eser için sabitlenir.
+**Sosyal medya alıntı izni — isteğe bağlı.** Boş bırakırsanız alıntı izni
+verilmemiş sayılır; yazı normal biçimde yayımlanır ve sosyal medyada yalnızca
+başlık, adınız ve bağlantı paylaşılır.
 
-8.2. Mahlas seçilmişse Yazar'ın gerçek adı, e-posta adresi ve doğum tarihi
-Dergi'nin internet sitesinde, açık veri arayüzlerinde ve tanıtım materyallerinde
-gösterilmez.
+☐ Aşağıdaki metnin paylaşılmasına izin veriyorum:
 
-8.3. Dergi, seçilen adı eserden ayrı olarak sayı içindekiler listesinde, yazar
-profil sayfasında ve Madde 6'daki tanıtım kullanımında kullanabilir.
+> _______________________________________________________________
+>
+> _______________________________________________________________
 
-## 9. Esaslı değişiklik ve yeniden onay
+☐ Yazının tamamının paylaşılmasına izin veriyorum. *(Paraf: ______)*
 
-9.1. **Esaslı değişiklik**, aşağıdakilerden herhangi biridir: paragraf, bölüm
-veya cümle eklenmesi ya da çıkarılması; başlığın değiştirilmesi; anlamı, vurguyu
-veya üslubu değiştiren ifade değişiklikleri; alıntıların, kaynakların veya
-görsellerin değiştirilmesi.
+Hangi hesaplarda: ☐ X ☐ Instagram ☐ TikTok ☐ Pinterest ☐ Diğer: __________
 
-9.2. Yalnızca yazım ve noktalama düzeltmesi, dizgi ve biçimlendirme esaslı
-değildir ve yeniden onay gerektirmez.
+İzin, işaretlenen hesaplarda aynı metnin birden çok kez paylaşılmasını kapsar;
+her paylaşım için yeni izin gerekmez. Farklı bir alıntı, işaretlenmeyen bir hesap
+veya (yalnızca alıntı işaretlendiyse) yazının tamamı için yeni izin gerekir.
+Yazar bu izni her zaman geri alabilir; Dergi 15 gün içinde kaldırır.
 
-9.3. Esaslı bir değişiklik yapılırsa bu belge hükümsüz kalır; yeni son metin
-için **yeni bir Eser İzni belgesi** düzenlenir ve Yazar tarafından imzalanır.
-Yeni belge imzalanmadıkça değiştirilmiş metin yayımlanmaz.
-
-9.4. **Yayımlanmış bir eserin metni yerinde değiştirilmez.** Esaslı bir
-değişiklik gerekiyorsa eser önce yayından geri çekilir, yeni izin alındıktan
-sonra yeniden yayımlanır.
-
-9.5. Bu belgenin hükümsüz kalması, hükümsüzlük tarihine kadar hukuka uygun
-olarak yapılmış kullanımları etkilemez.
-
-## 10. Geri çekme
-
-10.1. Yazar, yayımlanmış eserinin Dergi'nin internet sitesinden kaldırılmasını
-Panel üzerinden veya e-posta ile gerekçesiyle talep edebilir. Dergi talebi en geç
-**15 gün** içinde yerine getirir.
-
-10.2. Geri çekme üzerine ruhsat, internet sitesi ve sosyal medya mecraları
-bakımından sona erer; Dergi daha önce yaptığı tanıtım paylaşımlarını da kaldırır.
-
-10.3. Eserin adresi (URL), geri çekildiği bilgisiyle açık kalır; metin yayında
-kalmaz.
-
-10.4. Geri çekme, talep tarihinden önce üçüncü kişilerin kendi imkânlarıyla
-aldığı kopyaları, arama motoru önbelleklerini ve internet arşivi kayıtlarını
-kapsamaz.
-
-## 11. Yazar'ın beyanları
-
-Yazar, çerçeve sözleşmenin Madde 3'ündeki beyanlarını bu eser için tekrar eder ve
-ayrıca:
-
-11.1. EK-1'deki metnin tamamen kendi özgün çalışması olduğunu; eseri üretirken
-yapay zekâ araçlarından yararlandıysa bunu Dergi'ye bildirdiğini,
-
-11.2. Eserde kullanılan **[GÖRSEL SAYISI]** görselin her biri için kullanım
-hakkına sahip olduğunu veya bu hakkı usulüne uygun biçimde temin ettiğini ve
-kaynak/lisans bilgilerini aşağıdaki tabloda doğru biçimde belirttiğini,
-
-| # | Görsel | Kaynak | Lisans / izin dayanağı |
-|---|---|---|---|
-| 1 | [DOSYA ADI] | [KAYNAK] | [LİSANS] |
-| 2 | [DOSYA ADI] | [KAYNAK] | [LİSANS] |
-
-*(Eserde görsel yoksa bu tablo "görsel kullanılmamıştır" yazılarak kapatılır.)*
-
-11.3. Alıntıların FSEK 35. maddesindeki iktibas serbestisi sınırları içinde
-kaldığını ve kaynağının belirtildiğini,
-
-11.4. Eserin üçüncü kişilerin fikri mülkiyet, kişilik veya diğer haklarını ihlal
-etmediğini; eserde gerçek kişilere ilişkin bilgi varsa bunun hukuka uygun
-olduğunu,
-
-11.5. Eser daha önce başka bir yerde yayımlandıysa bunu Dergi'ye bildirdiğini ve
-önceki yayının bu izne engel olmadığını: ☐ Daha önce yayımlanmadı ☐ Daha önce
-yayımlandı: [NEREDE, NE ZAMAN]
-
-11.6. Bu eser üzerinde üçüncü bir kişiye, bu belgeyle çelişen bir tam ruhsat
-vermediğini veya mali hak devretmediğini
-
-beyan eder.
-
-## 12. Yayın izninin doğduğu an
-
-12.1. Eserin Dergi'ye teslim edilmiş, Panel'de "kabul edildi" olarak
-işaretlenmiş veya bir sayıya yerleştirilmiş olması **yayın izni sayılmaz.**
-
-12.2. Yayın izni, bu belgenin Yazar tarafından imzalanması ve imzalı kopyanın
-Dergi'ye ulaşmasıyla doğar.
-
-12.3. Belge üzerindeki tarih, imzanın **fiilen atıldığı** tarihtir. Geriye dönük
-tarihli izin düzenlenmez.
-
-12.4. Dergi, eseri yayımlayıp yayımlamamakta serbesttir; bu belgenin imzalanması
-Dergi'ye yayın yükümlülüğü getirmez.
-
-## 13. Şekil
-
-13.1. Bu belge, FSEK 52. maddesindeki yazılı şekil şartını karşılamak üzere
-Yazar tarafından **el yazısıyla** veya **güvenli elektronik imza (e-imza / mobil
-imza)** ile imzalanır.
-
-13.2. Panel'de verilen onay kaydı (gösterilen metnin özeti, onay tarihi ve saati,
-IP adresi ve tarayıcı bilgisi) bu belgenin içeriğini ve tarihini destekleyen bir
-**delil kaydı** olarak saklanır; imzalı belgenin yerine geçmez.
-
-13.3. Dergi, imzalı belgeyi teslim aldığında Panel'de eseri "izin alındı" olarak
-işaretler.
-
-## 14. Uygulanacak hukuk
-
-Bu belge Türk hukukuna tabidir. Uyuşmazlıklarda kanunda öngörülen genel yetki ve
-görev kuralları uygulanır.
+<!-- YAZI-BLOGU-SONU -->
 
 ---
 
-## İmzalar
+## C. İmza
 
-**Ruhsat veren (Yazar)**
+Yukarıda işaretlediğim yazılar için, A bölümündeki şartlarla yayın izni
+veriyorum. İşaretlemediğim yazılar bu Ek kapsamında değildir.
 
-Ad Soyad: [YAZAR AD SOYAD]
-Tarih: ____ / ____ / ________
-Yer: ______________________
+**Yazar**
+
+Ad Soyad: [YAZAR_AD] · Tarih: ____ / ____ / ________
 
 İmza:
 
 
-**Ruhsat alan — Postscript Dergisi adına**
+**Postscript Dergisi adına**
 
-Ad Soyad: [ORTAK AD SOYAD]
-Tarih: ____ / ____ / ________
+Ek, Dergi adına **her iki ortak** tarafından imzalanır; ortaklardan birinin tek
+başına temsil yetkisi bulunduğu varsayılmaz.
+
+Ad Soyad: [ORTAK_1] · Tarih: ____ / ____ / ________
+
+İmza:
+
+
+Ad Soyad: [ORTAK_2] · Tarih: ____ / ____ / ________
 
 İmza:
 
 
 ---
 
-## EK-1 — Yayımlanacak son metin
+<!-- METIN-BLOGU-BASI -->
+## EK-[EK_HARF] — [BASLIK]
 
-> Son metnin tamamı bu ekin altına konur. Ekin ilk satırına eserin başlığı, son
-> satırına metnin SHA-256 özeti yazılır; özet Madde 4'teki özetle aynı olmalıdır.
-
-**Eser:** [ESER BAŞLIĞI]
-**Sürüm:** [SÜRÜM NO]
+**Panel kaydı:** `[MAKALE_ID]` · **Sürüm:** [SURUM]
 
 ---
 
-[SON METNİN TAMAMI]
+[SON METİN BURAYA — editör metni dondurduktan sonra eklenir]
 
 ---
 
-**EK-1 metin özeti (SHA-256):** [METİN HASH]
-
-<!-- BELGE SONU -->
-
----
-
-# Avukata sorular (bu belge için)
-
-1. **Son metnin ek olarak konması** FSEK m. 52 bakımından gerekli mi, yoksa
-   metnin SHA-256 özetiyle tanımlanması yeterli mi? Ek koymak belgeyi çok
-   uzatıyor; özet tek başına "konusu olan hakların ayrı ayrı gösterilmesi"
-   şartını ve eserin belirliliğini karşılar mı?
-2. **Madde 6'daki ek izin kutusu** (sosyal medyada eserin tamamı) çerçeve
-   sözleşmenin kapsamını genişletiyor. Bu, çerçeve sözleşmenin "kapsam
-   genişletilemez" kuralıyla çelişir mi; yoksa eser bazında verilen ayrı bir
-   izin olarak geçerli mi?
-3. **Madde 9'daki esaslı değişiklik tanımı** yeterince belirli mi? "Anlamı,
-   vurguyu veya üslubu değiştiren ifade değişiklikleri" ölçütü uyuşmazlıkta
-   işletilebilir mi?
-4. **Madde 12.3'teki geriye dönük tarih yasağı** yazılı olarak konmalı mı, yoksa
-   gereksiz mi?
-5. **Madde 11.2'deki görsel tablosu**: yazarın beyanı yeterli mi, yoksa Dergi'nin
-   ayrıca kontrol yükümlülüğü var mı?
-6. **Yayma hakkının hiç verilmemesi**, eserin sitede indirilebilir olmadığı bir
-   düzende doğru mu? Tarayıcının sayfayı kaydetmesi yayma sayılır mı?
-7. **İki belgeli düzen** (çerçeve + eser bazlı) yerine, her eser için tek ve
-   kendi kendine yeten bir sözleşme imzalamak daha güvenli olur mu?
-8. **Dergi tarafında tek ortağın imzası** yeterli mi, iki ortağın da imzalaması
-   mı gerekir?
+<!-- METIN-BLOGU-SONU -->

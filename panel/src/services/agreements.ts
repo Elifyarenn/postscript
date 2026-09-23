@@ -61,6 +61,28 @@ export async function listAgreementVersions(actor: Actor) {
 }
 
 /** Every version this user has ever accepted, newest first (§9.1). */
+/**
+ * Whether this account has accepted the version that is current right now
+ * (D-238). A later version never inherits an older acceptance: publishing a new
+ * version makes this false again until the writer accepts that text too.
+ */
+export async function hasAcceptedCurrentAgreement(userId: string): Promise<boolean> {
+  const current = await getCurrentAgreement();
+  if (!current) return false;
+
+  const rows = await db
+    .select({ id: agreementAcceptances.id })
+    .from(agreementAcceptances)
+    .where(
+      and(
+        eq(agreementAcceptances.userId, userId),
+        eq(agreementAcceptances.agreementVersionId, current.id),
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
+}
+
 export async function listAcceptancesForUser(userId: string) {
   return db
     .select({

@@ -309,6 +309,20 @@
       "when": 1790117687052,
       "tag": "0044_clumsy_talisman",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1790154172794,
+      "tag": "0045_damp_bromley",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1790154188721,
+      "tag": "0046_useful_nemesis",
+      "breakpoints": true
     }
   ]
 }

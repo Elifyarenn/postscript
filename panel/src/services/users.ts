@@ -284,6 +284,7 @@ export async function listUsers(
       createdAt: users.createdAt,
       isMainEditor: users.isMainEditor,
       isIllustrator: users.isIllustrator,
+      isLegalAdvisor: users.isLegalAdvisor,
       totpEnabledAt: users.totpEnabledAt,
       kvkkConsentAt: users.kvkkConsentAt,
       kvkkConsentVersion: users.kvkkConsentVersion,
@@ -570,6 +571,47 @@ export async function setIllustrator(
     entityId: target.id,
     before: { isIllustrator: target.isIllustrator },
     after: { isIllustrator },
+    ip: meta.ip,
+  });
+
+  return updated!;
+}
+
+/**
+ * The legal adviser mark (D-238). Same shape as the illustrator mark: it is not
+ * a role, so `role` and every panel permission stay untouched. It records the
+ * duty and opens the team avatar builder; nothing else.
+ */
+export async function setLegalAdvisor(
+  actor: Actor,
+  targetUserId: string,
+  isLegalAdvisor: boolean,
+  meta: RequestMeta,
+): Promise<User> {
+  if (!canManageUsers(actor)) throw forbidden("Hukuk danışmanı işareti yalnızca admin yetkisidir.");
+
+  const target = await findUserById(targetUserId);
+  if (target.isLegalAdvisor === isLegalAdvisor) {
+    throw conflict(
+      isLegalAdvisor
+        ? "Kullanıcı zaten hukuk danışmanı."
+        : "Kullanıcı zaten hukuk danışmanı değil.",
+    );
+  }
+
+  const [updated] = await db
+    .update(users)
+    .set({ isLegalAdvisor, updatedAt: new Date() })
+    .where(eq(users.id, target.id))
+    .returning();
+
+  await writeAudit({
+    actorId: actor.id,
+    action: "user.legal_advisor_changed",
+    entityType: "users",
+    entityId: target.id,
+    before: { isLegalAdvisor: target.isLegalAdvisor },
+    after: { isLegalAdvisor },
     ip: meta.ip,
   });
 

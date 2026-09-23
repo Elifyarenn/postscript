@@ -308,6 +308,12 @@ export const users = pgTable(
      * value. The mark grants no panel of its own.
      */
     isIllustrator: boolean("is_illustrator").notNull().default(false),
+    /**
+     * Marks the magazine's legal adviser (D-238). Same idea as the illustrator
+     * mark: not a role, grants no panel and no authority over content. It only
+     * names the duty and opens the team avatar builder.
+     */
+    isLegalAdvisor: boolean("is_legal_advisor").notNull().default(false),
     writerStatus: writerStatusEnum("writer_status"),
     /** Belongs to editors only; admins and writers leave it null (D-039). */
     editorStatus: editorStatusEnum("editor_status"),
@@ -1114,8 +1120,16 @@ export const rightsGrants = pgTable(
     consideration: considerationEnum("consideration").notNull().default("none"),
     commercialUseIncluded: boolean("commercial_use_included").notNull().default(false),
 
-    /** sha256 of the full form text that was rendered to the writer. */
+    /** sha256 of the work's body as it stood when the licence was declared. */
     formTextHash: text("form_text_hash").notNull(),
+    /**
+     * The body itself, kept beside its hash (D-238). The hash proves nothing
+     * changed; this is what was actually licensed, so it has to be readable
+     * years later without reconstructing it from the version history.
+     */
+    acceptedBodyMarkdown: text("accepted_body_markdown"),
+    /** Which `article_versions` number the declaration was made against. */
+    acceptedVersion: integer("accepted_version"),
     formPdfMediaId: uuid("form_pdf_media_id").references(() => media.id, { onDelete: "set null" }),
 
     status: grantStatusEnum("status").notNull().default("pending"),

@@ -32,18 +32,26 @@ import type { RequestMeta } from "./auth";
 
 const PNG_MIME = "image/png";
 
-async function isIllustrator(userId: string): Promise<boolean> {
+/** The duty marks that open the builder to an account with no staff role. */
+async function dutyMarks(userId: string): Promise<{
+  isIllustrator: boolean;
+  isLegalAdvisor: boolean;
+}> {
   const rows = await db
-    .select({ isIllustrator: users.isIllustrator })
+    .select({ isIllustrator: users.isIllustrator, isLegalAdvisor: users.isLegalAdvisor })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
-  return rows[0]?.isIllustrator ?? false;
+  return {
+    isIllustrator: rows[0]?.isIllustrator ?? false,
+    isLegalAdvisor: rows[0]?.isLegalAdvisor ?? false,
+  };
 }
 
 /** Whether the builder is open to this account; the page and every action ask. */
 export async function isTeamMember(actor: Actor): Promise<boolean> {
-  return canCreateTeamAvatar(actor, await isIllustrator(actor.id));
+  const marks = await dutyMarks(actor.id);
+  return canCreateTeamAvatar(actor, marks.isIllustrator, marks.isLegalAdvisor);
 }
 
 async function assertTeamMember(actor: Actor): Promise<void> {
@@ -124,9 +132,11 @@ export async function getOwnTeamForm(actor: Actor): Promise<OwnTeamForm | null> 
  * illustrator mark, which is where "what this person does" is actually
  * recorded. The team role on the avatar is free text and cannot be matched on.
  */
-export async function teamDutyOf(actor: Actor): Promise<{ role: string; isIllustrator: boolean }> {
+export async function teamDutyOf(
+  actor: Actor,
+): Promise<{ role: string; isIllustrator: boolean; isLegalAdvisor: boolean }> {
   await assertTeamMember(actor);
-  return { role: actor.role, isIllustrator: await isIllustrator(actor.id) };
+  return { role: actor.role, ...(await dutyMarks(actor.id)) };
 }
 
 /** How far the team form has got, for the admin overview (D-226). */
@@ -178,7 +188,11 @@ export async function listTeamMembersMissing(actor: Actor): Promise<MissingTeamM
     .where(
       and(
         // Who the builder is open to, the same rule as `canCreateTeamAvatar`
-        or(inArray(users.role, ["writer", "editor", "admin"]), eq(users.isIllustrator, true)),
+        or(
+          inArray(users.role, ["writer", "editor", "admin"]),
+          eq(users.isIllustrator, true),
+          eq(users.isLegalAdvisor, true),
+        ),
         ne(users.role, "admin"),
         isNull(users.deletedAt),
         eq(users.isBanned, false),
