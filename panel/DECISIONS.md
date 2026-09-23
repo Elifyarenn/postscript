@@ -9652,3 +9652,38 @@ taslağıyla değil. Kapı değişmedi — kim neyi okuyabiliyorsa yine o okuyor
 adının görünmesi; editörün kaydettiği sürümde editörün adının görünmesi; başka
 bir yazara 403). `article-versions` 8 test, `article-history` ve tüm birim
 testleri (365) geçti. Kapı: typecheck, lint, test.
+
+---
+
+## D-243 — Yazar, incelemedeki kendi yazısının sayfasına giremiyordu
+
+**Belirti:** "Yazarlar yazı sürümlerini göremiyor, ama admin panelinde
+gözüküyor." Sözleşmeyle ilgisi yoktu: üretimde 31 aktif yazarın 13'ü sözleşmeyi
+hiç kabul etmemiş ve panelleri açıktı; `guardWriterInnerPages` zaten sözleşmeye
+bakmıyor (D-050), yalnızca `suspended` ve okunmamış zorunlu duyuru kapatıyor.
+
+**Sebep:** `/writer/articles` listesinde yazının başlığı yalnızca yazı
+`draft` veya `revision_requested` iken bağlantıydı; diğer durumlarda düz metne
+dönüyor, "Düzenle" bağlantısı da gizleniyordu. Yani yazı incelemeye gittiği an
+yazarın kendi yazı sayfasına **hiçbir kapısı kalmıyordu**. Sürüm geçmişi,
+editör notları ve yazının adımları hep o sayfada duruyor; editör panelinin
+kendi yazı sayfası (`/editor/articles/<id>`) etkilenmediği için aynı liste
+orada görünmeye devam ediyordu — "admin panelinde gözüküyor" bundan.
+
+Veri sağlamdı: 35 yazının hepsinde sürüm kaydı var (1–7), yazarı atanmamış yazı
+yok, her yazar kendi yazılarının sürümlerini servis katmanında okuyabiliyordu.
+Eksik olan tek şey bağlantıydı.
+
+**Karar:** Başlık her durumda bağlantı. Sağdaki eylem bağlantısı da her zaman
+duruyor: yazı düzenlenebilir durumdaysa "Düzenle", değilse "Sürümler ve
+notlar". Düzenlemeyi sayfanın kendisi reddediyor (`updateArticleAsWriter`
+taslak dışını 409 ile geri çeviriyor) — kapıyı gizleyerek değil.
+
+**Ders:** Bir yeteneği "kullanılamaz" hâle getirmenin en sessiz yolu, sayfayı
+değil ona giden bağlantıyı kaldırmaktır. Yetki kontrolü sunucuda yapılıyorsa
+bağlantıyı gizlemek güvenlik sağlamaz, yalnızca özelliği görünmez kılar.
+
+**Doğrulama:** Yeni entegrasyon testi, `in_review`, `pending_admin_approval` ve
+`ready_for_publishing` durumlarının üçünde de yazarın kendi sürüm listesini ve
+tek sürüm sayfasını okuyabildiğini doğruluyor. `article-versions` +
+`article-history`: 16 test. Kapı: typecheck, lint, test.

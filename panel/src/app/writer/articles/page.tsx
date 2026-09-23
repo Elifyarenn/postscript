@@ -76,13 +76,16 @@ export default async function WriterArticlesPage() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h2 className="font-serif text-lg">
-                      {editable(article.status) ? (
-                        <Link href={`/writer/articles/${article.id}`} className="hover:underline">
-                          {article.title}
-                        </Link>
-                      ) : (
-                        article.title
-                      )}
+                      {/* Always a way in (D-243). The title used to stop being
+                          a link the moment the article left the author's
+                          hands, which also shut the author out of the page
+                          that holds the editor's notes, the article's steps
+                          and its version history — the very things they most
+                          want to see while it is being reviewed. Editing is
+                          refused by the page itself, not by hiding the door. */}
+                      <Link href={`/writer/articles/${article.id}`} className="hover:underline">
+                        {article.title}
+                      </Link>
                     </h2>
                     <p className="mt-1 text-xs text-muted">
                       {issue ? `Sayı ${issue.number} · ${issue.title}` : "Sayıya atanmadı"}
@@ -92,14 +95,12 @@ export default async function WriterArticlesPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    {editable(article.status) && (
-                      <Link
-                        href={`/writer/articles/${article.id}`}
-                        className="text-sm text-accent underline"
-                      >
-                        {article.status === "revision_requested" ? "Düzenle" : "Düzenle"}
-                      </Link>
-                    )}
+                    <Link
+                      href={`/writer/articles/${article.id}`}
+                      className="text-sm text-accent underline"
+                    >
+                      {editable(article.status) ? "Düzenle" : "Sürümler ve notlar"}
+                    </Link>
                     <StatusBadge status={article.status} />
                   </div>
                 </div>

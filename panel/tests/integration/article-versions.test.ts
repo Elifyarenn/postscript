@@ -5,7 +5,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
-import { articleVersions, users, writerAreas } from "@/db/schema";
+import { articleVersions, articles, users, writerAreas } from "@/db/schema";
 import {
   createArticle,
   createArticleAsWriter,
@@ -226,5 +226,38 @@ describe("an author's own version history", () => {
     const stranger = await createUser({ role: "writer", writerStatus: "active" });
     const error = await captureError(listArticleVersions(actorOf(stranger), article.id));
     expect(error.status).toBe(403);
+  });
+});
+
+describe("an article that has left the author's hands", () => {
+  it("still lets its author read its versions and its steps (D-243)", async () => {
+    const admin = await createUser({ role: "admin" });
+    const writer = await createUser({
+      role: "writer",
+      writerStatus: "pending_agreement",
+      writerArea: "Deneme alanı",
+    });
+    await db.insert(writerAreas).values({ name: "Deneme alanı" });
+    await publishContract(actorOf(admin));
+    await acceptCurrentContract(writer);
+    const author = await reloadUser(writer.id);
+
+    const article = await createArticleAsWriter(
+      actorOf(author),
+      { title: "İncelemedeki yazı", bodyMarkdown: "İlk hâli.", category: "Deneme alanı" },
+      noMeta,
+    );
+
+    // Every status the review chain puts an article in; none of them is the
+    // author's to edit, and all of them are theirs to read
+    for (const status of ["in_review", "pending_admin_approval", "ready_for_publishing"] as const) {
+      await db.update(articles).set({ status }).where(eq(articles.id, article.id));
+
+      const versions = await listArticleVersions(actorOf(author), article.id);
+      expect(versions.length, status).toBeGreaterThan(0);
+
+      const one = await getArticleVersion(actorOf(author), article.id, versions[0]!.version);
+      expect(one.article.id, status).toBe(article.id);
+    }
   });
 });
