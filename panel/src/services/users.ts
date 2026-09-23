@@ -159,6 +159,8 @@ function segmentCondition(segment: UserSegment): SQL | undefined {
     // everyone marked — a writer who also draws included
     case "illustrators":
       return eq(users.isIllustrator, true);
+    case "assistants":
+      return eq(users.isAssistant, true);
     case "readers":
       return eq(users.role, "user");
     default:
@@ -285,6 +287,7 @@ export async function listUsers(
       isMainEditor: users.isMainEditor,
       isIllustrator: users.isIllustrator,
       isLegalAdvisor: users.isLegalAdvisor,
+      isAssistant: users.isAssistant,
       totpEnabledAt: users.totpEnabledAt,
       kvkkConsentAt: users.kvkkConsentAt,
       kvkkConsentVersion: users.kvkkConsentVersion,
@@ -612,6 +615,44 @@ export async function setLegalAdvisor(
     entityId: target.id,
     before: { isLegalAdvisor: target.isLegalAdvisor },
     after: { isLegalAdvisor },
+    ip: meta.ip,
+  });
+
+  return updated!;
+}
+
+/**
+ * The assistant mark (D-239). The third member of the same family as the
+ * illustrator and legal adviser marks: not a role, so `role` and every panel
+ * permission stay untouched. It records the duty, shows a badge and opens the
+ * team avatar builder.
+ */
+export async function setAssistant(
+  actor: Actor,
+  targetUserId: string,
+  isAssistant: boolean,
+  meta: RequestMeta,
+): Promise<User> {
+  if (!canManageUsers(actor)) throw forbidden("Asistan işareti yalnızca admin yetkisidir.");
+
+  const target = await findUserById(targetUserId);
+  if (target.isAssistant === isAssistant) {
+    throw conflict(isAssistant ? "Kullanıcı zaten asistan." : "Kullanıcı zaten asistan değil.");
+  }
+
+  const [updated] = await db
+    .update(users)
+    .set({ isAssistant, updatedAt: new Date() })
+    .where(eq(users.id, target.id))
+    .returning();
+
+  await writeAudit({
+    actorId: actor.id,
+    action: "user.assistant_changed",
+    entityType: "users",
+    entityId: target.id,
+    before: { isAssistant: target.isAssistant },
+    after: { isAssistant },
     ip: meta.ip,
   });
 

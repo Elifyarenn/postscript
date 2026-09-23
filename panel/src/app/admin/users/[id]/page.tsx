@@ -42,6 +42,7 @@ import {
   setEditorStatusAction,
   setHybridWriterRoleAction,
   setIllustratorAction,
+  setAssistantAction,
   setLegalAdvisorAction,
   setWriterAreasAction,
   setWriterStatusAction,
@@ -318,6 +319,37 @@ export default async function AdminUserDetailPage({
                 {target.isLegalAdvisor
                   ? "Hukuk danışmanı olarak işaretli."
                   : "Hukuk danışmanı değil."}
+              </p>
+            </>
+          </PanelForm>
+        </Card>
+
+        <Card>
+          <h2 className="mb-1 font-serif text-lg">Asistan</h2>
+          <p className="mb-4 text-sm text-muted">
+            Dergiye yardım eden hesabı işaretler. Çizer ve hukuk danışmanı işaretleri
+            gibi ayrı bir rol değildir: hesabın rolü değişmez, hiçbir panele giriş
+            vermez ve içerik üzerinde yetki tanımaz. İşaretli hesap Asistanlar
+            listesinde görünür ve ekip avatarı oluşturucusuna girebilir. Kayıtlı her
+            üye gibi topluluğu da kullanabilir; bunun için işaret gerekmez.
+          </p>
+          <PanelForm
+            action={setAssistantAction}
+            csrfToken={csrfToken}
+            submitLabel={
+              target.isAssistant ? "Asistan işaretini kaldır" : "Asistan olarak işaretle"
+            }
+            submitVariant="secondary"
+          >
+            <>
+              <input type="hidden" name="userId" value={target.id} />
+              <input
+                type="hidden"
+                name="assistant"
+                value={target.isAssistant ? "hayir" : "evet"}
+              />
+              <p className="text-sm">
+                Şu an: {target.isAssistant ? "Asistan olarak işaretli." : "Asistan değil."}
               </p>
             </>
           </PanelForm>

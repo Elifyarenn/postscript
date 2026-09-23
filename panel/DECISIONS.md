@@ -9528,3 +9528,47 @@ veri taşımıyor. **Üretime uygulanmadı, push edilmedi.**
 
 **Yapılmayanlar:** Canlıya yayımlanmadı, üretim kaydı değiştirilmedi, onay
 toplanmadı, sürüm 2 yayımlanmadı, commit/push yapılmadı.
+
+---
+
+## D-239 — Asistan işareti; üç işaret olunca `canCreateTeamAvatar` adlandırılmış alanlara geçti
+
+**İstek (ürün sahibi):** "Asistan tag'i ekle, birini panelden asistan
+ekleyebileyim; panel görünümü çizerler ve hukuk danışmanı gibi olsun."
+
+**Karar:** `users.is_assistant` — çizer (D-151) ve hukuk danışmanı (D-238)
+işaretlerinin üçüncüsü. **Rol değil:** `role` değişmiyor, hiçbir panele giriş
+vermiyor, içerik üzerinde yetki tanımıyor. Verdiği şeyler: "Asistan" rozeti,
+**Asistanlar** listesi ve ekip avatarı oluşturucusuna erişim.
+
+**Panel görünümü çizerlerle aynı kalıp:**
+
+- `/admin/users/<id>` → "Asistan" kartı, tek düğmeyle aç/kapat (çizer ve hukuk
+  danışmanı kartlarının aynısı).
+- `/admin/users/assistants` → kendi listesi. `UsersListPage` sayesinde sayfa
+  10 satır; segment `USER_SEGMENTS`'e eklendi, kenar çubuğu ve sayaç
+  kendiliğinden geldi.
+- Kullanıcı tablosuna seçilebilir "Asistan" kolonu.
+- Değişiklik `user.assistant_changed` olarak denetim kaydına yazılıyor.
+
+**Üç işaret olunca yetki fonksiyonu düzeltildi.** `canCreateTeamAvatar` sırayla
+iki, sonra üç konumsal boolean alacak hâle gelmişti; dördüncüye gitmeden
+adlandırılmış alanlara çevrildi:
+
+```
+canCreateTeamAvatar(actor, marks: DutyMarks)
+type DutyMarks = { isIllustrator?; isLegalAdvisor?; isAssistant? }
+```
+
+Böylece çağıran hangi görevi verdiğini adıyla söylüyor ve iki görevi karıştırıp
+kapıyı yanlışlıkla genişletmesi zorlaşıyor. `dutyMarks` üç kolonu birlikte
+okuyor; avatar servisi ve testler nesne biçimine geçirildi. Ekip avatarı
+formunun öneri seçimi (`teamDutyOf`) de asistanı taşıyor.
+
+**Hakkında sayfası:** asistan kamuya açık listeye eklenmedi — çizerlerden farkı
+bu; hukuk danışmanında olduğu gibi istenirse tek satırlık iş.
+
+**Doğrulama:** `pnpm typecheck` temiz, `pnpm lint` 0 hata (5 uyarı başka bir
+oturumun dosyalarında), `pnpm test` **80 dosya / 819 test geçti**.
+
+**Migration 0047:** tek kolon, varsayılanlı, veri taşımıyor.

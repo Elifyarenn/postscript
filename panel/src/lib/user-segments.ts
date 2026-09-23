@@ -5,7 +5,14 @@
  */
 import type { EditorStatus, Role, WriterApplicationStatus, WriterStatus } from "@/db/schema";
 
-export const USER_SEGMENTS = ["all", "writers", "editors", "illustrators", "readers"] as const;
+export const USER_SEGMENTS = [
+  "all",
+  "writers",
+  "editors",
+  "illustrators",
+  "assistants",
+  "readers",
+] as const;
 
 export type UserSegment = (typeof USER_SEGMENTS)[number];
 
@@ -41,6 +48,13 @@ export const USER_SEGMENT_META: Record<
     description: "Dergiye görsel üreten hesaplar. Hem yazan hem çizen hesaplar da burada.",
     countNoun: "çizer",
   },
+  assistants: {
+    href: "/admin/users/assistants",
+    navLabel: "Asistanlar",
+    title: "Asistanlar",
+    description: "Dergiye yardım eden hesaplar. İşaret bir rol değildir; panele giriş vermez.",
+    countNoun: "asistan",
+  },
   readers: {
     href: "/admin/users/readers",
     navLabel: "Kullanıcılar",
@@ -70,6 +84,8 @@ export type UserListRow = {
   isIllustrator: boolean;
   /** Whether the account is the magazine's legal adviser (D-238). */
   isLegalAdvisor: boolean;
+  /** Whether the account is marked as an assistant (D-239). */
+  isAssistant: boolean;
   /** Only whether 2FA is on; the secret never leaves the service. */
   totpEnabled: boolean;
   kvkkConsentAt: Date | null;

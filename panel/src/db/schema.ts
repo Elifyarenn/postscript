@@ -314,6 +314,12 @@ export const users = pgTable(
      * names the duty and opens the team avatar builder.
      */
     isLegalAdvisor: boolean("is_legal_advisor").notNull().default(false),
+    /**
+     * Marks an assistant working for the magazine (D-239). Same family as the
+     * illustrator and legal adviser marks: not a role, no panel, no authority
+     * over content — it names the duty and opens the team avatar builder.
+     */
+    isAssistant: boolean("is_assistant").notNull().default(false),
     writerStatus: writerStatusEnum("writer_status"),
     /** Belongs to editors only; admins and writers leave it null (D-039). */
     editorStatus: editorStatusEnum("editor_status"),

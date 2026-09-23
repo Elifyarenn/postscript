@@ -34,7 +34,8 @@ type ColumnId =
   | "kvkk"
   | "application"
   | "illustrator"
-  | "legalAdvisor";
+  | "legalAdvisor"
+  | "assistant";
 
 type Column = { label: string; className?: string; cell: (row: UserListRow) => ReactNode };
 
@@ -177,6 +178,11 @@ const COLUMNS: Record<ColumnId, Column> = {
     className: "text-xs whitespace-nowrap",
     cell: (row) => (row.isLegalAdvisor ? <StatusBadge status="legal_advisor" /> : "—"),
   },
+  assistant: {
+    label: "Asistan",
+    className: "text-xs whitespace-nowrap",
+    cell: (row) => (row.isAssistant ? <StatusBadge status="assistant" /> : "—"),
+  },
   application: {
     label: "Yazar başvurusu",
     cell: (row) =>
@@ -193,6 +199,7 @@ const SEGMENT_COLUMNS: Record<UserSegment, { available: ColumnId[]; defaults: Co
       "role",
       "illustrator",
       "legalAdvisor",
+      "assistant",
       "status",
       "areas",
       "birthDate",
@@ -211,6 +218,10 @@ const SEGMENT_COLUMNS: Record<UserSegment, { available: ColumnId[]; defaults: Co
   // A çizer may be a yazar as well, so this list shows the role too (D-151)
   illustrators: {
     available: ["name", "email", "role", "status", "areas", "createdAt"],
+    defaults: ["name", "email", "role", "createdAt"],
+  },
+  assistants: {
+    available: ["name", "email", "role", "status", "createdAt"],
     defaults: ["name", "email", "role", "createdAt"],
   },
   readers: {

@@ -5,7 +5,12 @@ import { z } from "zod";
 import { db } from "@/db/client";
 import { teamAvatars, users, type TeamAvatar } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
-import { canCreateTeamAvatar, canManageTeamAvatars, type Actor } from "@/lib/auth/rbac";
+import {
+  canCreateTeamAvatar,
+  canManageTeamAvatars,
+  type Actor,
+  type DutyMarks,
+} from "@/lib/auth/rbac";
 import { badRequest, forbidden, notFound } from "@/lib/errors";
 import {
   AVATAR_CONFIG_VERSION,
@@ -33,25 +38,26 @@ import type { RequestMeta } from "./auth";
 const PNG_MIME = "image/png";
 
 /** The duty marks that open the builder to an account with no staff role. */
-async function dutyMarks(userId: string): Promise<{
-  isIllustrator: boolean;
-  isLegalAdvisor: boolean;
-}> {
+async function dutyMarks(userId: string): Promise<Required<DutyMarks>> {
   const rows = await db
-    .select({ isIllustrator: users.isIllustrator, isLegalAdvisor: users.isLegalAdvisor })
+    .select({
+      isIllustrator: users.isIllustrator,
+      isLegalAdvisor: users.isLegalAdvisor,
+      isAssistant: users.isAssistant,
+    })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
   return {
     isIllustrator: rows[0]?.isIllustrator ?? false,
     isLegalAdvisor: rows[0]?.isLegalAdvisor ?? false,
+    isAssistant: rows[0]?.isAssistant ?? false,
   };
 }
 
 /** Whether the builder is open to this account; the page and every action ask. */
 export async function isTeamMember(actor: Actor): Promise<boolean> {
-  const marks = await dutyMarks(actor.id);
-  return canCreateTeamAvatar(actor, marks.isIllustrator, marks.isLegalAdvisor);
+  return canCreateTeamAvatar(actor, await dutyMarks(actor.id));
 }
 
 async function assertTeamMember(actor: Actor): Promise<void> {
@@ -134,7 +140,7 @@ export async function getOwnTeamForm(actor: Actor): Promise<OwnTeamForm | null> 
  */
 export async function teamDutyOf(
   actor: Actor,
-): Promise<{ role: string; isIllustrator: boolean; isLegalAdvisor: boolean }> {
+): Promise<{ role: string } & Required<DutyMarks>> {
   await assertTeamMember(actor);
   return { role: actor.role, ...(await dutyMarks(actor.id)) };
 }
@@ -192,6 +198,7 @@ export async function listTeamMembersMissing(actor: Actor): Promise<MissingTeamM
           inArray(users.role, ["writer", "editor", "admin"]),
           eq(users.isIllustrator, true),
           eq(users.isLegalAdvisor, true),
+          eq(users.isAssistant, true),
         ),
         ne(users.role, "admin"),
         isNull(users.deletedAt),

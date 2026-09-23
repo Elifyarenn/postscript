@@ -299,20 +299,25 @@ export function canPerformTransition(
 /* ------------------------------------------------------------------ */
 
 /**
- * The team is everyone who makes the magazine: writers, editors, admins, and
- * members carrying a duty mark instead of a staff role — illustrators (D-151)
- * and the legal adviser (D-238). A plain reader has no place on a team page, so
- * the builder stays closed to them.
- *
- * The marks are separate parameters rather than one "is marked" flag so a
- * caller cannot accidentally widen the door by conflating two duties.
+ * The duty marks an account can carry instead of a staff role: illustrator
+ * (D-151), legal adviser (D-238), assistant (D-239). Each one is named rather
+ * than collapsed into a single "is marked" flag, so a caller cannot widen the
+ * door by conflating two duties.
  */
-export function canCreateTeamAvatar(
-  actor: Actor,
-  isIllustrator: boolean,
-  isLegalAdvisor = false,
-): boolean {
-  return isOperational(actor) && (hasRole(actor.role, "writer") || isIllustrator || isLegalAdvisor);
+export type DutyMarks = {
+  isIllustrator?: boolean;
+  isLegalAdvisor?: boolean;
+  isAssistant?: boolean;
+};
+
+/**
+ * The team is everyone who makes the magazine: writers, editors, admins, and
+ * members carrying one of the duty marks. A plain reader has no place on a team
+ * page, so the builder stays closed to them.
+ */
+export function canCreateTeamAvatar(actor: Actor, marks: DutyMarks = {}): boolean {
+  const marked = marks.isIllustrator === true || marks.isLegalAdvisor === true || marks.isAssistant === true;
+  return isOperational(actor) && (hasRole(actor.role, "writer") || marked);
 }
 
 /** Every team avatar, its PNG and the ZIP are the admin's to see (D-194). */

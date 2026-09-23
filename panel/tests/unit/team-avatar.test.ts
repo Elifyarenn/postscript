@@ -466,29 +466,33 @@ describe("zip", () => {
 
 describe("team avatar permissions", () => {
   it("opens the builder to the team and closes it to readers", () => {
-    expect(canCreateTeamAvatar(actor({ role: "writer", writerStatus: "active" }), false)).toBe(true);
-    expect(canCreateTeamAvatar(actor({ role: "editor", editorStatus: "active" }), false)).toBe(true);
-    expect(canCreateTeamAvatar(actor({ role: "admin" }), false)).toBe(true);
-    expect(canCreateTeamAvatar(actor(), true)).toBe(true);
-    expect(canCreateTeamAvatar(actor(), false)).toBe(false);
+    expect(canCreateTeamAvatar(actor({ role: "writer", writerStatus: "active" }), {})).toBe(true);
+    expect(canCreateTeamAvatar(actor({ role: "editor", editorStatus: "active" }), {})).toBe(true);
+    expect(canCreateTeamAvatar(actor({ role: "admin" }), {})).toBe(true);
+    expect(canCreateTeamAvatar(actor(), { isIllustrator: true })).toBe(true);
+    expect(canCreateTeamAvatar(actor(), {})).toBe(false);
   });
 
-  it("opens the builder to the legal adviser mark as well (D-238)", () => {
-    // A reader with the mark gets in; the mark does not touch the role
-    expect(canCreateTeamAvatar(actor(), false, true)).toBe(true);
-    // No mark at all stays out, and the default keeps old callers unchanged
-    expect(canCreateTeamAvatar(actor(), false)).toBe(false);
-    expect(canCreateTeamAvatar(actor(), false, false)).toBe(false);
+  it("opens the builder to every duty mark, not just the illustrator one", () => {
+    // A reader carrying any single mark gets in; no mark stays out
+    expect(canCreateTeamAvatar(actor(), { isLegalAdvisor: true })).toBe(true);
+    expect(canCreateTeamAvatar(actor(), { isAssistant: true })).toBe(true);
+    expect(canCreateTeamAvatar(actor(), { isIllustrator: false, isAssistant: false })).toBe(false);
+    expect(canCreateTeamAvatar(actor())).toBe(false);
   });
 
   it("closes it to banned and unverified accounts", () => {
-    expect(canCreateTeamAvatar(actor({ role: "writer", isBanned: true }), false)).toBe(false);
-    expect(canCreateTeamAvatar(actor({ emailVerifiedAt: null }), true)).toBe(false);
+    expect(canCreateTeamAvatar(actor({ role: "writer", isBanned: true }), {})).toBe(false);
+    expect(canCreateTeamAvatar(actor({ emailVerifiedAt: null }), { isIllustrator: true })).toBe(
+      false,
+    );
   });
 
-  it("closes it to a banned or unverified legal adviser too", () => {
-    expect(canCreateTeamAvatar(actor({ isBanned: true }), false, true)).toBe(false);
-    expect(canCreateTeamAvatar(actor({ emailVerifiedAt: null }), false, true)).toBe(false);
+  it("closes it to a banned or unverified marked account too", () => {
+    expect(canCreateTeamAvatar(actor({ isBanned: true }), { isLegalAdvisor: true })).toBe(false);
+    expect(canCreateTeamAvatar(actor({ emailVerifiedAt: null }), { isAssistant: true })).toBe(
+      false,
+    );
   });
 
   it("lets only admins manage the avatars", () => {

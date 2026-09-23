@@ -18,6 +18,7 @@ import {
   setBirthDateAsAdmin,
   setEditorStatus,
   setIllustrator,
+  setAssistant,
   setLegalAdvisor,
   setWriterStatus,
 } from "@/services/users";
@@ -179,6 +180,24 @@ export async function setLegalAdvisorAction(
 
     revalidatePath(`/admin/users/${targetId}`);
     return { success: "Hukuk danışmanı işareti güncellendi." };
+  });
+}
+
+export async function setAssistantAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
+
+    const targetId = text(formData, "userId");
+    await setAssistant({ ...user }, targetId, text(formData, "assistant") === "evet", meta);
+
+    revalidatePath(`/admin/users/${targetId}`);
+    revalidatePath("/admin/users/assistants");
+    return { success: "Asistan işareti güncellendi." };
   });
 }
 
