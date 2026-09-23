@@ -5,8 +5,15 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
-import { articleVersions, users } from "@/db/schema";
-import { createArticle, getArticleVersion } from "@/services/articles";
+import { articleVersions, users, writerAreas } from "@/db/schema";
+import {
+  createArticle,
+  createArticleAsWriter,
+  getArticleVersion,
+  listArticleVersions,
+  updateArticle,
+  updateArticleAsWriter,
+} from "@/services/articles";
 import { isAppError } from "@/lib/errors";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
@@ -16,6 +23,7 @@ import {
   createUser,
   noMeta,
   publishContract,
+  reloadUser,
 } from "../helpers/factories";
 
 let database: Database;
@@ -126,5 +134,97 @@ describe("getArticleVersion", () => {
       const error = await captureError(getArticleVersion(editor, article.id, raw));
       expect(error.status, raw).toBe(404);
     }
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* The author's own history (D-242)                                    */
+/* ------------------------------------------------------------------ */
+
+describe("an author's own version history", () => {
+  /** A writer who may write, with an area their category can come from. */
+  async function writerWithArea() {
+    const admin = await createUser({ role: "admin" });
+    const writer = await createUser({
+      role: "writer",
+      writerStatus: "pending_agreement",
+      displayName: "Yazar Yaren",
+      writerArea: "Deneme alanı",
+    });
+    await db.insert(writerAreas).values({ name: "Deneme alanı" });
+    await publishContract(actorOf(admin));
+    await acceptCurrentContract(writer);
+    return await reloadUser(writer.id);
+  }
+
+  it("keeps the note the author wrote, and shows who saved each version", async () => {
+    const writer = await writerWithArea();
+    const article = await createArticleAsWriter(
+      actorOf(writer),
+      { title: "Bırakamadıklarım", bodyMarkdown: "İlk hâli.", category: "Deneme alanı" },
+      noMeta,
+    );
+
+    await updateArticleAsWriter(
+      actorOf(writer),
+      article.id,
+      {
+        title: "Bırakamadıklarım",
+        category: "Deneme alanı",
+        bodyMarkdown: "İkinci hâli.",
+        changeNote: "Girişi yeniden yazdım",
+      },
+      noMeta,
+    );
+
+    const versions = await listArticleVersions(actorOf(writer), article.id);
+    expect(versions.map((row) => row.version)).toEqual([2, 1]);
+    // Before D-242 an author's own version was stored without a note, so the
+    // history they could open read as a column of dashes
+    expect(versions[0]!.changeNote).toBe("Girişi yeniden yazdım");
+    expect(versions[0]!.changedBy).toBe(writer.id);
+    expect(versions[0]!.changedByName).toBe("Yazar Yaren");
+  });
+
+  it("names the editor on a version the editor saved", async () => {
+    const writer = await writerWithArea();
+    const editor = await createUser({ role: "editor", displayName: "Editör Tuanna" });
+    await db.update(users).set({ isMainEditor: true }).where(eq(users.id, editor.id));
+
+    const article = await createArticleAsWriter(
+      actorOf(writer),
+      { title: "Bırakamadıklarım", bodyMarkdown: "İlk hâli.", category: "Deneme alanı" },
+      noMeta,
+    );
+    await updateArticle(
+      actorOf(editor),
+      article.id,
+      {
+        title: "Bırakamadıklarım",
+        category: "Deneme alanı",
+        bodyMarkdown: "Editörün dokunduğu hâli.",
+        changeNote: "Yazım düzeltmeleri",
+        changeKind: "correction",
+      },
+      noMeta,
+    );
+
+    const versions = await listArticleVersions(actorOf(writer), article.id);
+    // The author sees where someone else's hand was on their text
+    expect(versions[0]!.changedByName).toBe("Editör Tuanna");
+    expect(versions[0]!.changeNote).toBe("Yazım düzeltmeleri");
+  });
+
+  it("is still closed to another writer", async () => {
+    const writer = await writerWithArea();
+    const article = await createArticleAsWriter(
+      actorOf(writer),
+      { title: "Bırakamadıklarım", bodyMarkdown: "İlk hâli.", category: "Deneme alanı" },
+      noMeta,
+    );
+
+    const stranger = await createUser({ role: "writer", writerStatus: "active" });
+    const error = await captureError(listArticleVersions(actorOf(stranger), article.id));
+    expect(error.status).toBe(403);
   });
 });

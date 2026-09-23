@@ -172,6 +172,7 @@ export async function updateArticleAsWriterAction(
         bodyMarkdown: text(formData, "bodyMarkdown"),
         slug: optionalText(formData, "slug"),
         category: optionalText(formData, "category"),
+        changeNote: optionalText(formData, "changeNote"),
       },
       meta,
     );

@@ -114,6 +114,21 @@ export default async function WriterArticleDetailPage({
                       defaultValue={article.bodyMarkdown}
                     />
                   </Field>
+
+                  {/* Goes onto the version this save creates, so the history
+                      below reads as sentences rather than dashes (D-242) */}
+                  <Field
+                    label="Bu kayıtta neyi değiştirdiniz? (isteğe bağlı)"
+                    htmlFor="changeNote"
+                    hint="Aşağıdaki sürüm geçmişinde bu satırın notu olarak görünür."
+                  >
+                    <Input
+                      id="changeNote"
+                      name="changeNote"
+                      maxLength={300}
+                      placeholder="Girişi yeniden yazdım"
+                    />
+                  </Field>
                 </>
               </PanelForm>
             </Card>
@@ -182,6 +197,7 @@ export default async function WriterArticleDetailPage({
                 <tr>
                   <Th>Sürüm</Th>
                   <Th>Tarih</Th>
+                  <Th>Kaydeden</Th>
                   <Th>Not</Th>
                 </tr>
               </thead>
@@ -200,6 +216,9 @@ export default async function WriterArticleDetailPage({
                       )}
                     </Td>
                     <Td className="text-xs">{formatDateTime(version.createdAt)}</Td>
+                    <Td className="text-xs">
+                      {version.changedBy === user.id ? "Siz" : (version.changedByName ?? "—")}
+                    </Td>
                     <Td className="text-xs">{version.changeNote ?? "—"}</Td>
                   </tr>
                 ))}

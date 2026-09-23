@@ -9618,3 +9618,37 @@ demek, "boyu artık içerik belirlemiyor" demek değildi.
 **Doğrulama:** Yayına alındıktan sonra canlıda, 1280×900'de Playwright ile
 ölçüldü: slider ve kutu yükseklikleri ile listenin gerçekten kendi içinde
 kayması (`scrollHeight > clientHeight`).
+
+---
+
+## D-242 — Yazar kendi sürüm geçmişini okuyabilir hâle geldi
+
+**Durum tespiti:** Yazarın kendi yazısının sürümlerini *görmesi* zaten vardı
+(D-108). `/writer/articles/<id>` sayfasında "Sürüm geçmişi" tablosu, her
+sürümün kendi sayfası ve bir önceki sürümle satır satır karşılaştırma
+çalışıyor; `listArticleVersions` ve `getArticleVersion` aynı okuma kapısını
+(`assertCanReadArticle`) kullanıyor, başka bir yazar 403 alıyor. Bu doğrulandı,
+yeniden yazılmadı.
+
+**Sorun:** Görünen liste işe yaramıyordu. `updateArticleAsWriter`,
+`snapshotVersion`'a notu her zaman `null` geçiyordu; yani yazarın kendi
+kaydettiği her sürümün "Not" sütunu "—" idi. Ayrıca listede sürümü kimin
+kaydettiği yoktu: yazar, metnine editörün ne zaman dokunduğunu göremiyordu.
+
+**Karar:**
+
+1. `writerArticleInputSchema`'ya `changeNote` eklendi (300 karakter, isteğe
+   bağlı) ve taslak kaydedilirken oluşan sürüme yazılıyor. Formda "Bu kayıtta
+   neyi değiştirdiniz?" alanı var.
+2. `listArticleVersions` artık `changedBy` ve `changedByName` döndürüyor
+   (`users` ile leftJoin). Yazarın tablosunda "Kaydeden" sütunu: kendi
+   kayıtları "Siz", editörünki editörün adı.
+
+**Sınır:** Yazarın kendi kaydı her zaman `content_change`; düzeltme/içerik
+ayrımı (§7.5) editörün başkasının metnine dokunmasıyla ilgili, yazarın kendi
+taslağıyla değil. Kapı değişmedi — kim neyi okuyabiliyorsa yine o okuyor.
+
+**Doğrulama:** Üç yeni entegrasyon testi (yazarın notunun sürüme yazılması ve
+adının görünmesi; editörün kaydettiği sürümde editörün adının görünmesi; başka
+bir yazara 403). `article-versions` 8 test, `article-history` ve tüm birim
+testleri (365) geçti. Kapı: typecheck, lint, test.

@@ -83,6 +83,12 @@ export const writerArticleInputSchema = z.strictObject({
   bodyMarkdown: z.string().max(200_000).optional(),
   slug: z.string().trim().max(120).optional().nullable(),
   category: z.string().trim().max(80).optional().nullable(),
+  /**
+   * What the author changed, in their own words (D-242). The author's versions
+   * used to be stored without one, so their own history read as a column of
+   * dashes — a list they could open but not use.
+   */
+  changeNote: z.string().trim().max(300).optional().nullable(),
 });
 
 /* ------------------------------------------------------------------ */
@@ -439,7 +445,10 @@ export async function updateArticleAsWriter(
     .returning();
 
   if (input.bodyMarkdown !== undefined && input.bodyMarkdown !== existing.bodyMarkdown) {
-    await snapshotVersion(updated!, actor.id, null, false, "content_change");
+    // The author's own note, when they left one (D-242). An author rewriting
+    // their own draft is always a content change, never a correction: the
+    // distinction in §7.5 is about an editor touching someone else's work.
+    await snapshotVersion(updated!, actor.id, input.changeNote ?? null, false, "content_change");
   }
 
   await writeAudit({
@@ -604,9 +613,24 @@ export async function listArticleVersions(actor: Actor, articleId: string) {
   // The full gate, not the pure one: a category editor's areas count here too
   await assertCanReadArticle(actor, article);
 
+  // Who saved each version comes along (D-242): an author reading their own
+  // history needs to see where an editor's hand was, not only that the text
+  // moved. The name only; the audit log keeps the rest.
   return db
-    .select()
+    .select({
+      id: articleVersions.id,
+      articleId: articleVersions.articleId,
+      version: articleVersions.version,
+      bodyMarkdown: articleVersions.bodyMarkdown,
+      changeNote: articleVersions.changeNote,
+      changeKind: articleVersions.changeKind,
+      isPublishedSnapshot: articleVersions.isPublishedSnapshot,
+      changedBy: articleVersions.changedBy,
+      changedByName: users.displayName,
+      createdAt: articleVersions.createdAt,
+    })
     .from(articleVersions)
+    .leftJoin(users, eq(articleVersions.changedBy, users.id))
     .where(eq(articleVersions.articleId, articleId))
     .orderBy(desc(articleVersions.version));
 }
