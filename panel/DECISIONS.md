@@ -9607,3 +9607,36 @@ slider'ın altına düşüyor ve sabit 7.5rem'lik kutusuyla kayıyor (D-119, D-2
 **Doğrulama:** Yayına alındıktan sonra canlıda Playwright ile ölçüldü —
 1280×900'de slider sütunu ile çalma listesi kutusunun yükseklikleri
 karşılaştırıldı ve listenin gerçekten kendi içinde kaydığı doğrulandı.
+
+---
+
+## D-240 — Aydınlatma metni, gönderimle doğan izin ve üç görev işaretini anlatacak şekilde güncellendi
+
+**Sorun:** `CLAUDE.md`'nin ihlal edilemez kuralı, kişisel veri saklayan bir
+değişiklikte aydınlatma metninin **aynı adımda** güncellenmesini istiyor. D-238 ve
+D-239'da bu yapılmadı: metin hâlâ yalnızca çizer işaretini ve "onaylanan metnin
+SHA-256 özeti"ni anlatıyordu. Oysa artık (a) hukuk danışmanı ve asistan
+işaretleri var, (b) `rights_grants.accepted_body_markdown` ile **gönderilen
+metnin tam hâli** saklanıyor, (c) izin eser onayı ekranıyla değil gönderim
+işlemiyle doğuyor.
+
+**Yapılan (`data/kvkk-aydinlatma-metni.md`):**
+
+- §2'ye **"Yayın izni"** satırı: gönderim anındaki metnin tam hâli ve özeti,
+  yazının sürüm numarası, dayandığı sözleşme sürümü, hesap, tarih-saat, IP ve
+  tarayıcı bilgisi; yeniden gönderimde önceki beyanın kayıt olarak kalması.
+- §2'ye **"Görev işareti"** satırı: çizer, hukuk danışmanı, asistan — rol
+  olmadığı, görevi kaydettiği ve avatar oluşturucusunu açtığı yazılı. Çizer
+  ifadesi "Yazarlık" satırından buraya taşındı.
+- §2 "Sözleşme" satırı: kabul edilen metnin **tam hâlinin** de saklandığı eklendi
+  (kod `agreement_acceptances.rendered_markdown` ile bunu zaten yapıyordu, metin
+  yalnızca özetten söz ediyordu).
+- §3'e iki amaç satırı: her yazı için yayın izninin kurulması ve ispatı; görev
+  işaretinin kaydı. §4'te toplama yöntemi olarak "yazıyı editöre gönderme
+  işlemi". §7'de saklama satırları buna göre.
+
+**Yayımlanma durumu değişmedi:** canlı metin hâlâ 1. sürüm (6 Eylül). Depodaki
+tam metnin yayımlanması `[AÇIK ADRES]` yer tutucusuna bağlı ve o karar ürün
+sahibinde; bu güncelleme metni yayına hazır hâle getirmenin bir adımı.
+
+**Kod:** Değişiklik yok.

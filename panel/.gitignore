@@ -19,3 +19,6 @@ coverage/
 .vercel-env.txt
 .demo-users.txt
 .e2e-dev.*.log
+
+# Vercel CLI baglantisi (vercel link)
+.vercel
