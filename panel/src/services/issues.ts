@@ -31,7 +31,7 @@ export const issueInputSchema = z.strictObject({
 export async function listIssues(actor: Actor) {
   if (!canAccessEditorPanel(actor)) throw forbidden();
   // The working issue is the admins' own; an editor is not shown that it
-  // exists, here or anywhere else (D-236)
+  // exists, here or anywhere else (D-240)
   const visible = canAccessAdminPanel(actor)
     ? isNull(issues.deletedAt)
     : and(isNull(issues.deletedAt), eq(issues.adminOnly, false));

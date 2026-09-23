@@ -1,5 +1,5 @@
 /**
- * Marking a quiz, and knowing when one is not ready to be marked (D-236).
+ * Marking a quiz, and knowing when one is not ready to be marked (D-240).
  */
 import { describe, expect, it } from "vitest";
 import {

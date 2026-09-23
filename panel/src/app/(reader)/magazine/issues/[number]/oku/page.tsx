@@ -18,7 +18,7 @@ const PICK_LABELS: Record<string, string> = {
 };
 
 /**
- * The magazine reader (D-234, D-236).
+ * The magazine reader (D-234, D-240).
  *
  * Whether this reader may be opened at all is decided in `readIssuePages`, not
  * here: an unpublished issue answers 404 to everyone outside the panel, and

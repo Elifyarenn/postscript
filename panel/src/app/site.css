@@ -3261,6 +3261,21 @@ html[data-playlist-open] .ps-site .topbar-note {
   .ps-site .issue-extras-row .player-tracks {
     height: auto;
   }
+
+  /**
+   * The list fills what is left over; it does not decide how much there is.
+   *
+   * `overflow-y: auto` makes a box scroll, but it does not stop the box
+   * asking to be as tall as its contents when the browser works out how tall
+   * the row should be — so forty-five songs were setting the row's height and
+   * the player ran down the page instead of ending where the slider ends.
+   * A height of nothing removes that request; `flex` then hands the list
+   * every pixel the slider’s height leaves over, and the rest scrolls (D-241).
+   */
+  .ps-site .issue-extras-row .player-track-list {
+    height: 0;
+    flex: 1 1 0;
+  }
 }
 
 /* ════════════════ Movie, series and book cards on the rail (D-120) ════════════════ */
@@ -5471,7 +5486,7 @@ html:has(.profile-editor[open]) {
   opacity: 0.7;
 }
 
-/* ════════════ Designed pages in the reader (D-236) ════════════ */
+/* ════════════ Designed pages in the reader (D-240) ════════════ */
 
 /* The reader is the whole screen now: its own frame, no site furniture */
 .ps-site.reader-frame {

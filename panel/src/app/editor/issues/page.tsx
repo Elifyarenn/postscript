@@ -88,7 +88,7 @@ export default async function EditorIssuesPage() {
                 <h2 className="font-serif text-lg">
                   Sayı {issue.number} · {issue.title}
                   {/* Said out loud wherever the issue appears, so nobody has
-                      to remember which one is the working copy (D-236) */}
+                      to remember which one is the working copy (D-240) */}
                   {issue.adminOnly && (
                     <span className="ml-2 rounded border border-warning/50 bg-warning/10 px-1.5 py-0.5 text-xs font-normal text-warning">
                       Yalnızca iki admin — örnek sayı

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Taking delivered pages into an issue (D-236).
+ * Taking delivered pages into an issue (D-240).
  *
  * Several files at once, each with its own progress, its own success and its
  * own failure: a batch where one file is refused must not look like a batch

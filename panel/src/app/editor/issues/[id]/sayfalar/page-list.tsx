@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The issue's pages, in order (D-236).
+ * The issue's pages, in order (D-240).
  *
  * Dragging is the quick way and the arrows are the sure way: both write the
  * same order, and a keyboard alone is enough. The order on screen is not the

@@ -1,5 +1,5 @@
 /**
- * The natural size of an image, read from its own header (D-236).
+ * The natural size of an image, read from its own header (D-240).
  *
  * A page's clickable areas are stored as fractions of the picture, so the
  * picture's proportions are part of the record: a replacement that is a

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 /**
- * The reading frame (D-236).
+ * The reading frame (D-240).
  *
  * Deliberately bare: no site header, no account menu, no footer. An issue is
  * meant to fill the screen, and the site's own furniture around it both steals

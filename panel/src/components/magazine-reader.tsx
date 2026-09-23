@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The magazine reader (D-234, rebuilt for designed pages in D-236).
+ * The magazine reader (D-234, rebuilt for designed pages in D-240).
  *
  * A page is the picture the designer delivered, shown whole, with the
  * clickable areas the panel drew on top of it. The reader's job is to get out
@@ -328,7 +328,7 @@ export function MagazineReader({
 
   const progress = Math.round(((index + 1) / total) * 100);
   // Offered once, on the way in: a reader who has already turned a page knows
-  // where they are and does not want to be sent back (D-236)
+  // where they are and does not want to be sent back (D-240)
   const offerResume =
     !moved && startPageId === null && rememberedIndex > 0 && rememberedIndex !== index;
 
@@ -472,7 +472,7 @@ export function MagazineReader({
                 suppressClicks={suppressClicks}
               />
             ) : (
-              // Laid out from a template before D-236 and never given a
+              // Laid out from a template before D-240 and never given a
               // picture: still shown, so nothing already typed is lost
               <IssuePageSheet key={page.id} page={page} preview={preview} />
             ),

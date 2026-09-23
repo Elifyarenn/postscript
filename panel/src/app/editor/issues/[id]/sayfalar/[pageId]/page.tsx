@@ -14,7 +14,7 @@ import { HotspotEditor, type Sibling } from "./hotspot-editor";
 export const metadata = { title: "Etkileşim alanları" };
 
 /**
- * One page, large, with its clickable areas (D-236).
+ * One page, large, with its clickable areas (D-240).
  *
  * Everything about who may be here is decided in the service: the page is
  * read through `readPageForEditing`, which asks for the admin role, and the

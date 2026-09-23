@@ -1,7 +1,7 @@
 /**
  * POST /api/editor/issues/:id/pages — takes one delivered page picture.
  *
- * A route handler rather than a server action (D-236), for one reason: the
+ * A route handler rather than a server action (D-240), for one reason: the
  * panel uploads several pages at once and shows each one's progress, which
  * needs a request per file that the browser can watch. Everything a server
  * action would check is checked here too — same origin, the double-submit

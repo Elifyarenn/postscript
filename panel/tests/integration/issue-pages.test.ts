@@ -1,5 +1,5 @@
 /**
- * The magazine's pages (D-234, D-236): who may read an issue, that a draft and
+ * The magazine's pages (D-234, D-240): who may read an issue, that a draft and
  * the admins' working issue are refused at the data layer rather than merely
  * hidden, that laying pages out is the admin's, that ordering stays dense and
  * survives a reload, that replacing a picture keeps the areas drawn on it, and
@@ -273,7 +273,7 @@ describe("interaction blocks", () => {
 });
 
 /* ------------------------------------------------------------------ */
-/* The working issue, and the designed pages on it (D-236)             */
+/* The working issue, and the designed pages on it (D-240)             */
 /* ------------------------------------------------------------------ */
 
 /** A PNG header just real enough for the type check and the size read. */

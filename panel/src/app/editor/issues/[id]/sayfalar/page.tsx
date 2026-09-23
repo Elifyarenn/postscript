@@ -20,7 +20,7 @@ import { addIssuePageAction, updateIssuePageAction } from "./actions";
 export const metadata = { title: "Sayı sayfaları" };
 
 /**
- * Preparing an issue (D-234, reshaped by D-236).
+ * Preparing an issue (D-234, reshaped by D-240).
  *
  * Pages are the designs as delivered: upload them, put them in order, say what
  * each one is, and then draw the clickable areas on them. The template layouts

@@ -1,7 +1,7 @@
 "use server";
 
 /**
- * Writing an issue's quizzes (D-236): CSRF check → session → service.
+ * Writing an issue's quizzes (D-240): CSRF check → session → service.
  *
  * The whole quiz travels as one JSON field, because that is what it is: a
  * shape with questions inside options inside it. Saving it in one write means

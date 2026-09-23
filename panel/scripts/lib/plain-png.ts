@@ -1,5 +1,5 @@
 /**
- * A very small PNG writer, for neutral test pages (D-236).
+ * A very small PNG writer, for neutral test pages (D-240).
  *
  * Used by `sample-issue-pages.ts` to make pages that look like pages — the
  * right proportions, the magazine's paper and wine, a rule and a number — so

@@ -1,5 +1,5 @@
 /**
- * Reading a picture's size, and the geometry of the areas drawn on it (D-236).
+ * Reading a picture's size, and the geometry of the areas drawn on it (D-240).
  */
 import { deflateSync } from "node:zlib";
 import { describe, expect, it } from "vitest";

@@ -9247,7 +9247,13 @@ listesine not düşülür.
 
 ---
 
-## D-236 — Dergi sayfa görselleri + üzerine etkileşim alanları
+## D-240 — Dergi sayfa görselleri + üzerine etkileşim alanları
+
+> **Numara düzeltmesi:** Bu karar önce yanlışlıkla D-236 olarak yazıldı. Ben
+> çalışırken paralel bir oturum D-236 (sözleşme paketleri), D-237, D-238 ve
+> D-239'u ekledi; ben dosyanın sonuna eklerken numarayı eski okumama göre
+> verdim. Sözleşme paketleri kararı önce geldiği için D-236 onda kaldı; bu
+> karar ve koddaki 46 atıf D-240’a taşındı (step 157).
 
 **Karar:** Dergi modeli değişti. Bir sayfa artık şablondan kurulan bir yerleşim
 değil, **tasarımcının teslim ettiği görselin kendisi**; panelin eklediği şey bu
@@ -9572,3 +9578,32 @@ bu; hukuk danışmanında olduğu gibi istenirse tek satırlık iş.
 oturumun dosyalarında), `pnpm test` **80 dosya / 819 test geçti**.
 
 **Migration 0047:** tek kolon, varsayılanlı, veri taşımıyor.
+
+---
+
+## D-241 — Çalma listesi kutusu boyunu slider'dan alır, kendi içeriğinden değil
+
+**Karar:** Geniş ekranda çalma listesi kutusunun yüksekliğini artık yanındaki
+sayı kartları slider'ı belirliyor. Şarkı listesi (`.player-track-list`) geniş
+ekranda `height: 0; flex: 1 1 0` alıyor: boyu sorma hakkını bırakıyor, kalan
+yeri dolduruyor, gerisi içinde kayıyor.
+
+**Sorun:** D-225'te kutuya `align-self: stretch` verilmişti ama `.player-tracks`
+geniş ekranda `height: auto` idi ve listede 45 şarkı vardı. `overflow-y: auto`
+bir kutuyu kaydırılabilir yapar; tarayıcı satır yüksekliğini hesaplarken o
+kutunun "içeriğim kadar uzun olmak istiyorum" demesini **engellemez**. Bu
+yüzden satırın boyunu slider değil çalma listesi belirliyordu: kutu aşağı
+doğru uzuyordu — istenenin tam tersi.
+
+**Neden `height: 0`:** `flex-basis: 0` tek başına yeterli değil; kapsayıcının
+max-content hesabına öğenin içeriği yine karışabiliyor. Kesin (definite) bir
+yükseklik ise o katkıyı sıfırlar. `.player-tracks` üzerindeki
+`min-height: 7.5rem` taban olarak duruyor, yani slider beklenmedik biçimde
+kısalırsa liste yok olmuyor.
+
+**Kapsam:** Yalnızca `@media (min-width: 1000px)` bloğu. Telefonda kutu zaten
+slider'ın altına düşüyor ve sabit 7.5rem'lik kutusuyla kayıyor (D-119, D-220).
+
+**Doğrulama:** Yayına alındıktan sonra canlıda Playwright ile ölçüldü —
+1280×900'de slider sütunu ile çalma listesi kutusunun yükseklikleri
+karşılaştırıldı ve listenin gerçekten kendi içinde kaydığı doğrulandı.

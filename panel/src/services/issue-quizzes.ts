@@ -21,7 +21,7 @@ import { mayReadIssue } from "./issue-pages";
 import type { RequestMeta } from "./auth";
 
 /**
- * The quizzes an issue carries (D-236).
+ * The quizzes an issue carries (D-240).
  *
  * Writing one is the admin's, exactly like laying the issue out. Answering one
  * goes through `answerQuiz`, which asks the same door the reader went through

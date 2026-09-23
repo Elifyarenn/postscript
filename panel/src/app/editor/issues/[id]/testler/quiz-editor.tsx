@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Writing a quiz in the panel (D-236).
+ * Writing a quiz in the panel (D-240).
  *
  * Both kinds are the same form with a different middle: a knowledge quiz
  * marks one option right per question, a scored quiz gives every option a

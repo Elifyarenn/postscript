@@ -1,12 +1,12 @@
 /**
- * What the reader component is handed for one page (D-234, D-236).
+ * What the reader component is handed for one page (D-234, D-240).
  *
  * A plain, serialisable shape. Markdown is turned into sanitised HTML on the
  * server, so the browser never carries a parser and never sees anything that
  * was not cleaned first.
  *
  * A page is normally a designed picture with clickable areas on it. Pages laid
- * out from a template before D-236 have no picture and are still rendered from
+ * out from a template before D-240 have no picture and are still rendered from
  * their fields, so nothing already typed was lost.
  */
 import type { PageBlock } from "./issue-blocks";

@@ -1,5 +1,5 @@
 /**
- * The quizzes an issue carries (D-236): who may write one, who may answer one,
+ * The quizzes an issue carries (D-240): who may write one, who may answer one,
  * that the answer key never leaves the server, and that an unfinished quiz
  * refuses to produce a result rather than inventing one.
  */

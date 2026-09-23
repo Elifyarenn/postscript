@@ -1,7 +1,7 @@
 /**
  * GET /api/issue-pages/:id/media/:mediaId — a picture that belongs to a page.
  *
- * Page pictures do not go through the media library route (D-236). A designed
+ * Page pictures do not go through the media library route (D-240). A designed
  * page is the issue: if the issue is closed, so is every pixel of it, and an
  * issue marked "admin only" is closed even to an editor who could otherwise
  * read the whole library. The service asks both questions — may this actor

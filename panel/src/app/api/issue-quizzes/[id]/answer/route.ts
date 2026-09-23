@@ -1,5 +1,5 @@
 /**
- * POST /api/issue-quizzes/:id/answer — marks a reader's answers (D-236).
+ * POST /api/issue-quizzes/:id/answer — marks a reader's answers (D-240).
  *
  * Grading happens here, not in the browser, so the answer key never travels.
  * The reader sends which option they chose for each question and gets back how

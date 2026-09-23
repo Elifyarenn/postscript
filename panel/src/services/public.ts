@@ -105,7 +105,7 @@ export async function listPublishedIssues() {
     })
     .from(issues)
     .leftJoin(media, eq(issues.coverMediaId, media.id))
-    // The working issue is never public, whatever its status says (D-236)
+    // The working issue is never public, whatever its status says (D-240)
     .where(and(eq(issues.status, "published"), eq(issues.adminOnly, false), isNull(issues.deletedAt)))
     .orderBy(desc(issues.number));
 

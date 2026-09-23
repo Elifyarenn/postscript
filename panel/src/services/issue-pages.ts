@@ -31,7 +31,7 @@ import { buildStorageKey, getStorage } from "@/lib/storage";
 import type { RequestMeta } from "./auth";
 
 /**
- * The pages of an issue (D-234, reshaped by D-236).
+ * The pages of an issue (D-234, reshaped by D-240).
  *
  * A page is a designed picture with clickable areas drawn on top of it. The
  * picture carries the headline, the words and the illustration, exactly as the
@@ -259,7 +259,7 @@ async function pagesOf(issueId: string, preview: boolean): Promise<IssuePageView
  * Whether this actor may open this issue at all.
  *
  *  - an issue marked `adminOnly` is the admins' working copy: nobody else,
- *    not an editor, not a writer, not a signed-in reader (D-236)
+ *    not an editor, not a writer, not a signed-in reader (D-240)
  *  - a published issue is open to any signed-in reader
  *  - anything else is the editorial panel's preview
  */
@@ -755,7 +755,7 @@ export async function reorderIssuePages(
 const PAGE_IMAGE_MIMES = ["image/png", "image/jpeg", "image/webp"];
 
 /**
- * Larger than the library's ten (D-236): a full page of design at a size
+ * Larger than the library's ten (D-240): a full page of design at a size
  * where the small type is still readable is a big file, and squeezing it to
  * fit the library's limit is exactly what must not happen to it.
  */

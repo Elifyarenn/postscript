@@ -1,5 +1,5 @@
 /**
- * The clickable areas drawn on a page image (D-236).
+ * The clickable areas drawn on a page image (D-240).
  *
  * A rectangle is stored in fractions of the picture, so it lands on the same
  * part of the design at any size and any zoom. Everything here is pure: the

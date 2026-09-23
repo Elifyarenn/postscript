@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * One designed page, with its clickable areas on top (D-236).
+ * One designed page, with its clickable areas on top (D-240).
  *
  * The picture is the page. Everything above it is positioned in fractions of
  * the picture element itself — not of the frame around it — so an area sits on

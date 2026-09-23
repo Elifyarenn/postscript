@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Taking a quiz inside the magazine (D-236).
+ * Taking a quiz inside the magazine (D-240).
  *
  * One question at a time, with the progress shown, and a result at the end.
  * The marking happens on the server: the browser never receives the answer

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Drawing the clickable areas on a page (D-236).
+ * Drawing the clickable areas on a page (D-240).
  *
  * The picture is the page; this is where a rectangle is put on it and told
  * what to do. Every rectangle is kept in fractions of the picture, measured

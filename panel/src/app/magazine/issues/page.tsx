@@ -78,7 +78,7 @@ export default async function IssuesPage() {
                 <p className="issue-draft-number">Sayı {formatIssueNumber(issue.number)}</p>
                 <p className="issue-draft-title">{issue.theme ?? issue.title}</p>
                 {/* The working issue reaches this list only for an admin;
-                    `listIssues` leaves it out of everybody else's (D-236) */}
+                    `listIssues` leaves it out of everybody else's (D-240) */}
                 <p className="issue-draft-state">
                   {issue.adminOnly ? "Örnek sayı · yalnızca yöneticiler" : "Hazırlanıyor"}
                 </p>

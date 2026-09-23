@@ -15,7 +15,7 @@ import { removeQuizAction } from "./actions";
 export const metadata = { title: "Sayı testleri" };
 
 /**
- * The quizzes an issue carries (D-236).
+ * The quizzes an issue carries (D-240).
  *
  * A quiz lives in the issue, not on a page: the same quiz can be opened from
  * several places in the magazine without being written twice. Which page opens

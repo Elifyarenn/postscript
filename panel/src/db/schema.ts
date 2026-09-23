@@ -153,11 +153,11 @@ export const pageTemplateEnum = pgEnum("page_template", [
   "back_cover",
 ]);
 
-/** What a clickable area on a page image does when a reader chooses it (D-236). */
+/** What a clickable area on a page image does when a reader chooses it (D-240). */
 export const hotspotKindEnum = pgEnum("hotspot_kind", ["link", "page", "info", "quiz"]);
 
 /**
- * The two kinds of quiz (D-236): one with a right answer per question, one
+ * The two kinds of quiz (D-240): one with a right answer per question, one
  * that adds points up and names an outcome for the band the total falls in.
  */
 export const quizKindEnum = pgEnum("quiz_kind", ["knowledge", "scored"]);
@@ -803,7 +803,7 @@ export const issues = pgTable(
     blurb: text("blurb"),
     coverMediaId: uuid("cover_media_id").references(() => media.id, { onDelete: "set null" }),
     /**
-     * A working issue that only the admins may open (D-236). Narrower than
+     * A working issue that only the admins may open (D-240). Narrower than
      * "the editorial team": the sample issue we develop the reader against is
      * not something an editor or a writer should stumble into, so the door in
      * `readIssuePages` asks for the admin panel, not the editor panel.
@@ -857,7 +857,7 @@ export const issuePages = pgTable(
     caption: text("caption"),
 
     /**
-     * The designed page, as delivered (D-236). When this is set the page *is*
+     * The designed page, as delivered (D-240). When this is set the page *is*
      * the picture: the reader shows it whole and puts the clickable areas on
      * top of it, and the template fields above are left alone.
      *
@@ -893,7 +893,7 @@ export const issuePages = pgTable(
 );
 
 /**
- * A quiz an issue carries (D-236).
+ * A quiz an issue carries (D-240).
  *
  * The questions and the outcome bands are JSON because they are a shape, not a
  * relation: nothing ever queries "every option of every quiz", and keeping one
@@ -925,7 +925,7 @@ export const issueQuizzes = pgTable(
 );
 
 /**
- * A clickable area drawn on a page image (D-236).
+ * A clickable area drawn on a page image (D-240).
  *
  * Position is stored as fractions of the picture (0..1), never as pixels: the
  * same rectangle then lands on the same part of the design whatever the
