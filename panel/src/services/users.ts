@@ -813,12 +813,14 @@ export const profileSchema = z.strictObject({
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Tarih YYYY-AA-GG biçiminde olmalı.")
     .optional()
     .nullable(),
+  // http(s) only: a bare `z.url()` takes `javascript:` and `data:`, and these
+  // links go out raw through the public author API (D-248)
   socialLinks: z
     .strictObject({
-      x: z.url().optional(),
-      instagram: z.url().optional(),
-      tiktok: z.url().optional(),
-      substack: z.url().optional(),
+      x: z.url({ protocol: /^https?$/ }).optional(),
+      instagram: z.url({ protocol: /^https?$/ }).optional(),
+      tiktok: z.url({ protocol: /^https?$/ }).optional(),
+      substack: z.url({ protocol: /^https?$/ }).optional(),
     })
     .optional(),
 });

@@ -344,7 +344,8 @@ export async function updateMediaLicenseAction(
       { ...user },
       text(formData, "mediaId"),
       {
-        licenseType: text(formData, "licenseType") as LicenseType,
+        // Validated by the service's schema, not trusted as a cast (D-248)
+        licenseType: text(formData, "licenseType"),
         licenseSource: optionalText(formData, "licenseSource"),
         altText: optionalText(formData, "altText"),
       },

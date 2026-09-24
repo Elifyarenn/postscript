@@ -8,7 +8,7 @@
  *  - media without a `license_type` can never be attached to an article
  */
 import "server-only";
-import { and, desc, eq, inArray, isNull, notLike, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, ne, notLike, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
 import { articleMedia, media, type LicenseType, type MediaRow } from "@/db/schema";
@@ -71,6 +71,9 @@ export function assertUploadAcceptable(buffer: Buffer, declaredMime: string): De
 /* Creating media                                                      */
 /* ------------------------------------------------------------------ */
 
+// `contract_pdf` is deliberately missing: only `storeGeneratedPdf` stamps it.
+// When an editor could choose it — or choose something else for a contract —
+// the label that guards contracts became a switch editors held (D-248).
 export const mediaLicenseSchema = z.strictObject({
   licenseType: z.enum([
     "own_work",
@@ -78,7 +81,6 @@ export const mediaLicenseSchema = z.strictObject({
     "cc_by",
     "stock_licensed",
     "permission_letter",
-    "contract_pdf",
     "other",
   ]),
   licenseSource: z.string().trim().max(500).optional().nullable(),
@@ -178,13 +180,49 @@ export function isIssuePageMedia(row: Pick<MediaRow, "storageKey">): boolean {
   return row.storageKey.startsWith(ISSUE_PAGE_PREFIX);
 }
 
+/** Signed contracts and work approvals; only the system writes under it. */
+export const CONTRACT_PREFIX = "contracts/";
+/** Applicants' sample works; applications are the admin's since D-059. */
+export const APPLICATION_SAMPLE_PREFIX = "writer-applications/";
+
+/**
+ * Whether a file is a contract or work approval PDF. Decided by where the
+ * system stored it, not only by `license_type`: that column is editable, and
+ * while it alone decided, an editor could relabel a writer's signed contract
+ * and then download it as ordinary library media (D-248).
+ */
+export function isContractDocument(row: Pick<MediaRow, "storageKey" | "licenseType">): boolean {
+  return row.licenseType === "contract_pdf" || row.storageKey.startsWith(CONTRACT_PREFIX);
+}
+
+export function isApplicationSample(row: Pick<MediaRow, "storageKey">): boolean {
+  return row.storageKey.startsWith(APPLICATION_SAMPLE_PREFIX);
+}
+
+/**
+ * The editorial library: what an editor may list, relabel and attach. Issue
+ * pages, contracts and application samples each have their own door.
+ */
+export function isLibraryMedia(row: Pick<MediaRow, "storageKey" | "licenseType">): boolean {
+  return !isIssuePageMedia(row) && !isContractDocument(row) && !isApplicationSample(row);
+}
+
 export async function listMedia(actor: Actor, limit = 60, offset = 0) {
   if (!canAccessEditorPanel(actor)) throw forbidden();
 
   return db
     .select()
     .from(media)
-    .where(and(isNull(media.deletedAt), notLike(media.storageKey, `${ISSUE_PAGE_PREFIX}%`)))
+    .where(
+      and(
+        isNull(media.deletedAt),
+        notLike(media.storageKey, `${ISSUE_PAGE_PREFIX}%`),
+        notLike(media.storageKey, `${CONTRACT_PREFIX}%`),
+        notLike(media.storageKey, `${APPLICATION_SAMPLE_PREFIX}%`),
+        // `<>` alone would drop the unlabelled rows, which the library must show
+        or(isNull(media.licenseType), ne(media.licenseType, "contract_pdf")),
+      ),
+    )
     .orderBy(desc(media.createdAt))
     .limit(limit)
     .offset(offset);
@@ -209,7 +247,8 @@ export async function attachMediaToArticle(
 
   const rows = await db.select().from(media).where(eq(media.id, mediaId)).limit(1);
   const row = rows[0];
-  if (!row) throw notFound("Görsel bulunamadı.");
+  // A contract attached to an article would be published with it (D-248)
+  if (!row || row.deletedAt || !isLibraryMedia(row)) throw notFound("Görsel bulunamadı.");
 
   // §4: a media row without a license type may not be attached to an article
   if (!row.licenseType) {
@@ -256,17 +295,31 @@ export async function findMediaByIds(ids: string[]): Promise<MediaRow[]> {
 export async function updateMediaLicense(
   actor: Actor,
   mediaId: string,
-  license: { licenseType: LicenseType; licenseSource?: string | null; altText?: string | null },
+  license: unknown,
   meta: RequestMeta,
 ): Promise<MediaRow> {
   if (!canAccessEditorPanel(actor)) throw forbidden();
 
+  // The action used to cast the form value, so any enum label got through
+  const parsed = mediaLicenseSchema.safeParse(license);
+  if (!parsed.success) {
+    throw badRequest("Lisans bilgisi geçersiz.", z.flattenError(parsed.error).fieldErrors);
+  }
+
+  // Only library rows are relabelled; a contract's label is what keeps it
+  // away from editors, so it must not be theirs to change (D-248). The same
+  // 404 as a missing row, so the answer does not say which ids are contracts.
+  const existing = await db.select().from(media).where(eq(media.id, mediaId)).limit(1);
+  if (!existing[0] || existing[0].deletedAt || !isLibraryMedia(existing[0])) {
+    throw notFound("Görsel bulunamadı.");
+  }
+
   const [row] = await db
     .update(media)
     .set({
-      licenseType: license.licenseType,
-      licenseSource: license.licenseSource ?? null,
-      altText: license.altText ?? null,
+      licenseType: parsed.data.licenseType,
+      licenseSource: parsed.data.licenseSource ?? null,
+      altText: parsed.data.altText ?? null,
       updatedAt: new Date(),
     })
     .where(eq(media.id, mediaId))
@@ -279,7 +332,7 @@ export async function updateMediaLicense(
     action: "media.license_updated",
     entityType: "media",
     entityId: mediaId,
-    after: { licenseType: license.licenseType },
+    after: { licenseType: parsed.data.licenseType },
     ip: meta.ip,
   });
 

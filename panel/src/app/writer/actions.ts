@@ -70,6 +70,10 @@ export async function acceptAgreementAction(
 
     // The whole writer panel unlocks on acceptance, so refresh the shell too
     revalidatePath("/writer", "layout");
+    // A frozen writer's acceptance is recorded, but only an admin lifts the freeze (D-248)
+    if (user.writerStatus === "suspended") {
+      return { success: "Sözleşmeyi onayladınız. Göreviniz dondurulmuş; yeniden açılması için yöneticiye başvurun." };
+    }
     return { success: "Sözleşmeyi onayladınız. Yazar sayfalarınız açıldı." };
   });
 }

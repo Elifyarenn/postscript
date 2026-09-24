@@ -25,7 +25,7 @@ const LICENSE_OPTIONS = [
   ["cc_by", "CC BY"],
   ["stock_licensed", "Lisanslı stok"],
   ["permission_letter", "İzin yazısı var"],
-  ["contract_pdf", "Sözleşme PDF"],
+  // No "contract PDF" choice: only the system files contracts, never an editor (D-248)
   ["other", "Diğer"],
 ] as const;
 

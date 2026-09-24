@@ -8,7 +8,7 @@
  * and it is the hash of the *filled* text that the acceptance records.
  */
 import "server-only";
-import { and, desc, eq, isNull, ne } from "drizzle-orm";
+import { and, desc, eq, isNull, ne, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
 import {
@@ -392,11 +392,21 @@ export async function acceptAgreement(
       })
       .onConflictDoNothing();
 
-    // 5. Accepting the current contract is what turns a writer active
+    // 5. Accepting the current contract is what turns a writer active — but
+    // never a frozen one. A freeze is lifted by an admin only; letting the
+    // acceptance lift it made the accept button a way to undo the admin's
+    // decision (D-248). The condition sits in the UPDATE, so a freeze that
+    // lands while this request runs is not overwritten either.
     await tx
       .update(users)
       .set({ writerStatus: "active", updatedAt: acceptedAt })
-      .where(and(eq(users.id, writer.id), eq(users.role, "writer")));
+      .where(
+        and(
+          eq(users.id, writer.id),
+          eq(users.role, "writer"),
+          or(isNull(users.writerStatus), ne(users.writerStatus, "suspended")),
+        ),
+      );
   });
 
   // 6. and 7.

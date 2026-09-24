@@ -6,12 +6,7 @@ import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/session";
 import { queryAuditLog } from "@/services/audit-query";
 import { errorJson } from "@/lib/api";
-
-/** Quotes a value for CSV, doubling any quote inside it. */
-function csvCell(value: unknown): string {
-  const text = value === null || value === undefined ? "" : String(value);
-  return `"${text.replace(/"/g, '""')}"`;
-}
+import { csvCell } from "@/lib/csv";
 
 export async function GET(request: Request) {
   try {

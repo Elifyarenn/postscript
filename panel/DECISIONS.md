@@ -9916,3 +9916,102 @@ stil dosyalarıyla Playwright'ta 1440×900 ve 390×844'te ölçülerek kontrol e
 **Kalan:** Önizleme üretimde bir yöneticinin düğmeye basmasıyla kurulur. Bu
 oturumda üretim veritabanını okuma izni olmadığı için hangi taslakların
 bulunduğu ve sayfaların canlıdaki görüntüsü buradan doğrulanamadı.
+
+---
+
+## D-248 — Güvenlik denetimi: editör sözleşme PDF'lerine, dondurulmuş yazar paneline ulaşabiliyordu
+
+**Kapsam:** Bütün server action'lar, route handler'lar, korumalı sayfalar,
+yükleme/depolama, markdown/XSS, SQL, CSRF, open redirect, gizli anahtarlar (çalışma
+ağacı + 259 commit'lik geçmiş), rate limit ve bağımlılıklar kod üzerinden
+tarandı. Canlıya yalnızca tek bir okuma isteği atıldı (`GET /login`, başlıklar);
+üretim veritabanına dokunulmadı, deploy yapılmadı.
+
+### Düzeltilenler
+
+1. **(P1) Editör, yazarın imzalı sözleşme ve Eser Onayı PDF'ini indirebiliyordu.**
+   `/api/media/:id` sözleşmeyi yalnızca `license_type = contract_pdf` etiketinden
+   tanıyordu; o etiketi ise her editör, medya kitaplığının "Lisans bilgisini
+   düzelt" formundan herhangi bir satırda değiştirebiliyordu (`updateMediaLicense`
+   satırın ne olduğuna bakmıyor, action değeri `as LicenseType` ile geçiriyordu;
+   `listMedia` sözleşmeleri de listeliyordu). Etiketi "Diğer" yapan editör PDF'i
+   sıradan medya gibi açıyordu — `rbac.ts`'teki "editör bunları asla görmez"
+   kuralı ve KVKK açısından açık.
+   - Sözleşme artık dosyanın **nerede durduğundan** da tanınır: `contracts/`
+     öneki yalnızca `storeGeneratedPdf` tarafından yazılır (`isContractDocument`).
+     Düzeltmeden önce etiketi değiştirilmiş bir satır da böylece kapalı kalır.
+   - `contract_pdf` editörün seçebileceği lisanslardan çıkarıldı; lisans
+     güncellemesi zod'dan geçer ve yalnızca kitaplık satırlarına uygulanır
+     (sözleşme, başvuru örneği, sayı sayfası → 404, var olmayan satırla aynı yanıt).
+   - Sözleşmeler ve başvuru örnekleri kitaplıkta listelenmez, makaleye eklenemez.
+   - Başvuru örnekleri (`writer-applications/`) artık yalnızca yöneticiye ve
+     başvuranın kendisine açık; başvurular D-059'dan beri yöneticinin işi ama
+     örnek dosyalar editörlere açık kalmıştı.
+2. **(P1) Dondurulmuş yazar kendi dondurmasını kaldırabiliyordu.** `acceptAgreement`
+   `writer_status`'u koşulsuz `active` yapıyordu; `requireRole("writer")`
+   yazar durumuna bakmıyor ve `/writer/agreement` dondurulmuş yazara da açık.
+   Yönetici tarafından (veya kendi isteğiyle) dondurulan yazar sözleşmeyi onaylayıp
+   paneli yeniden açıyordu. Onay artık kaydedilir ama dondurma kaldırılmaz; koşul
+   UPDATE'in içinde. Dondurmayı yalnızca yönetici kaldırır.
+3. **(P2) Yazar metni değiştirince eski yayın izni beyanı yerinde kalıyordu.**
+   D-238'de gönderim beyanı gönderilen metnin hash'iyle kaydediliyor; yazar
+   `revision_requested`'da metni yeniden yazıp tekrar göndermezse ve editör
+   yazıyı ilerletirse eski metnin beyanı yayına kadar taşınıyordu. Yazarın
+   gövde değişikliği artık canlı beyanı iptal eder; yeniden gönderim yeni beyan
+   kaydeder, gönderilmezse kabulde açılan Eser Onayı yazara yeniden sorar.
+4. **(P2) Editör yazının yazarını her durumda değiştirebiliyordu** ve yayın yeni
+   yazarın hiç vermediği bir onayla sürüyordu. Yazar değişikliği artık metin
+   değişikliği gibi yeni Eser Onayı ister (onay yenisi için açılır); yayımlanmış
+   eserde 409.
+5. **(P2, yan bulgu) Yayımlanmış eserde "içerik değişikliği" 409 veriyordu ama
+   yazma çoktan olmuştu.** Kontrol `UPDATE`'ten sonra çalışıyordu; hata dönse de
+   sitedeki metin değişiyordu. Kontrol yazmadan önceye alındı.
+6. **(P2) Denetim CSV'sinde formül enjeksiyonu.** `actor` sütunu herkesin
+   seçebildiği görünen ad; `=HYPERLINK(…)` Excel'de çalışıyordu. `=`, `+`, `-`,
+   `@`, sekme ve CR ile başlayan hücrelere `'` eklenir (`src/lib/csv.ts`).
+7. **(P3) Yazar sosyal bağlantıları `javascript:`/`data:` kabul ediyordu**
+   (`z.url()` şema kısıtı koymuyor; public yazar API'si bunları ham döndürüyor).
+   Artık yalnızca http/https.
+
+**Sürücü (D-078):** Yeni sorgular yalnızca üretimde zaten çalışan operatörlerden
+oluşur (`notLike`, `ne`, `or`, `isNull`, `.returning()`); upsert, `sql` şablonu
+veya ham `Date` parametresi yok.
+
+**KVKK (D-084):** Yeni kişisel veri, amaç, aktarım veya saklama süresi yok;
+değişiklikler yalnızca erişimi daraltıyor. Aydınlatma metni değişmedi.
+
+### Bilerek düzeltilmeyenler (rapor edildi)
+
+- **Rate limit sayacı yarış koşulu (P2)** — D-078'den beri bilinen ve kabul
+  edilen açık. Üretimde tüm girişi düşüren olaydan sonra, Neon dalında
+  doğrulanmadan tekrar dokunulmadı. Önerilen yol: upsert yerine
+  karşılaştır-ve-yaz (`UPDATE … WHERE id = ? AND count = ? RETURNING`, kaybeden
+  yeniden okur); önce bir Neon dalına karşı çalıştırılmalı.
+- **Başarılı giriş IP sayacını sıfırlıyor (P2).** `login_ip` başarılı girişleri
+  de sayıyor; sıfırlama kaldırılırsa aynı IP'yi paylaşan (mobil operatör CGNAT)
+  okurlar 10 başarılı girişten sonra kilitlenir. Doğru çözüm IP kovasına yalnızca
+  başarısız denemeleri saymak; sayaç semantiğini değiştirdiği için ayrı adım.
+- **Oturum içi şifre/2FA doğrulamalarında limit yok** (şifre değiştirme, 2FA
+  kapatma, kurtarma kodu üretme) ve **TOTP kodu pencere içinde tekrar
+  kullanılabilir** (P3).
+- **CSP `script-src 'unsafe-inline'`** (P3): nonce tabanlı CSP gerekir.
+- **Yorum/sohbet/arama/yükleme için hız sınırı yok** (P3).
+- **Deneme testi cevap anahtarını döndürüyor** (P3): boş cevapla gönderim bütün
+  `correctId`'leri verir; kayıt tutulmuyor, sonuç önemsiz.
+- **Yönetim hesabı birbirini düşürebilir** (P3): `changeRole`/`setBanned`/
+  `deleteUser` yalnızca kişinin kendisine uygulanmasını engelliyor.
+- **Anonim kutu + veri dışa aktarımı** (P2, hukukçu görüşü gerekiyor): yönetici
+  `exportUserData` ile bir hesabın gönderdiği anonim mesajları görebilir; kutuyu
+  okuyanlar da yöneticiler olduğu için anonimlik yönetime karşı korunmuyor.
+  Kanuni erişim hakkı (KVKK m. 11) ile anonimlik vaadi arasındaki denge hukuki
+  bir karar; kod değiştirilmedi.
+- Diğer P3'ler (işlenmemiş hata günlüğünde sorgu parametreleri, `.gitignore`'da
+  `.env*` genellemesi, kök depoda `.gitignore` yok, editörün `issueId`/kategori
+  dışı taslak oluşturması, medya ekleme/çıkarmada kategori kapsamı yok) raporda.
+
+**Doğrulama:** `tests/integration/security-audit.test.ts` — 23 test; route handler
+ve server action gerçek oturum çereziyle, UI atlanarak doğrudan çağrılıyor.
+Düzeltmeler geri alınıp çalıştırıldığında **12'si kırmızı** (her biri bir
+istismarı yeniden üretiyor), düzeltmelerle 23'ü yeşil. `pnpm audit`: bilinen
+açık yok (prod ve dev). Gizli anahtar taraması: çalışma ağacında ve geçmişte
+gerçek bir anahtar yok, döndürme gerekmiyor.

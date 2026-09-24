@@ -18,10 +18,10 @@ import { NextResponse } from "next/server";
 import { db } from "@/db/client";
 import { agreementAcceptances, media, rightsGrants, writerApplications } from "@/db/schema";
 import { requireAuth } from "@/lib/auth/session";
-import { canAccessEditorPanel, canViewContractDocuments } from "@/lib/auth/rbac";
+import { canAccessAdminPanel, canAccessEditorPanel, canViewContractDocuments } from "@/lib/auth/rbac";
 import { getStorage } from "@/lib/storage";
 import { isProfileImage } from "@/services/profile-images";
-import { isIssuePageMedia } from "@/services/media";
+import { isApplicationSample, isContractDocument, isIssuePageMedia } from "@/services/media";
 import { errorJson } from "@/lib/api";
 import { forbidden, notFound } from "@/lib/errors";
 
@@ -41,7 +41,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     // which asks whether this person may open that issue (D-247)
     if (isIssuePageMedia(row)) throw notFound("Dosya bulunamadı.");
 
-    const isContract = row.licenseType === "contract_pdf";
+    // By where the system stored the file too, not by the editable label alone (D-248)
+    const isContract = isContractDocument(row);
 
     if (isContract) {
       const allowed =
@@ -60,6 +61,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
           headers: { "cache-control": "no-store" },
         });
       }
+    } else if (isApplicationSample(row)) {
+      // Applications are reviewed by the admin alone since D-059; an editor
+      // could still list and open the samples until D-248
+      const allowed =
+        canAccessAdminPanel(context.user) || (await ownsApplicationSample(context.user.id, row.id));
+      if (!allowed) throw forbidden();
     } else if (
       // A profile picture or cover photo is shown to every signed-in member (D-141)
       !(await isProfileImage(row.id)) &&

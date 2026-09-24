@@ -449,6 +449,12 @@ export async function updateArticleAsWriter(
     // their own draft is always a content change, never a correction: the
     // distinction in §7.5 is about an editor touching someone else's work.
     await snapshotVersion(updated!, actor.id, input.changeNote ?? null, false, "content_change");
+
+    // The declaration made at the last submit covered the old text. Left in
+    // place, an editor moving the article on without a resubmit carried it to
+    // publication over a body it never named (D-248). A resubmit records a new
+    // one; otherwise the approval opened at acceptance asks the author again.
+    await revokeApproval(articleId, actor.id, meta);
   }
 
   await writeAudit({
@@ -483,9 +489,21 @@ export async function updateArticle(
   // exactly as on the read side (D-071)
   await assertEditorCoversArticle(actor, existing);
 
-  if (input.authorId && input.authorId !== existing.authorId) {
-    await assertAuthorIsWriter(input.authorId);
+  const authorChanged = Boolean(input.authorId) && input.authorId !== existing.authorId;
+  if (authorChanged) {
+    await assertAuthorIsWriter(input.authorId!);
   }
+
+  const bodyChanged =
+    input.bodyMarkdown !== undefined && input.bodyMarkdown !== existing.bodyMarkdown;
+  const changeKind = input.changeKind ?? "correction";
+
+  // A new author did not approve anything, and neither did the old one approve
+  // a different text: both need a fresh approval (§7.5, D-248). Checked before
+  // the write — this used to run after it, so a published work refused with
+  // 409 had already been rewritten on the site.
+  const needsNewApproval = authorChanged || (bodyChanged && changeKind === "content_change");
+  if (needsNewApproval) assertApprovalCanReopen(existing, authorChanged);
 
   // Moving an article out of the editor's own areas would hand it to someone
   // else's queue and lock the mover out of it; only a main editor or an admin
@@ -520,10 +538,6 @@ export async function updateArticle(
     .where(eq(articles.id, articleId))
     .returning();
 
-  const bodyChanged =
-    input.bodyMarkdown !== undefined && input.bodyMarkdown !== existing.bodyMarkdown;
-  const changeKind = input.changeKind ?? "correction";
-
   if (bodyChanged) {
     await snapshotVersion(updated!, actor.id, input.changeNote ?? null, false, changeKind);
   }
@@ -540,12 +554,27 @@ export async function updateArticle(
 
   // §7.5: a correction stays inside contract article 6.2 and keeps the writer's
   // approval. A content change is a different work, so the approval it was
-  // given for no longer covers it and a fresh one has to be asked for.
-  if (bodyChanged && changeKind === "content_change") {
+  // given for no longer covers it and a fresh one has to be asked for. A new
+  // author is the same: the approval on file is someone else's (D-248).
+  if (needsNewApproval) {
     return reopenApprovalAfterContentChange(updated!, actor, meta);
   }
 
   return updated!;
+}
+
+/**
+ * Refuses a change that would need a new approval for a work that is already
+ * on the site. Runs before the write, so a refusal leaves the article as it was.
+ */
+function assertApprovalCanReopen(article: Article, authorChanged: boolean): void {
+  if (article.status !== "published" && article.status !== "archived") return;
+  throw conflict(
+    authorChanged
+      ? "Yayımlanmış bir eserin yazarı değiştirilemez. Önce geri çekin: yeni yazarın Eser Onayı gerekir."
+      : "Yayımlanmış bir eserin içeriği değiştirilemez. Önce geri çekin, sonra düzenleyin: " +
+          "değişen metin için yeni bir Eser Onayı gerekir (Sözleşme m. 6.3).",
+  );
 }
 
 /**
