@@ -9752,3 +9752,28 @@ birlikte sorulmalı. O zamana kadar metin kullanımı açıkça yazıyor.
 
 **Yayın:** Metin yalnızca depoda güncellendi. Canlıdaki sürüm hâlâ 1; tam metin
 `[AÇIK ADRES]` dolunca yeni sürüm olarak yayınlanacak (bkz. D-154). Migration yok.
+
+## D-246 — "Hepsi" listesinin rol filtresinde Çizer seçeneği
+
+**İstek (ürün sahibi):** "rollere çizerleri de ekle aramada."
+
+**Durum:** `/admin/users` ("Hepsi") arama formundaki Rol seçimi `roleEnum`'u
+ham hâliyle basıyordu (`user`, `writer`, `editor`, `admin`). Çizer bir rol
+olmadığı için (D-151) seçenekler arasında yoktu.
+
+**Karar:**
+- Seçeneklere **Çizer** eklendi (`?role=illustrator`). Seçildiğinde
+  `listUsers` işaretli herkesi döndürür; hem yazar hem çizer olan da dahil.
+- Seçenekler Türkçe gösteriliyor; etiketler `STATUS_LABELS`'tan geliyor
+  (Kullanıcı, Yazar, Editör, Yönetici, Çizer). İkinci bir etiket tablosu yok.
+- **"Kullanıcı" filtresi rolsüz çizeri artık göstermiyor.** "Kullanıcılar"
+  listesiyle (D-244) aynı ayrım; aynı sözcük iki ekranda farklı kişileri
+  göstermesin diye.
+- `illustrator` adı `roleEnum`'da yok, yani `role` değeri olarak hiçbir sorguya
+  karışmaz: sayfa onu ayrı bir `illustrator` bayrağına çevirir.
+
+**Bilerek yapılmayan:** Hukuk danışmanı ve asistan filtreye eklenmedi; istek
+yalnızca çizerleri kapsıyordu.
+
+**Yetki / hukuk:** Yalnızca yöneticiye açık bir listenin filtresi; yeni veri
+işlenmiyor. Migration yok.

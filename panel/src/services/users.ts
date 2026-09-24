@@ -136,6 +136,8 @@ export async function findUserById(userId: string): Promise<User> {
 export type UserListFilters = {
   query?: string;
   role?: Role;
+  /** Only accounts carrying the çizer mark; offered next to the roles (D-246). */
+  illustrator?: boolean;
   /** Which admin list is asking (D-087): narrows the rows and picks the extra figures. */
   segment?: UserSegment;
   limit?: number;
@@ -261,6 +263,9 @@ export async function listUsers(
   const bySegment = segmentCondition(segment);
   if (bySegment) conditions.push(bySegment);
   if (filters.role) conditions.push(eq(users.role, filters.role));
+  // Same split as the readers list: a roleless çizer is not a "Kullanıcı" (D-244)
+  if (filters.role === "user") conditions.push(eq(users.isIllustrator, false));
+  if (filters.illustrator) conditions.push(eq(users.isIllustrator, true));
   if (filters.query) {
     const pattern = `%${filters.query.trim()}%`;
     const match = or(

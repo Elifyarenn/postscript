@@ -85,6 +85,21 @@ describe("listUsers segments", () => {
     expect(namesOf(await listUsers(actorOf(admin), { segment: "readers" }))).toEqual(["Okur"]);
   });
 
+  it("filters the general list by the çizer mark next to the roles (D-246)", async () => {
+    const { admin, reader, writer } = await seedAccounts();
+    const other = await createUser({ displayName: "Başka Okur" });
+    await setIllustrator(actorOf(admin), reader.id, true, noMeta);
+    await setIllustrator(actorOf(admin), writer.id, true, noMeta);
+
+    expect(
+      namesOf(await listUsers(actorOf(admin), { segment: "all", illustrator: true })),
+    ).toEqual(["Okur", "Yazar"]);
+    // "Kullanıcı" leaves the roleless çizer out, like the readers list (D-244)
+    expect(
+      namesOf(await listUsers(actorOf(admin), { segment: "all", role: "user" })),
+    ).toEqual([other.displayName]);
+  });
+
   it("counts a writer's live articles and the published ones", async () => {
     const { admin, writer } = await seedAccounts();
     await db.insert(articles).values([

@@ -1,11 +1,13 @@
 import { guardPanel } from "@/lib/auth/guard";
 import { listUsers } from "@/services/users";
 import { UsersTable } from "@/components/users-table";
-import { Alert, Card, Field, Input, PageHeader, Select } from "@/components/ui";
+import { Alert, Card, Field, Input, PageHeader, Select, STATUS_LABELS } from "@/components/ui";
 import { roleEnum, type Role } from "@/db/schema";
 import { USER_SEGMENT_META, type UserSegment } from "@/lib/user-segments";
 
 export type UsersListSearchParams = { q?: string; role?: string; deleted?: string };
+
+const ILLUSTRATOR_FILTER = "illustrator";
 
 /**
  * The body of every admin users list (D-087). The pages differ only in the
@@ -27,8 +29,14 @@ export async function UsersListPage({
     segment === "all" && roleEnum.enumValues.includes(filters.role as Role)
       ? (filters.role as Role)
       : undefined;
+  // A çizer is a mark, not a role (D-151), but admins look for them in the
+  // same place, so the filter offers it among the roles (D-246)
+  const illustrator = segment === "all" && filters.role === ILLUSTRATOR_FILTER;
 
-  const rows = await listUsers({ ...user }, { segment, query: filters.q, role, limit: 200 });
+  const rows = await listUsers(
+    { ...user },
+    { segment, query: filters.q, role, illustrator, limit: 200 },
+  );
 
   return (
     <>
@@ -51,9 +59,9 @@ export async function UsersListPage({
               <Field label="Rol" htmlFor="role">
                 <Select id="role" name="role" defaultValue={filters.role ?? ""}>
                   <option value="">Tümü</option>
-                  {roleEnum.enumValues.map((value) => (
+                  {[...roleEnum.enumValues, ILLUSTRATOR_FILTER].map((value) => (
                     <option key={value} value={value}>
-                      {value}
+                      {STATUS_LABELS[value] ?? value}
                     </option>
                   ))}
                 </Select>
