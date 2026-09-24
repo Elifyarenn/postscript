@@ -178,6 +178,14 @@ const ISSUE_EXTRAS: Record<number, IssueExtras> = {
   },
 };
 
+/** What each card is called on the page: one wording for the front page and the reader. */
+export const CARD_LABELS: Record<IssueCardKind, string> = {
+  movie: "Sayının filmi",
+  series: "Sayının dizisi",
+  book: "Sayının kitabı",
+  artwork: "Sayının eseri",
+};
+
 export function issueExtrasFor(issueNumber: number): IssueExtras | null {
   return ISSUE_EXTRAS[issueNumber] ?? null;
 }

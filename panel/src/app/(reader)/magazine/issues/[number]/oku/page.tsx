@@ -2,20 +2,13 @@ import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth/guard";
 import { isAppError } from "@/lib/errors";
 import { renderMarkdown } from "@/lib/markdown";
-import { issueExtrasFor } from "@/lib/issue-extras";
+import { CARD_LABELS, issueExtrasFor } from "@/lib/issue-extras";
 import { templateOf } from "@/lib/issue-templates";
 import type { ReaderExtras, ReaderPage } from "@/lib/issue-reader";
 import { pageMediaUrl, readIssuePages } from "@/services/issue-pages";
 import { MagazineReader } from "@/components/magazine-reader";
 
 export const metadata = { title: "Dergi", robots: { index: false, follow: false } };
-
-const PICK_LABELS: Record<string, string> = {
-  movie: "Sayının filmi",
-  series: "Sayının dizisi",
-  book: "Sayının kitabı",
-  artwork: "Sayının eseri",
-};
 
 /**
  * The magazine reader (D-234, D-240).
@@ -51,7 +44,7 @@ export default async function IssueReaderPage({
   const extras: ReaderExtras | null = extrasSource
     ? {
         picks: (extrasSource.cards ?? []).map((card) => ({
-          kind: PICK_LABELS[card.kind] ?? card.kind,
+          kind: CARD_LABELS[card.kind] ?? card.kind,
           title: card.title,
           credit: card.credit,
           year: card.year,

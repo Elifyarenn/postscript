@@ -15,9 +15,13 @@ import { Alert, Card, EmptyState, PageHeader, StatusBadge } from "@/components/u
 import { IssuePageEditor, type EditablePage } from "./page-editor";
 import { IssuePageList, type ListedPage } from "./page-list";
 import { PageUploader } from "./page-uploader";
+import { PreviewBuilder } from "./preview-builder";
 import { addIssuePageAction, updateIssuePageAction } from "./actions";
 
 export const metadata = { title: "Sayı sayfaları" };
+
+// Drawing the seven preview pages takes a few seconds each on the server (D-247)
+export const maxDuration = 120;
 
 /**
  * Preparing an issue (D-234, reshaped by D-240).
@@ -174,6 +178,13 @@ export default async function IssuePagesPage({ params }: { params: Promise<{ id:
         </span>
         <span>{pages.length} sayfa</span>
       </div>
+
+      {issue.adminOnly && (
+        <Card className="mb-4">
+          <h2 className="mb-3 font-serif text-lg">Geçici önizleme</h2>
+          <PreviewBuilder issueId={issue.id} csrfToken={csrfToken ?? ""} />
+        </Card>
+      )}
 
       <Card className="mb-4">
         <h2 className="mb-3 font-serif text-lg">Sayfa görseli yükle</h2>

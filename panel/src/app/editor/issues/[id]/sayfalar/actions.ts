@@ -19,6 +19,7 @@ import {
   updateIssuePage,
   updatePageMeta,
 } from "@/services/issue-pages";
+import { buildIssuePreview } from "@/services/issue-preview";
 
 /** A form field that is empty means "nothing", not an empty string. */
 function optional(formData: FormData, name: string): string | null {
@@ -180,5 +181,21 @@ export async function saveHotspotsAction(_state: ActionState, formData: FormData
     await saveHotspots({ ...user }, text(formData, "pageId"), areas, await requestMetadata());
     refresh(text(formData, "issueId"));
     return { success: "Etkileşim alanları kaydedildi." };
+  });
+}
+
+/** Builds or refreshes the temporary preview of the admin-only issue (D-247). */
+export async function buildIssuePreviewAction(_state: ActionState, formData: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const issueId = text(formData, "issueId");
+
+    const result = await buildIssuePreview({ ...user }, issueId, await requestMetadata());
+    refresh(issueId);
+    const titles = result.articles.map((article) => `“${article.title}”`).join(", ");
+    return {
+      success: `Önizleme hazır: ${result.added} sayfa eklendi, ${result.replaced} güncellendi, ${result.unchanged} aynı kaldı. Kullanılan taslaklar: ${titles}.`,
+    };
   });
 }

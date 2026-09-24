@@ -9777,3 +9777,142 @@ yalnızca çizerleri kapsıyordu.
 
 **Yetki / hukuk:** Yalnızca yöneticiye açık bir listenin filtresi; yeni veri
 işlenmiyor. Migration yok.
+
+---
+
+## D-247 — Örnek sayının geçici önizlemesi ve okuyucunun görünüm hataları
+
+**İstek (ürün sahibi):** Tasarımcıların son sayfaları gelmeden okuyucuyu
+değerlendirmek için, var olan görsel stoğu ve taslak yazılarla küçük, birbirini
+izleyen bir örnek sayı; anlamlı deneme etkileşimleri; son incelemedeki kırık
+görsel, yapışan araç çubuğu, büyük boşluklar ve pencere gibi açılmayan test
+görünümünün giderilmesi. İçerik yalnızca iki yöneticiye açık kalacak.
+
+### Okuyucunun görünüm hataları — neden
+
+- **Stil hiç yüklenmiyordu.** Okuyucunun bütün kuralları `site.css`'te; o dosyayı
+  yalnızca `SiteShell` içe aktarıyor. D-240'ta okuyucu `app/(reader)` grubuna
+  taşınınca `SiteShell` dışında kaldı. Siteden tıklanarak gelinince önceki
+  sayfanın CSS'i tarayıcıda kaldığı için doğru görünüyor, adres doğrudan
+  açılınca (yenileme, paylaşılan bağlantı) stilsiz geliyordu: simgeler yan yana
+  yapışık, görsel doğal boyutunda (1240×1754) ve etrafında büyük boşluk, test
+  `position: fixed` olmadığı için sayfanın altında düz metin. Düzeltme:
+  `(reader)/layout.tsx` `site.css`'i ve üç yazı tipi değişkenini kendisi yüklüyor.
+  Alan düzenleyicisinin "okur gibi önizle" görünümü aynı sorunu taşıyordu; o da
+  düzeltildi (`page-preview-frame`).
+- **Telefonda sayfa sağdan kesiliyordu.** Sayfa yalnızca yüksekliğe göre
+  sığdırılıyordu; dikey bir A4 telefonun yüksekliğine sığınca genişliğini aşıyor.
+  Sahne artık bir boyut kabı (`container-type: size`) ve sayfa
+  `min(100cqh, 100cqw / sayfa sayısı × oran)` ile hem ene hem boya sığıyor,
+  sonra yakınlaştırmayla çarpılıyor. Telefonda alt çubuk tek satır (ilerleme
+  çizgisi kalan yeri alıyor), üstteki işaret kısa hâline iniyor.
+- **Kırık sayfa görseli — muhtemel neden, üretimden okunarak doğrulanamadı.**
+  D-240'ın deneme sayfaları betikle eklenmişti; betik yerel `.env`'le çalışır ve
+  orada depolama `file://.storage`. Yerelde `.storage/media/issue-pages/2026-09-22/`
+  altında tam altı PNG duruyor — D-240'ın `--pages 6` çağrısıyla aynı sayı.
+  Veritabanı kaydı üretime, dosya bu makinenin diskine gitmiş olmalı; R2'de
+  karşılığı olmayan kayıt okuyucuda kırık görsel olarak görünür. Üretim
+  veritabanını okuma izni bu oturumda yoktu, o yüzden "doğrulandı" denmiyor.
+  Önizleme kurulunca bu altı sayfa yeni görselleriyle değiştirilir (aşağıda).
+  **Kural:** sayfa görseli ekleyen bir betik üretime karşı yerel depolamayla
+  çalıştırılmaz; bu yüzden önizleme betik değil, üretimde çalışan bir panel
+  işlemi olarak yazıldı.
+
+### Geçici önizleme
+
+**Yol:** Panelde "Sayı sayfaları" ekranında, yalnızca `admin_only` sayıda görünen
+"Geçici önizlemeyi kur / güncelle" düğmesi (`buildIssuePreview`). Sayfalar
+sunucuda `next/og` ile çizilir (takım avatarlarının kullandığı çizici, D-194;
+yeni kütüphane yok) ve **sıradan sayfa görseli** olarak `addPageImage` /
+`replacePageImage` / `saveHotspots` / `createQuiz` üzerinden kaydedilir. İkinci
+bir sayfa türü yok; tasarımcıların PNG/WebP dosyaları sayfa listesinden her
+birinin yerine yüklenir, hiçbir şey bu yönteme bağlı değil.
+
+**Yedi sayfa:** tipografik kapak · içindekiler · görsel ağırlıklı yazı açılışı ·
+rahat okunan devam sayfası · ikinci yazı · kontrollü kolaj · seçki ve deneme
+testi. Çift sayfada kapak tek, sonra (2,3), (4,5), (6,7). Her sayfanın üst
+bandında ve kapağın altında "GEÇİCİ TASARIM — YAYIMLANMADI" yazar; okuyucu çubuğu
+da aynı ibareyi gösterir. Yazıdan yalnızca bir bölüm kullanılan her sayfada
+"ÖNİZLEME SEÇKİSİ" etiketi ve açıklaması var.
+
+**Taslaklar:** üç farklı kategoriden; her yer için iki aday, ilki yoksa ikincisi.
+Adaylar 23 Eylül'de görsellerle eşleştirilmiş başlıklar (`GORSEL_LISTESI.md`):
+Bilim & Teknoloji ("Bilim İnsanları ve Obsesyon", yedek "Çay Koy…"), Sosyoloji &
+Düşünce ("Madde 1 - Hukukun Peşini Bırakmadıkları", yedek "Hayali Şahit…"),
+Sanat & Edebiyat ("Üç Kalem", yedek "TAKINTI: Kar Tanesi…"). Yayımlanmış,
+zamanlanmış, arşivlenmiş ve geri çekilmiş yazılar alınmaz; 600 karakterden kısa
+metin alınmaz; bulunamazsa hiçbir şey yazılmaz, eksik başlık söylenir.
+Başlık, kategori ve metin kayıttan okunur; metin yalnızca **sonundan** kesilir
+(paragraf, olmazsa cümle, olmazsa kelime sınırında, "…" ile). Büyük puntolu
+alıntı metnin kendi cümlesidir. **Yazar adı** dergide basılacak ad kuralıyla
+(`publicByline`, D-076): imzalı eser onayında gerçek ad seçilmemişse mahlas.
+Yalnızca yöneticilere açık bir sayfada bile gerçek ad rıza olmadan basılmaz.
+Yazıların metnine, durumuna ve `updated_at`'ine dokunulmaz (testi var).
+
+**Görseller:** `gorseller/ilk-sayi` stoğundan, kaynak sayfası ve lisansı
+kayıtlı 12 Unsplash/Pexels fotoğrafı; 1400 piksele küçültülüp
+`assets/issue-preview/stock/` altına alındı, kaynak kaydı
+`src/lib/issue-preview/stock.ts`'te (fotoğrafçı, görsel sayfası, lisans). Hubble
+görselleri (lisansı kesin doğrulanamadı) ve Storyset çizimleri (atıf zorunlu,
+yeniden renklendirilmiş) **alınmadı**; klasörde durmaları izin sayılmadı.
+Fotoğrafçı adı her sayfada yazılı, "Görsel ve kaynak" bilgi kutusu kaynak
+adresini ve lisansı verir. Dosyalar hiçbir rotadan olduğu gibi servis edilmez;
+yalnızca sayfa görselinin içinde, yani yalnızca yöneticilere açık sayfada
+görünür. Yazı tipleri sitenin üç yüzünün (Bodoni Moda, Cormorant Garamond,
+Source Serif 4) statik TTF'leri, SIL OFL, lisans metinleri yanlarında. Bu
+dosyalar yalnızca `/editor/issues/**` fonksiyonuna paketlenir.
+
+**Etkileşimler:** içindekilerin dört satırı ilgili sayfaya geçer (sayfa
+kimliğiyle, D-240); çalma listesi kutuları mevcut Spotify listesine gider
+(`issue-extras`); açılış, devam, ikinci yazı ve kolaj sayfalarında bilgi kutusu
+(kaynak/lisans, önizleme seçkisi açıklaması); son sayfada deneme testi.
+
+**Deneme testi** açıkça örnek: başlığı "Örnek test · Okuyucuyu deneyin",
+girişinde "sorular PostScript yazarlarına ait değildir ve hiçbir yazıdan
+alınmamıştır". Sorular okuyucunun kendisiyle ilgili ve doğru (büyütme tuşu,
+kapağın çift sayfada tek durması, sayıyı kimin açabileceği). Cevap kaydı yok
+(D-240).
+
+**Tekrar çalıştırma:** sayfalar etiketle bulunur ("Geçici tasarım · Kapak" …);
+yoksa D-240'ın "Deneme sayfası N" sayfaları yuva olarak kullanılır, o da yoksa
+yeni sayfa eklenir. Çizim bayt bayt aynıysa yeniden yüklenmez; değiştiyse eski
+görsel, başka hiçbir yerde kullanılmıyorsa ve `issue-pages/` altındaysa
+bırakılır (medya kaydı silinmiş işaretlenir, dosya kaldırılır). Alanlar sayfa
+başına küme olarak kaydedilir, test başlığıyla bulunur; üç kez çalıştırmak yedi
+sayfa ve bir test bırakır (testi var). Önizleme sayfaları başa alınır, sayının
+diğer sayfaları kendi sıralarıyla arkada kalır; hiçbiri silinmez, üzerine
+yazılmaz.
+
+### Erişim
+
+- Servis `admin_only` olmayan sayıyı (400) ve yönetici olmayanı (403) reddeder.
+  Okuyucu, sayfa görselleri ve test D-240'ın kapısından geçer: editör, yazar,
+  üye ve oturumsuz için 404 (testi var).
+- **Açık kapatıldı:** sayı sayfa görselleri medya kitaplığında (`listMedia`)
+  editörlere listeleniyor ve `/api/media/:id` üzerinden editör hesabıyla
+  açılabiliyordu; bu, `admin_only` kapısının yanından geçen bir yoldu. Artık
+  `issue-pages/` altındaki dosyalar kitaplıkta listelenmez ve o rotadan 404
+  döner; yalnızca sayfanın kendi korumalı rotasından verilir.
+
+**KVKK:** yeni kişisel veri, yeni amaç veya yeni aktarım yok. Yazıların mevcut
+kaydı (başlık, metin, basılacak ad) derginin kendi yayın hazırlığı için,
+yalnızca iki yöneticiye açık bir sayfada kullanılıyor; aydınlatma metninde
+değişiklik gerekmedi (D-084 gereği kontrol edildi).
+
+**Doğrulama:** 11 birim testi (başlık eşleştirme, metnin yalnızca sondan
+kesilmesi ve kutuyu aşmaması, markdown'dan paragraf, alıntının metinden birebir
+olması, alanların sayfa içinde kalması, her sayfada "geçici tasarım" ibaresi,
+stok kaynak kaydı, gerçek bir 1240×1754 PNG çizimi) ve 8 entegrasyon testi
+(editöre ve `admin_only` olmayan sayıya ret, taslak yoksa hiçbir şey yazmaması,
+yayımlanmış yazının alınmaması, yazıların değişmemesi, önizlemenin başa gelmesi,
+mahlasın basılıp gerçek adın basılmaması, içindekilerin doğru sayfalara gitmesi,
+test ve bilgi kutusu, rol bazında 404, kitaplıkta görünmeme, tekrar
+çalıştırmada birikmeme ve eski görselin bırakılması, deneme sayfalarının yuva
+olması). Okuyucu CSS'i, gerçek bileşenlerin sunucuda çizilen HTML'i ve gerçek
+stil dosyalarıyla Playwright'ta 1440×900 ve 390×844'te ölçülerek kontrol edildi
+(yerel sunucu açılmadan): mobilde yatay taşma yok, simgeler ayrık, test penceresi
+`fixed` ve ortalı. Kapı: typecheck, lint, 843 test, build.
+
+**Kalan:** Önizleme üretimde bir yöneticinin düğmeye basmasıyla kurulur. Bu
+oturumda üretim veritabanını okuma izni olmadığı için hangi taslakların
+bulunduğu ve sayfaların canlıdaki görüntüsü buradan doğrulanamadı.

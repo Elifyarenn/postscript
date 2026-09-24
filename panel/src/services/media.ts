@@ -8,7 +8,7 @@
  *  - media without a `license_type` can never be attached to an article
  */
 import "server-only";
-import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, notLike, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
 import { articleMedia, media, type LicenseType, type MediaRow } from "@/db/schema";
@@ -167,13 +167,24 @@ export async function storeGeneratedPdf(
 /* Library and article links                                           */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Page pictures of an issue are stored under this prefix. They belong to the
+ * issue, not to the library: an unpublished or admin-only issue is closed, and
+ * its pages must not be reachable around that door (D-240, D-247).
+ */
+export const ISSUE_PAGE_PREFIX = "issue-pages/";
+
+export function isIssuePageMedia(row: Pick<MediaRow, "storageKey">): boolean {
+  return row.storageKey.startsWith(ISSUE_PAGE_PREFIX);
+}
+
 export async function listMedia(actor: Actor, limit = 60, offset = 0) {
   if (!canAccessEditorPanel(actor)) throw forbidden();
 
   return db
     .select()
     .from(media)
-    .where(isNull(media.deletedAt))
+    .where(and(isNull(media.deletedAt), notLike(media.storageKey, `${ISSUE_PAGE_PREFIX}%`)))
     .orderBy(desc(media.createdAt))
     .limit(limit)
     .offset(offset);

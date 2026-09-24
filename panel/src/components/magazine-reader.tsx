@@ -355,7 +355,10 @@ export function MagazineReader({
           <span className="reader-issue">Sayı {String(issueNumber).padStart(2, "0")}</span>
           <span className="reader-name">{theme ?? issueTitle}</span>
           {adminOnly ? (
-            <span className="reader-flag">Yalnızca yöneticiler · örnek sayı</span>
+            <span className="reader-flag">
+              Geçici tasarım — yayımlanmadı
+              <span className="reader-flag-more"> · yalnızca yöneticiler</span>
+            </span>
           ) : (
             preview && <span className="reader-flag">Önizleme · yayımlanmadı</span>
           )}
@@ -462,7 +465,10 @@ export function MagazineReader({
         onPointerUp={endDrag}
         onPointerLeave={endDrag}
       >
-        <div className="reader-pages" style={{ "--zoom": zoom } as React.CSSProperties}>
+        <div
+          className="reader-pages"
+          style={{ "--zoom": zoom, "--pages": shown.length } as React.CSSProperties}
+        >
           {shown.map((page) =>
             page.imageUrl ? (
               <IssuePageImage

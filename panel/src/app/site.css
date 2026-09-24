@@ -5525,6 +5525,8 @@ html:has(.profile-editor[open]) {
   /* Native panning and native pinch: the browser does it better than we would */
   touch-action: pan-x pan-y pinch-zoom;
   overscroll-behavior: contain;
+  /* The pages are sized against this box (D-247): the cq units below */
+  container-type: size;
 }
 
 .ps-site .reader[data-zoomed] .reader-stage {
@@ -5535,8 +5537,6 @@ html:has(.profile-editor[open]) {
   display: flex;
   width: max-content;
   min-width: 100%;
-  /* The zoom is a height: the pages keep their proportions whatever it is */
-  height: calc(100% * var(--zoom, 1));
   min-height: 100%;
   align-items: center;
   justify-content: center;
@@ -5544,11 +5544,13 @@ html:has(.profile-editor[open]) {
   gap: 0;
 }
 
-/* One delivered page */
+/* One delivered page. Fitted whole — by height on a wide screen, by width on a
+   phone — and then multiplied by the zoom (D-247). Sizing only by height made
+   a portrait page wider than a phone and cut its right side off */
 .ps-site .page-image {
   position: relative;
   display: block;
-  height: 100%;
+  height: calc(var(--zoom, 1) * min(100cqh, 100cqw / var(--pages, 1) * var(--page-ratio, 1.4142)));
   flex: 0 0 auto;
   margin: 0;
   background: var(--site-paper);
@@ -5583,10 +5585,28 @@ html:has(.profile-editor[open]) {
 .ps-site .reader-pages .page-sheet {
   width: auto;
   max-width: none;
-  height: 100%;
+  height: calc(var(--zoom, 1) * min(100cqh, 100cqw / var(--pages, 1) * 4 / 3));
   max-height: none;
   aspect-ratio: 3 / 4;
   overflow-y: auto;
+}
+
+/* The same page inside the panel's area editor: sized by the column, not by a
+   reader's screen (D-247) */
+.ps-site.page-preview-frame {
+  display: block;
+  min-height: 0;
+  background: none;
+}
+
+.ps-site.page-preview-frame .page-image {
+  width: 100%;
+  height: auto;
+}
+
+.ps-site.page-preview-frame .page-image img {
+  width: 100%;
+  height: auto;
 }
 
 /* ──────────────── Clickable areas ──────────────── */
@@ -5636,6 +5656,32 @@ html:has(.profile-editor[open]) {
   border: 0;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* ──────────────── A phone's bars (D-247) ──────────────── */
+
+/* The progress line takes what room is left rather than a fixed width, so
+   "Önceki", the line, the count and "Sonraki" stay on one row on a phone */
+.ps-site .reader-foot {
+  flex-wrap: nowrap;
+}
+
+.ps-site .reader-progress {
+  width: auto;
+  min-width: 2rem;
+  max-width: 18rem;
+  flex: 1 1 auto;
+}
+
+@media (max-width: 600px) {
+  /* The flag keeps its first half, the part that matters: not published */
+  .ps-site .reader-flag-more {
+    display: none;
+  }
+
+  .ps-site .reader-count {
+    min-width: 0;
+  }
 }
 
 /* ──────────────── The zoom controls ──────────────── */

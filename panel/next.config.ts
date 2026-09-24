@@ -83,6 +83,8 @@ const nextConfig: NextConfig = {
   // These data files are read at runtime, so tracing must keep them
   outputFileTracingIncludes: {
     "/**": ["./data/**", "./assets/fonts/**", "./drizzle/**"],
+    // The preview's faces and stock photos (D-247): only the page that draws them
+    "/editor/issues/**": ["./assets/issue-preview/**"],
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

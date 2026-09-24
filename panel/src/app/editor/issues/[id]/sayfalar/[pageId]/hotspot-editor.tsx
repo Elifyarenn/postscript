@@ -47,6 +47,9 @@ import {
 import type { ReaderQuiz } from "@/lib/issue-quiz";
 import type { ReaderPage } from "@/lib/issue-reader";
 import { IssuePageImage } from "@/components/issue-page-image";
+// The reader's own styles, for the "as a reader sees it" preview below; every
+// rule in it is scoped under .ps-site, so the panel around it is untouched
+import "@/app/site.css";
 import { IssueQuizPlayer } from "@/components/issue-quiz-player";
 import { saveHotspotsAction } from "../actions";
 
@@ -420,7 +423,7 @@ export function HotspotEditor({
             style={narrow ? { maxWidth: "24rem" } : undefined}
           >
             {preview ? (
-              <div className="ps-site">
+              <div className="ps-site page-preview-frame">
                 <IssuePageImage
                   page={previewPage}
                   showAllAreas
@@ -800,26 +803,29 @@ export function HotspotEditor({
         </div>
       </div>
 
-      {previewInfo && (
-        <div className="reader-overlay" role="dialog" aria-modal="true">
-          <div className="reader-panel">
-            <header className="reader-panel-head">
-              <h2>{previewInfo.infoTitle ?? "Bilgi"}</h2>
-              <button
-                type="button"
-                className="reader-icon"
-                onClick={() => setPreviewInfo(null)}
-                aria-label="Kapat"
-              >
-                <X aria-hidden />
-              </button>
-            </header>
-            {previewInfo.infoBody && <p className="reader-panel-body">{previewInfo.infoBody}</p>}
+      {/* The reader's windows need the reader's styles, which are scoped */}
+      <div className="ps-site page-preview-frame">
+        {previewInfo && (
+          <div className="reader-overlay" role="dialog" aria-modal="true">
+            <div className="reader-panel">
+              <header className="reader-panel-head">
+                <h2>{previewInfo.infoTitle ?? "Bilgi"}</h2>
+                <button
+                  type="button"
+                  className="reader-icon"
+                  onClick={() => setPreviewInfo(null)}
+                  aria-label="Kapat"
+                >
+                  <X aria-hidden />
+                </button>
+              </header>
+              {previewInfo.infoBody && <p className="reader-panel-body">{previewInfo.infoBody}</p>}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {openQuiz && <IssueQuizPlayer quiz={openQuiz} onClose={() => setPreviewQuiz(null)} />}
+        {openQuiz && <IssueQuizPlayer quiz={openQuiz} onClose={() => setPreviewQuiz(null)} />}
+      </div>
     </div>
   );
 }

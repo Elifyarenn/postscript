@@ -21,6 +21,7 @@ import { requireAuth } from "@/lib/auth/session";
 import { canAccessEditorPanel, canViewContractDocuments } from "@/lib/auth/rbac";
 import { getStorage } from "@/lib/storage";
 import { isProfileImage } from "@/services/profile-images";
+import { isIssuePageMedia } from "@/services/media";
 import { errorJson } from "@/lib/api";
 import { forbidden, notFound } from "@/lib/errors";
 
@@ -36,6 +37,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     const rows = await db.select().from(media).where(eq(media.id, id)).limit(1);
     const row = rows[0];
     if (!row || row.deletedAt) throw notFound("Dosya bulunamadı.");
+    // An issue's page pictures are served only through the page's own route,
+    // which asks whether this person may open that issue (D-247)
+    if (isIssuePageMedia(row)) throw notFound("Dosya bulunamadı.");
 
     const isContract = row.licenseType === "contract_pdf";
 

@@ -55,11 +55,17 @@ export function IssuePageImage({
   suppressClicks?: () => boolean;
 }) {
   const describedBy = useId();
-  const ratio =
-    page.imageWidth && page.imageHeight ? `${page.imageWidth} / ${page.imageHeight}` : undefined;
+  const known = Boolean(page.imageWidth && page.imageHeight);
+  // The ratio sizes the page before its picture arrives, so nothing jumps
+  const style = known
+    ? ({
+        aspectRatio: `${page.imageWidth} / ${page.imageHeight}`,
+        "--page-ratio": page.imageHeight! / page.imageWidth!,
+      } as React.CSSProperties)
+    : undefined;
 
   return (
-    <figure className="page-image" style={ratio ? { aspectRatio: ratio } : undefined}>
+    <figure className="page-image" style={style}>
       {page.imageUrl && (
         <img
           src={page.imageUrl}

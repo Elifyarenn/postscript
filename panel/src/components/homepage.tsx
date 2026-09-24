@@ -15,7 +15,7 @@ import artworkWeiss from "@/assets/design/artwork-weiss-obsession.webp";
 import bookMasumiyet from "@/assets/design/book-masumiyet-muzesi.webp";
 import movieBlackSwan from "@/assets/design/movie-black-swan.webp";
 import seriesYou from "@/assets/design/series-you.webp";
-import type { IssueCard, IssueCardImage, IssueCardKind, IssueExtras } from "@/lib/issue-extras";
+import { CARD_LABELS, type IssueCard, type IssueCardImage, type IssueExtras } from "@/lib/issue-extras";
 import { formatIssueNumber } from "@/lib/site";
 import { spotifyEmbedUrl } from "@/lib/spotify";
 import { IssueCardRail } from "./issue-card-rail";
@@ -28,13 +28,6 @@ const CARD_IMAGES: Record<IssueCardImage, StaticImageData> = {
   you: seriesYou,
   "masumiyet-muzesi": bookMasumiyet,
   "weiss-obsession": artworkWeiss,
-};
-
-const CARD_LABELS: Record<IssueCardKind, string> = {
-  movie: "Sayının filmi",
-  series: "Sayının dizisi",
-  book: "Sayının kitabı",
-  artwork: "Sayının eseri",
 };
 
 function cardImageAlt(card: IssueCard): string {

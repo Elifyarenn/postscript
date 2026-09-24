@@ -1,4 +1,12 @@
 import type { ReactNode } from "react";
+import { bodyFont, capsFont, italicFont } from "@/lib/fonts";
+import { cn } from "@/lib/utils";
+// The reader's styles live with the magazine's. Only `SiteShell` imported them,
+// and this layout does not render it, so a reader opened directly (not reached
+// by a click from the site) came up unstyled: toolbar icons run together,
+// pictures at full size with wide gaps, and the quiz drawn inline instead of
+// as a window (D-247)
+import "@/app/site.css";
 
 /**
  * The reading frame (D-240).
@@ -12,5 +20,9 @@ import type { ReactNode } from "react";
  * particular issue may be opened at all.
  */
 export default function ReaderLayout({ children }: { children: ReactNode }) {
-  return <div className="ps-site reader-frame">{children}</div>;
+  return (
+    <div className={cn("ps-site reader-frame", bodyFont.variable, capsFont.variable, italicFont.variable)}>
+      {children}
+    </div>
+  );
 }

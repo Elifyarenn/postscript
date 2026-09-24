@@ -50,7 +50,7 @@ const ANONYMOUS_BYLINE = "İsimsiz";
  * index on `rights_grants` allows one live grant per article, so this matches
  * at most one row and no aliasing or grouping is needed.
  */
-function signedGrantFor(articleId: PgColumn) {
+export function signedGrantFor(articleId: PgColumn) {
   return and(eq(rightsGrants.articleId, articleId), eq(rightsGrants.status, "signed"));
 }
 
@@ -67,7 +67,7 @@ function signedGrantFor(articleId: PgColumn) {
  * of every writer who had not set a pen name — against the CLAUDE.md rule that
  * the public API returns no real name, and without anyone having agreed to it.
  */
-function publicByline(row: {
+export function publicByline(row: {
   penName: string | null;
   displayName: string;
   bylineChoice: "real_name" | "pen_name" | null;
