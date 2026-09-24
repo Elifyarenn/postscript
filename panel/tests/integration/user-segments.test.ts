@@ -73,11 +73,16 @@ describe("listUsers segments", () => {
       "Okur",
       "Yazar",
     ]);
-    // The mark moves nobody out of the list their role puts them in (D-151)
+    // A writer who draws stays in the writers list (D-151) …
     expect(namesOf(await listUsers(actorOf(admin), { segment: "writers" }))).toEqual([
       "Editör Yazar",
       "Yazar",
     ]);
+    // … but a roleless çizer is not a reader any more (D-244)
+    expect(await listUsers(actorOf(admin), { segment: "readers" })).toEqual([]);
+
+    await setIllustrator(actorOf(admin), reader.id, false, noMeta);
+    expect(namesOf(await listUsers(actorOf(admin), { segment: "readers" }))).toEqual(["Okur"]);
   });
 
   it("counts a writer's live articles and the published ones", async () => {

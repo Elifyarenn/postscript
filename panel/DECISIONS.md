@@ -9687,3 +9687,31 @@ bağlantıyı gizlemek güvenlik sağlamaz, yalnızca özelliği görünmez kıl
 `ready_for_publishing` durumlarının üçünde de yazarın kendi sürüm listesini ve
 tek sürüm sayfasını okuyabildiğini doğruluyor. `article-versions` +
 `article-history`: 16 test. Kapı: typecheck, lint, test.
+
+## D-244 — Çizerler "Kullanıcılar" listesinden ayrıldı
+
+**İstek (ürün sahibi):** "çizerleri kullanıcılardan ayrı tut."
+
+**Durum:** Çizer bir rol değil, hesaba konan bir işaret (D-151). Rolü olmayan
+bir çizerin `role` değeri `user` kaldığı için `/admin/users/readers`
+("Kullanıcılar") listesine de düşüyordu; yönetim ana sayfasındaki "Kullanıcı"
+sayısı da onları okur sayıyordu. Yani aynı kişi hem "Çizerler" hem
+"Kullanıcılar" listesinde görünüyordu.
+
+**Karar:**
+- "Kullanıcılar" listesi artık `role = user` **ve** çizer işareti olmayan
+  hesaplar. Rolsüz çizer yalnızca "Çizerler" listesinde.
+- Yazar/editör olup aynı zamanda çizen hesap değişmedi: kendi rol listesinde de,
+  "Çizerler"de de görünmeye devam ediyor (D-151'deki "hem yazar hem çizer").
+- Yönetim ana sayfasına **Çizer** sayısı eklendi (işaretli herkes); "Kullanıcı"
+  sayısı rolsüz çizerleri artık saymıyor. Her kutu açtığı listeyle aynı sayıyı
+  gösterir.
+- "Hepsi" listesi değişmedi.
+
+**Bilerek yapılmayanlar:** Asistan ve hukuk danışmanı işaretli rolsüz hesaplar
+(D-238, D-239) "Kullanıcılar"da kalmaya devam ediyor; istek yalnızca çizerleri
+kapsıyordu. "Yazar yapılabilecek okur" sayısı da değişmedi — rolsüz bir çizer
+yazar yapılabilir, hem yazar hem çizer olmak D-151'in izin verdiği durum.
+
+**Yetki / hukuk:** Değişiklik yalnızca liste filtresi; yetki, rol ve kişisel
+veri işleme değişmedi. Aydınlatma metni güncellenmedi. Migration yok.

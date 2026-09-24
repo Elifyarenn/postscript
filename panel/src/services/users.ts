@@ -161,8 +161,10 @@ function segmentCondition(segment: UserSegment): SQL | undefined {
       return eq(users.isIllustrator, true);
     case "assistants":
       return eq(users.isAssistant, true);
+    // A çizer with no role is still staff, not a reader: they have their own
+    // list and are kept out of this one (D-244)
     case "readers":
-      return eq(users.role, "user");
+      return and(eq(users.role, "user"), eq(users.isIllustrator, false));
     default:
       return undefined;
   }

@@ -59,7 +59,8 @@ export const USER_SEGMENT_META: Record<
     href: "/admin/users/readers",
     navLabel: "Kullanıcılar",
     title: "Kullanıcılar",
-    description: "Rolü olmayan okuyucu hesapları: doğrulama, yaş, KVKK onayı ve yazar başvurusu.",
+    description:
+      "Rolü olmayan okuyucu hesapları: doğrulama, yaş, KVKK onayı ve yazar başvurusu. Çizerler burada değil, kendi listelerinde.",
     countNoun: "kullanıcı",
   },
 };

@@ -15,10 +15,10 @@ export default async function AdminDashboard() {
 
   const [byRole, agreement, pending] = await Promise.all([
     db
-      .select({ role: users.role, total: count() })
+      .select({ role: users.role, isIllustrator: users.isIllustrator, total: count() })
       .from(users)
       .where(isNull(users.deletedAt))
-      .groupBy(users.role),
+      .groupBy(users.role, users.isIllustrator),
     acceptanceReport({ ...user }),
     pendingAdminWork({ ...user }),
   ]);
@@ -72,7 +72,14 @@ export default async function AdminDashboard() {
       ),
     );
 
-  const counts = Object.fromEntries(byRole.map((row) => [row.role, row.total]));
+  // A roleless çizer is counted as a çizer, not a reader, so each tile
+  // matches the list it opens (D-244); a writer who draws stays a writer too
+  const counts: Record<string, number> = { illustrator: 0 };
+  for (const row of byRole) {
+    if (row.isIllustrator) counts.illustrator! += row.total;
+    if (row.role === "user" && row.isIllustrator) continue;
+    counts[row.role] = (counts[row.role] ?? 0) + row.total;
+  }
 
   return (
     <>
@@ -123,7 +130,7 @@ export default async function AdminDashboard() {
           )}
         </Card>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {(
             [
               // Each count opens its own list (D-087); admins have none, so
@@ -131,6 +138,7 @@ export default async function AdminDashboard() {
               ["user", "Kullanıcı", "/admin/users/readers"],
               ["writer", "Yazar", "/admin/users/writers"],
               ["editor", "Editör", "/admin/users/editors"],
+              ["illustrator", "Çizer", "/admin/users/illustrators"],
               ["admin", "Yönetici", "/admin/users?role=admin"],
             ] as const
           ).map(([role, label, href]) => (
