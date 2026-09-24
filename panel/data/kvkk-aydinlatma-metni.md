@@ -21,7 +21,7 @@ ortaklık adına tek başına temsile yetkilidir.
 | Kategori | Veriler |
 |---|---|
 | Kimlik | Ad soyad (görünen ad), mahlas, doğum tarihi |
-| İletişim | E-posta adresi, telefon numarası (yalnızca yazar kaydında) |
+| İletişim | E-posta adresi; telefon numarası (yazar kaydında zorunlu; diğer hesaplarda isteğe bağlı, profil ekranından eklenir) |
 | Hesap güvenliği | Şifrenin geri döndürülemez özeti, iki adımlı doğrulama (TOTP) gizli anahtarı, iki adımlı doğrulama kurtarma kodlarının geri döndürülemez özetleri ve kullanılma zamanları, e-posta doğrulama ve şifre sıfırlama bağlantı kayıtları, giriş denemesi kayıtları |
 | İşlem güvenliği | IP adresi, tarayıcı bilgisi (user-agent), oturum açma ve son görülme zamanları; kayıt ve doğrulama e-postası formlarında bot doğrulaması için tarayıcınızdan toplanan teknik sinyaller |
 | Profil | Topluluk kullanıcı adı, kısa biyografi, profil görseli, sosyal medya bağlantıları, yazı alanı, topluluk ayarlarında sabit bir listeden seçtiğiniz ilgi alanları (yalnızca size gösterilir) |
@@ -87,6 +87,7 @@ saklanmaz**.
 | Yazar sözleşmesinin kurulması ve ispatı | (c) Sözleşmenin ifası, (e) Bir hakkın tesisi, kullanılması ve korunması |
 | Her yazı için yayın izninin kurulması ve ispatı: yazıyı gönderdiğinizde hangi metne, hangi sözleşme sürümüne dayanarak ve ne zaman izin verdiğinizin kaydedilmesi | (c) Sözleşmenin ifası, (e) Bir hakkın tesisi, kullanılması ve korunması |
 | Dergi ekibindeki görevinizin (çizer, hukuk danışmanı, asistan) kaydedilmesi ve yönetim panelinde gösterilmesi | (c) Sözleşmenin ifası, (f) Meşru menfaat |
+| Dergi ekibindeyseniz (yazar, editör, çizer, hukuk danışmanı, asistan) dergi işleriyle ilgili size telefonla veya WhatsApp üzerinden ulaşılabilmesi (yönetim panelindeki bağlantı WhatsApp'ı yöneticinin kendi cihazında numaranızla açar; mesajı yönetici gönderir); telefon numaranız eksikse bunu tamamlamanızın e-postayla hatırlatılması. Numaranızı yalnızca yöneticiler görür | (c) Sözleşmenin ifası, (f) Meşru menfaat |
 | Yazar profilinin ve eserin dergide yayımlanması, künyede ad veya mahlas belirtilmesi | (c) Sözleşmenin ifası |
 | Çizer olarak işaretlenmiş hesapların Hakkında sayfasında mahlas veya topluluk adıyla listelenmesi | (c) Sözleşmenin ifası |
 | Yorum ve topluluk sohbeti işlevlerinin sunulması | (c) Sözleşmenin ifası |

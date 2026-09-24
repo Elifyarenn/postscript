@@ -145,7 +145,7 @@ export function ProfileCard({
             <Field
               label="Telefon"
               htmlFor="phone"
-              hint="Yazarlık sürecinde size ulaşmak için kullanılır."
+              hint="Dergi ekibindeyseniz dergi işleri için size ulaşmakta kullanılır. Yalnızca yöneticiler görür."
             >
               <Input
                 id="phone"

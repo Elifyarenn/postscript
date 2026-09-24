@@ -9715,3 +9715,40 @@ yazar yapılabilir, hem yazar hem çizer olmak D-151'in izin verdiği durum.
 
 **Yetki / hukuk:** Değişiklik yalnızca liste filtresi; yetki, rol ve kişisel
 veri işleme değişmedi. Aydınlatma metni güncellenmedi. Migration yok.
+
+## D-245 — Aydınlatma metni: ekip üyelerinin telefonu ve hatırlatma e-postası
+
+**Olay:** Ürün sahibi, telefonu kayıtlı olmayan ekip üyelerine (yöneticiler
+hariç) numaralarını eklemelerini isteyen bir e-posta gönderilmesini istedi.
+2026-09-24'te üç kişiye (bir editör, iki çizer) sitenin gönderen adresinden
+(`noreply@postscriptmag.com`, Resend) **tek seferlik** bir hatırlatma gitti.
+Gönderim uygulamanın parçası değil; depoda bir betik bırakılmadı. Toplu
+bildirim/e-posta sistemi ileride ayrı bir karar olarak gelecek.
+
+**Metin koddan geri kalmıştı:**
+- İletişim satırı "telefon numarası (yalnızca yazar kaydında)" diyordu. D-054'ten
+  beri `/account` profil formunda telefon alanı **her hesaba** açık.
+- Amaç tablosunda telefondan söz eden bir satır yoktu. D-231 "telefonun amacı
+  zaten iletişim olarak yazılı" demişti; yazılı değildi.
+- WhatsApp bağlantısı (D-231) metinde geçmiyordu.
+- Profil formundaki ipucu "Yazarlık sürecinde size ulaşmak için kullanılır"
+  diyordu; çizer, editör ve hukuk danışmanı da bu alanı dolduruyor.
+
+**Karar:**
+- İletişim: "yazar kaydında zorunlu; diğer hesaplarda isteğe bağlı, profil
+  ekranından eklenir".
+- Yeni amaç satırı: ekip üyesine dergi işleri için telefonla veya WhatsApp
+  üzerinden ulaşılması ve eksik numaranın e-postayla hatırlatılması; numarayı
+  yalnızca yöneticiler görür. Hukuki sebep (c) sözleşmenin ifası, (f) meşru
+  menfaat. "Yalnızca yöneticiler görür" koddan doğrulandı: numara yalnızca
+  `/admin/users/<id>` ve `/admin/team-avatars` ekranlarında basılıyor.
+- Profil formundaki ipucu: "Dergi ekibindeyseniz dergi işleri için size
+  ulaşmakta kullanılır. Yalnızca yöneticiler görür."
+
+**Hukukçu görüşü gerekiyor:** WhatsApp bağlantısı numarayı yöneticinin
+cihazında WhatsApp'a (Meta, yurt dışı) verir. Sunucu hiçbir şey iletmiyor, ama
+bu bir m. 9 yurt dışı aktarımı sayılır mı açık. D-117'deki aktarım sorularıyla
+birlikte sorulmalı. O zamana kadar metin kullanımı açıkça yazıyor.
+
+**Yayın:** Metin yalnızca depoda güncellendi. Canlıdaki sürüm hâlâ 1; tam metin
+`[AÇIK ADRES]` dolunca yeni sürüm olarak yayınlanacak (bkz. D-154). Migration yok.
