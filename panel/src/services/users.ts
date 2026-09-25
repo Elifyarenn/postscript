@@ -590,7 +590,7 @@ export async function setIllustrator(
 /**
  * The legal adviser mark (D-238). Same shape as the illustrator mark: it is not
  * a role, so `role` and every panel permission stay untouched. It records the
- * duty and opens the team avatar builder; nothing else.
+ * duty; nothing else.
  */
 export async function setLegalAdvisor(
   actor: Actor,
@@ -631,8 +631,7 @@ export async function setLegalAdvisor(
 /**
  * The assistant mark (D-239). The third member of the same family as the
  * illustrator and legal adviser marks: not a role, so `role` and every panel
- * permission stay untouched. It records the duty, shows a badge and opens the
- * team avatar builder.
+ * permission stay untouched. It records the duty and shows a badge.
  */
 export async function setAssistant(
   actor: Actor,

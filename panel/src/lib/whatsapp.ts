@@ -34,14 +34,3 @@ export function whatsappHref(raw: string | null | undefined, message = ""): stri
   if (number === null) return null;
   return message === "" ? `https://wa.me/${number}` : `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
 }
-
-/**
- * What to say to someone who still owes an avatar or the team form. The words
- * are the product owner's, short on purpose; someone missing the avatar owes
- * both steps, so that message asks for both (D-231).
- */
-export function chaseMessage(missing: "avatar" | "form"): string {
-  return missing === "avatar"
-    ? "Selam, avatarı yapıp formu doldurur musun?"
-    : "Selam, formu doldurur musun?";
-}

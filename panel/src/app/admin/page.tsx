@@ -5,7 +5,6 @@ import { users } from "@/db/schema";
 import { guardPanel } from "@/lib/auth/guard";
 import { acceptanceReport } from "@/services/agreements";
 import { pendingAdminWork } from "@/services/admin-overview";
-import { countTeamForms } from "@/services/team-avatars";
 import { Alert, Card, EmptyState, PageHeader } from "@/components/ui";
 
 export const metadata = { title: "Yönetim" };
@@ -37,10 +36,6 @@ export default async function AdminDashboard() {
     },
   ];
   const nothingPending = queues.every((queue) => queue.total === 0);
-
-  // How far the team form has got (D-226); it can only be answered by
-  // someone who already sent an avatar, so the total is the avatar count
-  const teamForms = await countTeamForms({ ...user });
 
   // A writer with no pen name is published without a name and has no author
   // page; the byline rule is in `publicByline` (D-210)
@@ -181,28 +176,6 @@ export default async function AdminDashboard() {
                   ))}
                 </ul>
               )}
-            </div>
-          )}
-        </Card>
-
-        <Card>
-          <h2 className="mb-3 font-serif text-lg">Ekip formu</h2>
-          {teamForms.total === 0 ? (
-            <p className="text-sm text-muted">Henüz gönderilmiş ekip avatarı yok.</p>
-          ) : (
-            <div className="text-sm">
-              <p>
-                <strong>
-                  {teamForms.answered}/{teamForms.total}
-                </strong>{" "}
-                kişi formu yanıtladı.
-              </p>
-              <p className="mt-2 text-xs text-muted">
-                Yanıtlar avatarların yanında duruyor.{" "}
-                <Link href="/admin/team-avatars" className="underline">
-                  Ekip avatarları
-                </Link>
-              </p>
             </div>
           )}
         </Card>

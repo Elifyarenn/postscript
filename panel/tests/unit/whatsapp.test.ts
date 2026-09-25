@@ -3,7 +3,7 @@
  * as the member typed them, so the shapes below all really occur.
  */
 import { describe, expect, it } from "vitest";
-import { chaseMessage, whatsappHref, whatsappNumber } from "@/lib/whatsapp";
+import { whatsappHref, whatsappNumber } from "@/lib/whatsapp";
 
 describe("whatsappNumber", () => {
   it("keeps an international number, with or without the plus", () => {
@@ -42,16 +42,5 @@ describe("whatsappHref", () => {
 
   it("gives no link at all when the number cannot be read", () => {
     expect(whatsappHref("yok", "Merhaba")).toBeNull();
-  });
-});
-
-describe("chaseMessage", () => {
-  it("asks for both steps from someone who has not started", () => {
-    // No avatar means no form either, so one message covers both
-    expect(chaseMessage("avatar")).toBe("Selam, avatarı yapıp formu doldurur musun?");
-  });
-
-  it("asks only for the form from someone whose avatar is in", () => {
-    expect(chaseMessage("form")).toBe("Selam, formu doldurur musun?");
   });
 });

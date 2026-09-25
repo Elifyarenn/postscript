@@ -10015,3 +10015,40 @@ Düzeltmeler geri alınıp çalıştırıldığında **12'si kırmızı** (her b
 istismarı yeniden üretiyor), düzeltmelerle 23'ü yeşil. `pnpm audit`: bilinen
 açık yok (prod ve dev). Gizli anahtar taraması: çalışma ağacında ve geçmişte
 gerçek bir anahtar yok, döndürme gerekmiyor.
+
+## D-249 — Ekip avatarı oluşturucusu ve ekip formu panelden kaldırıldı; veriler veritabanında kalıyor
+
+**Karar:** Ürün sahibinin isteğiyle ekip avatarı ve ekip formu işi paneldeki
+bütün yüzeylerinden çıkarıldı; toplanmış kayıtlar olduğu gibi saklanıyor.
+
+- **Kaldırılan sayfalar:** `/team/avatar` (oluşturucu), `/team/form`,
+  `/admin/team-avatars` (liste, ayrıntı, "işlendi" düğmesi, silme) ve
+  `/api/admin/team-avatars/*` (PNG ve ZIP indirme). Bu adreslere gidilirse
+  Next.js 404 döner. `team-avatar-builder` bileşeni de silindi.
+- **Kaldırılan bağlantılar:** yönetici, editör ve yazar kenar çubuklarındaki
+  "Ekip avatarım", "Ekip formu", "Ekip avatarları"; editör ve yazar genel
+  bakışındaki "Ekip formu sizi bekliyor" uyarısı; yönetici genel bakışındaki
+  "Ekip formu" kartı. Kenar çubuğunun oluşturucuya bağlandığını doğrulayan
+  `tests/unit/panel-nav.test.ts` ve artık kullanılmayan `chaseMessage` silindi.
+- **Kalanlar:** `team_avatars` tablosu, R2'deki PNG'ler, şema ve migration'lar
+  aynen duruyor; migration yok. `src/services/team-avatars.ts` ve
+  `src/lib/avatar/*` bilerek bırakıldı: hesap silinince avatarın da silinmesi
+  (`removeTeamAvatarOf`, D-194) hâlâ çalışıyor, `pnpm redraw-team-avatars`
+  betiği ve servis testleri duruyor; özellik geri açılırsa yalnızca sayfalar
+  geri getirilir.
+
+**Muhafazakâr seçim:** "Avatar sayfası" hem üyenin oluşturucusu hem yöneticinin
+listesi olabilirdi; istek "yalnızca avatar bilgileri veritabanında kalsın"
+dediği için ikisi de kaldırıldı. Kayıtlara artık yalnızca veritabanından
+erişiliyor.
+
+**KVKK (D-084):** Veri toplama durduğu, üyenin kendi kaydını silme yolu
+kalktığı için aydınlatma metni aynı adımda güncellendi: ekip avatarı satırı
+geçmişte toplanan ve artık yalnızca saklanan veriyi anlatıyor; amaçtan
+"oluşturulması, görüntülenmesi ve indirilmesi" çıktı; toplama yöntemlerinden
+oluşturucu çıktı; saklama süresi "hesap silinene veya Bölüm 9 yoluyla silinmesi
+istenene kadar" oldu (silme talebi artık veritabanında elle yapılır). Görev
+işaretinin "oluşturucuyu açar" etkisi de metinden ve yönetici kullanıcı
+sayfasından çıkarıldı. Yeni sürüm panelden ayrıca yayımlanmalı.
+
+---

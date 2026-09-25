@@ -4,7 +4,6 @@ import { listArticles } from "@/services/articles";
 import { listIssues } from "@/services/issues";
 import { listPendingApprovals } from "@/services/rights";
 import { getEditorAssignment } from "@/services/editor-categories";
-import { teamFormPrompt } from "@/services/team-avatars";
 import { Alert, Card, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
 import type { ArticleStatus } from "@/db/schema";
@@ -22,8 +21,6 @@ export default async function EditorDashboard() {
   const actor = { ...user };
   const isAdmin = user.role === "admin";
   const assignment = isAdmin ? null : await getEditorAssignment(user.id);
-  // Everyone on the team answers the same three questions (D-226)
-  const teamForm = await teamFormPrompt(actor);
 
   const queues: { status: ArticleStatus; label: string }[] = isAdmin
     ? [
@@ -60,25 +57,6 @@ export default async function EditorDashboard() {
       />
 
       <div className="space-y-6">
-        {teamForm.show && (
-          <Alert tone="info" title="Ekip formu sizi bekliyor">
-            Üç soru, bir dakika: kendinizden bir söz, ekip sayfasında adınızın mı
-            mahlasınızın mı yazacağı ve burcunuz.{" "}
-            {teamForm.needsAvatar ? (
-              <>
-                Formu doldurabilmek için önce{" "}
-                <Link href="/team/avatar" className="underline">
-                  ekip avatarınızı oluşturun
-                </Link>
-                .
-              </>
-            ) : (
-              <Link href="/team/form" className="underline">
-                Formu doldurun
-              </Link>
-            )}
-          </Alert>
-        )}
         {!isAdmin && assignment && assignment.assignedAreas.length === 0 && (
           <Alert tone="warning" title="Alan atanmamış">
             Henüz size sorumlu alan atanmadı; yönetici size bir alan atayana kadar

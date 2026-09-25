@@ -293,9 +293,8 @@ export default async function AdminUserDetailPage({
           <p className="mb-4 text-sm text-muted">
             Derginin hukuk danışmanını işaretler. Çizer işareti gibi ayrı bir rol
             değildir: hesabın rolü değişmez, hiçbir panele giriş vermez ve içerik
-            üzerinde yetki tanımaz. Tek etkisi, işaretli hesabın ekip avatarı
-            oluşturucusuna girebilmesi ve bu etiketi taşımasıdır. Kayıtlı her üye
-            gibi topluluğu da kullanabilir; bunun için işaret gerekmez.
+            üzerinde yetki tanımaz. Tek etkisi, işaretli hesabın bu etiketi
+            taşımasıdır. Kayıtlı her üye gibi topluluğu da kullanabilir; bunun için işaret gerekmez.
           </p>
           <PanelForm
             action={setLegalAdvisorAction}
@@ -330,7 +329,7 @@ export default async function AdminUserDetailPage({
             Dergiye yardım eden hesabı işaretler. Çizer ve hukuk danışmanı işaretleri
             gibi ayrı bir rol değildir: hesabın rolü değişmez, hiçbir panele giriş
             vermez ve içerik üzerinde yetki tanımaz. İşaretli hesap Asistanlar
-            listesinde görünür ve ekip avatarı oluşturucusuna girebilir. Kayıtlı her
+            listesinde görünür. Kayıtlı her
             üye gibi topluluğu da kullanabilir; bunun için işaret gerekmez.
           </p>
           <PanelForm

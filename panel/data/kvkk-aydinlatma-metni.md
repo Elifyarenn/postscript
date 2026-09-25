@@ -29,7 +29,7 @@ ortaklık adına tek başına temsile yetkilidir.
 | Bilgilendirme | Aydınlatma metninin hangi sürümünü ne zaman okuduğunuzu belirttiğiniz (kayıt sırasında ve sonraki sürümlerde); önceki kayıt panel işlem kayıtlarında saklanır |
 | Sözleşme | Yazar sözleşmesini kabul kaydınız: tarih-saat, IP adresi, tarayıcı bilgisi, kabul ettiğiniz metnin tam hâli ve SHA-256 özeti, PDF kopyası |
 | Yayın izni | Bir yazıyı "İncelemeye gönder" ile gönderdiğinizde oluşan izin beyanı kaydı: gönderdiğiniz **metnin o andaki tam hâli** ve SHA-256 özeti, yazının sürüm numarası, dayandığı sözleşme sürümü, hesabınız, tarih-saat, IP adresi ve tarayıcı bilgisi. Yazıyı yeniden gönderdiğinizde önceki beyan kayıt olarak saklanır |
-| Görev işareti | Hesabınızın dergiye çizen bir hesap (çizer), derginin hukuk danışmanı veya asistan olarak işaretlenmiş olması. Bu işaretler bir rol değildir; hangi görevi üstlendiğinizi kaydeder ve ekip avatarı oluşturucusunu açar |
+| Görev işareti | Hesabınızın dergiye çizen bir hesap (çizer), derginin hukuk danışmanı veya asistan olarak işaretlenmiş olması. Bu işaretler bir rol değildir; hangi görevi üstlendiğinizi kaydeder |
 | İçerik | Dergiye gönderilen eserler ve sürümleri, yazı üzerindeki editör notları |
 | Topluluk | Yazılara yapılan yorumlar, topluluk sohbeti mesajları, paylaştığınız gönderiler ve yanıtlar ile bunların gönderim zamanı; beğendiğiniz ve yeniden paylaştığınız gönderiler; takip ettiğiniz ve sizi takip eden hesaplar, engellediğiniz hesaplar, katıldığınız topluluklar, kaydettiğiniz yazı ve gönderiler, size gönderilen panel içi bildirimler |
 | İçerik bildirimi | Bildirdiğiniz içeriğin türü ve o anki metni, seçtiğiniz bildirim türü, varsa açıklamanız, bildirimin sonucu; bildirilen içeriğin sahibi olduğunuzda bu bilgiler sizinle ilişkilendirilir |
@@ -40,7 +40,7 @@ ortaklık adına tek başına temsile yetkilidir.
 | Denetim | Panelde yapılan işlemlerin kaydı: kimin, ne zaman, hangi işlemi, hangi IP adresinden yaptığı |
 | İletişim formu | İletişim sayfasındaki formu doldurduğunuzda yazdığınız ad, e-posta adresi, konu ve mesajınız. Bu bilgiler sitede saklanmaz; doğrudan derginin e-posta kutusuna iletilir |
 | Profil görselleri | Topluluk profilinize yüklediğiniz profil fotoğrafı ve kapak fotoğrafı; yükleyen hesap, dosya türü ve boyutu. Bu görselleri giriş yapmış diğer üyeler görür; yüklemek zorunlu değildir |
-| Ekip avatarı | Yalnızca dergi ekibindeyseniz (yazar, editör, çizer, yönetici) ve avatar oluşturucuyu kullanırsanız: seçtiğiniz çizim parçaları (ten tonu, yüz şekli, göz ve kirpik, kaş, burun, ağız ve dudak rengi, saç modeli, dokusu ve rengi, sakal, çil, ben, allık, göz altı, yara izi, gözlük, piercing, küpe, kolye, kıyafet ve şapka gibi ekstralar), bu seçimlerden sunucuda çizilen PNG görseli, girdiğiniz görünen isim ve ekipteki rolünüz, kaydın hesabınızla ilişkisi, oluşturulma ve güncellenme zamanı. Avatarınızı gönderdiyseniz ayrıca doldurabileceğiniz ekip formunun yanıtları: kendinizden yazdığınız en çok 55 karakterlik bir söz, ekip sayfasında adınızın mı mahlasınızın mı yazmasını istediğiniz, burcunuz ve formu yanıtladığınız zaman. Ne avatar oluşturmak ne de formu doldurmak zorunludur |
+| Ekip avatarı | Panelde bir süre açık kalan ekip avatarı oluşturucusunu ve ekip formunu kullandıysanız, o dönemde kaydedilmiş: seçtiğiniz çizim parçaları (ten tonu, yüz şekli, göz ve kirpik, kaş, burun, ağız ve dudak rengi, saç modeli, dokusu ve rengi, sakal, çil, ben, allık, göz altı, yara izi, gözlük, piercing, küpe, kolye, kıyafet ve şapka gibi ekstralar), bu seçimlerden sunucuda çizilen PNG görseli, girdiğiniz görünen isim ve ekipteki rolünüz, kaydın hesabınızla ilişkisi, oluşturulma ve güncellenme zamanı. Avatarınızı gönderdiyseniz ayrıca doldurabileceğiniz ekip formunun yanıtları: kendinizden yazdığınız en çok 55 karakterlik bir söz, ekip sayfasında adınızın mı mahlasınızın mı yazmasını istediğiniz, burcunuz ve formu yanıtladığınız zaman. Oluşturucu ve form panelden kaldırıldı; artık yeni avatar veya form yanıtı alınmıyor, var olan kayıtlar veritabanında saklanıyor ve panelde gösterilmiyor |
 | Müzik çalar | Üye olarak giriş yapmışken ana sayfadaki Spotify çalarını açtığınızda tarayıcınızın Spotify ile kurduğu bağlantıda iletilen IP adresi ve tarayıcı bilgisi; bu veriler dergiye değil, doğrudan Spotify AB şirketine gider |
 
 Özel mesajlarınızı yalnızca siz ve yazıştığınız üye görür; yöneticiler özel
@@ -69,7 +69,7 @@ yazmamanızı rica ederiz; yayımlanan metinlerden kişiyi tanınır kılan ayr�
 çıkarılır. Kişisel veri dışa aktarımında gönderdiğiniz anonim mesajlar yer alır.
 
 Özel nitelikli kişisel veri (sağlık, din, biyometrik veri ve benzeri)
-toplamıyoruz. Avatar oluşturucudaki ten tonu, saç ve yüz seçimleri bir çizim
+toplamıyoruz. Ekip avatarı kayıtlarındaki ten tonu, saç ve yüz seçimleri bir çizim
 tercihidir: gerçek görünüşünüzü yansıtması gerekmez, ırk veya etnik köken bilgisi
 olarak istenmez ve böyle kullanılmaz. Kimlik belgesi fotokopisi veya görüntüsü **talep edilmez ve
 saklanmaz**.
@@ -91,7 +91,7 @@ saklanmaz**.
 | Yazar profilinin ve eserin dergide yayımlanması, künyede ad veya mahlas belirtilmesi | (c) Sözleşmenin ifası |
 | Çizer olarak işaretlenmiş hesapların Hakkında sayfasında mahlas veya topluluk adıyla listelenmesi | (c) Sözleşmenin ifası |
 | Yorum ve topluluk sohbeti işlevlerinin sunulması | (c) Sözleşmenin ifası |
-| Ekip üyelerinin avatarlarının ve ekip formu yanıtlarının oluşturulması, yönetim tarafından görüntülenmesi ve indirilmesi; ekip sayfasının hazırlanması; avatarın görünen isim, ekip rolü ve form yanıtlarıyla birlikte derginin sitesinde veya sosyal medya hesaplarında ekip tanıtımı için kullanılması (yayımlama yalnızca ilgili ekip üyesinin onayıyla yapılır) | (f) Meşru menfaat; yayımlama bakımından (a) açık rıza |
+| Daha önce kaydedilmiş ekip avatarlarının ve ekip formu yanıtlarının saklanması; ekip sayfasının hazırlanması; avatarın görünen isim, ekip rolü ve form yanıtlarıyla birlikte derginin sitesinde veya sosyal medya hesaplarında ekip tanıtımı için kullanılması (yayımlama yalnızca ilgili ekip üyesinin onayıyla yapılır) | (f) Meşru menfaat; yayımlama bakımından (a) açık rıza |
 | Topluluk profilinin gösterilmesi; gönderi, yanıt, beğeni, yeniden paylaşım, takip, engelleme, kaydetme ve bildirim işlevlerinin sunulması | (c) Sözleşmenin ifası |
 | İçerik bildirimlerinin alınması, incelenmesi ve 5651 sayılı Kanun kapsamındaki içerik kaldırma yükümlülüğünün yerine getirilmesi | (ç) Veri sorumlusunun hukuki yükümlülüğü, (f) Meşru menfaat |
 | Yorum, mesaj ve oturumlara ilişkin trafik kayıtlarının tutulması | (ç) Veri sorumlusunun hukuki yükümlülüğü — 5651 sayılı Kanun m. 5 |
@@ -113,7 +113,7 @@ sistemlerle verilen bir karar bulunmamaktadır.
 Kişisel verileriniz tamamen elektronik ortamda toplanır:
 
 - **Doğrudan sizden:** Kayıt formu, yazarlık başvuru formu, profil ekranı,
-  sözleşme ekranı, yazıyı editöre gönderme işlemi, ekip avatarı oluşturucusu, yorum ve sohbet alanları, topluluk
+  sözleşme ekranı, yazıyı editöre gönderme işlemi, yorum ve sohbet alanları, topluluk
   ayarları ve topluluk ekranlarındaki takip, engelleme ve kaydetme düğmeleri.
 - **Kullanım sırasında otomatik olarak:** Oturum çerezi aracılığıyla tutulan
   oturum kaydı ile sunucu tarafında oluşan IP adresi, tarayıcı bilgisi ve işlem
@@ -177,7 +177,7 @@ esas alınarak gerçekleştirilmektedir.
 | Hesap verileri (kimlik, iletişim, profil) | Hesap açık kaldığı sürece. Silme talebiniz üzerine 30 gün sonra anonimleştirilir. |
 | İletişim formu mesajları | Sitede saklanmaz. Derginin e-posta kutusunda, talebiniz karşılandıktan sonra en geç 1 yıl içinde silinir. |
 | Profil ve kapak fotoğrafı | Siz kaldırana kadar. Yenisini yüklediğinizde eskisi hemen silinir; hesabınız silindiğinde dosyalar da silinir. |
-| Ekip avatarı ve ekip formu yanıtları (seçimler, görsel, görünen isim, ekip rolü, söz, ad/mahlas tercihi, burç) | Siz avatar oluşturucudan silene, yönetim silene veya hesabınız silinene kadar; üçü de kaydı ve görseli kalıcı olarak siler. Yeniden kaydettiğinizde eski görsel hemen silinir. Yönetimin indirdiği kopyalar sistemin dışında kalır; silinmelerini Bölüm 9'daki yolla isteyebilirsiniz. |
+| Ekip avatarı ve ekip formu yanıtları (seçimler, görsel, görünen isim, ekip rolü, söz, ad/mahlas tercihi, burç) | Hesabınız silinene veya Bölüm 9'daki yolla silinmesini isteyene kadar; ikisi de kaydı ve görseli kalıcı olarak siler. Yönetimin daha önce indirdiği kopyalar sistemin dışında kalır; bunların silinmesini de aynı yolla isteyebilirsiniz. |
 | Tamamlanmamış (e-postası doğrulanmamış) kayıtlar | 7 gün |
 | E-posta doğrulama bağlantıları | 24 saat |
 | Şifre sıfırlama bağlantıları | 30 dakika |
