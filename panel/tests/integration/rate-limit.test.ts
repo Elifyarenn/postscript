@@ -1,5 +1,5 @@
 /**
- * The database-backed rate limiter (D-007, D-074).
+ * The database-backed rate limiter (D-007, D-074, D-250).
  *
  * The counter is one upsert rather than a read followed by a write, so these
  * cover the thing a sequential test would miss: parallel attempts must each
@@ -64,18 +64,48 @@ describe("consumeAttempt", () => {
     expect(second.retryAfterMs).toBeLessThanOrEqual(first.retryAfterMs);
   });
 
-  /**
-   * D-078: the counter is a read followed by a write again, so parallel
-   * requests can share an attempt. Sequential counting is what it does
-   * guarantee, and that is what is pinned here; the race is a known gap,
-   * recorded in D-078 and not yet fixed.
-   */
   it("charges every sequential attempt", async () => {
     for (let attempt = 0; attempt < 4; attempt += 1) {
       await consumeAttempt("login_account", "counted@example.com");
     }
 
     expect(await currentAttemptCount("login_account", "counted@example.com")).toBe(4);
+  });
+
+  /**
+   * D-078 regression. PGlite serialises queries on one connection, but the
+   * calls still interleave at every await: all the reads are queued before any
+   * write, which is exactly the lost update a pooled connection produces. A
+   * read-then-write counter fails these; the same checks run against a real
+   * Neon branch in rate-limit-postgres.test.ts.
+   */
+  it("never lets a parallel burst past the limit", async () => {
+    const rule = RULES.login_ip;
+    await consumeAttempt("login_ip", "203.0.113.10");
+
+    const results = await Promise.all(
+      Array.from({ length: 20 }, () => consumeAttempt("login_ip", "203.0.113.10")),
+    );
+
+    expect(results.filter((result) => result.allowed)).toHaveLength(rule.limit - 1);
+    // Every attempt up to the one that locks is counted; locked ones leave it alone
+    expect(await currentAttemptCount("login_ip", "203.0.113.10")).toBe(rule.limit + 1);
+  });
+
+  it("counts parallel first attempts on a bucket that does not exist yet", async () => {
+    const results = await Promise.allSettled(
+      Array.from({ length: 4 }, () => consumeAttempt("contact_form_ip", "203.0.113.11")),
+    );
+
+    // Two inserts racing for the same new bucket must not surface as an error
+    expect(results.every((result) => result.status === "fulfilled")).toBe(true);
+    const allowed = results.filter(
+      (result) => result.status === "fulfilled" && result.value.allowed,
+    );
+    expect(allowed).toHaveLength(RULES.contact_form_ip.limit);
+    expect(await currentAttemptCount("contact_form_ip", "203.0.113.11")).toBe(
+      RULES.contact_form_ip.limit + 1,
+    );
   });
 
   it("starts a fresh window once the old one has rolled over", async () => {

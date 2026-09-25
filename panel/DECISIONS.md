@@ -10052,3 +10052,65 @@ işaretinin "oluşturucuyu açar" etkisi de metinden ve yönetici kullanıcı
 sayfasından çıkarıldı. Yeni sürüm panelden ayrıca yayımlanmalı.
 
 ---
+
+## D-250 — Rate limit sayacı yeniden tek deyimde; D-074'ün canlıda kırılma nedeni bulundu
+
+**Karar:** `consumeAttempt` yine tek bir `INSERT … ON CONFLICT DO UPDATE`
+çalıştırıyor (D-074'ün şekli). Farkı: `sql` şablonuna giren her zaman damgası
+artık `Date` nesnesi olarak değil, `'<ISO>'::timestamptz` olarak gidiyor
+(`timestamp()` yardımcısı). D-078'deki açık kapandı.
+
+**D-078'in kök nedeni (kodla doğrulandı):** drizzle'ın postgres-js sürücüsü
+(`drizzle-orm/postgres-js/driver.js`) timestamptz dahil tarih tiplerinin
+serializer'ını kimlik fonksiyonuyla değiştiriyor. postgres.js bir `Date`
+parametresinin tipini 1184 (timestamptz) diye çıkarıyor, serializer onu string'e
+çevirmiyor ve Bind mesajı yazılırken sorgu hata veriyor. Kolon değerleri
+(`values`, `set`) bu sorunu yaşamıyor, çünkü drizzle onları kolonun
+`mapToDriverValue`'suyla (`toISOString`) önceden çeviriyor; D-074'ün kırılan
+kısmı yalnızca `CASE` içindeki çıplak `${now}`, `${windowCutoff}` ve
+`${lockUntil}` idi. PGlite parametreyi kendisi çevirdiği için testler geçti.
+Neon dalında `select ${new Date()}` postgres.js üzerinden gerçekten hata
+veriyor; bu durum artık bir testle sabitlendi.
+
+**Yarışın kanıtı (eski kod, SELECT → karar → UPDATE):**
+- PGlite: sayacı 1 olan bir kovaya 20 paralel `login_ip` denemesi → 20'sinin
+  de izni geçti (beklenen 9). Yeni bir kovaya gelen paralel ilk denemeler
+  `auth_attempts_scope_identifier_unique` ihlaliyle patladı (kullanıcıya
+  "Beklenmeyen bir hata").
+- Neon dalı, postgres.js, 20 bağlantılık havuz: `login_2fa` (limit 5) için 3×15
+  paralel denemede **46** izin; 40 paralel ilk denemenin 33'ü 23505 hatası;
+  tek hak kalmışken 2 paralel istek → 2 izin.
+
+**Doğrulama (yeni kod):** `tests/integration/rate-limit.test.ts` (PGlite, iki
+yeni paralel test) ve yeni `tests/integration/rate-limit-postgres.test.ts`
+(sıralı, paralel, sınır, pencere dolması, farklı IP'ler, farklı
+tanımlayıcı/kapsam, başarı sonrası temizleme, kilitliyken ret). İkinci dosya
+yalnızca `RATE_LIMIT_TEST_DATABASE_URL` verildiğinde çalışır ve boş bir
+veritabanına migration'ları kendisi uygular. Ücretsiz planın dal kotası dolu
+olduğu için yeni dal açılamadı; üretim olmayan `migration-test-0026-0030`
+dalında **yeni ve boş** bir `d249_ratelimit` veritabanı açıldı, üretim verisine
+dokunulmadı. Eski kod burada 4 testte kaldı, yeni kod üç ayrı koşuda 10/10
+geçti. Paralel testte izin sayısı limite eşit, sayaç `limit + 1`: limiti aşan
+tek deneme sayılır ve kilidi kurar, kilitliyken gelenler satırı değiştirmez.
+
+**Neden atomik:** `ON CONFLICT DO UPDATE` çakışan satırı kilitler ve READ
+COMMITTED'da `SET` ifadelerini en son işlenmiş satır üzerinden hesaplar; ayrı
+bir transaction gerekmiyor. Satırın hiç olmadığı durumda iki eşzamanlı ekleme
+de upsert'e döndüğü için unique ihlali oluşmuyor.
+
+**Etkilenen akışlar:** kayıt (`register_ip`), giriş (`login_ip`,
+`login_account`), 2FA'nın ikinci adımı (`login_2fa`, kurtarma kodu dahil),
+şifre sıfırlama isteği (`password_reset_ip`), iletişim formu
+(`contact_form_ip`). Davranış sıralı istekte değişmedi.
+
+**Bu adımda bilerek değiştirilmeyen:** Başarılı giriş `login_ip` kovasını
+tamamen siliyor; kendi hesabı olan bir saldırgan tek IP'den başka hesaplara
+9 tahmin → kendi hesabıyla giriş → 10 tahmin daha yapabiliyor (testte tek
+IP'den 19 başarısız tahmin, limit 10). `auth.test.ts`'e `it.fails` olarak
+eklendi; düzeltilince test `it` yapılmalı. Önerilen model: IP kovası yalnızca
+başarısız denemeleri saysın, başarılı giriş yalnızca o hesabın kovasını
+temizlesin, IP kovası CGNAT için daha geniş tutulsun (ör. 15 dakikada 30
+başarısız). Ayrı bir adımda ele alınacak.
+
+**Yayın notu:** Şema ve migration değişmedi. Push öncesi D-079 kontrolü yine
+yapılmalı.

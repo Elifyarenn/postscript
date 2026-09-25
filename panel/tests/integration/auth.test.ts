@@ -246,6 +246,33 @@ describe("login", () => {
     expect(locked.status).toBe(429);
   }, 60_000);
 
+  /**
+   * KNOWN GAP, recorded in D-250 and deliberately not fixed yet: a successful
+   * login clears the whole login_ip bucket, so an attacker holding one real
+   * account can spray other accounts from one address, log in to their own
+   * account to refill the budget, and carry on. `it.fails` keeps the suite
+   * green while the gap exists; when it is fixed this flips and must become `it`.
+   */
+  it.fails("does not let a successful login refill an address's failure budget", async () => {
+    await createUser({ email: "attacker@example.com" });
+    const meta = { ip: "198.51.100.50", userAgent: "vitest" };
+    let failed = 0;
+
+    // Each guess targets a different account, so no per-account counter trips
+    const guess = async (target: number) => {
+      const error = await captureError(
+        verifyCredentials({ email: `victim${target}@example.com`, password: "guess" }, meta),
+      );
+      if (error.status === 401) failed += 1;
+    };
+
+    for (let target = 0; target < 9; target += 1) await guess(target);
+    await verifyCredentials({ email: "attacker@example.com", password: TEST_PASSWORD }, meta);
+    for (let target = 9; target < 20; target += 1) await guess(target);
+
+    expect(failed).toBeLessThanOrEqual(10);
+  }, 60_000);
+
   it("refuses a banned account", async () => {
     await createUser({ email: "banned@example.com", isBanned: true });
     const error = await captureError(
