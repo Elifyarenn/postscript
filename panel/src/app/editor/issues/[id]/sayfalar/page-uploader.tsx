@@ -15,6 +15,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Check, AlertTriangle, Upload, X } from "lucide-react";
+import { MAX_PAGE_IMAGE_BYTES, MAX_PAGE_IMAGE_MB, PAGE_IMAGE_TOO_LARGE } from "@/lib/page-image";
 
 type Picked = {
   key: string;
@@ -180,6 +181,11 @@ export function PageUploader({
 
       let failed: string | null = null;
       for (const [at, part] of parts.entries()) {
+        // Vercel would refuse it with a bare 413 before the server could explain
+        if (part.blob.size > MAX_PAGE_IMAGE_BYTES) {
+          failed = PAGE_IMAGE_TOO_LARGE;
+          break;
+        }
         const form = new FormData();
         form.append("csrfToken", csrfToken);
         form.append("file", part.blob, part.name);
@@ -219,7 +225,7 @@ export function PageUploader({
         }}
       >
         <p className="mb-2 text-muted">
-          Sayfa görsellerini buraya sürükleyin — PNG, JPG veya WEBP, en çok 25 MB.
+          Sayfa görsellerini buraya sürükleyin — PNG, JPG veya WEBP, en çok {MAX_PAGE_IMAGE_MB} MB.
         </p>
         <input
           ref={inputRef}

@@ -1,4 +1,5 @@
 import "server-only";
+import { MAX_PAGE_IMAGE_BYTES, PAGE_IMAGE_TOO_LARGE } from "@/lib/page-image";
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
@@ -754,12 +755,6 @@ export async function reorderIssuePages(
 /** What the panel takes as a designed page. GIF is not among them. */
 const PAGE_IMAGE_MIMES = ["image/png", "image/jpeg", "image/webp"];
 
-/**
- * Larger than the library's ten (D-240): a full page of design at a size
- * where the small type is still readable is a big file, and squeezing it to
- * fit the library's limit is exactly what must not happen to it.
- */
-export const MAX_PAGE_IMAGE_BYTES = 25 * 1024 * 1024;
 
 /**
  * The bytes decide the type, not the name the browser sent. Every refusal
@@ -774,7 +769,7 @@ function assertPageImage(buffer: Buffer, declaredMime: string): { mime: string }
     throw badRequest("Dosya içeriği bildirilen türle uyuşmuyor.");
   }
   if (buffer.length > MAX_PAGE_IMAGE_BYTES) {
-    throw badRequest("Sayfa görseli çok büyük. Sınır: 25 MB.");
+    throw badRequest(PAGE_IMAGE_TOO_LARGE);
   }
   return { mime: detected.mime };
 }

@@ -10230,3 +10230,23 @@ geçmeden commit'lendi (typecheck testi yazmadan önce çalıştırılmıştı).
 düzeltildi; iki adımın toplamı yeşil.
 
 **Yayın notu:** Şema ve migration yok; kişisel veri işleme değişmedi.
+
+## D-254 — Ana sayfada yayın tarihi; sayfa görseli sınırı Vercel'in 4,5 MB'ına indirildi
+
+**Yayın tarihi:** Ana sayfa "Yeni sayı! … Çok yakında" diyor ama tarihi hiçbir
+yerde söylemiyordu; geri sayım yalnızca oturum arkasındaki `/magazine/issues`'ta.
+İlk kez gelen okuyucu ne zaman döneceğini bilemiyordu. Sayı yayımlanmadıkça
+kahraman alanında temanın altına geri sayımla aynı cümle yazılır: "1 Ekim
+17.00'de yayında" (`issue-extras.ts`'teki `release.at`, D-192). Yeni stil yok;
+`hero-theme` satırı.
+
+**Sayfa görseli sınırı:** D-240 sınırı 25 MB koymuştu, arayüz de "en çok 25 MB"
+diyordu. Ancak yükleme tek istekle Vercel fonksiyonuna gidiyor ve Vercel 4,5 MB'ı
+aşan gövdeyi kodumuz çalışmadan 413 ile reddediyor (D-161). 4,5–25 MB arası
+her sayfa açıklamasız bir "Yükleme başarısız (413)" ile düşerdi. Sınır
+`src/lib/page-image.ts`'te tek yerde 4 MB (formun diğer alanlarına pay) ve
+yükleyici dosyayı göndermeden önce aynı Türkçe mesajla reddediyor. Daha büyük
+sayfa için kalıcı çözüm doğrudan depolamaya (R2 presigned) yükleme; CSP
+`img-src`/`connect-src` değişikliği ve ayrı bir adım gerektirir.
+
+**Yayın notu:** Şema ve migration yok; kişisel veri işleme değişmedi.

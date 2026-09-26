@@ -8,6 +8,7 @@
  * member, the only kind of reader who may open the playlist (D-132).
  */
 import Image, { type StaticImageData } from "next/image";
+import { formatReleaseMoment } from "@/lib/countdown";
 import Link from "next/link";
 import { ArrowRight, Star } from "lucide-react";
 import heroCollage from "@/assets/design/hero-collage.webp";
@@ -63,6 +64,8 @@ export function HomePage({
 }) {
   const playlistEmbed = extras?.playlist ? spotifyEmbedUrl(extras.playlist.spotifyUrl) : null;
   const cards = extras?.cards ?? [];
+  const releaseText =
+    !issue.published && extras?.release ? `${formatReleaseMoment(extras.release.at)}'de yayında` : null;
   const hasExtras = extras !== null && (cards.length > 0 || Boolean(extras.playlist));
 
   return (
@@ -86,7 +89,15 @@ export function HomePage({
           <h2 id="home-issue-title" className="hero-title fit-line" lang={issue.titleLang}>
             {issue.title}
           </h2>
-          {issue.theme && <p className="hero-theme">{issue.theme}</p>}
+          {/* Before launch the front page never said when (D-254); the same words
+              as the countdown on the issues page */}
+          {(issue.theme || releaseText) && (
+            <p className="hero-theme">
+              {issue.theme}
+              {issue.theme && releaseText && <br />}
+              {releaseText}
+            </p>
+          )}
           <Link href={issue.href} className="site-outline-button">
             {issue.published ? "Hemen oku!" : "Çok yakında"}
           </Link>
