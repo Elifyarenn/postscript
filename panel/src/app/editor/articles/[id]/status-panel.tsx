@@ -93,7 +93,7 @@ export function StatusPanel({
             <Field
               label="Yayın zamanı"
               htmlFor="scheduledAt"
-              hint="Boş bırakılırsa hemen yayına alınabilir duruma geçer."
+              hint="Türkiye saati. Planlanan yazılar her sabah 06.00 civarında yayına alınır; tam saatinde yayın için yazıyı o saatte elle yayımlayın. Boş bırakılırsa hemen yayına alınabilir duruma geçer."
             >
               <Input id="scheduledAt" name="scheduledAt" type="datetime-local" />
             </Field>

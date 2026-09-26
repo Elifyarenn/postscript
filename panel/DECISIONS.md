@@ -10338,3 +10338,46 @@ sitemap tam olarak açık olanları listeler).
 
 **Yayın notu:** Şema ve migration yok. Kişisel veri işleme değişmedi; yeni bir
 veri alanı açılmadı (yorumlar üyelerde kaldı).
+
+## D-258 — Okuyucudaki 500'lerin nedeni; eksik dosya 404; zamanlama Türkiye saatinde; 1 Ekim yayını elle
+
+**Okuyucu görselleri (1. sayı, `/magazine/issues/1/oku`):** Altı sayfa
+görselinin hepsi 500 veriyordu. Neden (Vercel çalışma kaydı + üretimde salt
+okunur sorgu): R2 `NoSuchKey` — dosyalar depolamada yok. `issue_pages` ve
+`media` satırları 2026-09-22 23:55 UTC'de üretim veritabanına yazılmış, dosyalar
+ise yerel `.env`'deki `file://` depolama yüzünden geliştirici makinesinin
+`.storage/` klasörüne gitmiş (D-247'deki tuzak). Üretimde "Geçici önizlemeyi kur
+/ güncelle" hiç çalıştırılmamış (audit_log'da `issue_preview.*` yok). Üretim
+verisine dokunulmadı; yer tutucu üretilmedi.
+
+- **Kod:** Depolama bağdaştırıcıları (S3, yerel disk, bellek) olmayan bir
+  anahtarda artık 404 (`notFound`) atıyor ve anahtarı tek satır uyarıyla
+  logluyor; önceden SDK hatası 500'e dönüyordu. Her `get()` çağıranı bunu
+  kendiliğinden alır. Okuyucu sayfası yüklenemeyen görselin yerine sayfa
+  boyutunu koruyarak "Bu sayfanın görseli şu anda yüklenemedi." yazıyor; bilgi
+  penceresindeki süs görseli yüklenemezse gizleniyor. 4 MB sınırı (D-254) aynı.
+- **Veri (ürün sahibi):** 1. sayı ekranında "Geçici önizlemeyi kur / güncelle"
+  ya da gerçek sayfaların panelden yeniden yüklenmesi.
+
+**Zamanlama:**
+- `scheduledAt` (`datetime-local`) sunucuda `new Date(raw)` ile UTC olarak
+  okunuyordu: 17.00 diye girilen yazı 20.00'de (TR) yayına girecek gibi
+  kaydediliyordu. `parseTurkeyLocalDateTime` alanı Türkiye saati (UTC+3, 2016'dan
+  beri sabit) olarak okur; okunamayan değer 400.
+- `formatDate`/`formatDateTime` saat dilimi vermiyordu; sunucu UTC olduğu için
+  sitedeki her saat üç saat geri görünüyordu. Artık `Europe/Istanbul`.
+- Planlama alanının ipucu: yazılar günlük cron ile sabah 06.00 civarında
+  yayına alınır; tam saat için elle yayımlanmalı.
+
+**Cron durumu (2026-09-26):** `vercel.json` günde bir kez `0 3 * * *` (06.00
+TR), Hobby planında ±59 dk kayabilir. `/api/cron/daily` `CRON_SECRET` yoksa
+401 döner: **üretimde `CRON_SECRET` eksik**, yani planlanmış hiçbir yazı
+kendiliğinden yayına girmiyor. Sayıların planlanma mekanizması hiç yok
+(`issue_status`'ta `scheduled` yok; `planned_publish_date` yalnızca gösterim);
+eklemek şema değişikliği ister. **1 Ekim 17.00 yayını elle yapılmalı:** sayı
+durumunu "yayımlandı"ya çekmek ve yazıları yayımlamak.
+
+Testler: `tests/unit/turkey-time.test.ts`, `public-magazine.test.ts`'e eksik
+dosya → 404.
+
+**Yayın notu:** Şema ve migration yok; kişisel veri işleme değişmedi.

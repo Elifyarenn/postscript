@@ -15,7 +15,25 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { env, isProduction } from "@/lib/env";
-import { badRequest } from "@/lib/errors";
+import { badRequest, notFound } from "@/lib/errors";
+
+/**
+ * A key with nothing behind it answers 404, not 500 (D-257). It happened on
+ * production: page rows were written there while their files went to a
+ * developer's disk, and every reader picture failed with a bare 500. The
+ * warning keeps the gap visible in the logs; the key is a path of dates and
+ * UUIDs, nothing personal.
+ */
+function missingObject(key: string) {
+  console.warn(`[storage] missing object: ${key}`);
+  return notFound("Dosya bulunamadı.");
+}
+
+function isMissingS3Object(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const { name, $metadata } = error as { name?: string; $metadata?: { httpStatusCode?: number } };
+  return name === "NoSuchKey" || $metadata?.httpStatusCode === 404;
+}
 
 export type Bucket = "media";
 
@@ -82,11 +100,13 @@ function createS3Adapter(): StorageAdapter {
       );
     },
     async get({ bucket, key }) {
-      const result = await client.send(
-        new GetObjectCommand({ Bucket: bucketName(bucket), Key: key }),
-      );
+      const result = await client
+        .send(new GetObjectCommand({ Bucket: bucketName(bucket), Key: key }))
+        .catch((error: unknown) => {
+          throw isMissingS3Object(error) ? missingObject(key) : error;
+        });
       const bytes = await result.Body?.transformToByteArray();
-      if (!bytes) throw new Error(`Object not found: ${key}`);
+      if (!bytes) throw missingObject(key);
       return Buffer.from(bytes);
     },
     async remove({ bucket, key }) {
@@ -128,7 +148,9 @@ function createLocalDiskAdapter(root: string): StorageAdapter {
     },
     async get({ bucket, key }) {
       const { readFile } = await import("node:fs/promises");
-      return readFile(resolve(bucket, key));
+      return readFile(resolve(bucket, key)).catch((error: unknown) => {
+        throw (error as { code?: string }).code === "ENOENT" ? missingObject(key) : error;
+      });
     },
     async remove({ bucket, key }) {
       const { rm } = await import("node:fs/promises");
@@ -155,7 +177,7 @@ export class MemoryStorageAdapter implements StorageAdapter {
 
   async get({ bucket, key }: { bucket: Bucket; key: string }) {
     const found = this.objects.get(this.id(bucket, key));
-    if (!found) throw new Error(`Object not found: ${key}`);
+    if (!found) throw missingObject(key);
     return found.body;
   }
 

@@ -39,6 +39,7 @@ import {
   type ActionState,
 } from "@/lib/action";
 import { badRequest } from "@/lib/errors";
+import { parseTurkeyLocalDateTime } from "@/lib/utils";
 import type { LicenseType } from "@/db/schema";
 
 /* ------------------------------------------------------------------ */
@@ -124,10 +125,15 @@ export async function transitionArticleAction(
     // The target status goes to the service unparsed; it validates it (D-070)
     const target = text(formData, "status");
     const scheduledAtRaw = optionalText(formData, "scheduledAt");
+    // The field has no zone; the editor means Turkey's time (D-257)
+    const scheduledAt = scheduledAtRaw ? parseTurkeyLocalDateTime(scheduledAtRaw) : null;
+    if (scheduledAtRaw && !scheduledAt) {
+      throw badRequest("Yayın zamanı okunamadı.", { scheduledAt: ["Yayın zamanı okunamadı."] });
+    }
 
     await transitionArticle({ ...user }, articleId, target, meta, {
       withdrawnReason: optionalText(formData, "withdrawnReason") ?? undefined,
-      scheduledAt: scheduledAtRaw ? new Date(scheduledAtRaw) : null,
+      scheduledAt,
       note: optionalText(formData, "note") ?? undefined,
     });
 

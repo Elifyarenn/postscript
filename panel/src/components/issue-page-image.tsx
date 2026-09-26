@@ -12,7 +12,7 @@
  * hint. Keyboard focus is always visible: an invisible control that cannot be
  * found by tabbing is not a control.
  */
-import { useId } from "react";
+import { useId, useState } from "react";
 import { ExternalLink, HelpCircle, Info, MoveRight } from "lucide-react";
 import type { ReaderHotspot } from "@/lib/issue-hotspots";
 import type { ReaderPage } from "@/lib/issue-reader";
@@ -55,6 +55,9 @@ export function IssuePageImage({
   suppressClicks?: () => boolean;
 }) {
   const describedBy = useId();
+  // Keyed by address, so turning to another page starts fresh
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const failed = page.imageUrl !== null && failedUrl === page.imageUrl;
   const known = Boolean(page.imageWidth && page.imageHeight);
   // The ratio sizes the page before its picture arrives, so nothing jumps
   const style = known
@@ -66,7 +69,13 @@ export function IssuePageImage({
 
   return (
     <figure className="page-image" style={style}>
-      {page.imageUrl && (
+      {/* A picture that does not arrive leaves a sentence, not a broken icon (D-257) */}
+      {failed && (
+        <p className="page-image-missing" role="status">
+          Bu sayfanın görseli şu anda yüklenemedi.
+        </p>
+      )}
+      {page.imageUrl && !failed && (
         <img
           src={page.imageUrl}
           alt={page.imageAlt ?? `Sayfa ${page.position}`}
@@ -75,6 +84,7 @@ export function IssuePageImage({
           decoding="async"
           draggable={false}
           aria-describedby={page.transcript ? describedBy : undefined}
+          onError={() => setFailedUrl(page.imageUrl)}
         />
       )}
 

@@ -535,7 +535,16 @@ export function MagazineReader({
               </button>
             </header>
             {info.infoImageUrl && (
-              <img className="reader-panel-image" src={info.infoImageUrl} alt="" decoding="async" />
+              <img
+                className="reader-panel-image"
+                src={info.infoImageUrl}
+                alt=""
+                decoding="async"
+                // Decorative; a missing file is simply left out (D-257)
+                onError={(event) => {
+                  event.currentTarget.hidden = true;
+                }}
+              />
             )}
             {info.infoBody && <p className="reader-panel-body">{info.infoBody}</p>}
           </div>
