@@ -23,7 +23,7 @@ import { setChatMode } from "@/services/chat-mode";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import { isAppError } from "@/lib/errors";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
-import { actorOf, createUser, noMeta } from "../helpers/factories";
+import { actorOf, createUser, noMeta, testIssueId } from "../helpers/factories";
 
 let database: Database;
 const mailbox = new MemoryMailAdapter();
@@ -59,7 +59,7 @@ async function publishedArticle() {
   slugCounter += 1;
   const [row] = await db
     .insert(articles)
-    .values({
+    .values({ issueId: await testIssueId(),
       title: "Yorumlanacak Yazı",
       slug: `yorumlanacak-${slugCounter}`,
       bodyMarkdown: "gövde",
@@ -74,7 +74,7 @@ async function draftArticle() {
   slugCounter += 1;
   const [row] = await db
     .insert(articles)
-    .values({
+    .values({ issueId: await testIssueId(),
       title: "Taslak",
       slug: `taslak-${slugCounter}`,
       bodyMarkdown: "x",

@@ -91,6 +91,26 @@ export const issueStatusEnum = pgEnum("issue_status", [
 ]);
 
 /**
+ * A writer's topic for an issue (D-261): sent, sent back for changes, taken
+ * or turned down. A turned-down topic is final for that issue.
+ */
+export const topicProposalStatusEnum = pgEnum("topic_proposal_status", [
+  "submitted",
+  "revision_requested",
+  "accepted",
+  "rejected",
+]);
+
+/** What happened to a topic proposal, one row per step (D-261). */
+export const topicProposalEventKindEnum = pgEnum("topic_proposal_event_kind", [
+  "submitted",
+  "resubmitted",
+  "accepted",
+  "revision_requested",
+  "rejected",
+]);
+
+/**
  * The editorial chain is staged (D-059): a draft reaches the category editor
  * (`in_review`), their approval hands it to the main editor
  * (`pending_admin_approval`), and the main editor's approval drops it into the
@@ -812,11 +832,33 @@ export const issues = pgTable(
     status: issueStatusEnum("status").notNull().default("planning"),
     plannedPublishDate: date("planned_publish_date"),
     publishedAt: timestamp("published_at", { withTimezone: true }),
+    /**
+     * The two windows the admin sets and the system applies on its own
+     * (D-261): writers propose topics in the first and hand in articles in
+     * the second. Instants; typed and shown in Turkey's time. An issue without
+     * them keeps the flow it started in (issue 1).
+     */
+    topicOpensAt: timestamp("topic_opens_at", { withTimezone: true }),
+    topicClosesAt: timestamp("topic_closes_at", { withTimezone: true }),
+    submissionOpensAt: timestamp("submission_opens_at", { withTimezone: true }),
+    submissionClosesAt: timestamp("submission_closes_at", { withTimezone: true }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
     deletedAt: deletedAt(),
   },
-  (t) => [uniqueIndex("issues_number_unique").on(t.number).where(sql`${t.deletedAt} is null`)],
+  (t) => [
+    uniqueIndex("issues_number_unique").on(t.number).where(sql`${t.deletedAt} is null`),
+    // Both ends or neither, and the start first: the form checks it too, but
+    // this is the rule nothing can go around (D-261)
+    check(
+      "issues_topic_window",
+      sql`(${t.topicOpensAt} is null) = (${t.topicClosesAt} is null) and (${t.topicOpensAt} is null or ${t.topicOpensAt} < ${t.topicClosesAt})`,
+    ),
+    check(
+      "issues_submission_window",
+      sql`(${t.submissionOpensAt} is null) = (${t.submissionClosesAt} is null) and (${t.submissionOpensAt} is null or ${t.submissionOpensAt} < ${t.submissionClosesAt})`,
+    ),
+  ],
 );
 
 /**
@@ -992,7 +1034,10 @@ export const articles = pgTable(
   "articles",
   {
     id: id(),
-    issueId: uuid("issue_id").references(() => issues.id, { onDelete: "set null" }),
+    // Every article belongs to an issue (D-261); issues are only ever soft-deleted
+    issueId: uuid("issue_id")
+      .notNull()
+      .references(() => issues.id, { onDelete: "restrict" }),
     title: text("title").notNull(),
     slug: text("slug").notNull(),
     summary: text("summary"),
@@ -1031,6 +1076,80 @@ export const articles = pgTable(
     index("articles_scheduled_at_idx").on(t.scheduledAt),
   ],
 );
+
+/**
+ * A writer's topic for an issue (D-261). One live proposal per writer per
+ * issue, held by a unique index so a double click or a replayed request
+ * cannot make a second one. `version` grows with every change, and a
+ * decision names the version it saw, so two editors in two tabs cannot both
+ * decide the same proposal. The article written for an accepted topic is
+ * linked here, once.
+ */
+export const topicProposals = pgTable(
+  "topic_proposals",
+  {
+    id: id(),
+    issueId: uuid("issue_id")
+      .notNull()
+      .references(() => issues.id, { onDelete: "restrict" }),
+    authorId: uuid("author_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    /** One of the writer's areas, as for articles. */
+    category: text("category"),
+    status: topicProposalStatusEnum("status").notNull().default("submitted"),
+    version: integer("version").notNull().default(1),
+    /** The note that came with the last decision; the full trail is in the events. */
+    editorNote: text("editor_note"),
+    decidedBy: uuid("decided_by").references(() => users.id, { onDelete: "set null" }),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    /** When the current version was sent. */
+    submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
+    articleId: uuid("article_id").references(() => articles.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    deletedAt: deletedAt(),
+  },
+  (t) => [
+    uniqueIndex("topic_proposals_issue_author_unique")
+      .on(t.issueId, t.authorId)
+      .where(sql`${t.deletedAt} is null`),
+    uniqueIndex("topic_proposals_article_unique")
+      .on(t.articleId)
+      .where(sql`${t.articleId} is not null`),
+    index("topic_proposals_issue_status_idx").on(t.issueId, t.status),
+    index("topic_proposals_author_idx").on(t.authorId),
+  ],
+);
+
+/**
+ * Every step of a topic proposal, with the text as it stood (D-261). Only
+ * ever inserted: who sent what, who asked for which change and why, and when.
+ */
+export const topicProposalEvents = pgTable(
+  "topic_proposal_events",
+  {
+    id: id(),
+    proposalId: uuid("proposal_id")
+      .notNull()
+      .references(() => topicProposals.id, { onDelete: "restrict" }),
+    kind: topicProposalEventKindEnum("kind").notNull(),
+    /** The proposal's version this step made or decided. */
+    version: integer("version").notNull(),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    category: text("category"),
+    note: text("note"),
+    actorId: uuid("actor_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+  },
+  (t) => [index("topic_proposal_events_proposal_idx").on(t.proposalId, t.createdAt)],
+);
+
+export type TopicProposal = typeof topicProposals.$inferSelect;
+export type TopicProposalStatus = (typeof topicProposalStatusEnum.enumValues)[number];
 
 export const articleVersions = pgTable(
   "article_versions",

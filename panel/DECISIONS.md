@@ -10441,3 +10441,104 @@ ve doğum tarihi, reddedilen yorumda metin siliniyordu.
   form yine sunucuya ulaşır. CSRF, bot ve Turnstile jetonları eskisi gibi.
 - Kurallar `src/lib/form-fields.ts`'te saf fonksiyon; birim testi
   `tests/unit/form-fields.test.ts`.
+
+## D-261 — Sayı bazlı üretim: konu belirleme ve yazı kabul dönemleri, konu önerileri
+
+**İstek (ürün sahibi, 2026-09-26):** İçerik üretimi sayı bazlı yönetilsin. Her
+yazı bir sayıya ait olsun; admin her sayı için konu belirleme ve yazı kabul
+dönemlerinin tarih/saatini girsin, sistem bunları kendiliğinden uygulasın.
+Yazar konu önerir, ana editör kabul eder / değişiklik ister / reddeder; yazı,
+kabul edilmiş konu için ve yazı kabul döneminde teslim edilir.
+
+**Veri modeli (yeni tablo icat edilmedi, `issues` genişletildi):**
+- `issues`: `topic_opens_at`, `topic_closes_at`, `submission_opens_at`,
+  `submission_closes_at` (timestamptz, boş olabilir). CHECK kısıtları: iki uç
+  birlikte girilir ve başlangıç bitişten önce (`issues_topic_window`,
+  `issues_submission_window`).
+- `articles.issue_id` artık NOT NULL; yabancı anahtar `set null` yerine
+  `restrict` (sayılar zaten yalnızca yumuşak silinir).
+- `topic_proposals`: sayı + yazar + başlık + açıklama + alan + durum
+  (`submitted | revision_requested | accepted | rejected`) + `version` + son
+  editör notu + karar veren/zaman + bağlı yazı. `(issue_id, author_id)` canlı
+  satırlar için tekil (çift tıklama, tekrar gönderilen istek, iki sekme DB
+  seviyesinde tek öneriye düşer); `article_id` tekil (bir konu bir yazı).
+- `topic_proposal_events`: her adım (gönderildi, yeniden gönderildi, kabul,
+  değişiklik istendi, reddedildi) metnin o anki hali, not, kim ve ne zaman ile.
+  Yalnızca eklenir; güncelleme/silme kodu yok (FK `restrict`).
+
+**Migration (üretime uygulanmadı):**
+- `0048_issue_one_backfill` (drizzle `--custom`): makaleler için gerekirse
+  "Sayı 1"i oluşturur (canlıda zaten var: `planning`, `admin_only = true`) ve
+  sayısız her makaleyi (silinmişler dahil) 1. sayıya bağlar. Durum, içerik,
+  yazar, tarihler ve `updated_at` değişmez. İdempotent; boş veritabanında hiçbir
+  şey yapmaz.
+- `0049_issue_windows_topics` (üretilmiş): yeni kolonlar, iki tablo, iki enum,
+  indeksler, CHECK'ler ve `issue_id NOT NULL`. Yıkıcı adım yok (FK düşürülüp
+  `restrict` ile yeniden ekleniyor).
+- 2026-09-26 salt okunur kontrol: canlıda 47 migration uygulanmış (yerel
+  journal ile aynı), 37 makale (2'si silinmiş) ve hepsi sayısız; tek sayı 1.
+  Test: `tests/integration/issue-backfill.test.ts` 0047'deki bir veritabanına
+  eski makaleleri koyup yeni migration'ları uygular (sayı 1 yokken, varken,
+  iki kez, boş veritabanında).
+
+**Kurallar (hepsi sunucuda, isteğin saatine göre; sayfalar yalnızca yansıtır):**
+- Dönem durumu saf fonksiyon (`src/lib/issue-periods.ts`): başlamadan önce
+  "Yakında", `başlangıç ≤ şimdi ≤ bitiş` "Açık" (iki uç dahil — tam bitiş
+  anındaki istek geçer, bir an sonrası geçmez), sonra "Süre doldu". Formda
+  Türkiye saati girilir ve gösterilir; saklanan an UTC (D-258'deki
+  `parseTurkeyLocalDateTime`).
+- **Konu önerisi:** etkin yazar (`isActiveWriter`), sayı görünür (silinmemiş,
+  çalışma sayısı değil), konu dönemi açık. Alan verilirse yazarın alanlarından
+  biri olmalı.
+- **Değerlendirme:** `canReviewTopicProposals` = ana editör ya da admin
+  (`canReviewMainStage` ile aynı kural; kategori editörü değerlendiremez).
+  Değişiklik isterken ve reddederken not zorunlu. Kimse kendi önerisine karar
+  veremez. Karar, formun gördüğü `version`'la koşullu güncellenir: iki sekmeden
+  ya da iki editörden yalnızca biri geçer, diğeri 409.
+- **Yeniden gönderim:** yalnızca yazarın kendisi, yalnızca `revision_requested`
+  iken, konu dönemi başladıktan sonra ve yazı kabul dönemi bitene kadar
+  (değişiklik isteği çoğu zaman konu döneminin sonunda gelir; yeni öneri ise
+  konu dönemi kapanınca kapanır). Reddedilen konu o sayı için kesindir.
+- **Yazı:** yazar yeni yazıyı kabul edilmiş kendi konusundan başlatır; yazı
+  konunun sayısına bağlanır ve konuya bağlanması koşullu güncellemeyle tek
+  seferliktir. Taslağı teslim etmek (`draft → in_review`, yazarın kendisi)
+  `transitionArticle` içinde `assertArticleDeliveryAllowed` ile yazı kabul
+  dönemine ve kabul edilmiş konuya bağlı. Editörün geri gönderdiği yazının
+  yeniden gönderilmesi dönemden bağımsız (yeni teslim değil).
+- **Pencereleri olmayan sayı eski akışla çalışır** (1. sayı): konu şartı ve
+  teslim penceresi yok; yazar oraya konusuz yazı açabilir (çalışma sayısı hariç).
+  Böylece incelemedeki 37 yazı olduğu gibi devam eder.
+- Konuya bağlı yazı başka sayıya taşınamaz; sayı sıralaması başka sayının
+  yazısını çekemez (`reorderArticles` koşulu). Editörün oluşturduğu her yazı
+  için sayı zorunlu.
+
+**Ekranlar:**
+- Admin: `/editor/issues`'ta oluşturma ve düzenleme formlarına iki dönem (Türkiye
+  saati; tarayıcı da başlangıç ≥ bitişi reddeder), her sayıda dönem rozetleri.
+  `/admin` genel bakışta süreci süren her sayı için özet: iki dönem ve durumu,
+  etkin yazar sayısı, gönderilen / bekleyen / değişiklik istenen / kabul / red,
+  teslim edilen yazı ve konu göndermeyen yazarlar (tıklanabilir).
+- Ana editör/admin: `/editor/topics` — sayı ve durum filtresi, her öneride
+  yazar (pasif hesap işaretli), başlık, açıklama, gönderim zamanı, durum, son
+  not ve tam geçmiş; karar formu.
+- Editör yazı listesi: sayı filtresi artık her editörde, "Sayı" sütunu.
+- Yazar: `/writer/topics` (menüde "Sayılar ve konular") — süren sayılar üstte
+  (dönemler, tek rozetle durum: Yakında / Konu bekleniyor / Değerlendiriliyor /
+  Değişiklik istendi / Kabul edildi / Yazım aşamasında / Teslim edildi / Süre
+  doldu, sonraki adım), geçmiş sayılar ayrı. Yazar paneli ana sayfasında süren
+  sayı kartı. "Yeni yazı" konu seçerek başlar.
+- Karar yazara uygulama içi bildirim olarak gider (`editorial`).
+
+**Bilerek yapılmayan / açık:**
+- Sayı yayını hâlâ elle (D-258); bu adım yalnızca konu/teslim dönemlerini
+  otomatikleştirir.
+- `topic_proposal_events` için `audit_log`'daki gibi silmeyi engelleyen DB
+  tetikleyicisi yok (kod yalnızca ekler; kararlar ayrıca `audit_log`'da).
+- Sürücüye duyarlı SQL (D-078): `version + 1` koşullu güncellemeler ve
+  transaction'lar yalnızca PGlite'te sınandı; Neon dal kotası dolu olduğu için
+  bir Neon dalında çalıştırılmadı. Üretime almadan önce migration'lar bir yedek
+  dal/snapshot üzerinde denenmeli.
+
+**KVKK:** Yeni bir kişisel veri kategorisi yok: konu önerisi yazarın zaten
+işlenen yazarlık faaliyetinin (eser taslağı) parçası; kimlik ve alan bilgisi
+mevcut. Aydınlatma metninde değişiklik gerekmedi.

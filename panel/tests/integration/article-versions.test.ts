@@ -23,8 +23,7 @@ import {
   createUser,
   noMeta,
   publishContract,
-  reloadUser,
-} from "../helpers/factories";
+  reloadUser, testIssueId } from "../helpers/factories";
 
 let database: Database;
 
@@ -62,7 +61,7 @@ async function articleWithTwoVersions() {
 
   const article = await createArticle(
     actorOf(editor),
-    { title: "Sürüm Denemesi", bodyMarkdown: "## Giriş\nEski cümle.", authorId: writer.id },
+    { issueId: await testIssueId(), title: "Sürüm Denemesi", bodyMarkdown: "## Giriş\nEski cümle.", authorId: writer.id },
     noMeta,
   );
   await db.insert(articleVersions).values({
@@ -161,7 +160,7 @@ describe("an author's own version history", () => {
     const writer = await writerWithArea();
     const article = await createArticleAsWriter(
       actorOf(writer),
-      { title: "Bırakamadıklarım", bodyMarkdown: "İlk hâli.", category: "Deneme alanı" },
+      { issueId: await testIssueId(), title: "Bırakamadıklarım", bodyMarkdown: "İlk hâli.", category: "Deneme alanı" },
       noMeta,
     );
 
@@ -193,7 +192,7 @@ describe("an author's own version history", () => {
 
     const article = await createArticleAsWriter(
       actorOf(writer),
-      { title: "Bırakamadıklarım", bodyMarkdown: "İlk hâli.", category: "Deneme alanı" },
+      { issueId: await testIssueId(), title: "Bırakamadıklarım", bodyMarkdown: "İlk hâli.", category: "Deneme alanı" },
       noMeta,
     );
     await updateArticle(
@@ -219,7 +218,7 @@ describe("an author's own version history", () => {
     const writer = await writerWithArea();
     const article = await createArticleAsWriter(
       actorOf(writer),
-      { title: "Bırakamadıklarım", bodyMarkdown: "İlk hâli.", category: "Deneme alanı" },
+      { issueId: await testIssueId(), title: "Bırakamadıklarım", bodyMarkdown: "İlk hâli.", category: "Deneme alanı" },
       noMeta,
     );
 
@@ -244,7 +243,7 @@ describe("an article that has left the author's hands", () => {
 
     const article = await createArticleAsWriter(
       actorOf(author),
-      { title: "İncelemedeki yazı", bodyMarkdown: "İlk hâli.", category: "Deneme alanı" },
+      { issueId: await testIssueId(), title: "İncelemedeki yazı", bodyMarkdown: "İlk hâli.", category: "Deneme alanı" },
       noMeta,
     );
 

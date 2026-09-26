@@ -8,7 +8,7 @@ import { articles, contentReports, writerApplications } from "@/db/schema";
 import { pendingAdminWork } from "@/services/admin-overview";
 import { isAppError } from "@/lib/errors";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
-import { actorOf, createUser } from "../helpers/factories";
+import { actorOf, createUser, testIssueId } from "../helpers/factories";
 
 let database: Database;
 
@@ -60,9 +60,9 @@ describe("pendingAdminWork", () => {
 
     // Only the undeleted article in the publication queue counts
     await db.insert(articles).values([
-      { title: "Kuyrukta", slug: "kuyrukta", status: "ready_for_publishing" },
-      { title: "Silinmiş", slug: "silinmis", status: "ready_for_publishing", deletedAt: now },
-      { title: "İncelemede", slug: "incelemede", status: "in_review" },
+      { issueId: await testIssueId(), title: "Kuyrukta", slug: "kuyrukta", status: "ready_for_publishing" },
+      { issueId: await testIssueId(), title: "Silinmiş", slug: "silinmis", status: "ready_for_publishing", deletedAt: now },
+      { issueId: await testIssueId(), title: "İncelemede", slug: "incelemede", status: "in_review" },
     ]);
 
     expect(await pendingAdminWork(actorOf(admin), now)).toEqual({

@@ -5,6 +5,8 @@ import { users } from "@/db/schema";
 import { guardPanel } from "@/lib/auth/guard";
 import { acceptanceReport } from "@/services/agreements";
 import { pendingAdminWork } from "@/services/admin-overview";
+import { issueProcessSummaries } from "@/services/topics";
+import { IssueProcessSummary } from "@/components/issue-process-summary";
 import { Alert, Card, EmptyState, PageHeader } from "@/components/ui";
 
 export const metadata = { title: "Yönetim" };
@@ -12,7 +14,8 @@ export const metadata = { title: "Yönetim" };
 export default async function AdminDashboard() {
   const { user } = await guardPanel("admin");
 
-  const [byRole, agreement, pending] = await Promise.all([
+  const now = new Date();
+  const [byRole, agreement, pending, issueSummaries] = await Promise.all([
     db
       .select({ role: users.role, isIllustrator: users.isIllustrator, total: count() })
       .from(users)
@@ -20,6 +23,7 @@ export default async function AdminDashboard() {
       .groupBy(users.role, users.isIllustrator),
     acceptanceReport({ ...user }),
     pendingAdminWork({ ...user }),
+    issueProcessSummaries({ ...user }, now),
   ]);
 
   const queues = [
@@ -124,6 +128,11 @@ export default async function AdminDashboard() {
             </ul>
           )}
         </Card>
+
+        {/* The running issues' topic and delivery process (D-261) */}
+        {issueSummaries.map((summary) => (
+          <IssueProcessSummary key={summary.issue.id} summary={summary} now={now} />
+        ))}
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {(

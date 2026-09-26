@@ -246,6 +246,19 @@ export const STATUS_LABELS: Record<string, string> = {
   info: "Bilgilendirme",
   important: "Önemli",
   critical: "Kritik",
+  // An issue's windows and a writer's topic (D-261); prefixed, because
+  // "submitted" and "revision_requested" already mean other things here
+  period_unset: "Tarih yok",
+  period_upcoming: "Yakında",
+  period_open: "Açık",
+  period_closed: "Süre doldu",
+  topic_missing: "Konu bekleniyor",
+  topic_submitted: "Değerlendiriliyor",
+  topic_revision_requested: "Değişiklik istendi",
+  topic_accepted: "Kabul edildi",
+  topic_rejected: "Reddedildi",
+  topic_writing: "Yazım aşamasında",
+  topic_delivered: "Teslim edildi",
 };
 
 const BADGE_TONES: Record<string, string> = {
@@ -276,6 +289,14 @@ const BADGE_TONES: Record<string, string> = {
   admin_rejected: "bg-danger-soft text-danger border-danger/30",
   important: "bg-warning-soft text-warning border-warning/30",
   critical: "bg-danger-soft text-danger border-danger/30",
+  period_open: "bg-accent-soft text-accent border-accent/30",
+  period_closed: "bg-danger-soft text-danger border-danger/30",
+  topic_submitted: "bg-warning-soft text-warning border-warning/30",
+  topic_revision_requested: "bg-warning-soft text-warning border-warning/30",
+  topic_accepted: "bg-accent-soft text-accent border-accent/30",
+  topic_rejected: "bg-danger-soft text-danger border-danger/30",
+  topic_writing: "bg-accent-soft text-accent border-accent/30",
+  topic_delivered: "bg-accent-soft text-accent border-accent/30",
 };
 
 export function StatusBadge({ status }: { status: string }) {

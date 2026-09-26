@@ -162,3 +162,24 @@ export async function acceptCurrentContract(writer: User): Promise<void> {
     noMeta,
   );
 }
+
+/**
+ * Every article belongs to an issue (D-261). Tests that are not about issues
+ * put theirs in one shared issue without windows, created on first use; the
+ * tables are emptied between tests, so it is looked up each time.
+ */
+export async function testIssueId(): Promise<string> {
+  const { issues } = await import("@/db/schema");
+  const { and, eq, isNull } = await import("drizzle-orm");
+  const existing = await db
+    .select({ id: issues.id })
+    .from(issues)
+    .where(and(eq(issues.number, 9999), isNull(issues.deletedAt)))
+    .limit(1);
+  if (existing[0]) return existing[0].id;
+  const [row] = await db
+    .insert(issues)
+    .values({ number: 9999, title: "Test sayısı", status: "planning" })
+    .returning({ id: issues.id });
+  return row!.id;
+}

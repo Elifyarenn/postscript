@@ -8,7 +8,7 @@ import { articles, editorCategories, writerApplications, writerAreas } from "@/d
 import { getUserOverview, listUsers, setIllustrator } from "@/services/users";
 import { isAppError } from "@/lib/errors";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
-import { actorOf, createUser, noMeta } from "../helpers/factories";
+import { actorOf, createUser, noMeta, testIssueId } from "../helpers/factories";
 
 let database: Database;
 
@@ -103,9 +103,9 @@ describe("listUsers segments", () => {
   it("counts a writer's live articles and the published ones", async () => {
     const { admin, writer } = await seedAccounts();
     await db.insert(articles).values([
-      { title: "Bir", slug: "bir", authorId: writer.id, status: "published", publishedAt: new Date() },
-      { title: "İki", slug: "iki", authorId: writer.id },
-      { title: "Silinen", slug: "silinen", authorId: writer.id, deletedAt: new Date() },
+      { issueId: await testIssueId(), title: "Bir", slug: "bir", authorId: writer.id, status: "published", publishedAt: new Date() },
+      { issueId: await testIssueId(), title: "İki", slug: "iki", authorId: writer.id },
+      { issueId: await testIssueId(), title: "Silinen", slug: "silinen", authorId: writer.id, deletedAt: new Date() },
     ]);
 
     const rows = await listUsers(actorOf(admin), { segment: "writers" });
@@ -149,7 +149,7 @@ describe("listUsers segments", () => {
 
   it("does not compute another list's figures", async () => {
     const { admin, writer } = await seedAccounts();
-    await db.insert(articles).values({ title: "Bir", slug: "bir", authorId: writer.id });
+    await db.insert(articles).values({ issueId: await testIssueId(), title: "Bir", slug: "bir", authorId: writer.id });
 
     const rows = await listUsers(actorOf(admin), { segment: "all" });
     expect(rows.find((candidate) => candidate.id === writer.id)!.articleCount).toBe(0);
@@ -159,7 +159,7 @@ describe("listUsers segments", () => {
 describe("getUserOverview", () => {
   it("returns the detail page figures for one account", async () => {
     const { admin, writer } = await seedAccounts();
-    await db.insert(articles).values({
+    await db.insert(articles).values({ issueId: await testIssueId(),
       title: "Bir",
       slug: "bir",
       authorId: writer.id,

@@ -43,7 +43,7 @@ import {
 import { anonymiseUser } from "@/services/users";
 import { isAppError } from "@/lib/errors";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
-import { actorOf, createUser, noMeta, reloadUser } from "../helpers/factories";
+import { actorOf, createUser, noMeta, reloadUser, testIssueId } from "../helpers/factories";
 
 let database: Database;
 
@@ -321,7 +321,7 @@ describe("content reports (5651 m. 9)", () => {
     const reader = await createUser();
     const [article] = await db
       .insert(articles)
-      .values({ title: "Yazı", slug: "yazi-rapor", bodyMarkdown: "x", status: "published", publishedAt: new Date() })
+      .values({ issueId: await testIssueId(), title: "Yazı", slug: "yazi-rapor", bodyMarkdown: "x", status: "published", publishedAt: new Date() })
       .returning();
     const comment = await addCommunityComment(actorOf(author), { articleId: article!.id, body: "kötü yorum" }, noMeta);
 

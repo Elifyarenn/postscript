@@ -6,6 +6,7 @@ import { db, type Database } from "@/db/client";
 import { articles } from "@/db/schema";
 import { listCategoryCounts } from "@/services/public";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
+import { testIssueId } from "../helpers/factories";
 
 let database: Database;
 
@@ -25,7 +26,7 @@ let counter = 0;
 
 async function article(category: string | null, options: { status?: "published" | "draft"; deleted?: boolean } = {}) {
   counter += 1;
-  await db.insert(articles).values({
+  await db.insert(articles).values({ issueId: await testIssueId(),
     title: `Yazı ${counter}`,
     slug: `kategori-yazi-${counter}`,
     category,

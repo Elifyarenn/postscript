@@ -32,8 +32,7 @@ import {
   adminActor,
   createUser,
   noMeta,
-  publishContract,
-} from "../helpers/factories";
+  publishContract, testIssueId } from "../helpers/factories";
 import type { Actor } from "@/lib/auth/rbac";
 
 let database: Database;
@@ -81,7 +80,7 @@ async function scenario() {
 
   const article = await createArticle(
     actorOf(editor),
-    {
+    { issueId: await testIssueId(),
       title: "Kayıp Zamanın İzinde",
       summary: "Bir deneme.",
       bodyMarkdown: "# Başlık\n\nGövde metni.",
@@ -174,7 +173,7 @@ describe("acceptance opens the work approval", () => {
     const writer = await createUser({ role: "writer", writerStatus: "active" });
     const article = await createArticle(
       actorOf(editor),
-      { title: "Sözleşmesiz", bodyMarkdown: "Gövde.", authorId: writer.id },
+      { issueId: await testIssueId(), title: "Sözleşmesiz", bodyMarkdown: "Gövde.", authorId: writer.id },
       noMeta,
     );
 

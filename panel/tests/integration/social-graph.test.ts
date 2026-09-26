@@ -26,7 +26,7 @@ import { addCommunityComment, listCommentsForArticle } from "@/services/communit
 import { anonymiseUser } from "@/services/users";
 import { isAppError } from "@/lib/errors";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
-import { actorOf, createUser, noMeta, reloadUser } from "../helpers/factories";
+import { actorOf, createUser, noMeta, reloadUser, testIssueId } from "../helpers/factories";
 
 let database: Database;
 
@@ -65,7 +65,7 @@ async function article(status: "published" | "draft") {
   slugCounter += 1;
   const [row] = await db
     .insert(articles)
-    .values({
+    .values({ issueId: await testIssueId(),
       title: "Kaydedilecek",
       slug: `kaydedilecek-${slugCounter}`,
       bodyMarkdown: "gövde",

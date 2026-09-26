@@ -20,8 +20,7 @@ import {
   actorOf,
   createUser,
   noMeta,
-  publishContract,
-} from "../helpers/factories";
+  publishContract, testIssueId } from "../helpers/factories";
 
 let database: Database;
 
@@ -69,7 +68,7 @@ async function reviewedArticle() {
 
   const article = await createArticle(
     editorActor,
-    { title: "Süreç Geçmişi Denemesi", bodyMarkdown: "Gövde metni.", authorId: writer.id },
+    { issueId: await testIssueId(), title: "Süreç Geçmişi Denemesi", bodyMarkdown: "Gövde metni.", authorId: writer.id },
     noMeta,
   );
   await transitionArticle(editorActor, article.id, "in_review", noMeta);
@@ -140,7 +139,7 @@ describe("listArticleHistory for editorial staff", () => {
 
   it("keeps another article's steps out", async () => {
     const { admin, editor } = await reviewedArticle();
-    const other = await createArticle(editor, { title: "Başka Bir Yazı", bodyMarkdown: "Gövde." }, noMeta);
+    const other = await createArticle(editor, { issueId: await testIssueId(), title: "Başka Bir Yazı", bodyMarkdown: "Gövde." }, noMeta);
 
     const steps = await listArticleHistory(admin, other.id);
 

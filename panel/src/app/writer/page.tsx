@@ -6,19 +6,28 @@ import { listArticlesForWriter } from "@/services/articles";
 import { getCurrentAgreement, listAcceptancesForUser } from "@/services/agreements";
 import { Alert, Card, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
+import { canProposeTopics } from "@/lib/auth/rbac";
+import { periodState, submissionPeriod, topicPeriod } from "@/lib/issue-periods";
+import { writerStage, WRITER_STAGE_TEXT } from "@/lib/topic-stage";
+import { isIssueInProgress, listWriterIssues } from "@/services/topics";
+import { IssueWindows } from "@/components/issue-windows";
 
 export const metadata = { title: "Yazar paneli" };
 
 export default async function WriterDashboard() {
   const { user } = await guardPanel("writer");
 
-  const [pending, approvals, articles, current, acceptances] = await Promise.all([
+  const [pending, approvals, articles, current, acceptances, issueEntries] = await Promise.all([
     pendingAcknowledgements({ ...user }),
     listApprovalsForWriter({ ...user }),
     listArticlesForWriter({ ...user }),
     getCurrentAgreement(),
     listAcceptancesForUser(user.id),
+    canProposeTopics({ ...user }) ? listWriterIssues({ ...user }) : Promise.resolve([]),
   ]);
+  const now = new Date();
+  // The issues whose process is running, shown first and loud (D-261)
+  const running = issueEntries.filter((entry) => isIssueInProgress(entry.issue, now));
 
   const pendingApprovals = approvals.filter((approval) => approval.status === "pending");
   const agreementAccepted =
@@ -63,6 +72,35 @@ export default async function WriterDashboard() {
             onaylanmadan diğer sayfalar açılmaz.
           </Alert>
         )}
+
+        {running.map(({ issue, proposal, articles: issueArticles }) => {
+          const article = proposal?.articleId
+            ? (issueArticles.find((row) => row.id === proposal.articleId) ?? null)
+            : null;
+          const stage = writerStage({
+            topicState: periodState(topicPeriod(issue), now),
+            submissionState: periodState(submissionPeriod(issue), now),
+            proposalStatus: proposal?.status ?? null,
+            articleStatus: article?.status ?? null,
+          });
+          return (
+            <Card key={issue.id} className="border-accent/40">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <h2 className="font-serif text-lg">
+                  Sayı {issue.number} · {issue.title}
+                </h2>
+                <StatusBadge status={stage} />
+              </div>
+              <IssueWindows issue={issue} now={now} />
+              <p className="mt-3 text-sm">
+                {WRITER_STAGE_TEXT[stage]}{" "}
+                <Link href="/writer/topics" className="text-accent underline">
+                  {stage === "topic_missing" ? "Konu Belirle" : "Ayrıntılar"}
+                </Link>
+              </p>
+            </Card>
+          );
+        })}
 
         <div className="grid gap-6 md:grid-cols-2">
           <Card>

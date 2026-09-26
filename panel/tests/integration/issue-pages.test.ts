@@ -27,7 +27,7 @@ import {
 } from "@/services/issue-pages";
 import { listIssues } from "@/services/issues";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
-import { actorOf, createUser, noMeta } from "../helpers/factories";
+import { actorOf, createUser, noMeta, testIssueId } from "../helpers/factories";
 
 let database: Database;
 
@@ -143,7 +143,7 @@ describe("laying an issue out", () => {
     const issue = await makeIssue();
     const [article] = await db
       .insert(articles)
-      .values({ title: "Saplantı", slug: "saplanti", authorId: writer.id, status: "draft" })
+      .values({ issueId: await testIssueId(), title: "Saplantı", slug: "saplanti", authorId: writer.id, status: "draft" })
       .returning({ id: articles.id });
 
     await addIssuePage(
@@ -189,7 +189,7 @@ describe("linking an article", () => {
     const issue = await makeIssue();
     const [article] = await db
       .insert(articles)
-      .values({
+      .values({ issueId: await testIssueId(),
         title: "Saplantı",
         slug: "saplanti",
         authorId: writer.id,
@@ -211,7 +211,7 @@ describe("linking an article", () => {
     const issue = await makeIssue("published", 3);
     const [article] = await db
       .insert(articles)
-      .values({
+      .values({ issueId: await testIssueId(),
         title: "Henüz yayımlanmadı",
         slug: "henuz",
         authorId: writer.id,

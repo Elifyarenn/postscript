@@ -91,9 +91,9 @@ export default async function EditorArticlesPage({
       authorId: filters.authorId,
       limit: 200,
     }),
-    isAdmin
-      ? listIssues(actor)
-      : Promise.resolve([]),
+    // Every editor filters and files by issue (D-261); the admins' working
+    // issue is still left out for them by `listIssues`
+    listIssues(actor),
     db
       .select({ id: users.id, displayName: users.displayName, penName: users.penName })
       .from(users)
@@ -103,6 +103,7 @@ export default async function EditorArticlesPage({
     listEditorAreasWithHolders(),
     getMainEditor(),
   ]);
+  const issueNumbers = new Map(issues.map((issue) => [issue.id, issue.number]));
 
   return (
     <>
@@ -144,18 +145,16 @@ export default async function EditorArticlesPage({
               </Select>
             </Field>
 
-            {isAdmin && (
-              <Field label="Sayı" htmlFor="issueId">
-                <Select id="issueId" name="issueId" defaultValue={filters.issueId ?? ""}>
-                  <option value="">Tümü</option>
-                  {issues.map((issue) => (
-                    <option key={issue.id} value={issue.id}>
-                      Sayı {issue.number} · {issue.title}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            )}
+            <Field label="Sayı" htmlFor="issueId">
+              <Select id="issueId" name="issueId" defaultValue={filters.issueId ?? ""}>
+                <option value="">Tümü</option>
+                {issues.map((issue) => (
+                  <option key={issue.id} value={issue.id}>
+                    Sayı {issue.number} · {issue.title}
+                  </option>
+                ))}
+              </Select>
+            </Field>
 
             <div className="flex items-end">
               <button
@@ -183,6 +182,7 @@ export default async function EditorArticlesPage({
                 <tr>
                   <Th>Başlık</Th>
                   <Th>Yazar</Th>
+                  <Th>Sayı</Th>
                   <Th>Kategori</Th>
                   <Th>Editör</Th>
                   <Th>Durum</Th>
@@ -209,6 +209,11 @@ export default async function EditorArticlesPage({
                         }}
                         name={article.authorName}
                       />
+                    </Td>
+                    <Td className="text-xs whitespace-nowrap">
+                      {issueNumbers.get(article.issueId) !== undefined
+                        ? `Sayı ${issueNumbers.get(article.issueId)}`
+                        : "—"}
                     </Td>
                     <Td className="text-xs">{article.category ?? "—"}</Td>
                     <Td className="text-xs">
@@ -250,10 +255,12 @@ export default async function EditorArticlesPage({
                   </Select>
                 </Field>
 
-                {isAdmin && (
-                  <Field label="Sayı" htmlFor="newIssueId">
-                    <Select id="newIssueId" name="issueId">
-                      <option value="">Sayıya atanmadı</option>
+                {/* Every article belongs to an issue (D-261) */}
+                <Field label="Sayı" htmlFor="newIssueId">
+                    <Select id="newIssueId" name="issueId" required defaultValue="">
+                      <option value="" disabled>
+                        Sayı seçin…
+                      </option>
                       {issues.map((issue) => (
                         <option key={issue.id} value={issue.id}>
                           Sayı {issue.number} · {issue.title}
@@ -261,7 +268,6 @@ export default async function EditorArticlesPage({
                       ))}
                     </Select>
                   </Field>
-                )}
 
                 <Field label="Kategori" htmlFor="category">
                   <Input id="category" name="category" maxLength={80} />

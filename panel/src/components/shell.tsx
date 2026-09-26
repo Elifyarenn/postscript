@@ -89,6 +89,7 @@ export const ADMIN_NAV: NavGroup[] = [
     items: [
       { href: "/editor/articles", label: "Makaleler & yayın kuyruğu" },
       { href: "/editor/issues", label: "Sayılar" },
+      { href: "/editor/topics", label: "Konu önerileri" },
       { href: "/editor/approvals", label: "Eser Onayı takibi" },
       { href: "/editor/media", label: "Medya kütüphanesi" },
     ],
@@ -109,21 +110,23 @@ export const ADMIN_NAV: NavGroup[] = [
  * Issue planning, announcements, work approvals and writer applications are
  * the admin's business and do not appear here.
  */
-export const EDITOR_NAV: NavGroup[] = [
-  {
-    label: "Genel",
-    items: [
-      { href: "/editor", label: "Genel bakış" },
-    ],
-  },
-  {
-    label: "İnceleme",
-    items: [
-      { href: "/editor/articles", label: "Kategoriye düşen yazılar" },
-      { href: "/editor/media", label: "Medya kütüphanesi" },
-    ],
-  },
-];
+export function editorNav(reviewsTopics: boolean): NavGroup[] {
+  return [
+    {
+      label: "Genel",
+      items: [{ href: "/editor", label: "Genel bakış" }],
+    },
+    {
+      label: "İnceleme",
+      items: [
+        { href: "/editor/articles", label: "Kategoriye düşen yazılar" },
+        // Topic decisions are the main editor's (D-261)
+        ...(reviewsTopics ? [{ href: "/editor/topics", label: "Konu önerileri" }] : []),
+        { href: "/editor/media", label: "Medya kütüphanesi" },
+      ],
+    },
+  ];
+}
 
 /** `locked` only greys the links out; each page checks the rule itself. */
 export function writerNav(locked: boolean): NavGroup[] {
@@ -133,6 +136,7 @@ export function writerNav(locked: boolean): NavGroup[] {
       items: [
         { href: "/writer", label: "Genel bakış" },
         { href: "/writer/announcements", label: "Duyurular" },
+        { href: "/writer/topics", label: "Sayılar ve konular", disabled: locked },
         { href: "/writer/agreement", label: "Sözleşme" },
         { href: "/writer/approvals", label: "Eser Onayları", disabled: locked },
         { href: "/writer/articles", label: "Yazılarım", disabled: locked },

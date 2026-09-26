@@ -41,8 +41,7 @@ import {
   actorOf,
   createUser,
   noMeta,
-  publishContract,
-} from "../helpers/factories";
+  publishContract, testIssueId } from "../helpers/factories";
 import type { Actor } from "@/lib/auth/rbac";
 
 let database: Database;
@@ -103,7 +102,7 @@ async function scenario(options: { accept?: boolean } = {}) {
 async function draftOf(writerActor: Actor, title: string, body = "İlk gövde.") {
   return createArticleAsWriter(
     writerActor,
-    { title, bodyMarkdown: body, category: "Sanat & Edebiyat" },
+    { issueId: await testIssueId(), title, bodyMarkdown: body, category: "Sanat & Edebiyat" },
     noMeta,
   );
 }
@@ -155,7 +154,7 @@ describe("the licence declared by submitting", () => {
 
     const article = await createArticle(
       adminActor,
-      { title: "Editörün Gönderdiği", bodyMarkdown: "Gövde.", authorId: writer.id },
+      { issueId: await testIssueId(), title: "Editörün Gönderdiği", bodyMarkdown: "Gövde.", authorId: writer.id },
       noMeta,
     );
     await transitionArticle(adminActor, article.id, "in_review", noMeta, {});
@@ -247,12 +246,12 @@ describe("works submitted before the contract was accepted", () => {
     // Submitted by an editor while no acceptance existed, so nothing covers them
     const first = await createArticle(
       adminActor,
-      { title: "Eski Bir", bodyMarkdown: "Bir.", authorId: writer.id },
+      { issueId: await testIssueId(), title: "Eski Bir", bodyMarkdown: "Bir.", authorId: writer.id },
       noMeta,
     );
     const second = await createArticle(
       adminActor,
-      { title: "Eski İki", bodyMarkdown: "İki.", authorId: writer.id },
+      { issueId: await testIssueId(), title: "Eski İki", bodyMarkdown: "İki.", authorId: writer.id },
       noMeta,
     );
     await transitionArticle(adminActor, first.id, "in_review", noMeta, {});
@@ -281,7 +280,7 @@ describe("works submitted before the contract was accepted", () => {
     const { adminActor, writer } = await scenario({ accept: false });
     const article = await createArticle(
       adminActor,
-      { title: "Teyitsiz", bodyMarkdown: "Gövde.", authorId: writer.id },
+      { issueId: await testIssueId(), title: "Teyitsiz", bodyMarkdown: "Gövde.", authorId: writer.id },
       noMeta,
     );
     await transitionArticle(adminActor, article.id, "in_review", noMeta, {});

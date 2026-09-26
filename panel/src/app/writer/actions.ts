@@ -18,7 +18,8 @@ import {
 import { approveWork, confirmUncoveredSubmissions } from "@/services/rights";
 import { requestMetadata, requireRole } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
-import { checkbox, optionalText, runAction, text, type ActionState } from "@/lib/action";
+import { checkbox, numberField, optionalText, runAction, text, type ActionState } from "@/lib/action";
+import { reviseTopicProposal, submitTopicProposal } from "@/services/topics";
 
 export async function acknowledgeAnnouncementAction(
   _state: ActionState,
@@ -127,6 +128,14 @@ export async function declineWorkAction(
 /* The author's own articles (step 1 of the review chain, D-059)      */
 /* ------------------------------------------------------------------ */
 
+/** "topic:<id>" or "issue:<id>"; anything else reaches the service as nothing chosen. */
+function articleTarget(raw: string | null): { topicProposalId?: string; issueId?: string } {
+  const [kind, id] = (raw ?? "").split(":");
+  if (kind === "topic" && id) return { topicProposalId: id };
+  if (kind === "issue" && id) return { issueId: id };
+  return {};
+}
+
 export async function createArticleAsWriterAction(
   _state: ActionState,
   formData: FormData,
@@ -146,6 +155,8 @@ export async function createArticleAsWriterAction(
         bodyMarkdown: text(formData, "bodyMarkdown"),
         slug: optionalText(formData, "slug"),
         category: optionalText(formData, "category"),
+        // An accepted topic, or an issue without windows (D-261), from one select
+        ...articleTarget(optionalText(formData, "target")),
       },
       meta,
     );
@@ -230,5 +241,57 @@ export async function submitArticleAction(
     revalidatePath(`/writer/articles/${articleId}`);
     revalidatePath("/writer/articles");
     return { success: "Yazı incelemeye gönderildi. Kategori editörünüz onaylayana dek bekleyecek." };
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Topic proposals (D-261)                                             */
+/* ------------------------------------------------------------------ */
+
+function topicFields(formData: FormData) {
+  return {
+    title: text(formData, "title"),
+    description: text(formData, "description"),
+    category: optionalText(formData, "category"),
+  };
+}
+
+export async function submitTopicAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("writer");
+    const meta = await requestMetadata();
+
+    await submitTopicProposal({ ...user }, text(formData, "issueId"), topicFields(formData), meta);
+
+    revalidatePath("/writer/topics");
+    revalidatePath("/writer");
+    return { success: "Konunuz gönderildi; editör değerlendirmesi bekleniyor." };
+  });
+}
+
+export async function reviseTopicAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("writer");
+    const meta = await requestMetadata();
+
+    await reviseTopicProposal(
+      { ...user },
+      text(formData, "proposalId"),
+      topicFields(formData),
+      numberField(formData, "version") ?? 0,
+      meta,
+    );
+
+    revalidatePath("/writer/topics");
+    revalidatePath("/writer");
+    return { success: "Konunuz yeniden gönderildi; editör değerlendirmesi bekleniyor." };
   });
 }

@@ -22,7 +22,7 @@ import {
 } from "@/services/issue-preview";
 import { listMedia } from "@/services/media";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
-import { actorOf, createUser, noMeta } from "../helpers/factories";
+import { actorOf, createUser, noMeta, testIssueId } from "../helpers/factories";
 
 let database: Database;
 
@@ -74,9 +74,9 @@ async function makeDrafts() {
   const rows = await db
     .insert(articles)
     .values([
-      { title: "Bilim İnsanları ve Obsesyon", slug: "bilim", category: "Bilim & Teknoloji", status: "draft", authorId: writer.id, bodyMarkdown: LONG },
-      { title: "Madde 1 - Hukukun Peşini Bırakmadıkları", slug: "madde-1", category: "Sosyoloji & Düşünce", status: "in_review", authorId: writer.id, bodyMarkdown: LONG },
-      { title: "Üç Kalem", slug: "uc-kalem", category: "Sanat & Edebiyat", status: "accepted", authorId: writer.id, bodyMarkdown: LONG },
+      { issueId: await testIssueId(), title: "Bilim İnsanları ve Obsesyon", slug: "bilim", category: "Bilim & Teknoloji", status: "draft", authorId: writer.id, bodyMarkdown: LONG },
+      { issueId: await testIssueId(), title: "Madde 1 - Hukukun Peşini Bırakmadıkları", slug: "madde-1", category: "Sosyoloji & Düşünce", status: "in_review", authorId: writer.id, bodyMarkdown: LONG },
+      { issueId: await testIssueId(), title: "Üç Kalem", slug: "uc-kalem", category: "Sanat & Edebiyat", status: "accepted", authorId: writer.id, bodyMarkdown: LONG },
     ])
     .returning();
   return rows;

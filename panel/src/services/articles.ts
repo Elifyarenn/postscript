@@ -14,7 +14,9 @@ import {
   articleComments,
   articles,
   articleVersions,
+  issues,
   notifications,
+  topicProposals,
   users,
   type Article,
   type ArticleStatus,
@@ -38,6 +40,8 @@ import * as templates from "@emails/templates";
 import { allMediaLicensed } from "./media";
 import { hasAcceptedCurrentAgreement } from "./agreements";
 import { getEditorAssignment, selectableWriterCategories } from "./editor-categories";
+import { acceptedTopicForNewArticle, assertArticleDeliveryAllowed } from "./topics";
+import { usesIssueWindows } from "@/lib/issue-periods";
 import {
   declineWork,
   findLiveApproval,
@@ -83,6 +87,13 @@ export const writerArticleInputSchema = z.strictObject({
   bodyMarkdown: z.string().max(200_000).optional(),
   slug: z.string().trim().max(120).optional().nullable(),
   category: z.string().trim().max(80).optional().nullable(),
+  /**
+   * Where a new article goes (D-261): the accepted topic it is written for,
+   * or, in an issue without windows (issue 1), the issue itself. Ignored on
+   * edits; an article never changes issue from the writer panel.
+   */
+  topicProposalId: z.uuid().optional().nullable(),
+  issueId: z.uuid().optional().nullable(),
   /**
    * What the author changed, in their own words (D-242). The author's versions
    * used to be stored without one, so their own history read as a column of
@@ -264,6 +275,11 @@ export async function createArticle(
   const input = parsed.data;
 
   if (input.authorId) await assertAuthorIsWriter(input.authorId);
+  // Every article belongs to an issue (D-261)
+  if (!input.issueId) {
+    throw badRequest("Yazının sayısını seçin.", { issueId: ["Sayı seçilmeli."] });
+  }
+  await assertLiveIssue(input.issueId);
 
   const slug = await uniqueSlug(input.title, (candidate) => slugExists(candidate));
 
@@ -275,7 +291,7 @@ export async function createArticle(
       summary: input.summary ?? null,
       bodyMarkdown: input.bodyMarkdown ?? "",
       authorId: input.authorId ?? null,
-      issueId: input.issueId ?? null,
+      issueId: input.issueId,
       category: input.category ?? null,
       dueDate: input.dueDate ?? null,
       status: "draft",
@@ -294,6 +310,45 @@ export async function createArticle(
   });
 
   return article!;
+}
+
+async function assertLiveIssue(issueId: string): Promise<void> {
+  const rows = await db
+    .select({ id: issues.id })
+    .from(issues)
+    .where(and(eq(issues.id, issueId), isNull(issues.deletedAt)))
+    .limit(1);
+  if (rows.length === 0) throw badRequest("Sayı bulunamadı.", { issueId: ["Sayı bulunamadı."] });
+}
+
+/**
+ * The issue a writer's new article goes into (D-261). With a topic: the
+ * topic's issue, and the topic must be the writer's own, accepted and still
+ * without an article. Without one: only an issue that has no windows, where
+ * the old flow goes on (issue 1). An issue with windows is entered through a
+ * topic only.
+ */
+async function writerTargetIssue(
+  actor: Actor,
+  input: { topicProposalId?: string | null; issueId?: string | null },
+): Promise<{ issueId: string; topic: { id: string; category: string | null } | null }> {
+  if (input.topicProposalId) {
+    const topic = await acceptedTopicForNewArticle(actor, input.topicProposalId);
+    return { issueId: topic.issueId, topic: { id: topic.id, category: topic.category } };
+  }
+  if (!input.issueId) throw badRequest("Yazının konusunu seçin.", { topicProposalId: ["Konu seçilmeli."] });
+
+  const rows = await db
+    .select()
+    .from(issues)
+    .where(and(eq(issues.id, input.issueId), isNull(issues.deletedAt), eq(issues.adminOnly, false)))
+    .limit(1);
+  const issue = rows[0];
+  if (!issue) throw badRequest("Sayı bulunamadı.", { issueId: ["Sayı bulunamadı."] });
+  if (usesIssueWindows(issue)) {
+    throw conflict("Bu sayıda yazı, kabul edilmiş bir konudan başlatılır.");
+  }
+  return { issueId: issue.id, topic: null };
 }
 
 /** An author must actually hold the writer role or above (§4). */
@@ -326,34 +381,57 @@ export async function createArticleAsWriter(
     throw badRequest("Makale bilgileri geçersiz.", z.flattenError(parsed.error).fieldErrors);
   }
   const input = parsed.data;
-  const category = await assertAuthorCategoryAllowed(actor, input.category);
+  const target = await writerTargetIssue(actor, input);
+  // The topic's area is the article's unless the writer picks another of theirs
+  const category = await assertAuthorCategoryAllowed(actor, input.category || target.topic?.category);
   const slug = await resolveSlug(input.slug, input.title);
 
-  const [article] = await db
-    .insert(articles)
-    .values({
-      title: input.title,
-      slug,
-      summary: input.summary ?? null,
-      bodyMarkdown: input.bodyMarkdown ?? "",
-      authorId: actor.id,
-      category,
-      status: "draft",
-    })
-    .returning();
+  const article = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .insert(articles)
+      .values({
+        title: input.title,
+        slug,
+        summary: input.summary ?? null,
+        bodyMarkdown: input.bodyMarkdown ?? "",
+        authorId: actor.id,
+        issueId: target.issueId,
+        category,
+        status: "draft",
+      })
+      .returning();
+    if (target.topic) {
+      // One article per topic: the condition, not an earlier read, decides
+      // when two tabs start the same topic at once
+      const linked = await tx
+        .update(topicProposals)
+        .set({ articleId: row!.id, updatedAt: new Date() })
+        .where(
+          and(
+            eq(topicProposals.id, target.topic.id),
+            eq(topicProposals.authorId, actor.id),
+            eq(topicProposals.status, "accepted"),
+            isNull(topicProposals.articleId),
+          ),
+        )
+        .returning({ id: topicProposals.id });
+      if (linked.length === 0) throw conflict("Bu konunun yazısı zaten başlatıldı.");
+    }
+    return row!;
+  });
 
-  await snapshotVersion(article!, actor.id, "İlk sürüm");
+  await snapshotVersion(article, actor.id, "İlk sürüm");
 
   await writeAudit({
     actorId: actor.id,
     action: "article.created_by_author",
     entityType: "articles",
-    entityId: article!.id,
-    after: { title: article!.title, slug: article!.slug },
+    entityId: article.id,
+    after: { title: article.title, slug: article.slug, issueId: article.issueId, topicProposalId: target.topic?.id ?? null },
     ip: meta.ip,
   });
 
-  return article!;
+  return article;
 }
 
 /**
@@ -494,6 +572,20 @@ export async function updateArticle(
     await assertAuthorIsWriter(input.authorId!);
   }
 
+  // An article written for a topic belongs to that topic's issue; moving it
+  // would mix one issue's work into another's (D-261)
+  if (input.issueId && input.issueId !== existing.issueId) {
+    await assertLiveIssue(input.issueId);
+    const topic = await db
+      .select({ id: topicProposals.id })
+      .from(topicProposals)
+      .where(eq(topicProposals.articleId, articleId))
+      .limit(1);
+    if (topic.length > 0) {
+      throw conflict("Bir konuya bağlı yazı başka sayıya taşınamaz.");
+    }
+  }
+
   const bodyChanged =
     input.bodyMarkdown !== undefined && input.bodyMarkdown !== existing.bodyMarkdown;
   const changeKind = input.changeKind ?? "correction";
@@ -530,7 +622,7 @@ export async function updateArticle(
       summary: input.summary ?? null,
       bodyMarkdown: input.bodyMarkdown ?? existing.bodyMarkdown,
       authorId: input.authorId ?? existing.authorId,
-      issueId: input.issueId === undefined ? existing.issueId : input.issueId,
+      issueId: input.issueId ?? existing.issueId,
       category: nextCategory,
       dueDate: input.dueDate === undefined ? existing.dueDate : (input.dueDate ?? null),
       updatedAt: new Date(),
@@ -767,6 +859,13 @@ export async function transitionArticle(
     )
   ) {
     throw forbidden("Bu durum geçişi için yetkiniz yok.");
+  }
+
+  // Handing in one's own draft is bound to the issue's delivery window and
+  // accepted topic (D-261). A text sent back for revision may come back after
+  // the window: that is the editor's request, not a new delivery.
+  if (to === "in_review" && article.authorId === actor.id && article.status === "draft") {
+    await assertArticleDeliveryAllowed(article);
   }
 
   // The declaration rests on the contract, so there is nothing to declare until

@@ -53,8 +53,7 @@ import {
   createUser,
   noMeta,
   publishContract,
-  reloadUser,
-} from "../helpers/factories";
+  reloadUser, testIssueId } from "../helpers/factories";
 
 /* ------------------------------------------------------------------ */
 /* A request context without Next: a cookie jar and request headers    */
@@ -185,7 +184,7 @@ describe("contract PDFs and the media library", () => {
     const { admin, writer, editor, contractId } = await contractScenario();
     const article = await createArticle(
       actorOf(admin),
-      { title: "Ek Denemesi", bodyMarkdown: "Gövde.", authorId: writer.id },
+      { issueId: await testIssueId(), title: "Ek Denemesi", bodyMarkdown: "Gövde.", authorId: writer.id },
       noMeta,
     );
 
@@ -327,7 +326,7 @@ describe("work approvals follow the text and the author", () => {
 
     const draft = await createArticleAsWriter(
       actorOf(author),
-      { title: "Onay Zinciri", bodyMarkdown: "İlk gövde.", category: "Sanat & Edebiyat" },
+      { issueId: await testIssueId(), title: "Onay Zinciri", bodyMarkdown: "İlk gövde.", category: "Sanat & Edebiyat" },
       noMeta,
     );
     await transitionArticle(actorOf(author), draft.id, "in_review", noMeta, {});
@@ -542,7 +541,7 @@ describe("the 2026-09-26 launch audit (D-253, D-255)", () => {
     const writer = await createUser({ role: "writer", writerStatus: "active" });
     const article = await createArticle(
       actorOf(admin),
-      { title: "İntihal Denemesi", bodyMarkdown: "Gövde.", authorId: writer.id },
+      { issueId: await testIssueId(), title: "İntihal Denemesi", bodyMarkdown: "Gövde.", authorId: writer.id },
       noMeta,
     );
 

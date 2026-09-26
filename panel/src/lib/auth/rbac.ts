@@ -223,6 +223,28 @@ export function canFinalizePublication(actor: Actor): boolean {
   return canAccessAdminPanel(actor);
 }
 
+/* ------------------------------------------------------------------ */
+/* Issue windows and topic proposals (D-261)                           */
+/* ------------------------------------------------------------------ */
+
+/** Creating issues and setting their topic and delivery windows is the admin's job. */
+export function canManageIssues(actor: Actor): boolean {
+  return canAccessAdminPanel(actor);
+}
+
+/** Who may propose a topic for an issue: anyone who may write their own articles. */
+export function canProposeTopics(actor: Actor): boolean {
+  return isActiveWriter(actor);
+}
+
+/**
+ * Deciding on topic proposals sits with whoever decides the main review
+ * stage: a main editor or an admin. A category editor may not.
+ */
+export function canReviewTopicProposals(actor: Actor, assignment: EditorAssignment): boolean {
+  return canReviewMainStage(actor, assignment);
+}
+
 /** The author themselves may write, edit and submit their own draft. */
 export function canAuthorOwnDraft(actor: Actor, article: ArticleForReview): boolean {
   return (

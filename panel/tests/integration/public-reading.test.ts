@@ -8,7 +8,7 @@ import { db, type Database } from "@/db/client";
 import { articles, users } from "@/db/schema";
 import { listPublicAuthors, listPublicStaff, listRecentArticles } from "@/services/public";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
-import { createUser } from "../helpers/factories";
+import { createUser, testIssueId } from "../helpers/factories";
 
 let database: Database;
 
@@ -35,7 +35,7 @@ async function article(values: {
   deleted?: boolean;
 }) {
   slugCounter += 1;
-  await db.insert(articles).values({
+  await db.insert(articles).values({ issueId: await testIssueId(),
     title: values.title,
     slug: `yazi-${slugCounter}`,
     summary: values.summary ?? null,

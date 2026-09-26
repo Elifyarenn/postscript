@@ -40,6 +40,8 @@ import {
 } from "@/lib/action";
 import { badRequest } from "@/lib/errors";
 import { parseTurkeyLocalDateTime } from "@/lib/utils";
+import { parsePeriod } from "@/lib/issue-periods";
+import { decideTopicProposal } from "@/services/topics";
 import type { LicenseType } from "@/db/schema";
 
 /* ------------------------------------------------------------------ */
@@ -201,6 +203,29 @@ export async function setPlagiarismAction(
 /* Issues                                                              */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The two windows from the issue form, typed in Turkey's time (D-261). The
+ * service checks them again, and so does the database.
+ */
+function issueWindows(formData: FormData) {
+  const topic = parsePeriod(
+    { opens: optionalText(formData, "topicOpensAt"), closes: optionalText(formData, "topicClosesAt") },
+    "Konu belirleme",
+  );
+  if (!topic.ok) throw badRequest(topic.message, { topicOpensAt: [topic.message] });
+  const submission = parsePeriod(
+    { opens: optionalText(formData, "submissionOpensAt"), closes: optionalText(formData, "submissionClosesAt") },
+    "Yazı kabulü",
+  );
+  if (!submission.ok) throw badRequest(submission.message, { submissionOpensAt: [submission.message] });
+  return {
+    topicOpensAt: topic.period.opensAt,
+    topicClosesAt: topic.period.closesAt,
+    submissionOpensAt: submission.period.opensAt,
+    submissionClosesAt: submission.period.closesAt,
+  };
+}
+
 export async function createIssueAction(
   _state: ActionState,
   formData: FormData,
@@ -222,6 +247,7 @@ export async function createIssueAction(
         blurb: optionalText(formData, "blurb"),
         coverMediaId: optionalText(formData, "coverMediaId"),
         plannedPublishDate: optionalText(formData, "plannedPublishDate"),
+        ...issueWindows(formData),
       },
       meta,
     );
@@ -253,6 +279,7 @@ export async function updateIssueAction(
         blurb: optionalText(formData, "blurb"),
         coverMediaId: optionalText(formData, "coverMediaId"),
         plannedPublishDate: optionalText(formData, "plannedPublishDate"),
+        ...issueWindows(formData),
       },
       meta,
     );
@@ -500,5 +527,45 @@ export async function editorRejectApplicationAction(
 
     revalidatePath("/editor/applications");
     return { success: "Başvuru reddedildi." };
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Topic proposals (D-261)                                             */
+/* ------------------------------------------------------------------ */
+
+export async function decideTopicAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    // The role check here is only the door; who may decide is the service's
+    // `canReviewTopicProposals` (main editor or admin)
+    const { user } = await requireRole("editor");
+    const meta = await requestMetadata();
+
+    const decision = text(formData, "decision");
+    await decideTopicProposal(
+      { ...user },
+      text(formData, "proposalId"),
+      {
+        decision,
+        note: optionalText(formData, "note"),
+        expectedVersion: numberField(formData, "version") ?? 0,
+      },
+      meta,
+    );
+
+    revalidatePath("/editor/topics");
+    revalidatePath("/admin");
+    return {
+      success:
+        decision === "accept"
+          ? "Konu kabul edildi."
+          : decision === "revision"
+            ? "Yazardan değişiklik istendi."
+            : "Konu reddedildi.",
+    };
   });
 }

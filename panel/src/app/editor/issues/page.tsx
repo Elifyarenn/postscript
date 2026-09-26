@@ -15,6 +15,9 @@ import {
   Textarea,
 } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
+import { toTurkeyLocalInput } from "@/lib/issue-periods";
+import { PeriodFields } from "@/components/period-fields";
+import { IssueWindows } from "@/components/issue-windows";
 import { IssueOrder } from "./issue-order";
 import {
   createIssueAction,
@@ -37,10 +40,14 @@ export default async function EditorIssuesPage() {
   );
 
   const nextNumber = (issues[0]?.number ?? 0) + 1;
+  const now = new Date();
 
   return (
     <>
-      <PageHeader title="Sayılar" description="Sayı planlama, kapak, sıralama ve yayın." />
+      <PageHeader
+        title="Sayılar"
+        description="Sayı planlama, konu ve yazı kabul dönemleri, kapak, sıralama ve yayın. Saatler Türkiye saatidir."
+      />
 
       <div className="space-y-6">
         <Card>
@@ -76,6 +83,24 @@ export default async function EditorIssuesPage() {
               <Field label="Tanıtım yazısı" htmlFor="blurb">
                 <Textarea id="blurb" name="blurb" rows={3} maxLength={600} />
               </Field>
+
+              {/* Applied by the clock, not by a switch (D-261) */}
+              <PeriodFields
+                label="Konu belirleme dönemi"
+                idPrefix="new-topic"
+                opensName="topicOpensAt"
+                closesName="topicClosesAt"
+                opensDefault=""
+                closesDefault=""
+              />
+              <PeriodFields
+                label="Yazı kabul dönemi"
+                idPrefix="new-submission"
+                opensName="submissionOpensAt"
+                closesName="submissionClosesAt"
+                opensDefault=""
+                closesDefault=""
+              />
           </PanelForm>
         </Card>
 
@@ -111,6 +136,15 @@ export default async function EditorIssuesPage() {
                     Okuyucuda önizle
                   </Link>
                 </div>
+              </div>
+
+              <div className="mb-5">
+                <IssueWindows issue={issue} now={now} />
+                <p className="mt-2 text-xs">
+                  <Link href={`/editor/topics?sayi=${issue.number}`} className="text-accent underline">
+                    Bu sayının konu önerileri
+                  </Link>
+                </p>
               </div>
 
               <div className="grid gap-6 lg:grid-cols-2">
@@ -189,6 +223,23 @@ export default async function EditorIssuesPage() {
                             defaultValue={issue.plannedPublishDate ?? ""}
                           />
                         </Field>
+
+                        <PeriodFields
+                          label="Konu belirleme dönemi"
+                          idPrefix={`topic-${issue.id}`}
+                          opensName="topicOpensAt"
+                          closesName="topicClosesAt"
+                          opensDefault={toTurkeyLocalInput(issue.topicOpensAt)}
+                          closesDefault={toTurkeyLocalInput(issue.topicClosesAt)}
+                        />
+                        <PeriodFields
+                          label="Yazı kabul dönemi"
+                          idPrefix={`submission-${issue.id}`}
+                          opensName="submissionOpensAt"
+                          closesName="submissionClosesAt"
+                          opensDefault={toTurkeyLocalInput(issue.submissionOpensAt)}
+                          closesDefault={toTurkeyLocalInput(issue.submissionClosesAt)}
+                        />
                       </>
                   </PanelForm>
 

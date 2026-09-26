@@ -13,7 +13,7 @@ import { addPageImage, listIssuePages, readIssuePages, readPageMedia } from "@/s
 import { getPublicArticle, listRecentArticles } from "@/services/public";
 import sitemap from "@/app/sitemap";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
-import { actorOf, createUser, noMeta } from "../helpers/factories";
+import { actorOf, createUser, noMeta, testIssueId } from "../helpers/factories";
 
 let database: Database;
 const storage = new MemoryStorageAdapter();
@@ -59,7 +59,7 @@ async function makeArticle(slug: string, status: "published" | "draft" | "schedu
     slug,
     bodyMarkdown: "Gövde.",
     status,
-    issueId,
+    issueId: issueId ?? (await testIssueId()),
     publishedAt: status === "published" ? new Date() : null,
   });
 }

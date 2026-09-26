@@ -32,7 +32,7 @@ import {
   setupTestDatabase,
   teardownTestDatabase,
 } from "../helpers/db";
-import { actorOf, createUser, noMeta } from "../helpers/factories";
+import { actorOf, createUser, noMeta, testIssueId } from "../helpers/factories";
 import { acceptCurrentContract, publishContract } from "../helpers/factories";
 
 let database: Database;
@@ -224,7 +224,7 @@ describe("the staged review chain", () => {
 
     const draft = await createArticleAsWriter(
       actorOf(writer),
-      { title: "Dört Aşamalı Deneme", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
+      { issueId: await testIssueId(), title: "Dört Aşamalı Deneme", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
       noMeta,
     );
     expect(draft.status).toBe("draft");
@@ -258,7 +258,7 @@ describe("the staged review chain", () => {
     // An explicit, well-formed slug is stored as given
     const draft = await createArticleAsWriter(
       actorOf(writer),
-      {
+      { issueId: await testIssueId(),
         title: "Sluglu Deneme",
         slug: "sluglu-deneme",
         bodyMarkdown: "Gövde.",
@@ -272,7 +272,7 @@ describe("the staged review chain", () => {
     const badSlug = await captureError(
       createArticleAsWriter(
         actorOf(writer),
-        { title: "Bozuk Slug", slug: "Bozuk_Slug!", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
+        { issueId: await testIssueId(), title: "Bozuk Slug", slug: "Bozuk_Slug!", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
         noMeta,
       ),
     );
@@ -282,7 +282,7 @@ describe("the staged review chain", () => {
     const staleField = await captureError(
       createArticleAsWriter(
         actorOf(writer),
-        { title: "Eski Alan", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat", tags: ["deneme"] },
+        { issueId: await testIssueId(), title: "Eski Alan", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat", tags: ["deneme"] },
         noMeta,
       ),
     );
@@ -292,7 +292,7 @@ describe("the staged review chain", () => {
     const taken = await captureError(
       createArticleAsWriter(
         actorOf(writer),
-        { title: "Tekrar", slug: "sluglu-deneme", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
+        { issueId: await testIssueId(), title: "Tekrar", slug: "sluglu-deneme", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
         noMeta,
       ),
     );
@@ -317,7 +317,7 @@ describe("the staged review chain", () => {
 
     const draft = await createArticleAsWriter(
       actorOf(writer),
-      { title: "Alan Dışı", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
+      { issueId: await testIssueId(), title: "Alan Dışı", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
       noMeta,
     );
     await transitionArticle(actorOf(writer), draft.id, "in_review", noMeta);
@@ -358,12 +358,12 @@ describe("the staged review chain", () => {
 
     await createArticleAsWriter(
       actorOf(writer),
-      { title: "Benim Alanım", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
+      { issueId: await testIssueId(), title: "Benim Alanım", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
       noMeta,
     );
     await createArticleAsWriter(
       actorOf(writer),
-      { title: "Başka Alan", bodyMarkdown: "Gövde.", category: "Bilim & Teknoloji" },
+      { issueId: await testIssueId(), title: "Başka Alan", bodyMarkdown: "Gövde.", category: "Bilim & Teknoloji" },
       noMeta,
     );
 
@@ -386,7 +386,7 @@ describe("an author's own submissions", () => {
 
     const article = await createArticleAsWriter(
       actorOf(writer),
-      { title: "Kendi Yazım", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
+      { issueId: await testIssueId(), title: "Kendi Yazım", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
       noMeta,
     );
     expect(article.authorId).toBe(writer.id);
@@ -395,7 +395,7 @@ describe("an author's own submissions", () => {
     const error = await captureError(
       createArticleAsWriter(
         actorOf(writer),
-        { title: "Yanlış Alan", bodyMarkdown: "Gövde.", category: "Tarih & Dünya" },
+        { issueId: await testIssueId(), title: "Yanlış Alan", bodyMarkdown: "Gövde.", category: "Tarih & Dünya" },
         noMeta,
       ),
     );
@@ -407,7 +407,7 @@ describe("an author's own submissions", () => {
     const denied = await captureError(
       createArticleAsWriter(
         actorOf(reader),
-        { title: "Yetkisiz", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
+        { issueId: await testIssueId(), title: "Yetkisiz", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
         noMeta,
       ),
     );
@@ -425,7 +425,7 @@ describe("an author's own submissions", () => {
     const hybridRow = await db.select().from(users).where(eq(users.id, hybrid.id)).limit(1);
     const hybridArticle = await createArticleAsWriter(
       actorOf(hybridRow[0]!),
-      { title: "Hibrit Yazısı", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
+      { issueId: await testIssueId(), title: "Hibrit Yazısı", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
       noMeta,
     );
     expect(hybridArticle.authorId).toBe(hybrid.id);
@@ -451,7 +451,7 @@ describe("a category editor's area scope on writes (D-071)", () => {
 
     const article = await createArticle(
       actorOf(admin),
-      { title: "Başka Alanın Yazısı", bodyMarkdown: "Gövde.", category: "Tarih & Dünya" },
+      { issueId: await testIssueId(), title: "Başka Alanın Yazısı", bodyMarkdown: "Gövde.", category: "Tarih & Dünya" },
       noMeta,
     );
 
@@ -498,7 +498,7 @@ describe("a category editor's area scope on writes (D-071)", () => {
 
     const own = await createArticle(
       actorOf(admin),
-      { title: "Kendi Alanı", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
+      { issueId: await testIssueId(), title: "Kendi Alanı", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
       noMeta,
     );
 
@@ -525,7 +525,7 @@ describe("a category editor's area scope on writes (D-071)", () => {
 
     const own = await createArticle(
       actorOf(admin),
-      { title: "Kendi Alanı", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
+      { issueId: await testIssueId(), title: "Kendi Alanı", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
       noMeta,
     );
 
@@ -550,7 +550,7 @@ describe("a category editor's area scope on writes (D-071)", () => {
 
     const article = await createArticle(
       actorOf(admin),
-      { title: "Her Alan", bodyMarkdown: "Gövde.", category: "Tarih & Dünya" },
+      { issueId: await testIssueId(), title: "Her Alan", bodyMarkdown: "Gövde.", category: "Tarih & Dünya" },
       noMeta,
     );
 
@@ -568,7 +568,7 @@ describe("a category editor's area scope on writes (D-071)", () => {
 
     const article = await createArticle(
       actorOf(admin),
-      {
+      { issueId: await testIssueId(),
         title: "Alanlar Korunur",
         bodyMarkdown: "Gövde.",
         category: "Tarih & Dünya",

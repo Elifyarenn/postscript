@@ -15,18 +15,49 @@ import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { triggerRevalidate } from "@/lib/revalidate";
 import type { RequestMeta } from "./auth";
 
-export const issueInputSchema = z.strictObject({
-  number: z.number().int().positive(),
-  title: z.string().trim().min(2).max(200),
-  theme: z.string().trim().max(200).optional().nullable(),
-  blurb: z.string().trim().max(600).optional().nullable(),
-  coverMediaId: z.uuid().optional().nullable(),
-  plannedPublishDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional()
-    .nullable(),
-});
+const windowEnd = z.date().nullable().optional();
+
+/** Both ends or neither, the start first; the database holds the same rule (D-261). */
+function windowIsOrdered(opensAt: Date | null | undefined, closesAt: Date | null | undefined): boolean {
+  if (!opensAt && !closesAt) return true;
+  return Boolean(opensAt && closesAt && opensAt.getTime() < closesAt.getTime());
+}
+
+export const issueInputSchema = z
+  .strictObject({
+    number: z.number().int().positive(),
+    title: z.string().trim().min(2).max(200),
+    theme: z.string().trim().max(200).optional().nullable(),
+    blurb: z.string().trim().max(600).optional().nullable(),
+    coverMediaId: z.uuid().optional().nullable(),
+    plannedPublishDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional()
+      .nullable(),
+    // The topic and delivery windows (D-261)
+    topicOpensAt: windowEnd,
+    topicClosesAt: windowEnd,
+    submissionOpensAt: windowEnd,
+    submissionClosesAt: windowEnd,
+  })
+  .refine((value) => windowIsOrdered(value.topicOpensAt, value.topicClosesAt), {
+    message: "Konu belirleme: başlangıç, bitişten önce olmalı; ikisi birlikte girilmeli.",
+    path: ["topicOpensAt"],
+  })
+  .refine((value) => windowIsOrdered(value.submissionOpensAt, value.submissionClosesAt), {
+    message: "Yazı kabulü: başlangıç, bitişten önce olmalı; ikisi birlikte girilmeli.",
+    path: ["submissionOpensAt"],
+  });
+
+function windowValues(input: z.infer<typeof issueInputSchema>) {
+  return {
+    topicOpensAt: input.topicOpensAt ?? null,
+    topicClosesAt: input.topicClosesAt ?? null,
+    submissionOpensAt: input.submissionOpensAt ?? null,
+    submissionClosesAt: input.submissionClosesAt ?? null,
+  };
+}
 
 export async function listIssues(actor: Actor) {
   if (!canAccessEditorPanel(actor)) throw forbidden();
@@ -78,6 +109,7 @@ export async function createIssue(
       blurb: parsed.data.blurb ?? null,
       coverMediaId: parsed.data.coverMediaId ?? null,
       plannedPublishDate: parsed.data.plannedPublishDate ?? null,
+      ...windowValues(parsed.data),
       status: "planning",
     })
     .returning();
@@ -87,7 +119,7 @@ export async function createIssue(
     action: "issue.created",
     entityType: "issues",
     entityId: issue!.id,
-    after: { number: issue!.number, title: issue!.title },
+    after: { number: issue!.number, title: issue!.title, ...windowValues(parsed.data) },
     ip: meta.ip,
   });
 
@@ -118,6 +150,7 @@ export async function updateIssue(
       blurb: parsed.data.blurb ?? null,
       coverMediaId: parsed.data.coverMediaId ?? null,
       plannedPublishDate: parsed.data.plannedPublishDate ?? null,
+      ...windowValues(parsed.data),
       updatedAt: new Date(),
     })
     .where(eq(issues.id, issueId))
@@ -128,8 +161,15 @@ export async function updateIssue(
     action: "issue.updated",
     entityType: "issues",
     entityId: issueId,
-    before: { number: existing.number, title: existing.title },
-    after: { number: updated!.number, title: updated!.title },
+    before: {
+      number: existing.number,
+      title: existing.title,
+      topicOpensAt: existing.topicOpensAt,
+      topicClosesAt: existing.topicClosesAt,
+      submissionOpensAt: existing.submissionOpensAt,
+      submissionClosesAt: existing.submissionClosesAt,
+    },
+    after: { number: updated!.number, title: updated!.title, ...windowValues(parsed.data) },
     ip: meta.ip,
   });
 
@@ -188,8 +228,9 @@ export async function reorderArticles(
     for (const [index, articleId] of orderedArticleIds.entries()) {
       await tx
         .update(articles)
-        .set({ orderInIssue: index + 1, issueId, updatedAt: new Date() })
-        .where(eq(articles.id, articleId));
+        .set({ orderInIssue: index + 1, updatedAt: new Date() })
+        // Ordering never moves an article from another issue into this one (D-261)
+        .where(and(eq(articles.id, articleId), eq(articles.issueId, issueId)));
     }
   });
 
