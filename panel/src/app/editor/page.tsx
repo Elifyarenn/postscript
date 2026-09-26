@@ -4,6 +4,8 @@ import { listArticles } from "@/services/articles";
 import { listIssues } from "@/services/issues";
 import { listPendingApprovals } from "@/services/rights";
 import { getEditorAssignment } from "@/services/editor-categories";
+import { listIssueCalendar } from "@/services/topics";
+import { IssueCalendar } from "@/components/issue-calendar";
 import { Alert, Card, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
 import type { ArticleStatus } from "@/db/schema";
@@ -39,10 +41,12 @@ export default async function EditorDashboard() {
           { status: "revision_requested", label: "Revizyon bekleniyor" },
         ];
 
-  const [articles, issues, pendingGrants] = await Promise.all([
+  const now = new Date();
+  const [articles, issues, pendingGrants, calendar] = await Promise.all([
     listArticles(actor, { limit: 200 }),
     isAdmin ? listIssues(actor) : Promise.resolve([]),
     isAdmin ? listPendingApprovals(actor) : Promise.resolve([]),
+    listIssueCalendar(actor, now),
   ]);
 
   return (
@@ -57,6 +61,9 @@ export default async function EditorDashboard() {
       />
 
       <div className="space-y-6">
+        {/* The running issue's windows, first thing on the page (D-264) */}
+        <IssueCalendar issues={calendar} now={now} />
+
         {!isAdmin && assignment && assignment.assignedAreas.length === 0 && (
           <Alert tone="warning" title="Alan atanmamış">
             Henüz size sorumlu alan atanmadı; yönetici size bir alan atayana kadar

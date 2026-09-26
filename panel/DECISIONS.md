@@ -10607,3 +10607,28 @@ hiç animasyon yok (e2e `document.getAnimations()` ile doğruluyor).
 **Açık:** Canlıya alınmadı (ürün sahibinin isteği). Commit push edilmedi; aynı
 ağaçtaki başka bir oturumun push'u bunu da yayına taşır. Taşırsa da sayfa
 kilitli kalır.
+
+## D-264 — Yazar ve editör panelinde sayı takvimi
+
+**İstek (ürün sahibi, 2026-09-27):** Süren sayının takvimi yazarların ve
+editörlerin panelinde de görünsün.
+
+**Karar:** `IssueCalendar` (`src/components/issue-calendar.tsx`) — "Sayı
+takvimi" kartı: süreci süren her sayı için konu belirleme ve yazı kabul
+dönemleri (tarih aralığı + Yakında / Açık / Süre doldu rozeti) ve varsa
+planlanan yayın günü. Saatler Türkiye saati.
+- `/editor` genel bakışın en üstünde, her editörde (kategori editörü dahil).
+- `/writer` genel bakışın en üstünde, her yazarda. Önceden kart yalnızca etkin
+  yazara çıkıyordu; şimdi takvim herkese, yazarın kendi durumu (rozet + sonraki
+  adım) etkin yazara ek satır olarak.
+- Veri `listIssueCalendar` (`services/topics.ts`): silinmemiş, dönemi tanımlı ve
+  süreci süren (`isIssueInProgress`) sayılar; admin olmayan için çalışma sayısı
+  (`admin_only`) hariç (D-240). Yazar ya da editör paneline erişimi olmayan 403.
+- `IssueWindows` planlanan yayın gününü de gösterir (varsa).
+- Takvim tanımlı sayı yokken kart "Şu anda takvimi belirlenmiş bir sayı yok."
+  der; 1. sayının dönemi yok, o yüzden bugün boş görünür.
+
+Test: `topics.test.ts` — yazar ve editör süren sayıyı görür, çalışma sayısını
+yalnızca admin görür, dönemsiz ve geçmiş sayı takvimde yok, okuyucu 403.
+
+**Yayın notu:** Şema ve migration yok; kişisel veri işleme değişmedi.

@@ -27,6 +27,8 @@ import {
 import { writeAudit } from "@/lib/audit";
 import {
   canAccessAdminPanel,
+  canAccessEditorPanel,
+  canAccessWriterPanel,
   canProposeTopics,
   canReviewTopicProposals,
   type Actor,
@@ -521,6 +523,25 @@ export function isIssueInProgress(issue: Issue, now: Date): boolean {
   if (submission === "closed") return false;
   const topic = periodState(topicPeriod(issue), now);
   return topic === "upcoming" || topic === "open";
+}
+
+/**
+ * The calendar of the issues whose process is running (D-264): what every
+ * writer and editor sees at the top of their panel. The admins' working
+ * issue stays theirs (D-240).
+ */
+export async function listIssueCalendar(actor: Actor, now: Date = new Date()): Promise<Issue[]> {
+  if (!canAccessWriterPanel(actor) && !canAccessEditorPanel(actor)) throw forbidden();
+  const visible = canAccessAdminPanel(actor)
+    ? isNull(issues.deletedAt)
+    : and(isNull(issues.deletedAt), eq(issues.adminOnly, false));
+
+  const rows = await db
+    .select()
+    .from(issues)
+    .where(and(visible, or(isNotNull(issues.topicOpensAt), isNotNull(issues.submissionOpensAt))))
+    .orderBy(asc(issues.number));
+  return rows.filter((issue) => isIssueInProgress(issue, now));
 }
 
 export type ProposalFilters = { issueId?: string; status?: TopicProposalStatus };

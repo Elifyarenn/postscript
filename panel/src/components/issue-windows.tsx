@@ -1,6 +1,7 @@
 /**
- * An issue's two windows with their state (D-261): the same lines on the
- * admin's summary, the issues page and the writer's panel.
+ * An issue's two windows with their state (D-261), and its planned
+ * publication day when one is set (D-264): the same lines on the admin's
+ * summary, the issues page and the writer's and editor's panels.
  */
 import {
   formatPeriod,
@@ -10,16 +11,23 @@ import {
   topicPeriod,
   type IssuePeriods,
 } from "@/lib/issue-periods";
+import { formatDate } from "@/lib/utils";
 import { StatusBadge } from "./ui";
 
-export function IssueWindows({ issue, now }: { issue: IssuePeriods; now: Date }) {
+export function IssueWindows({
+  issue,
+  now,
+}: {
+  issue: IssuePeriods & { plannedPublishDate?: string | null };
+  now: Date;
+}) {
   const rows = [
     { label: "Konu belirleme", period: topicPeriod(issue) },
     { label: "Yazı kabul", period: submissionPeriod(issue) },
   ];
 
   return (
-    <dl className="grid gap-3 sm:grid-cols-2">
+    <dl className={issue.plannedPublishDate ? "grid gap-3 sm:grid-cols-3" : "grid gap-3 sm:grid-cols-2"}>
       {rows.map((row) => (
         <div key={row.label} className="rounded-md border border-line bg-paper px-3 py-2">
           <dt className="flex flex-wrap items-center justify-between gap-2 text-sm font-medium">
@@ -29,6 +37,12 @@ export function IssueWindows({ issue, now }: { issue: IssuePeriods; now: Date })
           <dd className="mt-1 text-xs text-muted">{formatPeriod(row.period) ?? "Tarih belirlenmedi"}</dd>
         </div>
       ))}
+      {issue.plannedPublishDate && (
+        <div className="rounded-md border border-line bg-paper px-3 py-2">
+          <dt className="text-sm font-medium">Planlanan yayın</dt>
+          <dd className="mt-1 text-xs text-muted">{formatDate(issue.plannedPublishDate)}</dd>
+        </div>
+      )}
     </dl>
   );
 }

@@ -15,6 +15,7 @@ import {
   decideTopicProposal,
   isIssueInProgress,
   issueProcessSummaries,
+  listIssueCalendar,
   listTopicProposals,
   listWriterIssues,
   reviseTopicProposal,
@@ -435,3 +436,35 @@ describe("what each side sees", () => {
   });
 });
 
+
+describe("the issue calendar on the writer's and editor's panels (D-264)", () => {
+  it("shows running issues to writers and editors, the working issue to admins only", async () => {
+    const { writer, categoryEditor, admin, issue } = await scenario();
+    const working = await createIssue(
+      actorOf(admin),
+      { number: 7, title: "Çalışma", topicOpensAt: TOPIC_OPENS, topicClosesAt: TOPIC_CLOSES },
+      noMeta,
+    );
+    await db.update(issues).set({ adminOnly: true }).where(eq(issues.id, working.id));
+    // An issue without windows and one long over are not on the calendar
+    await testIssueId();
+    await createIssue(
+      actorOf(admin),
+      {
+        number: 1,
+        title: "Geçmiş",
+        submissionOpensAt: new Date("2026-01-15T09:00:00Z"),
+        submissionClosesAt: new Date("2026-01-25T09:00:00Z"),
+      },
+      noMeta,
+    );
+
+    const numbers = async (user: User) =>
+      (await listIssueCalendar(actorOf(user), DURING_TOPIC)).map((row) => row.number);
+    expect(await numbers(writer)).toEqual([issue.number]);
+    expect(await numbers(categoryEditor)).toEqual([issue.number]);
+    expect(await numbers(admin)).toEqual([issue.number, 7]);
+
+    await expectStatus(listIssueCalendar(actorOf(await createUser({ role: "user" })), DURING_TOPIC), 403);
+  });
+});
