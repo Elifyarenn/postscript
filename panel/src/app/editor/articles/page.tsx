@@ -13,6 +13,7 @@ import {
 import { editorForArticle, type ArticleEditor } from "@/lib/article-editor";
 import { readCsrfToken } from "@/lib/csrf";
 import { PanelForm } from "@/components/form";
+import { ArticleBodyTextarea } from "@/components/article-body-textarea";
 import {
   Card,
   EmptyState,
@@ -25,7 +26,6 @@ import {
   STATUS_LABELS,
   Table,
   Td,
-  Textarea,
   Th,
 } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
@@ -273,7 +273,7 @@ export default async function EditorArticlesPage({
               </div>
 
               <Field label="Gövde (markdown)" htmlFor="bodyMarkdown">
-                <Textarea id="bodyMarkdown" name="bodyMarkdown" rows={10} />
+                <ArticleBodyTextarea id="bodyMarkdown" name="bodyMarkdown" rows={10} />
               </Field>
             </>
           </PanelForm>

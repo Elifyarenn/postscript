@@ -2,7 +2,8 @@ import { guardWriterInnerPages } from "@/lib/auth/guard";
 import { selectableWriterCategories } from "@/services/editor-categories";
 import { readCsrfToken } from "@/lib/csrf";
 import { PanelForm } from "@/components/form";
-import { Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
+import { ArticleBodyTextarea } from "@/components/article-body-textarea";
+import { Field, Input, PageHeader, Select } from "@/components/ui";
 import { createArticleAsWriterAction } from "../../actions";
 
 export const metadata = { title: "Yeni yazı" };
@@ -53,7 +54,7 @@ export default async function WriterNewArticlePage() {
           </Field>
 
           <Field label="Gövde (markdown)" htmlFor="bodyMarkdown">
-            <Textarea id="bodyMarkdown" name="bodyMarkdown" rows={18} />
+            <ArticleBodyTextarea id="bodyMarkdown" name="bodyMarkdown" rows={18} />
           </Field>
         </>
       </PanelForm>

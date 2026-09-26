@@ -17,6 +17,7 @@ import { allMediaLicensed } from "@/services/media";
 import { readCsrfToken } from "@/lib/csrf";
 import { renderMarkdown } from "@/lib/markdown";
 import { ActionButton, PanelForm } from "@/components/form";
+import { ArticleBodyTextarea } from "@/components/article-body-textarea";
 import {
   Alert,
   Card,
@@ -177,7 +178,7 @@ export default async function EditorArticleDetailPage({
                 </div>
 
                 <Field label="Gövde (markdown)" htmlFor="bodyMarkdown">
-                  <Textarea
+                  <ArticleBodyTextarea
                     id="bodyMarkdown"
                     name="bodyMarkdown"
                     rows={16}

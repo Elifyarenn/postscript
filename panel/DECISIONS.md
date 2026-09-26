@@ -10114,3 +10114,31 @@ başarısız). Ayrı bir adımda ele alınacak.
 
 **Yayın notu:** Şema ve migration değişmedi. Push öncesi D-079 kontrolü yine
 yapılmalı.
+
+## D-251 — Word'den yapıştırılan yazı paragraflarına ayrılıyor
+
+**Sorun:** Yazarlar yazıyı Word'den kopyalayınca bazı yazılar tek paragraf
+olarak görünüyordu. Gövde markdown; markdown yeni paragrafı yalnızca boş satırdan
+sonra başlatır. Word'ün düz metin panosu paragrafları tek satır sonuyla ayırır.
+Word'de paragraflar arasında boş satır bırakan yazarlarda sorun olmadığı için
+yalnızca bazı yazılar bozuluyordu.
+
+**Karar:** Dört gövde alanı (yazar: yeni/düzenle, editör: yeni/düzenle) yeni
+`ArticleBodyTextarea` bileşenini kullanıyor.
+
+- Panoda `text/html` varsa (Word, Google Docs) yapıştırılan metindeki her satır
+  sonu paragraf sonuna çevrilir (`src/lib/pasted-paragraphs.ts`). Düz bir
+  editörden gelen metin bilerek yazılmış markdown olabilir; ona dokunulmaz.
+- Liste maddeleri, alıntı satırları ve tablo satırları bir arada kalır; kod
+  bloğunun içi değişmez. Word'ün `•`/`·` madde işaretleri `- ` olur. Normal
+  paragrafların başındaki boşluk/Tab silinir; Word'de Tab'la girinti verilen
+  ilk satır markdown'da kod bloğu olarak görünürdü.
+- Daha önce tek parça kaydedilmiş yazılar için alanın altında "Satır sonlarını
+  paragrafa çevir" düğmesi var; aynı dönüşümü bütün gövdeye uygular, Ctrl+Z ile
+  geri alınabilir. Kayıtlı yazılar otomatik değiştirilmedi: yayımlanmış metni
+  sessizce değiştirmek sürüm geçmişine yazılmayan bir değişiklik olurdu.
+
+**Bilerek yapılmayan:** Word'deki italik/kalın biçim markdown'a taşınmıyor
+(önceden de taşınmıyordu). HTML panosunu çözmek ayrı bir adım.
+
+**Yayın notu:** Şema ve migration değişmedi; kişisel veri işlenmesi değişmedi.

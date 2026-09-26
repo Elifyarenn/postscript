@@ -11,7 +11,8 @@ import { selectableWriterCategories } from "@/services/editor-categories";
 import { readCsrfToken } from "@/lib/csrf";
 import { renderMarkdown } from "@/lib/markdown";
 import { PanelForm } from "@/components/form";
-import { Alert, Card, EmptyState, Field, Input, PageHeader, Select, StatusBadge, Table, Td, Textarea, Th } from "@/components/ui";
+import { ArticleBodyTextarea } from "@/components/article-body-textarea";
+import { Alert, Card, EmptyState, Field, Input, PageHeader, Select, StatusBadge, Table, Td, Th } from "@/components/ui";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { submitArticleAction, updateArticleAsWriterAction } from "../../actions";
 
@@ -107,7 +108,7 @@ export default async function WriterArticleDetailPage({
                   </Field>
 
                   <Field label="Gövde (markdown)" htmlFor="bodyMarkdown">
-                    <Textarea
+                    <ArticleBodyTextarea
                       id="bodyMarkdown"
                       name="bodyMarkdown"
                       rows={16}
