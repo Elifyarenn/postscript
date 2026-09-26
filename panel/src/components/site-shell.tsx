@@ -24,7 +24,7 @@ import { unreadNotificationCount } from "@/services/notifications";
 import { getMemberSettings } from "@/services/social";
 import { FitLines } from "./fit-lines";
 import { KvkkNotice } from "./kvkk-notice";
-import { SiteMainNav, SiteMemberNav } from "./site-nav";
+import { SiteMainNav, SiteMemberNav, SiteMobileMenu } from "./site-nav";
 import { SocialIcon, Stars, Wordmark } from "./site-ui";
 import "@/app/site.css";
 
@@ -69,6 +69,10 @@ export async function SiteShell({
   const csrfToken = user ? ((await readCsrfToken()) ?? "") : "";
   // Only a link: the panel layouts still decide who gets in (D-086)
   const panelHref = user ? panelPathFor(user) : null;
+  // Built once: the member rail and the phone menu show the same entries
+  const memberItems = member
+    ? memberNav({ messages: member.messages, notifications: member.notifications })
+    : null;
 
   return (
     <div className={cn("ps-site", bodyFont.variable, capsFont.variable, italicFont.variable)}>
@@ -134,14 +138,7 @@ export async function SiteShell({
       </div>
 
       <div className={cn("site-frame", member && "has-member")}>
-        {member && (
-          <SiteMemberNav
-            items={memberNav({
-              messages: member.messages,
-              notifications: member.notifications,
-            })}
-          />
-        )}
+        {memberItems && <SiteMemberNav items={memberItems} />}
 
         <div className="site-column">
           <header className="site-header">
@@ -149,6 +146,9 @@ export async function SiteShell({
               <Wordmark />
               <span className="site-tagline">The things left unsaid</span>
             </Link>
+
+            {/* Phones only: the two menus above in one panel, readable size */}
+            <SiteMobileMenu memberItems={memberItems} />
 
             <div className="site-header-tools">
               <SiteMainNav />

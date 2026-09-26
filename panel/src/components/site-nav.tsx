@@ -5,10 +5,10 @@
  * they mark the page being shown; every page behind them still checks the
  * session on the server.
  */
-import type { SVGProps } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type SVGProps } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Bookmark, Mail } from "lucide-react";
+import { Bell, Bookmark, Mail, Menu, X } from "lucide-react";
 import { isNavActive, SITE_NAV, type MemberNavItem } from "@/lib/site";
 
 /*
@@ -69,30 +69,164 @@ export function SiteMainNav() {
   );
 }
 
+/** One member menu entry; the member rail and the phone menu draw it alike. */
+function MemberNavLink({
+  item,
+  pathname,
+  onNavigate,
+}: {
+  item: MemberNavItem;
+  pathname: string;
+  onNavigate?: () => void;
+}) {
+  const Icon = MEMBER_ICONS[item.icon];
+  const active = isNavActive(pathname, item.href);
+  // On the notifications page the list is being read, so its count goes
+  // at once rather than after the refresh that follows (D-164)
+  const badge = item.icon === "notifications" && active ? 0 : item.badge;
+  return (
+    <Link href={item.href} aria-current={active ? "page" : undefined} onClick={onNavigate}>
+      <Icon aria-hidden className="member-icon" strokeWidth={1.5} />
+      <span>{item.label}</span>
+      {badge ? <span className="member-badge">{badge > 99 ? "99+" : badge}</span> : null}
+    </Link>
+  );
+}
+
 export function SiteMemberNav({ items }: { items: MemberNavItem[] }) {
   const pathname = usePathname();
   return (
     <nav className="site-member-nav" aria-label="Üye menüsü">
       <ul className="fit-line">
-        {items.map((item) => {
-          const Icon = MEMBER_ICONS[item.icon];
-          const active = isNavActive(pathname, item.href);
-          // On the notifications page the list is being read, so its count goes
-          // at once rather than after the refresh that follows (D-164)
-          const badge = item.icon === "notifications" && active ? 0 : item.badge;
-          return (
-            <li key={item.href}>
-              <Link href={item.href} aria-current={active ? "page" : undefined}>
-                <Icon aria-hidden className="member-icon" strokeWidth={1.5} />
-                <span>{item.label}</span>
-                {badge ? (
-                  <span className="member-badge">{badge > 99 ? "99+" : badge}</span>
-                ) : null}
-              </Link>
-            </li>
-          );
-        })}
+        {items.map((item) => (
+          <li key={item.href}>
+            <MemberNavLink item={item} pathname={pathname} />
+          </li>
+        ))}
       </ul>
     </nav>
+  );
+}
+
+/**
+ * The phone menu. On a phone `FitLines` would zoom the two menus above down to
+ * unreadable text (D-157), so below the phone breakpoint the stylesheet hides
+ * them and this button opens the same entries in a side panel instead. Wider
+ * screens never show it.
+ *
+ * Without JavaScript the button does nothing and the panel stays hidden; the
+ * footer still links the magazine's main pages.
+ */
+export function SiteMobileMenu({ memberItems }: { memberItems: MemberNavItem[] | null }) {
+  const pathname = usePathname();
+  const panelId = useId();
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+
+  // Any navigation (a link in the menu, the back button, a redirect) closes
+  // it. Adjusted while rendering, as React advises, so the new page never
+  // paints with the old menu still open
+  const [shownPath, setShownPath] = useState(pathname);
+  if (shownPath !== pathname) {
+    setShownPath(pathname);
+    setOpen(false);
+  }
+
+  const close = useCallback(() => setOpen(false), []);
+  const closeAndReturnFocus = useCallback(() => {
+    setOpen(false);
+    toggleRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+
+    // Keyboard and screen reader users land in the menu they just opened
+    panelRef.current?.querySelector<HTMLElement>("nav a")?.focus();
+
+    const isInside = (target: EventTarget | null) =>
+      target instanceof Node &&
+      Boolean(panelRef.current?.contains(target) || toggleRef.current?.contains(target));
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeAndReturnFocus();
+    };
+    // A tap on the dimmed page, or tabbing out of the panel, puts the menu
+    // away; focus is left where the user sent it. `click` rather than
+    // `pointerdown`: closing on the press would drop the backdrop before the
+    // release, and the tap would land on whatever link lay under it
+    const onOutside = (event: Event) => {
+      if (!isInside(event.target)) close();
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("click", onOutside);
+    document.addEventListener("focusin", onOutside);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("click", onOutside);
+      document.removeEventListener("focusin", onOutside);
+    };
+  }, [open, close, closeAndReturnFocus]);
+
+  return (
+    <div className="site-menu" data-open={open ? "" : undefined}>
+      <button
+        ref={toggleRef}
+        type="button"
+        className="site-menu-toggle"
+        aria-expanded={open}
+        aria-controls={panelId}
+        aria-label={open ? "Menüyü kapat" : "Menüyü aç"}
+        onClick={() => setOpen(!open)}
+      >
+        <Menu aria-hidden />
+      </button>
+
+      <div className="site-menu-backdrop" hidden={!open} aria-hidden />
+
+      <div id={panelId} ref={panelRef} className="site-menu-panel" hidden={!open}>
+        <div className="site-menu-head">
+          <span>Menü</span>
+          <button
+            type="button"
+            className="site-menu-close"
+            aria-label="Menüyü kapat"
+            onClick={closeAndReturnFocus}
+          >
+            <X aria-hidden />
+          </button>
+        </div>
+
+        <nav className="site-menu-main" aria-label="Ana menü">
+          <ul>
+            {SITE_NAV.map((item) => (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  aria-current={isNavActive(pathname, item.href) ? "page" : undefined}
+                  onClick={close}
+                >
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {memberItems && (
+          <nav className="site-menu-member" aria-label="Üye menüsü">
+            <ul>
+              {memberItems.map((item) => (
+                <li key={item.href}>
+                  <MemberNavLink item={item} pathname={pathname} onNavigate={close} />
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
+      </div>
+    </div>
   );
 }

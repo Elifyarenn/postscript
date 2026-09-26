@@ -5910,6 +5910,10 @@ tek satır. Kapı: typecheck, lint, 64 dosya / 594 test.
 
 ## D-157 — Menüler, sekmeler, düğmeler ve başlıklar her ekranda tek satır
 
+> **Güncelleme (D-259, 2026-09-26):** 600 px ve altındaki ekranlarda ana menü ve
+> üye menüsü artık küçültülmüyor; ikisi gizlenip bir hamburger menüye taşındı.
+> Diğer bütün `fit-line` satırları için bu karar aynen geçerli.
+
 **İstek (ürün sahibi):** "yazılar sığmadığında scroll eklenmesin ya da kesilip
 yazı alt satıra geçmesin, hiçbir boyutta; ekran boyutuna göre boyutu
 ayarlansın, her yazı tek satır tek görünüm olsun."
@@ -10381,3 +10385,34 @@ Testler: `tests/unit/turkey-time.test.ts`, `public-magazine.test.ts`'e eksik
 dosya → 404.
 
 **Yayın notu:** Şema ve migration yok; kişisel veri işleme değişmedi.
+
+## D-259 — Telefonda hamburger menü (D-157'nin menüler için güncellenmesi)
+
+**Karar (ürün sahibi, 2026-09-26):** 320–430 px'te menüler okunmuyordu:
+`FitLines` üst menüyü ~6 px yazıya ve ~16 px dokunma alanına, üye menüsünü ~5
+px'e küçültüyordu. Mobil gezinme hamburger menü olsun; masaüstü/tablet
+gereksiz değişmesin.
+
+**Uygulama:** 600 px ve altında `.site-nav` ve `.site-member-nav` gizlenir
+(gizli satırın genişliği sıfır olduğu için `FitLines` onları küçültmez),
+başlıkta bir hamburger düğmesi (`SiteMobileMenu`, `src/components/site-nav.tsx`)
+çıkar. Panel aynı girdileri gösterir — `SITE_NAV` ve oturum varsa
+`memberNav()`; ikinci bir bağlantı listesi yok, üye bağlantısı tek bileşen
+(`MemberNavLink`, rozet kuralı D-164 tek yerde). Sağdan açılan panel, en az
+17 px yazı ve 48 px yüksekliğinde dokunma alanları.
+
+- Düğme 44×44, `aria-expanded`, `aria-controls`, "Menüyü aç/kapat".
+- Açılınca odak paneldeki ilk bağlantıya geçer; Escape kapatıp odağı düğmeye
+  döndürür; panel dışına dokunmak ya da odağın panelden çıkması kapatır;
+  bağlantı seçmek ve sayfa değişimi (pathname) kapatır.
+- Açıkken sayfa kaydırılmaz (yalnızca ≤600 px); kayma animasyonu
+  `prefers-reduced-motion: no-preference` altında.
+- Arama başlıkta kalır; telefonda tam genişlik ayrı satır, girdi 16 px (iOS
+  yakınlaştırmasın).
+- JavaScript olmadan düğme işlevsizdir, sayfa bozulmaz; altbilgi ana sayfalara
+  bağlanır.
+- 601 px ve üstü önceki gibi; diğer `fit-line` satırları (üst şerit dahil)
+  D-157'ye göre davranmaya devam eder.
+
+Doğrulama: typecheck, lint, derleme. Tarayıcı davranışı yerel sunucu açılmadığı için
+yayından sonra canlıda denenir.
