@@ -1,3 +1,4 @@
+import { NO_INDEX } from "@/lib/seo";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users, writerApplications } from "@/db/schema";
@@ -11,7 +12,7 @@ import { Alert, Card, PageHeader } from "@/components/ui";
 import { AgreementAcceptForm } from "@/app/writer/agreement/accept-form";
 import { signApplicationContractAction } from "../actions";
 
-export const metadata = { title: "Yazar sözleşmesi" };
+export const metadata = { title: "Yazar sözleşmesi", robots: NO_INDEX };
 
 /**
  * The contract an approved applicant signs. Only the owner of an application

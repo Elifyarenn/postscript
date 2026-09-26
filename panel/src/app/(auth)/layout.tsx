@@ -1,7 +1,11 @@
+import { NO_INDEX } from "@/lib/seo";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
 /** Centred single-column shell for the screens you can reach without a session. */
+// Sign-in, panel and member pages stay out of search (D-252)
+export const metadata = { robots: NO_INDEX };
+
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4 py-12">

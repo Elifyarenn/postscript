@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { env } from "@/lib/env";
+import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/seo";
 import "./globals.css";
 
 // Only the production site is indexed; dev and test builds stay out of search.
@@ -6,11 +8,14 @@ import "./globals.css";
 const devRobots = process.env.NODE_ENV === "production" ? {} : { robots: { index: false, follow: false } };
 
 export const metadata: Metadata = {
+  // Resolves the relative canonical and share image URLs the pages set (D-252)
+  metadataBase: new URL(env().SITE_URL),
   title: {
-    default: "PostScript Dergi",
-    template: "PostScript Dergi - %s",
+    default: SITE_NAME,
+    template: `${SITE_NAME} - %s`,
   },
-  description: "PostScript Dergi — edebiyat, psikoloji ve kültür üzerine bir e-dergi.",
+  description: SITE_DESCRIPTION,
+  openGraph: { type: "website", locale: "tr_TR", siteName: SITE_NAME },
   icons: {
     icon: "/favicon.ico",
   },

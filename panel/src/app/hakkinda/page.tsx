@@ -1,3 +1,4 @@
+import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import aboutBanner from "@/assets/design/banner-about.webp";
@@ -6,7 +7,12 @@ import { listPublicStaff, type PublicStaffMember } from "@/services/public";
 import { SiteShell } from "@/components/site-shell";
 import { SiteBanner } from "@/components/site-ui";
 
-export const metadata = { title: "Hakkında" };
+export const metadata = pageMetadata({
+  title: "Hakkında",
+  description:
+    "Postscript, hayalperestler, aşırı düşünenler, maceracılar ve meraklı zihinler için oluşturulmuş dijital bir dergi topluluğu. Hikâyemiz, yazarlarımız ve editörlerimiz.",
+  path: "/hakkinda",
+});
 
 // The design sets "DESIGNER AND ILLUSTRATORS" on three lines; the lines are kept (D-167)
 const SECTIONS = [

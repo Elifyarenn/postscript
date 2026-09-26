@@ -1,4 +1,5 @@
 ﻿import type { ReactNode } from "react";
+import { NO_INDEX } from "@/lib/seo";
 import { guardPanel } from "@/lib/auth/guard";
 import { pendingAcknowledgements } from "@/services/announcements";
 import { hasRole } from "@/lib/auth/rbac";
@@ -15,6 +16,9 @@ import { PanelShell, writerNav } from "@/components/shell";
  * The contract no longer locks the panel: writers are active from the moment
  * they are approved (D-050).
  */
+// Sign-in, panel and member pages stay out of search (D-252)
+export const metadata = { robots: NO_INDEX };
+
 export default async function WriterLayout({ children }: { children: ReactNode }) {
   const context = await guardPanel("writer");
   const { user } = context;

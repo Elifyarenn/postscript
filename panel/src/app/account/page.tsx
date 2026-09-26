@@ -1,3 +1,4 @@
+import { NO_INDEX } from "@/lib/seo";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users } from "@/db/schema";
@@ -23,7 +24,7 @@ import { countRecoveryCodesLeft, generateTotpSecret, otpauthUri } from "@/servic
 import QRCode from "qrcode";
 import { cancelDeletionAction, requestDeletionAction } from "./actions";
 
-export const metadata = { title: "Hesabım" };
+export const metadata = { title: "Hesabım", robots: NO_INDEX };
 
 /**
  * Every member's account: profile, password, sessions.

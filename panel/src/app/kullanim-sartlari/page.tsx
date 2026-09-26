@@ -1,9 +1,15 @@
+import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { getSiteSettings } from "@/services/site-settings";
 import { buildImprint } from "@/lib/legal";
 import { LegalPage } from "@/components/legal";
 
-export const metadata = { title: "Kullanım Şartları" };
+export const metadata = pageMetadata({
+  title: "Kullanım Şartları",
+  description:
+    "PostScript Dergi kullanım şartları: hesap, topluluk kuralları ve içerikler.",
+  path: "/kullanim-sartlari",
+});
 
 // The publisher e-mail and the competent court come from admin-editable settings
 export const dynamic = "force-dynamic";

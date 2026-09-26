@@ -10142,3 +10142,49 @@ yalnızca bazı yazılar bozuluyordu.
 (önceden de taşınmıyordu). HTML panosunu çözmek ayrı bir adım.
 
 **Yayın notu:** Şema ve migration değişmedi; kişisel veri işlenmesi değişmedi.
+
+## D-252 — Arama ve paylaşım üst verisi: OG görseli, canonical, noindex, sitemap, yapılandırılmış veri
+
+**Sorun (1 Ekim öncesi denetim):** Hiçbir sayfada `og:*`, `twitter:*`,
+canonical veya JSON-LD yoktu; WhatsApp/X/LinkedIn/Discord'da paylaşılan bağlantı
+görselsiz, çıplak bir başlıkla görünüyordu. Her sayfa aynı açıklamayı taşıyordu.
+Giriş, panel ve üye sayfaları dizinlenebilirdi. Sitemap, oturum kapısı yüzünden
+`/login`'e yönlenen `/magazine` adreslerini listeliyor, herkese açık hukuki
+sayfaları listelemiyordu. "Postscript" adı başka yayınlarla çakıştığı için
+arama motorunun bu derginin Türkçe ve Türkiye'den olduğunu anlaması gerekiyor.
+
+**Karar:**
+- `src/lib/seo.ts`: `pageMetadata({ title, description, path })` her herkese
+  açık sayfaya canonical, kendi açıklaması, tam `openGraph` (tr_TR, site adı,
+  görsel) ve `summary_large_image` Twitter kartı verir. Next alt sayfada
+  `openGraph`'ı sığ birleştirdiği için tam set her sayfada kuruluyor.
+  Kullananlar: `/`, `/hakkinda`, `/iletisim`, `/kategoriler`, `/kunye`,
+  `/kvkk`, `/kullanim-sartlari`. Kök düzende `metadataBase` = `SITE_URL`.
+- `src/app/opengraph-image.tsx`: 1200×630 paylaşım görseli; mevcut wordmark,
+  "The things left unsaid" ve "Kâr amacı gütmeyen Türkçe e-dergi ·
+  postscriptmag.com". Derleme anında bir kez çizilir; Türkçe harfler için PDF'lerde
+  zaten kullanılan DejaVu. Lisansı açık görseller (kolaj vb.) bilerek kullanılmadı.
+- Ana sayfada Organization + WebSite JSON-LD (`src/components/site-json-ld.tsx`):
+  ad, adres (yalnızca `addressCountry: TR` — açık adres henüz belli değil),
+  `site_settings.publisher_email`, `SOCIAL_LINKS`, `inLanguage: tr-TR`. Yalnızca
+  sitede zaten yazan bilgiler; boş ayar atlanır. `<` kaçışlı.
+- `noindex, nofollow`: `(auth)`, `admin`, `editor`, `writer`, `social`
+  düzenleri, `/account`, `/writer-application/contract`. `robots.txt` panelleri,
+  hesap sayfasını, API'yi ve tek kullanımlık bağlantıları (`/login/2fa`,
+  `/reset-password`, `/verify-email`) dışarıda bırakır. `/magazine` ve `/social`
+  bilerek engellenmedi: okuma oturumsuz açılırsa önizlemeler çalışmaya devam etsin.
+- Sitemap yalnızca oturumsuz açılan sayfaları listeler; sabit sayfalarda
+  `lastModified` yok. Yayımlanan sayı/yazı adresleri, `/magazine` oturum kapısı
+  (D-035) kalktığında `admin_only = false` şartıyla geri eklenecek.
+
+**Açık karar (ürün sahibi):** Yazı, sayı ve yazar sayfaları oturum arkasında;
+paylaşılan bir yazı bağlantısı herkeste giriş sayfası olarak önizlenir ve hiçbir
+yazı aramada çıkmaz. Kapıyı açmak (en azından yazı sayfası için) ürün kararı;
+açılırsa yazı sayfasına `generateMetadata` + Article JSON-LD eklenmeli.
+
+**Doğrulama:** Birim testi (`tests/unit/seo.test.ts`), üretim derlemesi
+(`/opengraph-image` statik PNG 1200×630, görsel gözle kontrol edildi;
+`robots.txt` ve `sitemap.xml` çıktıları okundu). Sayfa `<head>` etiketleri yayına
+alınınca canlıda doğrulanmalı (yerel sunucu açılmıyor).
+
+**Yayın notu:** Şema ve migration yok; kişisel veri işleme değişmedi.

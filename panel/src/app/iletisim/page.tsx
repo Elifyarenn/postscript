@@ -1,3 +1,4 @@
+import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import contactBanner from "@/assets/design/banner-contact.webp";
 import { getAuthContext } from "@/lib/auth/session";
@@ -13,7 +14,12 @@ import { SiteBanner } from "@/components/site-ui";
 import { TurnstileWidget } from "@/components/turnstile";
 import { sendContactMessageAction } from "./actions";
 
-export const metadata = { title: "İletişim" };
+export const metadata = pageMetadata({
+  title: "İletişim",
+  description:
+    "PostScript Dergi ile iletişime geçin: e-posta, Instagram, X ve iletişim formu.",
+  path: "/iletisim",
+});
 
 // The address and the topics are admin-editable, so the page is read per request
 export const dynamic = "force-dynamic";

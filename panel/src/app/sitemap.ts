@@ -1,91 +1,26 @@
 import type { MetadataRoute } from "next";
-import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
-import { db } from "@/db/client";
-import { articles, issues } from "@/db/schema";
 import { env } from "@/lib/env";
 
-// Always render per request: a build-time snapshot would ship a stale sitemap
-// and would force a database connection during `next build`.
-export const dynamic = "force-dynamic";
-
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+/**
+ * Only pages a logged-out visitor can open (D-252).
+ *
+ * Everything under /magazine sits behind the session gate (D-035), so its
+ * URLs answer with a redirect to /login; listing them told search engines to
+ * index the login page. When reading opens without a session, add the
+ * published issues and articles back here (with `admin_only = false`, D-240).
+ * Static pages carry no lastModified: a value that changes on every request
+ * teaches crawlers to ignore it.
+ */
+export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = env().SITE_URL.replace(/\/+$/, "");
-  const now = new Date();
-
-  const [articleRows, issueRows] = await Promise.all([
-    db
-      .select({ slug: articles.slug, publishedAt: articles.publishedAt })
-      .from(articles)
-      .where(
-        and(
-          eq(articles.status, "published"),
-          isNull(articles.deletedAt),
-          isNotNull(articles.publishedAt),
-        ),
-      )
-      .orderBy(desc(articles.publishedAt)),
-    db
-      .select({ number: issues.number, publishedAt: issues.publishedAt })
-      .from(issues)
-      .where(
-        and(
-          eq(issues.status, "published"),
-          eq(issues.adminOnly, false),
-          isNull(issues.deletedAt),
-          isNotNull(issues.publishedAt),
-        ),
-      )
-      .orderBy(desc(issues.publishedAt)),
-  ]);
 
   return [
-    {
-      url: `${baseUrl}/`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 1,
-    },
-    {
-      url: `${baseUrl}/magazine`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/magazine/issues`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.6,
-    },
-    {
-      url: `${baseUrl}/kategoriler`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 0.6,
-    },
-    {
-      url: `${baseUrl}/iletisim`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.4,
-    },
-    {
-      url: `${baseUrl}/kunye`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.4,
-    },
-    ...articleRows.map((row) => ({
-      url: `${baseUrl}/magazine/articles/${row.slug}`,
-      lastModified: row.publishedAt ?? now,
-      changeFrequency: "weekly" as const,
-      priority: 0.7,
-    })),
-    ...issueRows.map((row) => ({
-      url: `${baseUrl}/magazine/issues/${row.number}`,
-      lastModified: row.publishedAt ?? now,
-      changeFrequency: "monthly" as const,
-      priority: 0.5,
-    })),
+    { url: `${baseUrl}/`, changeFrequency: "weekly", priority: 1 },
+    { url: `${baseUrl}/hakkinda`, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${baseUrl}/kategoriler`, changeFrequency: "weekly", priority: 0.6 },
+    { url: `${baseUrl}/iletisim`, changeFrequency: "yearly", priority: 0.4 },
+    { url: `${baseUrl}/kunye`, changeFrequency: "yearly", priority: 0.4 },
+    { url: `${baseUrl}/kvkk`, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${baseUrl}/kullanim-sartlari`, changeFrequency: "yearly", priority: 0.3 },
   ];
 }

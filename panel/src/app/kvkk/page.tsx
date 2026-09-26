@@ -1,3 +1,4 @@
+import { pageMetadata } from "@/lib/seo";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { kvkkVersions } from "@/db/schema";
@@ -5,7 +6,12 @@ import { renderMarkdown } from "@/lib/markdown";
 import { formatDate } from "@/lib/utils";
 import { LegalPage } from "@/components/legal";
 
-export const metadata = { title: "KVKK Aydınlatma Metni" };
+export const metadata = pageMetadata({
+  title: "KVKK Aydınlatma Metni",
+  description:
+    "PostScript Dergi KVKK aydınlatma metni: hangi kişisel verilerin hangi amaçla işlendiği ve haklarınız.",
+  path: "/kvkk",
+});
 
 // Reads the current notice from the database, so it is rendered per request
 export const dynamic = "force-dynamic";

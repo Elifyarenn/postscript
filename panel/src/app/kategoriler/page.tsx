@@ -1,3 +1,4 @@
+import { pageMetadata } from "@/lib/seo";
 import categoriesBanner from "@/assets/design/banner-categories.webp";
 import { getAuthContext } from "@/lib/auth/session";
 import { listWriterAreasWithQuota } from "@/services/writer-areas";
@@ -5,7 +6,12 @@ import { CategoryCard } from "@/components/category-card";
 import { SiteShell } from "@/components/site-shell";
 import { SiteBanner } from "@/components/site-ui";
 
-export const metadata = { title: "Kategoriler" };
+export const metadata = pageMetadata({
+  title: "Kategoriler",
+  description:
+    "PostScript Dergi'nin yazı alanları ve kategorileri.",
+  path: "/kategoriler",
+});
 
 /**
  * Every writing area on one page (D-134), drawn as the designs draw it (D-146):

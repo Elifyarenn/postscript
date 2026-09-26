@@ -1,10 +1,16 @@
+import { pageMetadata } from "@/lib/seo";
 import { getSiteSettings } from "@/services/site-settings";
 import { getAuthContext } from "@/lib/auth/session";
 import { buildImprint, imprintFields } from "@/lib/legal";
 import { LegalPage } from "@/components/legal";
 import { Alert } from "@/components/ui";
 
-export const metadata = { title: "Künye" };
+export const metadata = pageMetadata({
+  title: "Künye",
+  description:
+    "PostScript Dergi künyesi: 5651 sayılı Kanun kapsamında yayıncı bilgileri ve içerik kaldırma başvuruları.",
+  path: "/kunye",
+});
 
 // The publisher details are admin-editable, so the page is rendered per request
 export const dynamic = "force-dynamic";

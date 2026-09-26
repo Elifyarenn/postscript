@@ -1,9 +1,15 @@
 import { getAuthContext } from "@/lib/auth/session";
+import { env } from "@/lib/env";
+import { pageMetadata } from "@/lib/seo";
+import { getSiteSettings } from "@/services/site-settings";
+import { SiteJsonLd } from "@/components/site-json-ld";
 import { issueExtrasFor } from "@/lib/issue-extras";
 import { listPublishedIssues } from "@/services/public";
 import { listWriterAreasWithQuota } from "@/services/writer-areas";
 import { HomePage, type HomeIssue } from "@/components/homepage";
 import { SiteShell } from "@/components/site-shell";
+
+export const metadata = pageMetadata({ path: "/" });
 
 /** The issue the designs announce, shown until the first issue is published. */
 const FIRST_ISSUE: HomeIssue = {
@@ -20,10 +26,11 @@ const FIRST_ISSUE: HomeIssue = {
  * account, the panel and the member menu when there is a session (D-112).
  */
 export default async function HomePageRoute() {
-  const [context, issues, areas] = await Promise.all([
+  const [context, issues, areas, settings] = await Promise.all([
     getAuthContext(),
     listPublishedIssues(),
     listWriterAreasWithQuota(),
+    getSiteSettings(),
   ]);
 
   const latest = issues[0];
@@ -39,6 +46,7 @@ export default async function HomePageRoute() {
 
   return (
     <SiteShell user={context?.user ?? null} bleed>
+      <SiteJsonLd siteUrl={env().SITE_URL} settings={settings} />
       <HomePage
         issue={issue}
         areas={areas.map((area) => area.name)}
