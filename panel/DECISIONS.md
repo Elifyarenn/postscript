@@ -561,6 +561,10 @@ adı, doğum tarihi hiçbir yerde geçmiyor. Tek eklenen read model
 `listRecentArticles`: bir yazı, sayısı yayınlanmadan da yayınlanabildiği için
 ana ekran sayı listesiyle değil son yazılarla açılıyor.
 
+> **Güncelleme (D-257, 2026-09-26):** Oturum kapısı kaldırıldı. Yayımlanmış
+> sayılar, yazılar ve yazar sayfaları artık oturumsuz okunur ve dizinlenir;
+> aşağıdaki "oturum ister" sınırı geçersizdir. Ayrıntı D-257'de.
+
 **Sınırlar:** `/magazine` oturum ister (rol istemez), çünkü bu uygulama
 tümüyle `robots: noindex` ile çalışıyor ve halka açık site public API'yi
 tüketiyor. Sayı kapakları listede gösterilmiyor: `/api/media/:id` sıradan medya
@@ -10288,3 +10292,49 @@ Sayfa `lang="tr"`; `text-transform: uppercase` Türkçe kurala göre i → İ ya
   alır; sayı sayfası ve yayımlanmış sayıda ana sayfa kullanır.
 
 Doğrulama: birim testi, derleme. Görünüm yayına alınınca canlıda kontrol edilmeli.
+
+## D-257 — Dergi herkese açık: yayımlanmış sayı, yazı ve yazar sayfaları oturumsuz okunur
+
+**Karar (ürün sahibi, 2026-09-26):** `/magazine` ve okuyucu tarafındaki
+yayımlanmış içerik girişsiz okunabilir ve aramada dizinlenir. Taslak, planlanmış
+ya da yayımlanmamış hiçbir şey açılmaz. Admin, editör, yazar ve topluluk
+panelleri oturum arkasında kalır. D-035'teki oturum kapısı bununla kalktı.
+
+**Uygulama:**
+- `magazine/layout.tsx` artık `requireSession` çağırmıyor; başlık oturum
+  varsa hesap menüsünü gösterir (ana sayfadaki gibi).
+- Sayfalar yeni `readerSession()` (`lib/auth/guard.ts`) ile oturumu
+  isteğe bağlı okur. Yasaklı ya da doğrulanmamış hesap ziyaretçi gibi görür.
+- `mayReadIssue`: yayımlanmış/arşivlenmiş sayı herkese açık (önceden
+  oturum şartı). Taslak sayı editör paneline, `adminOnly` sayı yalnızca
+  adminlere açık kalır — yayımlanmış işaretlense bile.
+- Sayfa görseli (`/api/issue-pages/:id/media/:mediaId`) ve test cevabı
+  (`/api/issue-quizzes/:id/answer`) yolları oturum istemiyor; aynı
+  `mayReadIssue` kapısından geçiyorlar. Test cevabı hiçbir şey saklamıyor.
+- **Çalışma sayısındaki yazılar:** Public read model'ler (`getPublicArticle`,
+  `listRecentArticles`, yazar sayfası, kategori sayıları, yazar listesi,
+  sitemap) artık `adminOnly` sayıdaki yazıyı dışlar. Dergi kapalıyken bu
+  açık yalnızca oturumlu okuyucuyu ilgilendiriyordu (denetim P3-6); açılınca
+  herkese açılacaktı.
+- **Yorumlar ve kaydetme üyelerde kalır.** Oturumsuz ziyaretçi yorum listesini
+  görmez (yorumlar üye adları taşır, bkz. denetim P3-4); yerine giriş/kayıt
+  çağrısı görür.
+- **Arama ve paylaşım:** Sayı, yazı ve yazar sayfalarında `generateMetadata`
+  (başlık, açıklama, canonical, Open Graph, Twitter). Yazıda `og:type=article`,
+  yayın/güncelleme zamanı, yazar sayfası, bölüm ve Article JSON-LD (yayıncı
+  ana sayfadaki Organization'a `@id` ile bağlanır; yazar, yazının yayımlandığı
+  imzadır — D-076). Bulunamayan, yayımlanmamış ya da geri çekilmiş içerik
+  `noindex` alır ve yalnızca public read model'den adlandırılır.
+- **Sitemap:** statik sayfalar + `/magazine`, `/magazine/issues`, her
+  yayımlanmış (çalışma sayısı olmayan) sayı, yazı ve yazar sayfası.
+- **Bilerek değişmeyen:** Geri çekilmiş yazı sayfası 200 + uyarı döner
+  (API 410). Sayfa `noindex`. Okuyucu (`/oku`) `noindex` kalır; dizinlenen
+  adres sayının kendi sayfası.
+
+**Doğrulama:** `tests/integration/public-magazine.test.ts` (oturumsuz
+yayımlanmış sayı ve görseli açılır; taslak, çalışma sayısı ve görselleri 404;
+taslak/planlanmış yazı 404; çalışma sayısındaki yazı hiçbir listede yok;
+sitemap tam olarak açık olanları listeler).
+
+**Yayın notu:** Şema ve migration yok. Kişisel veri işleme değişmedi; yeni bir
+veri alanı açılmadı (yorumlar üyelerde kaldı).

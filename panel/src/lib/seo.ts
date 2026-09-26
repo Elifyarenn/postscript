@@ -31,6 +31,14 @@ export function pageMetadata(options: {
   description?: string;
   /** Canonical path, starting with "/". */
   path: string;
+  /** An article's share card also says when it came out and who wrote it (D-257). */
+  article?: {
+    publishedTime?: string;
+    modifiedTime?: string;
+    /** Author page paths or URLs. */
+    authors?: string[];
+    section?: string;
+  };
 }): Metadata {
   const description = options.description ?? SITE_DESCRIPTION;
   const fullTitle = options.title ? `${SITE_NAME} - ${options.title}` : SITE_NAME;
@@ -40,7 +48,7 @@ export function pageMetadata(options: {
     description,
     alternates: { canonical: options.path },
     openGraph: {
-      type: "website",
+      ...(options.article ? { type: "article" as const, ...options.article } : { type: "website" as const }),
       locale: "tr_TR",
       siteName: SITE_NAME,
       title: fullTitle,

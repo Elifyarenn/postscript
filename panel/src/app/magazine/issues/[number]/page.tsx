@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, BookOpen } from "lucide-react";
-import { requireSession } from "@/lib/auth/guard";
+import { cache } from "react";
+import type { Metadata } from "next";
+import { readerSession } from "@/lib/auth/guard";
 import { getPublishedIssue } from "@/services/public";
 import { readIssuePages } from "@/services/issue-pages";
 import { ArticleCard } from "@/components/magazine";
@@ -12,32 +14,55 @@ import { issueExtrasFor } from "@/lib/issue-extras";
 import { templateOf } from "@/lib/issue-templates";
 import { formatIssueNumber } from "@/lib/site";
 import { formatDate } from "@/lib/utils";
+import { NO_INDEX, pageMetadata } from "@/lib/seo";
 
-export const metadata = { title: "Sayı" };
+/** One query per request for the metadata and the page alike. */
+const publishedIssue = cache((number: number) => getPublishedIssue(number).catch(() => null));
+
+function issueNumberOf(raw: string): number | null {
+  const parsed = Number(raw);
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 2_147_483_647 ? parsed : null;
+}
+
+/**
+ * Titles and share cards come from the public read model only, so a draft or
+ * the admins' working issue never lends its name to a search result (D-257).
+ */
+export async function generateMetadata({ params }: { params: Promise<{ number: string }> }): Promise<Metadata> {
+  const number = issueNumberOf((await params).number);
+  const issue = number === null ? null : await publishedIssue(number);
+  if (!issue) return { title: "Sayı", robots: NO_INDEX };
+
+  const label = `Sayı ${formatIssueNumber(issue.number)}`;
+  return pageMetadata({
+    title: `${label}: ${issue.title}`,
+    description: [`PostScript Dergi ${label}: ${issue.title}`, issue.theme].filter(Boolean).join(" — ") + ".",
+    path: `/magazine/issues/${issue.number}`,
+  });
+}
 
 /**
  * One issue's own page: what it is, what is in it, and the way in (D-234).
  *
- * A published issue is open to any signed-in reader. One that is still being
+ * A published issue is open to everyone (D-257). One that is still being
  * put together is visible only to the editorial panel, and says so plainly —
  * `readIssuePages` is what decides, so an unpublished issue answers 404 to
  * everybody else rather than merely hiding its link.
  */
 export default async function IssuePage({ params }: { params: Promise<{ number: string }> }) {
-  const { user } = await requireSession();
-  const { number } = await params;
+  const context = await readerSession();
+  const parsed = issueNumberOf((await params).number);
+  if (parsed === null) notFound();
 
-  const parsed = Number(number);
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 2_147_483_647) notFound();
-
-  const reader = await readIssuePages({ ...user }, parsed).catch((error: unknown) => {
+  const reader = await readIssuePages(context ? { ...context.user } : null, parsed).catch((error: unknown) => {
     if (isAppError(error) && error.status === 404) notFound();
     throw error;
   });
 
   // The published issue keeps its own contents list of articles; a draft has
   // only the pages that have been laid out so far
-  const published = await (reader.preview ? Promise.resolve(null) : getPublishedIssue(parsed));
+  // (null too for the admins' working issue once it is marked published)
+  const published = reader.preview ? null : await publishedIssue(parsed);
 
   const subtitle = [
     `Sayı ${formatIssueNumber(reader.issue.number)}`,

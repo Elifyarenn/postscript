@@ -261,12 +261,12 @@ async function pagesOf(issueId: string, preview: boolean): Promise<IssuePageView
  *
  *  - an issue marked `adminOnly` is the admins' working copy: nobody else,
  *    not an editor, not a writer, not a signed-in reader (D-240)
- *  - a published issue is open to any signed-in reader
+ *  - a published issue is open to everyone, signed in or not (D-257)
  *  - anything else is the editorial panel's preview
  */
 export function mayReadIssue(actor: Actor | null, issue: Pick<Issue, "status" | "adminOnly">): boolean {
   if (issue.adminOnly) return actor !== null && canAccessAdminPanel(actor);
-  if (issue.status === "published" || issue.status === "archived") return actor !== null;
+  if (issue.status === "published" || issue.status === "archived") return true;
   return actor !== null && canAccessEditorPanel(actor);
 }
 

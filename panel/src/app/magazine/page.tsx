@@ -1,15 +1,20 @@
 import Link from "next/link";
-import { requireSession } from "@/lib/auth/guard";
 import { listPublishedIssues, listRecentArticles } from "@/services/public";
 import { ArticleCard } from "@/components/magazine";
 import { SiteTitle } from "@/components/site-ui";
 import { Alert, Card, EmptyState } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = { title: "Dergi" };
+// Search and category views share the list's canonical address (D-257)
+export const metadata = pageMetadata({
+  title: "Dergi",
+  description: "PostScript Dergi'nin son yazıları ve sayıları: edebiyat, psikoloji ve kültür üzerine Türkçe yazılar.",
+  path: "/magazine",
+});
 
 /**
- * Where a reader lands after signing in: the newest writing, then the issues.
+ * The magazine's front: the newest writing, then the issues. Public (D-257).
  *
  * `?verified=1` is how the e-mail verification screen says welcome, since that
  * is where a reader is sent once the address is confirmed (D-034). `?q=` comes
@@ -21,7 +26,6 @@ export default async function MagazinePage({
 }: {
   searchParams: Promise<{ verified?: string; q?: string; kategori?: string }>;
 }) {
-  await requireSession();
   const params = await searchParams;
 
   const query = params.q?.trim().slice(0, 100) || undefined;

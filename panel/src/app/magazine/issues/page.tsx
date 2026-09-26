@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Heart } from "lucide-react";
 import issuesBanner from "@/assets/design/banner-issues.webp";
-import { requireSession } from "@/lib/auth/guard";
+import { readerSession } from "@/lib/auth/guard";
 import { canAccessEditorPanel } from "@/lib/auth/rbac";
 import { listPublishedIssues } from "@/services/public";
 import { listIssues } from "@/services/issues";
@@ -11,8 +11,13 @@ import { formatReleaseMoment } from "@/lib/countdown";
 import { issueExtrasFor } from "@/lib/issue-extras";
 import { formatIssueNumber } from "@/lib/site";
 import { formatDate } from "@/lib/utils";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = { title: "Sayılar" };
+export const metadata = pageMetadata({
+  title: "Sayılar",
+  description: "PostScript Dergi'nin yayımlanan bütün sayıları, en yeniden eskiye.",
+  path: "/magazine/issues",
+});
 
 /** The issue the countdown is for (D-192). */
 const UPCOMING_ISSUE = 1;
@@ -28,14 +33,15 @@ const PLACEHOLDER_SLOTS = [1, 2, 3];
  * yet, so the heart is drawn without a count (D-116).
  */
 export default async function IssuesPage() {
-  const { user } = await requireSession();
+  // Public (D-257); a session only adds the team's drafts below
+  const context = await readerSession();
   const issues = await listPublishedIssues();
 
   // Issues still being put together are the team's business only; a reader
   // never sees them here and cannot reach them by guessing a number either,
   // because the issue's own pages refuse (D-234)
-  const drafts = canAccessEditorPanel({ ...user })
-    ? (await listIssues({ ...user })).filter((issue) => issue.status !== "published" && issue.status !== "archived")
+  const drafts = context && canAccessEditorPanel({ ...context.user })
+    ? (await listIssues({ ...context.user })).filter((issue) => issue.status !== "published" && issue.status !== "archived")
     : [];
   // The countdown stays until the issue is published, then the issue's own card takes over
   const release = issues.some((issue) => issue.number === UPCOMING_ISSUE)

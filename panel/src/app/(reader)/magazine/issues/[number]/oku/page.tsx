@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireSession } from "@/lib/auth/guard";
+import { readerSession } from "@/lib/auth/guard";
 import { isAppError } from "@/lib/errors";
 import { renderMarkdown } from "@/lib/markdown";
 import { CARD_LABELS, issueExtrasFor } from "@/lib/issue-extras";
@@ -14,7 +14,8 @@ export const metadata = { title: "Dergi", robots: { index: false, follow: false 
  * The magazine reader (D-234, D-240).
  *
  * Whether this reader may be opened at all is decided in `readIssuePages`, not
- * here: an unpublished issue answers 404 to everyone outside the panel, and
+ * here: a published issue is open to everyone (D-257), an unpublished issue
+ * answers 404 to everyone outside the panel, and
  * the working issue answers 404 to everyone but an admin. The pictures are
  * fetched through the page's own guarded route, so they are as closed as the
  * issue is.
@@ -29,13 +30,12 @@ export default async function IssueReaderPage({
   params: Promise<{ number: string }>;
   searchParams: Promise<{ s?: string }>;
 }) {
-  const { user } = await requireSession();
-  const [{ number }, query] = await Promise.all([params, searchParams]);
+  const [context, { number }, query] = await Promise.all([readerSession(), params, searchParams]);
 
   const parsed = Number(number);
   if (!Number.isInteger(parsed) || parsed < 1 || parsed > 2_147_483_647) notFound();
 
-  const reader = await readIssuePages({ ...user }, parsed).catch((error: unknown) => {
+  const reader = await readIssuePages(context ? { ...context.user } : null, parsed).catch((error: unknown) => {
     if (isAppError(error) && error.status === 404) notFound();
     throw error;
   });

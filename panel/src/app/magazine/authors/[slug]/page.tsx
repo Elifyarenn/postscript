@@ -1,21 +1,35 @@
+import { cache } from "react";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { requireSession } from "@/lib/auth/guard";
 import { getPublicAuthor } from "@/services/public";
 import { ArticleCard, AuthorLinks } from "@/components/magazine";
 import { Card, EmptyState, PageHeader } from "@/components/ui";
 import { isAppError } from "@/lib/errors";
+import { NO_INDEX, pageMetadata } from "@/lib/seo";
 
-export const metadata = { title: "Yazar" };
-
-/** An author's page: the pen name, the biography and everything published. */
-export default async function AuthorPage({ params }: { params: Promise<{ slug: string }> }) {
-  await requireSession();
-  const { slug } = await params;
-
-  const author = await getPublicAuthor(slug).catch((error: unknown) => {
-    if (isAppError(error) && error.status === 404) notFound();
+/** One query per request for the metadata and the page alike; null when there is no such page. */
+const loadAuthor = cache((slug: string) =>
+  getPublicAuthor(slug).catch((error: unknown) => {
+    if (isAppError(error) && error.status === 404) return null;
     throw error;
+  }),
+);
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const author = await loadAuthor((await params).slug);
+  if (!author) return { title: "Yazar", robots: NO_INDEX };
+
+  return pageMetadata({
+    title: author.name,
+    description: author.bio ?? `${author.name}, PostScript Dergi yazarı: bütün yazıları.`,
+    path: `/magazine/authors/${author.slug}`,
   });
+}
+
+/** An author's page: the pen name, the biography and everything published. Public (D-257). */
+export default async function AuthorPage({ params }: { params: Promise<{ slug: string }> }) {
+  const author = await loadAuthor((await params).slug);
+  if (!author) notFound();
 
   return (
     <>

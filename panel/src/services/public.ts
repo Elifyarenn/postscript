@@ -32,8 +32,14 @@ export async function listCategoryCounts(): Promise<{ category: string; count: n
   const rows = await db
     .select({ category: articles.category, count: count() })
     .from(articles)
+    .leftJoin(issues, eq(articles.issueId, issues.id))
     .where(
-      and(eq(articles.status, "published"), isNull(articles.deletedAt), isNotNull(articles.category)),
+      and(
+        eq(articles.status, "published"),
+        isNull(articles.deletedAt),
+        isNotNull(articles.category),
+        outsideAdminOnlyIssue,
+      ),
     )
     .groupBy(articles.category)
     .orderBy(desc(count()), asc(articles.category));
@@ -42,6 +48,13 @@ export async function listCategoryCounts(): Promise<{ category: string; count: n
     row.category ? [{ category: row.category, count: Number(row.count) }] : [],
   );
 }
+
+/**
+ * An article outside the admin-only working issue (D-240). Since the magazine
+ * opened to logged-out readers (D-257) a published article inside that issue
+ * would otherwise be readable by anyone. Needs `issues` left-joined.
+ */
+const outsideAdminOnlyIssue = or(isNull(articles.issueId), eq(issues.adminOnly, false))!;
 
 /** Shown when an article has a byline we are not allowed to fill in. */
 const ANONYMOUS_BYLINE = "İsimsiz";
@@ -203,7 +216,9 @@ export async function getPublicArticle(slug: string) {
       status: articles.status,
       category: articles.category,
       publishedAt: articles.publishedAt,
+      updatedAt: articles.updatedAt,
       issueNumber: issues.number,
+      issueAdminOnly: issues.adminOnly,
       penName: users.penName,
       displayName: users.displayName,
       penNameSlug: users.penNameSlug,
@@ -222,6 +237,8 @@ export async function getPublicArticle(slug: string) {
   if (!row) throw notFound("Yazı bulunamadı.");
   if (row.status === "withdrawn") throw gone("Bu yazı geri çekildi.");
   if (row.status !== "published") throw notFound("Yazı bulunamadı.");
+  // The same answer a missing article gives, so nothing is confirmed to exist
+  if (row.issueAdminOnly) throw notFound("Yazı bulunamadı.");
 
   return {
     title: row.title,
@@ -230,6 +247,7 @@ export async function getPublicArticle(slug: string) {
     html: await renderMarkdown(row.bodyMarkdown),
     category: row.category,
     publishedAt: row.publishedAt,
+    updatedAt: row.updatedAt,
     issueNumber: row.issueNumber,
     author: row.displayName
       ? publicAuthor({
@@ -279,7 +297,12 @@ export async function getPublicAuthor(penNameSlug: string) {
     .from(articles)
     .leftJoin(issues, eq(articles.issueId, issues.id))
     .where(
-      and(eq(articles.authorId, row.id), eq(articles.status, "published"), isNull(articles.deletedAt)),
+      and(
+        eq(articles.authorId, row.id),
+        eq(articles.status, "published"),
+        isNull(articles.deletedAt),
+        outsideAdminOnlyIssue,
+      ),
     )
     .orderBy(desc(articles.publishedAt));
 
@@ -300,7 +323,7 @@ export async function listRecentArticles(limit = 20, rawFilter: unknown = {}) {
   const parsed = articleFilterSchema.safeParse(rawFilter);
   const filter = parsed.success ? parsed.data : {};
 
-  const conditions = [eq(articles.status, "published"), isNull(articles.deletedAt)];
+  const conditions = [eq(articles.status, "published"), isNull(articles.deletedAt), outsideAdminOnlyIssue];
   if (filter.category) conditions.push(eq(articles.category, filter.category));
   if (filter.query) {
     const pattern = containsPattern(filter.query);
@@ -338,6 +361,22 @@ export async function listRecentArticles(limit = 20, rawFilter: unknown = {}) {
 }
 
 /**
+ * Every published article's address and dates, for the sitemap (D-257). The
+ * same visibility as the reading screen: published, not deleted, not in the
+ * admins' working issue.
+ */
+export async function listSitemapArticles(): Promise<{ slug: string; lastModified: Date | null }[]> {
+  const rows = await db
+    .select({ slug: articles.slug, publishedAt: articles.publishedAt, updatedAt: articles.updatedAt })
+    .from(articles)
+    .leftJoin(issues, eq(articles.issueId, issues.id))
+    .where(and(eq(articles.status, "published"), isNull(articles.deletedAt), outsideAdminOnlyIssue))
+    .orderBy(desc(articles.publishedAt));
+
+  return rows.map((row) => ({ slug: row.slug, lastModified: row.updatedAt ?? row.publishedAt }));
+}
+
+/**
  * The writers the about page lists (D-112): anyone with a pen name page and at
  * least one published article. Pen names only — the page is public, and a
  * legal name is never listed (D-076).
@@ -347,6 +386,7 @@ export async function listPublicAuthors(): Promise<{ name: string; slug: string 
     .selectDistinct({ name: users.penName, slug: users.penNameSlug })
     .from(users)
     .innerJoin(articles, eq(articles.authorId, users.id))
+    .leftJoin(issues, eq(articles.issueId, issues.id))
     .where(
       and(
         isNotNull(users.penName),
@@ -354,6 +394,7 @@ export async function listPublicAuthors(): Promise<{ name: string; slug: string 
         isNull(users.deletedAt),
         eq(articles.status, "published"),
         isNull(articles.deletedAt),
+        outsideAdminOnlyIssue,
       ),
     )
     .orderBy(asc(users.penName));

@@ -12,7 +12,7 @@
  * for the same address, and a shared cache must not decide which one.
  */
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth/session";
+import { readerSession } from "@/lib/auth/guard";
 import { errorJson } from "@/lib/api";
 import { readPageMedia } from "@/services/issue-pages";
 
@@ -21,10 +21,11 @@ export async function GET(
   { params }: { params: Promise<{ id: string; mediaId: string }> },
 ) {
   try {
-    const { user } = await requireAuth();
+    // A published issue is public (D-257); the service still closes every other one
+    const context = await readerSession();
     const { id, mediaId } = await params;
 
-    const file = await readPageMedia({ ...user }, id, mediaId);
+    const file = await readPageMedia(context ? { ...context.user } : null, id, mediaId);
 
     return new NextResponse(new Uint8Array(file.body), {
       status: 200,

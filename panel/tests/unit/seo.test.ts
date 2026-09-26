@@ -4,7 +4,6 @@
 import { describe, expect, it } from "vitest";
 import { pageMetadata, SHARE_IMAGE, SITE_NAME } from "@/lib/seo";
 import { buildSiteJsonLd } from "@/components/site-json-ld";
-import sitemap from "@/app/sitemap";
 import robots from "@/app/robots";
 
 const SETTINGS = {
@@ -59,13 +58,8 @@ describe("buildSiteJsonLd", () => {
   });
 });
 
-describe("sitemap and robots", () => {
-  it("lists only pages a logged-out visitor can open", () => {
-    const urls = sitemap().map((entry) => new URL(entry.url).pathname);
-    expect(urls).toContain("/kvkk");
-    expect(urls.some((path) => path.startsWith("/magazine"))).toBe(false);
-  });
-
+// The sitemap reads the database; tests/integration/public-magazine.test.ts covers it
+describe("robots", () => {
   it("keeps crawlers out of the panels but not out of the magazine", () => {
     const rules = robots().rules;
     const disallow = (Array.isArray(rules) ? rules[0]! : rules).disallow;

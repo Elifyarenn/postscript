@@ -36,6 +36,18 @@ export async function guardWriterInnerPages(): Promise<AuthContext> {
 }
 
 /**
+ * The magazine is open to everyone (D-257): a session only adds the member
+ * features (comments, bookmarks). A banned or unverified account reads as a
+ * visitor here, so it gets the public view and no member controls it could
+ * not use anyway.
+ */
+export async function readerSession(): Promise<AuthContext | null> {
+  const context = await getAuthContext();
+  if (!context || context.user.isBanned || context.user.emailVerifiedAt === null) return null;
+  return context;
+}
+
+/**
  * Any signed-in page outside the panels.
  *
  * An unverified address goes no further than the page that explains why: the

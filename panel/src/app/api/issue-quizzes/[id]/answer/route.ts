@@ -10,7 +10,7 @@
  * whoever asks and however they got the id.
  */
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth/session";
+import { readerSession } from "@/lib/auth/guard";
 import { assertSameOrigin } from "@/lib/csrf";
 import { errorJson } from "@/lib/api";
 import { badRequest } from "@/lib/errors";
@@ -22,7 +22,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // Marking answers stores nothing, so the double-submit token would only
     // be ceremony; the origin check still keeps it off other people's pages
     await assertSameOrigin();
-    const { user } = await requireAuth();
+    // A published issue is public, so is trying its quiz (D-257); nothing is stored
+    const context = await readerSession();
     const { id } = await params;
 
     const body: unknown = await request.json().catch(() => null);
@@ -31,7 +32,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     );
     if (!parsed.success) throw badRequest("Cevaplar okunamadı.");
 
-    const result = await answerQuiz({ ...user }, id, parsed.data);
+    const result = await answerQuiz(context ? { ...context.user } : null, id, parsed.data);
     return NextResponse.json(result, { headers: { "cache-control": "private, no-store" } });
   } catch (error) {
     return errorJson(error);
