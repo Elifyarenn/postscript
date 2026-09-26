@@ -4,6 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  areaNameLang,
   AREA_QUOTA,
   writerAreaSelectionIssues,
   type WriterAreaQuota,
@@ -31,5 +32,12 @@ describe("writer area selection", () => {
   it("refuses a full area, naming it", () => {
     const issues = writerAreaSelectionIssues("Sanat & Edebiyat", [quota(AREA_QUOTA)]);
     expect(issues[0]).toContain("kontenjanı dolu");
+  });
+});
+
+describe("areaNameLang (D-256)", () => {
+  it("marks the English area names so they are not uppercased with a dotted İ", () => {
+    expect(areaNameLang("Lifestyle & Fashion")).toBe("en");
+    expect(areaNameLang("Bilim & Teknoloji")).toBeUndefined();
   });
 });

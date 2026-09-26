@@ -8,6 +8,7 @@ import { ArticleCard } from "@/components/magazine";
 import { SiteBanner } from "@/components/site-ui";
 import { EmptyState } from "@/components/ui";
 import { isAppError } from "@/lib/errors";
+import { issueExtrasFor } from "@/lib/issue-extras";
 import { templateOf } from "@/lib/issue-templates";
 import { formatIssueNumber } from "@/lib/site";
 import { formatDate } from "@/lib/utils";
@@ -50,7 +51,11 @@ export default async function IssuePage({ params }: { params: Promise<{ number: 
 
   return (
     <>
-      <SiteBanner title={reader.issue.title} subtitle={subtitle} />
+      <SiteBanner
+        title={reader.issue.title}
+        titleLang={issueExtrasFor(reader.issue.number)?.titleLang}
+        subtitle={subtitle}
+      />
 
       {reader.preview && (
         <section className="issues-section">

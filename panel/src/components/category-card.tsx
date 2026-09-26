@@ -3,6 +3,7 @@
  * page's category rail and the categories page (D-134) draw the same card.
  */
 import Image, { type StaticImageData } from "next/image";
+import { areaNameLang } from "@/lib/writer-areas";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import categoryArt from "@/assets/design/category-art.webp";
@@ -54,7 +55,9 @@ export function CategoryCard({
       <span className="category-card-art">
         <Image src={CATEGORY_IMAGES[categoryImageKey(name, index)]} alt="" fill sizes={sizes} />
       </span>
-      <span className="category-name">{name}</span>
+      <span className="category-name" lang={areaNameLang(name)}>
+        {name}
+      </span>
       {detailed && <span className="category-topics">{categorySubtitle(name, index)}</span>}
       {count !== undefined && (
         <span className="category-count">{count > 0 ? `${count} yazı` : "Henüz yazı yok"}</span>

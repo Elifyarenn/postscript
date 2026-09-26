@@ -9,6 +9,7 @@
  */
 import Image, { type StaticImageData } from "next/image";
 import { formatReleaseMoment } from "@/lib/countdown";
+import { areaNameLang } from "@/lib/writer-areas";
 import Link from "next/link";
 import { ArrowRight, Star } from "lucide-react";
 import heroCollage from "@/assets/design/hero-collage.webp";
@@ -109,7 +110,9 @@ export function HomePage({
             <ul className="hero-categories" aria-label="Yazı alanları">
               {areas.slice(0, 4).map((name) => (
                 <li key={name}>
-                  <Link href={`/magazine?kategori=${encodeURIComponent(name)}`}>{name}</Link>
+                  <Link href={`/magazine?kategori=${encodeURIComponent(name)}`} lang={areaNameLang(name)}>
+                    {name}
+                  </Link>
                 </li>
               ))}
               {areas.length > 4 && (

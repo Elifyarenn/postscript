@@ -39,6 +39,7 @@ export default async function HomePageRoute() {
         number: latest.number,
         published: true,
         title: latest.title,
+        titleLang: issueExtrasFor(latest.number)?.titleLang,
         theme: latest.theme,
         href: `/magazine/issues/${latest.number}`,
       }

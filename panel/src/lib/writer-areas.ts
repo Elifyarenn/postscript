@@ -19,6 +19,18 @@ export const DEFAULT_WRITER_AREAS = [
   "Eğlence & Dedikodu",
 ] as const;
 
+/**
+ * Area names written in English. Uppercased under lang="tr" an English "i"
+ * becomes a dotted "İ" ("LİFESTYLE & FASHİON"), so these are marked lang="en"
+ * (D-256). Areas are renamed from the admin panel; a new English name that is
+ * not listed here only loses the fix, nothing breaks.
+ */
+const ENGLISH_AREA_NAMES = new Set(["Pop Culture", "Lifestyle & Fashion"]);
+
+export function areaNameLang(name: string): "en" | undefined {
+  return ENGLISH_AREA_NAMES.has(name) ? "en" : undefined;
+}
+
 /** The quota new areas start with; the seed set uses it too (D-052). */
 export const AREA_QUOTA = 3;
 

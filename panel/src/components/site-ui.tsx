@@ -109,12 +109,15 @@ export function SiteTitle({ children, description }: { children: ReactNode; desc
 /** The night-burgundy banner with a hairline italic title ("HAKKINDA", "SAYILAR"). */
 export function SiteBanner({
   title,
+  titleLang,
   subtitle,
   aside,
   image,
   children,
 }: {
   title: string;
+  /** Set when the title is not Turkish, so it is uppercased with the right letters (D-256). */
+  titleLang?: string;
   subtitle?: ReactNode;
   /** Replaces the star on the right, e.g. with a quotation. */
   aside?: ReactNode;
@@ -140,7 +143,9 @@ export function SiteBanner({
         />
       )}
       <div>
-        <h1 className="site-banner-title fit-line">{title}</h1>
+        <h1 className="site-banner-title fit-line" lang={titleLang}>
+          {title}
+        </h1>
         {subtitle && <p className="site-banner-subtitle">{subtitle}</p>}
         {children}
       </div>

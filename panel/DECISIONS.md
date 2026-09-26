@@ -10272,3 +10272,19 @@ Testler: `tests/integration/security-audit.test.ts` sonuna üç regresyon testi.
 
 **Yayın notu:** Şema ve migration yok; kişisel veri işleme değişmedi (daha az
 kişi görüyor).
+
+## D-256 — İngilizce başlıklar noktalı İ ile büyütülmüyor
+
+Sayfa `lang="tr"`; `text-transform: uppercase` Türkçe kurala göre i → İ yapar.
+İngilizce adlar "LİFESTYLE & FASHİON" ve "OBSESSİON" olarak görünüyordu
+(ana sayfa kahraman alanı ve kategori kartları, sayı sayfası afişi).
+
+- Yazı alanları veritabanından gelir, dilleri tutulmuyor. `writer-areas.ts`'e
+  İngilizce adların kısa listesi (`Pop Culture`, `Lifestyle & Fashion`) ve
+  `areaNameLang()` eklendi; kategori kartı ve ana sayfa listesi `lang="en"` alır.
+  Admin yeni İngilizce bir ad verirse yalnızca bu düzeltmeden mahrum kalır.
+- Sayı başlığının dili, sayının elle tutulan diğer bilgileriyle
+  `issue-extras.ts`'te (`titleLang: "en"`, 1. sayı). `SiteBanner` `titleLang`
+  alır; sayı sayfası ve yayımlanmış sayıda ana sayfa kullanır.
+
+Doğrulama: birim testi, derleme. Görünüm yayına alınınca canlıda kontrol edilmeli.
