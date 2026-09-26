@@ -18,6 +18,7 @@ import {
   canAccessAdminPanel,
   canAccessEditorPanel,
   canAccessWriterPanel,
+  canPreviewManorGame,
   hasRole,
   type Actor,
 } from "./rbac";
@@ -274,6 +275,13 @@ export async function requireRole(minimum: Role): Promise<AuthContext> {
     if (!user.totpEnabled) throw twoFactorRequired();
   }
 
+  return context;
+}
+
+/** The manor game's actions check the same door as its page (D-263). */
+export async function requireManorGamePreview(): Promise<AuthContext> {
+  const context = await requireAuth();
+  if (!canPreviewManorGame(context.user)) throw forbidden();
   return context;
 }
 

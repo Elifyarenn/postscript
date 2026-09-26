@@ -10,7 +10,12 @@ import "server-only";
  */
 import { forbidden, redirect } from "next/navigation";
 import { getAuthContext, type AuthContext } from "./session";
-import { canAccessAdminPanel, canAccessEditorPanel, canAccessWriterPanel } from "./rbac";
+import {
+  canAccessAdminPanel,
+  canAccessEditorPanel,
+  canAccessWriterPanel,
+  canPreviewManorGame,
+} from "./rbac";
 import type { Role } from "@/db/schema";
 
 /**
@@ -88,6 +93,18 @@ export async function guardPanel(minimum: Role): Promise<AuthContext> {
     if (!context.user.totpEnabled) redirect("/account?twoFactor=1");
   }
 
+  return context;
+}
+
+/**
+ * The closed preview of the manor game (D-263). No session goes to the login
+ * screen like every other signed-in page; a signed-in account that is neither
+ * an admin nor on the preview list gets the same 403 as a panel it may not
+ * open, so the page does not say what is behind the door.
+ */
+export async function guardManorGame(): Promise<AuthContext> {
+  const context = await requireSession();
+  if (!canPreviewManorGame(context.user)) forbidden();
   return context;
 }
 

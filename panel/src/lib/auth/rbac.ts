@@ -346,3 +346,25 @@ export function canCreateTeamAvatar(actor: Actor, marks: DutyMarks = {}): boolea
 export function canManageTeamAvatars(actor: Actor): boolean {
   return canAccessAdminPanel(actor);
 }
+
+/* ------------------------------------------------------------------ */
+/* The manor game preview (D-263)                                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Accounts that may open the closed preview of /oyun besides the admins: the
+ * game's writer, who is not staff. This list is the only place the address
+ * lives; widening the preview means adding a line here, and opening the game
+ * to everyone means retiring this check, not the list.
+ */
+export const MANOR_GAME_PREVIEW_EMAILS: readonly string[] = ["semrailhan@outlook.com"];
+
+/**
+ * The admins and the listed accounts. The address has to be verified, which
+ * `isOperational` already demands, so registering someone else's address
+ * without its mailbox opens nothing.
+ */
+export function canPreviewManorGame(actor: Actor & { email: string }): boolean {
+  if (canAccessAdminPanel(actor)) return true;
+  return isOperational(actor) && MANOR_GAME_PREVIEW_EMAILS.includes(actor.email.trim().toLowerCase());
+}

@@ -10542,3 +10542,68 @@ kabul edilmiş konu için ve yazı kabul döneminde teslim edilir.
 **KVKK:** Yeni bir kişisel veri kategorisi yok: konu önerisi yazarın zaten
 işlenen yazarlık faaliyetinin (eser taslağı) parçası; kimlik ve alan bilgisi
 mevcut. Aydınlatma metninde değişiklik gerekmedi.
+
+## D-263 — Malikâne oyunu: `/oyun` kapalı önizlemesi
+
+**Ne:** 2. sayının (Gotizm) Eğlence & Dedikodu bölümü için dallanan hikâye
+oyunu "Lanetli Malikâneden Çıkabilecek Misin?". Şimdilik yalnızca `/oyun`
+adresinde, kapalı önizleme olarak; sayıya, menüye, ana sayfaya ve sitemap'e
+bağlanmadı.
+
+**Kim açar:** admin (`canAccessAdminPanel`, mevcut kural) ve
+`MANOR_GAME_PREVIEW_EMAILS` listesindeki doğrulanmış hesaplar
+(`semrailhan@outlook.com`, oyunun yazarı). Tek kural `canPreviewManorGame`
+(`rbac.ts`); adres yalnızca o listede durur. Adresin doğrulanmış ve hesabın
+yasaklı olmaması gerekir (`isOperational`), yani biri başkasının adresiyle kayıt
+açsa bile posta kutusu olmadan kapı açılmaz.
+- Sayfa: `guardManorGame()` (`guard.ts`). Oturum yoksa `/login` (diğer oturumlu
+  sayfalarla aynı; girişte geri dönüş parametresi yok, eklenmedi), yetkisiz
+  hesaba 403 — panellerdeki gibi, arkada ne olduğunu söylemeden.
+- Server action'lar: her biri `requireManorGamePreview()` (`session.ts`) ile
+  aynı kontrolü tekrar yapar. E2E, admin'in isteğini okuyucu oturumuyla tekrar
+  oynatıp sahne dönmediğini doğruluyor.
+- Admin için 2FA ayrıca istenmedi: oyun bir yönetim paneli değil ve canlıdaki
+  admin oturumları zaten ikinci adımdan geçerek açılıyor.
+- `noindex, nofollow` (`NO_INDEX`). `robots.txt`'e yazılmadı: orası herkese
+  açık bir liste, yolu ilan etmiş olurdu; noindex ve kilit yeterli.
+
+**Metin tek kaynaktan:** `doc/malikane oyunu.txt` (bu adımda depoya eklendi).
+Vercel yalnızca `panel/` klasörünü yayınladığı için çalışma anında okunan kopya
+`panel/data/malikane-oyunu.txt`; birim testi iki dosyanın bayt bayt aynı
+olduğunu denetler, metin değişince kopyalamak yeterli. Ayrıştırıcı
+(`src/lib/manor-game/story.ts`) katıdır: olmayan bir başlığa giden seçim, tekrar
+eden harf, "### SON" bloğu olmayan son hata verir.
+- Metne dokunulmadı. Web'e özgü tek biçim dönüşümü: iki rotadan girilen
+  sonlarda (Şafaktan Önce, Malikânenin Yeni Sahibi) okuyucuya yalnızca geldiği
+  rotanın girişi gösterilir; basılı sürümün "…ettiysen:" / "Ve iki yol burada
+  birleşiyor:" yol işaretleri gösterilmez. Giriş, metindeki sıraya göre gelen
+  seçime eşlenir (J/O, G/P); test bunu sabitler.
+- Seçim kartında hedef ("→ BALO SALONU", "SON: …") gösterilmez: sonun adını
+  seçmeden önce söylemek spoiler olur.
+
+**Spoiler koruması:** tarayıcıya her seferinde yalnızca bulunulan sahne gelir.
+Kapak başlık ve kuralları alır; her seçim sunucudan bir sonraki sahneyi ister
+(`chooseManorAction`, yalnızca sahnenin sunduğu harf kabul edilir); tarih
+bölümü (lore) istenince gelir. Görülmemiş sahne, son veya lore sayfanın
+kaynağında da yoktur. Server action'ı okuma için kullanmak kod üslubundaki
+"server action mutasyon içindir" kuralından bilinçli bir sapma: route handler
+yalnızca public API içindir, bütün metni sayfaya gömmek de spoiler korumasını
+bozardı.
+
+**Durum:** tarayıcıda, bellekte: bulunulan sahne, izlenen yol (harfler),
+ulaşılan sonlar ("Ulaştığın sonlar: 2/5", adları gösterilmez). Yenileyince
+sıfırlanır; localStorage ve sunucu kaydı yok, KVKK metnine yeni kalem gerekmedi.
+"Geri dön" düğmesi yok, geçmiş (history) girdisi de eklenmez; tarayıcının geri
+tuşu sayfadan çıkar. Lore bir sona ulaşınca açılır, beş sonu tamamlamak şart
+değil. Analitik sistemi olmadığı için olay kaydı eklenmedi.
+
+**Tasarım:** kendi karanlık çerçevesi (dergi kâğıt sütunu değil); logo,
+Bodoni/Cormorant/Source Serif yüzleri ve bordo derginin. Her mekânın kendi
+ışığı ve ince çizgi gravürü (`manor-emblems.tsx`), yağmur yalnızca giriş ve kış
+bahçesinde, tünel daha dar sütun, balo salonu eksende. Lore kâğıt renginde eski
+bir belge. Geçişler 260 ms kararma + 550 ms beliriş; `prefers-reduced-motion`'da
+hiç animasyon yok (e2e `document.getAnimations()` ile doğruluyor).
+
+**Açık:** Canlıya alınmadı (ürün sahibinin isteği). Commit push edilmedi; aynı
+ağaçtaki başka bir oturumun push'u bunu da yayına taşır. Taşırsa da sayfa
+kilitli kalır.
