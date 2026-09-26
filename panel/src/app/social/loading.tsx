@@ -10,7 +10,7 @@ export default function SocialLoading() {
     <div aria-busy="true" aria-live="polite" className="space-y-6">
       <p className="sr-only">Yükleniyor…</p>
       {[0, 1, 2].map((index) => (
-        <Card key={index} className="animate-pulse">
+        <Card key={index} className="motion-safe:animate-pulse">
           <div className="mb-3 h-4 w-32 rounded bg-line" />
           <div className="mb-2 h-3 w-full rounded bg-line" />
           <div className="h-3 w-2/3 rounded bg-line" />

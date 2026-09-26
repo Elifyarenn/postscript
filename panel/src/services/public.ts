@@ -255,7 +255,15 @@ export async function getPublicAuthor(penNameSlug: string) {
       id: users.id,
     })
     .from(users)
-    .where(and(eq(users.penNameSlug, penNameSlug), isNull(users.deletedAt)))
+    .where(
+      and(
+        eq(users.penNameSlug, penNameSlug),
+        isNull(users.deletedAt),
+        // A banned or anonymised account has no public page (D-255)
+        eq(users.isBanned, false),
+        isNull(users.anonymizedAt),
+      ),
+    )
     .limit(1);
 
   const row = rows[0];

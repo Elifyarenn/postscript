@@ -18,6 +18,7 @@ import { AlertTriangle, GripVertical, ImageUp, Link2, Loader2 } from "lucide-rea
 import { Alert, Button, Field, Input, Select, Textarea } from "@/components/ui";
 import { ActionButton, SubmitRow } from "@/components/form";
 import type { ActionState } from "@/lib/action";
+import { MAX_PAGE_IMAGE_BYTES, PAGE_IMAGE_TOO_LARGE } from "@/lib/page-image";
 import {
   duplicateIssuePageAction,
   moveIssuePageAction,
@@ -64,6 +65,12 @@ function ReplaceImage({
   const [note, setNote] = useState<{ tone: "ok" | "warn" | "bad"; text: string } | null>(null);
 
   const pick = async (file: File) => {
+    // Vercel would refuse it with a bare 413 before the server could explain (D-254)
+    if (file.size > MAX_PAGE_IMAGE_BYTES) {
+      setNote({ tone: "bad", text: PAGE_IMAGE_TOO_LARGE });
+      if (inputRef.current) inputRef.current.value = "";
+      return;
+    }
     setBusy(true);
     setNote(null);
     const form = new FormData();
@@ -96,6 +103,9 @@ function ReplaceImage({
           : { tone: "ok", text: "Görsel değiştirildi. Alanlar korundu." },
       );
       router.refresh();
+    } catch {
+      // A dropped connection used to end as an unhandled rejection with no message (D-255)
+      setNote({ tone: "bad", text: "Bağlantı kurulamadı, tekrar deneyin." });
     } finally {
       setBusy(false);
       if (inputRef.current) inputRef.current.value = "";

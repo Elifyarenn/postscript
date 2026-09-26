@@ -30,6 +30,7 @@ import { acceptAgreement, getCurrentAgreement, renderAgreementForWriter } from "
 import {
   createArticle,
   createArticleAsWriter,
+  setPlagiarismStatus,
   transitionArticle,
   updateArticle,
   updateArticleAsWriter,
@@ -37,6 +38,7 @@ import {
 import { articleHash, findLiveApproval } from "@/services/rights";
 import { changeRole, updateProfile } from "@/services/users";
 import { deleteOwnPost } from "@/services/posts";
+import { getPublicAuthor } from "@/services/public";
 import { GET as getMediaRoute } from "@/app/api/media/[id]/route";
 import { updateMediaLicenseAction } from "@/app/editor/actions";
 import {
@@ -497,5 +499,56 @@ describe("untrusted text on the way out", () => {
     expect(csvCell("@SUM(A1)")).toBe(`"'@SUM(A1)"`);
     expect(csvCell("Ada Yazar")).toBe(`"Ada Yazar"`);
     expect(csvCell(null)).toBe(`""`);
+  });
+});
+
+describe("the 2026-09-26 launch audit (D-253, D-255)", () => {
+  it("keeps members' profile photos out of the editor's library", async () => {
+    const editor = await createUser({ role: "editor" });
+    const [photo] = await db
+      .insert(media)
+      .values({ storageKey: "profile/avatar/2026-09-26/x.png", mime: "image/png", size: 1, licenseType: "own_work" })
+      .returning();
+
+    const library = await listMedia(actorOf(editor), 500);
+    expect(library.map((row) => row.id)).not.toContain(photo!.id);
+
+    const error = await captureError(
+      updateMediaLicense(actorOf(editor), photo!.id, { licenseType: "other" }, noMeta),
+    );
+    expect(error?.status).toBe(404);
+  });
+
+  it("gives a banned author no public page and never returns a javascript: link", async () => {
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    await db
+      .update(users)
+      .set({
+        penNameSlug: "ada-yazar",
+        socialLinks: { x: "javascript:alert(1)", instagram: "https://instagram.com/ada" },
+      })
+      .where(eq(users.id, writer.id));
+
+    const author = await getPublicAuthor("ada-yazar");
+    expect(author.socialLinks).toEqual({ instagram: "https://instagram.com/ada" });
+
+    await db.update(users).set({ isBanned: true }).where(eq(users.id, writer.id));
+    const error = await captureError(getPublicAuthor("ada-yazar"));
+    expect(error?.status).toBe(404);
+  });
+
+  it("refuses an unknown plagiarism status with a 400, not a database error", async () => {
+    const admin = await createUser({ role: "admin" });
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    const article = await createArticle(
+      actorOf(admin),
+      { title: "İntihal Denemesi", bodyMarkdown: "Gövde.", authorId: writer.id },
+      noMeta,
+    );
+
+    const error = await captureError(
+      setPlagiarismStatus(actorOf(admin), article.id, "bogus" as "clean", null, noMeta),
+    );
+    expect(error?.status).toBe(400);
   });
 });

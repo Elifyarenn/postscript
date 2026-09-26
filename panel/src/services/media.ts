@@ -184,6 +184,11 @@ export function isIssuePageMedia(row: Pick<MediaRow, "storageKey">): boolean {
 export const CONTRACT_PREFIX = "contracts/";
 /** Applicants' sample works; applications are the admin's since D-059. */
 export const APPLICATION_SAMPLE_PREFIX = "writer-applications/";
+/**
+ * Members' profile and cover photos (D-141). They are the members', not the
+ * magazine's: an editor must not list, relabel or attach them (D-255).
+ */
+export const PROFILE_PREFIX = "profile/";
 
 /**
  * Whether a file is a contract or work approval PDF. Decided by where the
@@ -204,7 +209,12 @@ export function isApplicationSample(row: Pick<MediaRow, "storageKey">): boolean 
  * pages, contracts and application samples each have their own door.
  */
 export function isLibraryMedia(row: Pick<MediaRow, "storageKey" | "licenseType">): boolean {
-  return !isIssuePageMedia(row) && !isContractDocument(row) && !isApplicationSample(row);
+  return (
+    !isIssuePageMedia(row) &&
+    !isContractDocument(row) &&
+    !isApplicationSample(row) &&
+    !row.storageKey.startsWith(PROFILE_PREFIX)
+  );
 }
 
 export async function listMedia(actor: Actor, limit = 60, offset = 0) {
@@ -219,6 +229,7 @@ export async function listMedia(actor: Actor, limit = 60, offset = 0) {
         notLike(media.storageKey, `${ISSUE_PAGE_PREFIX}%`),
         notLike(media.storageKey, `${CONTRACT_PREFIX}%`),
         notLike(media.storageKey, `${APPLICATION_SAMPLE_PREFIX}%`),
+        notLike(media.storageKey, `${PROFILE_PREFIX}%`),
         // `<>` alone would drop the unlabelled rows, which the library must show
         or(isNull(media.licenseType), ne(media.licenseType, "contract_pdf")),
       ),

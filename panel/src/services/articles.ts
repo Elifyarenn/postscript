@@ -1037,6 +1037,11 @@ export async function resolveComment(actor: Actor, commentId: string): Promise<v
     .where(eq(articleComments.id, commentId));
 }
 
+const plagiarismSchema = z.object({
+  status: z.enum(["not_run", "clean", "flagged"]),
+  note: z.string().max(2000).nullable(),
+});
+
 export async function setPlagiarismStatus(
   actor: Actor,
   articleId: string,
@@ -1046,11 +1051,22 @@ export async function setPlagiarismStatus(
 ): Promise<Article> {
   if (!canAccessEditorPanel(actor)) throw forbidden();
 
+  // The action passes form text through; an unknown status would reach the
+  // enum column and come back as a 500 (D-255)
+  const parsed = plagiarismSchema.safeParse({ status, note });
+  if (!parsed.success) {
+    throw badRequest("İntihal kaydı geçersiz.", z.flattenError(parsed.error).fieldErrors);
+  }
+
   await assertEditorCoversArticle(actor, await findArticleById(articleId));
 
   const [updated] = await db
     .update(articles)
-    .set({ plagiarismCheckStatus: status, plagiarismNote: note, updatedAt: new Date() })
+    .set({
+      plagiarismCheckStatus: parsed.data.status,
+      plagiarismNote: parsed.data.note,
+      updatedAt: new Date(),
+    })
     .where(eq(articles.id, articleId))
     .returning();
 

@@ -10250,3 +10250,25 @@ sayfa için kalıcı çözüm doğrudan depolamaya (R2 presigned) yükleme; CSP
 `img-src`/`connect-src` değişikliği ve ayrı bir adım gerektirir.
 
 **Yayın notu:** Şema ve migration yok; kişisel veri işleme değişmedi.
+
+## D-255 — Denetimden küçük sertleştirmeler: profil fotoğrafları, yasaklı yazar sayfası, intihal girdisi
+
+- **Profil ve kapak fotoğrafları editör kitaplığından çıkarıldı.** `listMedia`
+  ve `isLibraryMedia` `profile/` önekini dışlamıyordu; editör üyelerin
+  fotoğraflarını listeleyip etiketleyebiliyor, yazıya ekleyebiliyordu (lisans
+  `own_work` görünerek). Fotoğrafların sunulduğu `/api/media/:id` yolu ayrı
+  (`isProfileImage`) ve değişmedi.
+- **Yasaklı ya da anonimleştirilmiş hesabın yazar sayfası yok.**
+  `getPublicAuthor` yalnızca silinmişleri eliyordu.
+- **İntihal durumu servis içinde zod ile doğrulanıyor** (`not_run | clean |
+  flagged`, not ≤ 2000). Eylem form metnini tip dönüştürmesiyle geçiriyordu;
+  bilinmeyen değer enum kolonunda 500'e dönüyordu.
+- Sayfa görseli değiştirme düğmesi: bağlantı hatasında mesaj (önceden
+  yakalanmamış hata) ve D-254'teki 4 MB sınırının önceden denetimi.
+- `social/loading.tsx` iskeleti `prefers-reduced-motion`'a uyuyor
+  (`motion-safe:animate-pulse`).
+
+Testler: `tests/integration/security-audit.test.ts` sonuna üç regresyon testi.
+
+**Yayın notu:** Şema ve migration yok; kişisel veri işleme değişmedi (daha az
+kişi görüyor).
