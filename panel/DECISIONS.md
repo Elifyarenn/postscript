@@ -10188,3 +10188,45 @@ açılırsa yazı sayfasına `generateMetadata` + Article JSON-LD eklenmeli.
 alınınca canlıda doğrulanmalı (yerel sunucu açılmıyor).
 
 **Yayın notu:** Şema ve migration yok; kişisel veri işleme değişmedi.
+
+## D-253 — Hata sayfaları, erişilebilirlik ve küçük güvenlik sertleştirmeleri (1 Ekim denetimi)
+
+**Hata sayfaları:** `src/app` altında `not-found.tsx`, `error.tsx`,
+`global-error.tsx` yoktu. Bilinmeyen adres, `notFound()` ve veritabanı hatası
+Next'in beyaz, İngilizce sayfasını gösteriyordu. Üçü de `forbidden.tsx`
+biçiminde, Türkçe ve ana sayfa bağlantılı eklendi. `error.tsx` ve
+`global-error.tsx` Next 16'nın `retry()`'ını kullanır; hata ayrıntısı
+ziyaretçiye gösterilmez. 404 sayfası `noindex` ile çıkar (derleme çıktısında
+doğrulandı).
+
+**Erişilebilirlik ve içerik:**
+- Herkese açık sitede klavye için "Ana içeriğe geç" bağlantısı; `<main id="main">`.
+- Giriş/kayıt ekranlarında `<main>` işareti yoktu; eklendi. Bağlantısız
+  `/reset-password` ekranına h1 eklendi.
+- Künye, KVKK ve kullanım şartları çıkmaz sokaktı (başlık/menü yok); `LegalPage`
+  artık her zaman "← Ana sayfa" bağlantısıyla başlar.
+- `/kunye`: "Başvurunuzu iletisim@… gönderin" → "… adresine gönderin".
+- Form hata listesinde İngilizce alan adları (`name:`, `message:` …) çıkıyordu;
+  `FIELD_LABELS`'a Türkçeleri eklendi.
+- Sayı sayfası tanıtım metni boşken okuyucuya "[Sayı tanıtımı — panelden
+  doldurulacak]" gösteriyordu; artık yalnızca panel önizlemesinde görünür.
+- `.site-banner-subtitle` 320 px'te sayfayı yatay kaydırıyordu
+  (`overflow-wrap: anywhere`).
+
+**Güvenlik:**
+- Panelden şifre değiştirmek diğer oturumları kapatmıyordu (sıfırlama, e-posta
+  değişikliği ve 2FA açma kapatıyordu). `changePassword` artık değişikliği
+  yapan oturum dışındakileri düşürür; entegrasyon testi eklendi.
+- Yazar sosyal bağlantıları çıktıda yeniden `safeExternalUrl` ile süzülüyor
+  (sayfa ve public API): D-248'den önce kaydedilmiş bir `javascript:` adresi
+  bağlantı olamaz.
+- Public sayı API'si ve sayı sayfaları int4 aralığını aşan numarada 500
+  veriyordu; artık 400/404.
+- `panel/.gitignore` yalnızca `.env` ve `.env.local`'i dışarıda bırakıyordu;
+  `.env*` (örnek dosya hariç) eklendi. Depoda izlenen bir sır yok.
+
+**Önceki adımdaki hata:** Step 169'da `tests/unit/seo.test.ts` tip denetiminden
+geçmeden commit'lendi (typecheck testi yazmadan önce çalıştırılmıştı). Bu adımda
+düzeltildi; iki adımın toplamı yeşil.
+
+**Yayın notu:** Şema ve migration yok; kişisel veri işleme değişmedi.

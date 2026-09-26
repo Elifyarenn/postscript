@@ -98,9 +98,12 @@ export default async function ImprintPage() {
       <p>
         Başvurunuzu{" "}
         {email ? (
-          <a className="text-accent underline" href={`mailto:${email}`}>
-            {email}
-          </a>
+          <>
+            <a className="text-accent underline" href={`mailto:${email}`}>
+              {email}
+            </a>{" "}
+            adresine
+          </>
         ) : (
           <span className="text-muted">künyedeki e-posta adresine</span>
         )}{" "}

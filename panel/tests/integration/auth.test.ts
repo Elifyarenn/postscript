@@ -432,6 +432,23 @@ describe("changing a password from the panel", () => {
     expect(rows[0]!.passwordHash).not.toBe(user.passwordHash);
   });
 
+  it("ends every other session but keeps the one making the change (D-253)", async () => {
+    const user = await createUser({ email: "change-sessions@example.com" });
+    const [current, other] = await db
+      .insert(sessions)
+      .values([
+        { userId: user.id, tokenHash: "hash-current", expiresAt: new Date(Date.now() + 86_400_000) },
+        { userId: user.id, tokenHash: "hash-other", expiresAt: new Date(Date.now() + 86_400_000) },
+      ])
+      .returning();
+
+    await changePassword(user.id, TEST_PASSWORD, "Yeni-Guclu-Sifre-2026", noMeta, current!.id);
+
+    const rows = await db.select().from(sessions).where(eq(sessions.userId, user.id));
+    expect(rows.find((row) => row.id === current!.id)!.revokedAt).toBeNull();
+    expect(rows.find((row) => row.id === other!.id)!.revokedAt).not.toBeNull();
+  });
+
   it("stores a phone number given from the profile form (D-054)", async () => {
     const user = await createUser({ email: "phone@example.com" });
 

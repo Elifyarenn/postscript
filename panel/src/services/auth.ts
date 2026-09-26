@@ -679,12 +679,18 @@ async function assertPasswordAcceptable(password: string): Promise<void> {
   }
 }
 
-/** Changing a password from inside the panel; requires the current one. */
+/**
+ * Changing a password from inside the panel; requires the current one.
+ * Every other session ends, as with a reset (D-253): someone holding a stolen
+ * session must not outlive the owner changing the password. `keepSessionId`
+ * is the session making the change, which stays signed in.
+ */
 export async function changePassword(
   userId: string,
   currentPassword: string,
   newPassword: string,
   meta: RequestMeta,
+  keepSessionId?: string,
 ): Promise<void> {
   const rows = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   const user = rows[0];
@@ -700,6 +706,7 @@ export async function changePassword(
     .update(users)
     .set({ passwordHash: await hashPassword(newPassword), updatedAt: new Date() })
     .where(eq(users.id, userId));
+  await revokeAllSessions(userId, keepSessionId);
 
   await writeAudit({
     actorId: userId,

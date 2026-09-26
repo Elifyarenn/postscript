@@ -2,10 +2,10 @@ import { NO_INDEX } from "@/lib/seo";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-/** Centred single-column shell for the screens you can reach without a session. */
 // Sign-in, panel and member pages stay out of search (D-252)
 export const metadata = { robots: NO_INDEX };
 
+/** Centred single-column shell for the screens you can reach without a session. */
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-4 py-12">
@@ -17,7 +17,8 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           </span>
         </Link>
 
-        {children}
+        {/* The screen reader landmark the form lives in (D-253) */}
+        <main>{children}</main>
 
         <p className="mt-8 text-center text-xs text-muted">
           <span>

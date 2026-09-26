@@ -6,6 +6,7 @@
  * A withdrawn article answers 410, anything else unpublished answers 404.
  */
 import { profileHref } from "@/lib/profile-link";
+import { safeExternalUrl } from "@/lib/issue-hotspots";
 import "server-only";
 import { and, asc, count, desc, eq, ilike, isNotNull, isNull, or } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
@@ -89,8 +90,18 @@ function publicAuthor(row: {
     name: publicByline(row),
     slug: row.penNameSlug,
     bio: row.bio,
-    socialLinks: row.socialLinks ?? null,
+    socialLinks: safeSocialLinks(row.socialLinks),
   };
+}
+
+/** Only http(s) addresses leave the API (D-253); older rows predate that check. */
+function safeSocialLinks(links: unknown): Record<string, string> | null {
+  if (!links || typeof links !== "object") return null;
+  const entries = Object.entries(links as Record<string, unknown>).flatMap(([platform, raw]) => {
+    const url = typeof raw === "string" ? safeExternalUrl(raw) : null;
+    return url ? [[platform, url] as const] : [];
+  });
+  return entries.length > 0 ? Object.fromEntries(entries) : null;
 }
 
 export async function listPublishedIssues() {

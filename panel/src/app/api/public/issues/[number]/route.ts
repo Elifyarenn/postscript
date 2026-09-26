@@ -10,7 +10,10 @@ export async function GET(
   try {
     const { number } = await params;
     const parsed = Number(number);
-    if (!Number.isInteger(parsed) || parsed < 1) throw badRequest("Sayı numarası geçersiz.");
+    // Above the int4 column range Postgres would throw and the caller would see a 500 (D-253)
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 2_147_483_647) {
+      throw badRequest("Sayı numarası geçersiz.");
+    }
 
     return publicJson(await getPublishedIssue(parsed), request);
   } catch (error) {

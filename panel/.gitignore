@@ -4,6 +4,9 @@ out/
 build/
 .env
 .env.local
+# Every other env file too (D-253); only the example is tracked
+.env*
+!.env.example
 *.tsbuildinfo
 next-env.d.ts
 playwright-report/

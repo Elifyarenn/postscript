@@ -27,7 +27,7 @@ export default async function IssuePage({ params }: { params: Promise<{ number: 
   const { number } = await params;
 
   const parsed = Number(number);
-  if (!Number.isInteger(parsed) || parsed < 1) notFound();
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 2_147_483_647) notFound();
 
   const reader = await readIssuePages({ ...user }, parsed).catch((error: unknown) => {
     if (isAppError(error) && error.status === 404) notFound();
@@ -72,11 +72,14 @@ export default async function IssuePage({ params }: { params: Promise<{ number: 
           </Link>
         </div>
 
-        <p className="issue-blurb">
-          {reader.issue.blurb ?? (
+        {/* The reminder is for the panel preview only; readers never see a placeholder (D-253) */}
+        {reader.issue.blurb ? (
+          <p className="issue-blurb">{reader.issue.blurb}</p>
+        ) : reader.preview ? (
+          <p className="issue-blurb">
             <span className="issue-blurb-empty">[Sayı tanıtımı — panelden doldurulacak]</span>
-          )}
-        </p>
+          </p>
+        ) : null}
 
         {reader.pages.length > 0 ? (
           <Link href={`/magazine/issues/${reader.issue.number}/oku`} className="site-outline-button">

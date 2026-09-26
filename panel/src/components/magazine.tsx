@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { safeExternalUrl } from "@/lib/issue-hotspots";
 import { formatDate } from "@/lib/utils";
 
 /**
@@ -69,9 +70,12 @@ export function ArticleCard({
 export function AuthorLinks({ links }: { links: unknown }) {
   if (!links || typeof links !== "object") return null;
 
-  const entries = Object.entries(links as Record<string, unknown>).filter(
-    (entry): entry is [string, string] => typeof entry[1] === "string" && entry[1].length > 0,
-  );
+  // Checked again on the way out (D-253): rows saved before input was limited
+  // to http(s) (D-248) could hold a javascript: address
+  const entries = Object.entries(links as Record<string, unknown>).flatMap(([platform, raw]) => {
+    const url = typeof raw === "string" ? safeExternalUrl(raw) : null;
+    return url ? [[platform, url] as const] : [];
+  });
   if (entries.length === 0) return null;
 
   return (

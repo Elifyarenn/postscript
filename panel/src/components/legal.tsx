@@ -32,13 +32,12 @@ export function LegalPage({
 }) {
   return (
     <main className="mx-auto max-w-3xl px-4 py-12">
-      {back ? (
-        <Link href={back.href} className="text-sm text-muted hover:text-ink">
-          ← {back.label}
-        </Link>
-      ) : null}
+      {/* Without a back link the page was a dead end: no header, no way home (D-253) */}
+      <Link href={back?.href ?? "/"} className="text-sm text-muted hover:text-ink">
+        ← {back?.label ?? "Ana sayfa"}
+      </Link>
 
-      <h1 className={`font-serif text-2xl ${back ? "mt-6" : ""}`}>{title}</h1>
+      <h1 className="mt-6 font-serif text-2xl">{title}</h1>
       {subtitle ? <p className="mt-1 text-xs text-muted">{subtitle}</p> : null}
 
       <div className="prose-panel mt-8 text-sm">{children}</div>

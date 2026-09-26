@@ -33,7 +33,7 @@ export default async function IssueReaderPage({
   const [{ number }, query] = await Promise.all([params, searchParams]);
 
   const parsed = Number(number);
-  if (!Number.isInteger(parsed) || parsed < 1) notFound();
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 2_147_483_647) notFound();
 
   const reader = await readIssuePages({ ...user }, parsed).catch((error: unknown) => {
     if (isAppError(error) && error.status === 404) notFound();

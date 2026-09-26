@@ -41,6 +41,7 @@ export default async function OpengraphImage() {
         }}
       >
         {/* 1429 x 180 source, scaled to the image's width with a margin */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- ImageResponse draws plain img only */}
         <img src={`data:image/png;base64,${wordmark}`} width={960} height={121} alt="" />
         <div style={{ marginTop: 48, fontSize: 44 }}>The things left unsaid</div>
         <div style={{ marginTop: 28, fontSize: 30, color: MUTED }}>

@@ -17,6 +17,7 @@ export default async function ResetPasswordPage({
   if (!token) {
     return (
       <Card>
+        <h1 className="mb-4 font-serif text-xl">Şifre sıfırlama</h1>
         <Alert tone="danger" title="Bağlantı eksik">
           Sıfırlama bağlantısı geçersiz görünüyor. E-postadaki bağlantıyı tekrar açın.
         </Alert>

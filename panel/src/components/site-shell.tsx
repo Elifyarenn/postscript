@@ -73,6 +73,13 @@ export async function SiteShell({
   return (
     <div className={cn("ps-site", bodyFont.variable, capsFont.variable, italicFont.variable)}>
       <FitLines />
+      {/* Lets a keyboard user skip the three menus before the content (D-253) */}
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-[var(--site-paper)] focus:px-4 focus:py-2 focus:text-[var(--site-ink)]"
+      >
+        Ana içeriğe geç
+      </a>
       <div className="site-topbar">
         <div className="site-topbar-inner fit-line">
           <Link href="/magazine/issues" className="topbar-cell">
@@ -160,7 +167,13 @@ export async function SiteShell({
 
           {user && <KvkkNotice user={user} csrfToken={csrfToken} />}
 
-          <main className={cn("site-main", !bleed && "site-main-padded")}>{children}</main>
+          <main
+            id="main"
+            tabIndex={-1}
+            className={cn("site-main focus:outline-none", !bleed && "site-main-padded")}
+          >
+            {children}
+          </main>
         </div>
       </div>
 

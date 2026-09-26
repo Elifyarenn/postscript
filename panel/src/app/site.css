@@ -480,6 +480,9 @@ html[data-playlist-open] .ps-site .topbar-note {
   font-size: calc(34 * var(--du));
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  /* "SAYI 01 · BIRAKAMADIKLARIMIZ" is one long word at 320px and pushed the
+     page sideways; let it break rather than scroll (D-253) */
+  overflow-wrap: anywhere;
 }
 
 .ps-site .site-banner-aside {

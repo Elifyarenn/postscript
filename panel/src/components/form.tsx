@@ -52,6 +52,12 @@ const FIELD_LABELS: Record<string, string> = {
   category: "Bildirim türü",
   decision: "Karar",
   note: "Not",
+  name: "Ad",
+  message: "Mesaj",
+  topic: "Konu",
+  subject: "Konu",
+  newEmail: "Yeni e-posta",
+  token: "Bağlantı",
 };
 
 function FieldErrors({ fieldErrors }: { fieldErrors: Record<string, string[]> }) {

@@ -49,7 +49,7 @@ describe("buildSiteJsonLd", () => {
       email: "iletisim@example.com",
       address: { addressCountry: "TR" },
     });
-    expect(organization.sameAs).toContain("https://x.com/postscriptmgzn");
+    expect(organization).toHaveProperty("sameAs", expect.arrayContaining(["https://x.com/postscriptmgzn"]));
     expect(website).toMatchObject({ "@type": "WebSite", inLanguage: "tr-TR" });
   });
 
@@ -68,7 +68,7 @@ describe("sitemap and robots", () => {
 
   it("keeps crawlers out of the panels but not out of the magazine", () => {
     const rules = robots().rules;
-    const disallow = (Array.isArray(rules) ? rules[0] : rules).disallow;
+    const disallow = (Array.isArray(rules) ? rules[0]! : rules).disallow;
     expect(disallow).toContain("/admin");
     expect(disallow).not.toContain("/magazine");
   });

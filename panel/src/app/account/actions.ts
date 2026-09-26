@@ -68,7 +68,7 @@ export async function changePasswordAction(
 ): Promise<ActionState> {
   return runAction(async () => {
     await assertCsrfFromForm(formData);
-    const { user } = await requireAuth();
+    const { user, sessionId } = await requireAuth();
     const meta = await requestMetadata();
 
     const next = text(formData, "password");
@@ -76,8 +76,8 @@ export async function changePasswordAction(
       throw badRequest("Şifreler eşleşmiyor.", { passwordConfirm: ["Şifreler eşleşmiyor."] });
     }
 
-    await changePassword(user.id, text(formData, "currentPassword"), next, meta);
-    return { success: "Şifreniz güncellendi." };
+    await changePassword(user.id, text(formData, "currentPassword"), next, meta, sessionId);
+    return { success: "Şifreniz güncellendi. Diğer cihazlardaki oturumlarınız kapatıldı." };
   });
 }
 
