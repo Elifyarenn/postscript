@@ -7,10 +7,10 @@
  * and two of them need an extra input: a schedule needs a date, a withdrawal
  * needs a reason. Both are still validated on the server.
  */
-import { useActionState, useState } from "react";
-import { useFormStatus } from "react-dom";
+import { useState } from "react";
 import { Alert, Button, Field, Input, Textarea, STATUS_LABELS } from "@/components/ui";
-import type { ActionState, ServerAction } from "@/components/form";
+import { ActionForm, useActionForm, useSubmitPending } from "@/components/form";
+import type { ServerAction } from "@/components/form";
 
 /**
  * The wording of the transition buttons, in the product's own words (D-059,
@@ -32,7 +32,7 @@ const TRANSITION_LABELS: Record<string, string> = {
 };
 
 function Submit({ label }: { label: string }) {
-  const { pending } = useFormStatus();
+  const pending = useSubmitPending();
   return (
     <Button type="submit" disabled={pending}>
       {pending ? "Uygulanıyor…" : label}
@@ -53,7 +53,9 @@ export function StatusPanel({
   currentStatus: string;
   targets: readonly string[];
 }) {
-  const [state, formAction] = useActionState<ActionState, FormData>(action, null);
+  // A refused transition keeps the typed reason, note or schedule date
+  const form = useActionForm(action);
+  const { state } = form;
   const [selected, setSelected] = useState<string | null>(null);
 
   if (targets.length === 0) {
@@ -84,7 +86,7 @@ export function StatusPanel({
       </div>
 
       {selected && (
-        <form action={formAction} className="space-y-4 border-t border-line pt-4">
+        <ActionForm form={form} className="space-y-4 border-t border-line pt-4">
           <input type="hidden" name="csrfToken" value={csrfToken} />
           <input type="hidden" name="articleId" value={articleId} />
           <input type="hidden" name="status" value={selected} />
@@ -118,7 +120,7 @@ export function StatusPanel({
           <Submit
             label={`"${TRANSITION_LABELS[selected] ?? STATUS_LABELS[selected] ?? selected}" durumuna geç`}
           />
-        </form>
+        </ActionForm>
       )}
     </div>
   );

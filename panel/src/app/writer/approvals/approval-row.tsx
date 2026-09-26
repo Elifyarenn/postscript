@@ -9,11 +9,11 @@
  * text moved while this screen was open the approval is refused rather than
  * silently applied to something the writer never read.
  */
-import { useActionState, useState } from "react";
-import { useFormStatus } from "react-dom";
+import { useState } from "react";
 import Link from "next/link";
 import { Alert, Button, Field, Select, Textarea } from "@/components/ui";
-import type { ActionState, ServerAction } from "@/components/form";
+import { ActionForm, useActionForm, useSubmitPending } from "@/components/form";
+import type { ServerAction } from "@/components/form";
 
 type Approval = {
   id: string;
@@ -33,7 +33,7 @@ function Submit({
   variant: "primary" | "danger";
   disabled?: boolean;
 }) {
-  const { pending } = useFormStatus();
+  const pending = useSubmitPending();
   return (
     <Button type="submit" variant={variant} disabled={disabled || pending}>
       {pending ? "Gönderiliyor…" : label}
@@ -56,8 +56,11 @@ export function ApprovalRow({
   statement: string;
   locked: boolean;
 }) {
-  const [approveState, submitApprove] = useActionState<ActionState, FormData>(approveAction, null);
-  const [declineState, submitDecline] = useActionState<ActionState, FormData>(declineAction, null);
+  // A refused approval keeps the chosen byline, a refused decline its reason
+  const approveForm = useActionForm(approveAction);
+  const declineForm = useActionForm(declineAction);
+  const approveState = approveForm.state;
+  const declineState = declineForm.state;
   const [acknowledged, setAcknowledged] = useState(false);
   const [showDecline, setShowDecline] = useState(false);
 
@@ -87,7 +90,7 @@ export function ApprovalRow({
         </div>
       )}
 
-      <form action={submitApprove} className="mt-4 space-y-3">
+      <ActionForm form={approveForm} className="mt-4 space-y-3">
         <input type="hidden" name="csrfToken" value={csrfToken} />
         <input type="hidden" name="grantId" value={approval.id} />
         {/* Echoed back so the server can prove the text has not changed */}
@@ -137,10 +140,10 @@ export function ApprovalRow({
             {showDecline ? "Reddetmekten vazgeç" : "Reddet"}
           </Button>
         </div>
-      </form>
+      </ActionForm>
 
       {showDecline && (
-        <form action={submitDecline} className="mt-4 space-y-3 border-t border-line pt-4">
+        <ActionForm form={declineForm} className="mt-4 space-y-3 border-t border-line pt-4">
           <input type="hidden" name="csrfToken" value={csrfToken} />
           <input type="hidden" name="grantId" value={approval.id} />
 
@@ -153,7 +156,7 @@ export function ApprovalRow({
           </Field>
 
           <Submit label="Onayı reddet" variant="danger" disabled={locked} />
-        </form>
+        </ActionForm>
       )}
     </div>
   );

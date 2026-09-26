@@ -10416,3 +10416,28 @@ başlıkta bir hamburger düğmesi (`SiteMobileMenu`, `src/components/site-nav.t
 
 Doğrulama: typecheck, lint, derleme. Tarayıcı davranışı yerel sunucu açılmadığı için
 yayından sonra canlıda denenir.
+
+## D-260 — Başarısız form gönderimi yazılanları silmiyor
+
+React 19 bir form action'ı bittiğinde, sonuç ne olursa olsun, formdaki
+kontrolsüz alanları sıfırlıyordu. Yanlış şifrede e-posta, hız sınırına ya da
+Turnstile'a takılan iletişim mesajı (4000 karaktere kadar), başarısız kayıtta ad
+ve doğum tarihi, reddedilen yorumda metin siliniyordu.
+
+- `PanelForm` ve aynı sorunu taşıyan formlar (yazar onay satırı, editör durum
+  paneli, sayfa bilgisi formu, sayfa düzenleyici) `useActionForm` /
+  `ActionForm` (`src/components/form.tsx`) ile gönderiliyor: `onSubmit`
+  içinde `preventDefault`, FormData elle kurulur, action bir transition içinde
+  çağrılır. Hata dönerse yazılanlar kalır; başarıda form eskisi gibi sıfırlanır
+  (yorum/mesaj formları boşalır, veritabanından gelen `defaultValue`'lar
+  yenilenir).
+- **Bilerek boşaltılanlar:** `type="password"` alanları, `one-time-code`
+  alanları ve `data-clear-on-error` işaretli kurtarma kodu alanı. Şifre
+  ekranda kalmamalı (omuz üstünden bakan, ortak bilgisayar); TOTP ve kurtarma
+  kodu ya harcanmış ya da süresi dolmak üzere.
+- Bekleme durumu ("Gönderiliyor…", kilitli düğme) bir context ve
+  `useFormStatus` ile korunuyor; aynı tıktaki ikinci tıklama bir ref ile
+  engelleniyor. `action` prop'u yerinde, JavaScript yüklenmeden gönderilen
+  form yine sunucuya ulaşır. CSRF, bot ve Turnstile jetonları eskisi gibi.
+- Kurallar `src/lib/form-fields.ts`'te saf fonksiyon; birim testi
+  `tests/unit/form-fields.test.ts`.

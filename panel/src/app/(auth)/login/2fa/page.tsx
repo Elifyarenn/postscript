@@ -70,6 +70,8 @@ export default async function TwoFactorLoginPage() {
               autoCapitalize="none"
               spellCheck={false}
               required
+              // A recovery code is a one-use secret: emptied when the form comes back with an error
+              data-clear-on-error=""
             />
           </Field>
         </PanelForm>

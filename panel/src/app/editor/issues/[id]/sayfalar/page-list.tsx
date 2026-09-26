@@ -16,7 +16,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AlertTriangle, GripVertical, ImageUp, Link2, Loader2 } from "lucide-react";
 import { Alert, Button, Field, Input, Select, Textarea } from "@/components/ui";
-import { ActionButton, SubmitRow } from "@/components/form";
+import { ActionButton, ActionForm, SubmitRow, useActionForm } from "@/components/form";
 import type { ActionState } from "@/lib/action";
 import { MAX_PAGE_IMAGE_BYTES, PAGE_IMAGE_TOO_LARGE } from "@/lib/page-image";
 import {
@@ -152,10 +152,12 @@ function PageMetaForm({
   page: ListedPage;
   csrfToken: string;
 }) {
-  const [state, formAction] = useActionState<ActionState, FormData>(updatePageMetaAction, null);
+  // A refused save keeps the edits rather than falling back to the stored values
+  const form = useActionForm(updatePageMetaAction);
+  const { state } = form;
 
   return (
-    <form action={formAction} className="mt-3 space-y-3">
+    <ActionForm form={form} className="mt-3 space-y-3">
       <input type="hidden" name="csrfToken" value={csrfToken} />
       <input type="hidden" name="pageId" value={page.id} />
       <input type="hidden" name="issueId" value={issueId} />
@@ -200,7 +202,7 @@ function PageMetaForm({
       </Field>
 
       <SubmitRow state={state} label="Sayfa bilgilerini kaydet" />
-    </form>
+    </ActionForm>
   );
 }
 

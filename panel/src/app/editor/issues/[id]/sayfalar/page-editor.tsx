@@ -10,14 +10,14 @@
  * Blocks are edited as a small list and travel in one hidden field; the server
  * validates them again before anything is stored.
  */
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { BLOCK_KINDS, blockLabel, type PageBlock } from "@/lib/issue-blocks";
 import { PAGE_TEMPLATES, templateAsks, templateOf, type PageField } from "@/lib/issue-templates";
 import type { ReaderPage } from "@/lib/issue-reader";
 import type { ActionState } from "@/lib/action";
 import { IssuePageSheet } from "@/components/issue-page-sheet";
 import { Field, Input, Select, Textarea } from "@/components/ui";
-import { SubmitRow } from "@/components/form";
+import { ActionForm, SubmitRow, useActionForm } from "@/components/form";
 
 export type EditablePage = {
   id: string | null;
@@ -81,7 +81,9 @@ export function IssuePageEditor({
   /** The reader's shape for the live preview beside the form. */
   preview: ReaderPage;
 }) {
-  const [state, formAction] = useActionState<ActionState, FormData>(action, null);
+  // The uncontrolled fields (contents title, article) survive a refused save
+  const form = useActionForm(action);
+  const { state } = form;
   const [template, setTemplate] = useState(page.template);
   const [blocks, setBlocks] = useState<PageBlock[]>(page.blocks);
   const [draft, setDraft] = useState(page);
@@ -115,7 +117,7 @@ export function IssuePageEditor({
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
-      <form action={formAction} className="space-y-3">
+      <ActionForm form={form} className="space-y-3">
         <input type="hidden" name="csrfToken" value={csrfToken} />
         <input type="hidden" name="issueId" value={issueId} />
         {page.id && <input type="hidden" name="pageId" value={page.id} />}
@@ -484,7 +486,7 @@ export function IssuePageEditor({
         </fieldset>
 
         <SubmitRow state={state} label={submitLabel} />
-      </form>
+      </ActionForm>
 
       <div>
         <div className="mb-2 flex items-center gap-2">
