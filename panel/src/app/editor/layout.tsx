@@ -1,7 +1,7 @@
 ﻿import type { ReactNode } from "react";
 import { NO_INDEX } from "@/lib/seo";
 import { guardPanel } from "@/lib/auth/guard";
-import { canReviewTopicProposals } from "@/lib/auth/rbac";
+import { canContactTeam, canReviewTopicProposals } from "@/lib/auth/rbac";
 import { getEditorAssignment } from "@/services/editor-categories";
 import { ADMIN_NAV, editorNav, PanelShell } from "@/components/shell";
 
@@ -15,13 +15,15 @@ export default async function EditorLayout({ children }: { children: ReactNode }
   // work-approval tracker, the full article management). An admin who visits
   // them sees the admin sidebar, not the narrow editor one (D-059).
   const adminView = user.role === "admin";
-  const reviewsTopics = !adminView && canReviewTopicProposals(user, await getEditorAssignment(user.id));
+  const assignment = adminView ? null : await getEditorAssignment(user.id);
+  const reviewsTopics = assignment !== null && canReviewTopicProposals(user, assignment);
+  const contactsTeam = assignment !== null && canContactTeam(user, assignment);
 
   return (
     <PanelShell
       user={user}
       area={adminView ? "yönetim" : "editör paneli"}
-      groups={adminView ? ADMIN_NAV : editorNav(reviewsTopics)}
+      groups={adminView ? ADMIN_NAV : editorNav(reviewsTopics, contactsTeam)}
     >
       {children}
     </PanelShell>

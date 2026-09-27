@@ -34,3 +34,9 @@ export function whatsappHref(raw: string | null | undefined, message = ""): stri
   if (number === null) return null;
   return message === "" ? `https://wa.me/${number}` : `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
 }
+
+/** A "call this number" link, read the same way so the call and the chat reach one person. */
+export function telHref(raw: string | null | undefined): string | null {
+  const number = whatsappNumber(raw);
+  return number === null ? null : `tel:+${number}`;
+}

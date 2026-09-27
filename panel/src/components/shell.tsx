@@ -110,7 +110,7 @@ export const ADMIN_NAV: NavGroup[] = [
  * Issue planning, announcements, work approvals and writer applications are
  * the admin's business and do not appear here.
  */
-export function editorNav(reviewsTopics: boolean): NavGroup[] {
+export function editorNav(reviewsTopics: boolean, contactsTeam = false): NavGroup[] {
   return [
     {
       label: "Genel",
@@ -127,6 +127,10 @@ export function editorNav(reviewsTopics: boolean): NavGroup[] {
     },
   ];
 }
+    // The team's phone numbers are the main editor's too (D-267)
+    ...(contactsTeam
+      ? [{ label: "Ekip", items: [{ href: "/editor/team", label: "Ekip iletişimi" }] }]
+      : []),
 
 /** `locked` only greys the links out; each page checks the rule itself. */
 export function writerNav(locked: boolean): NavGroup[] {

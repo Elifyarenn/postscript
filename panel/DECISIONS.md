@@ -10731,3 +10731,48 @@ sahneler tek yüz (13–15 px, iki sütun), iki uzun final 2 yüz; tablette
 sahneler 2, uzun finaller 3 yüz; lore (≈2.900 karakter) her ekranda 2–4 yüz —
 derginin ek sayfası gibi.
 Okunabilirlik için 13 px'in altına inilmez; o boyutta sığmayan metin çevrilir.
+
+
+## D-267 — Ana editöre ekip iletişimi: telefon ve WhatsApp
+
+**İstek (ürün sahibi):** "ana editörümüzün yetkilerini arttıralım kullanıcılara
+rahatça ulaşmak için adminlerdeki gibi kullanıcı kartında telefon numarasına
+gidebilesin ve whatsapp butonu da etkin olsun."
+
+**Durum:** Telefon numarası yalnızca yönetici ekranlarında basılıyordu
+(`/admin/users/<id>`, D-231/D-245). Editör panelinde kullanıcı kartı yoktu.
+
+**Karar:**
+- Yeni yetki `canContactTeam` (`rbac.ts`): ana editör ve yönetici. Kural
+  `canReviewMainStage` ile aynı; donmuş editör paneliyle birlikte numaraları da
+  kaybeder. Kategori editörü göremez.
+- Yeni sayfa `/editor/team` ("Ekip iletişimi"), editör menüsünde yalnızca ana
+  editöre görünür. Her kişi için bir kart: ad (profil bağlantılı), rol ve
+  işaret rozetleri, **tıklanınca arayan telefon** (`tel:`) ve
+  **"WhatsApp'tan yaz"** düğmesi. Sayfa kendi başına da 403 verir; servis
+  (`listTeamContacts`) de aynı kuralla reddeder.
+- `tel:` bağlantısı `whatsappNumber` ile aynı okumadan geçer (`telHref`), yani
+  arama ve sohbet aynı numaraya gider; okunamayan numara düz metin kalır.
+
+**Muhafazakâr sınırlar (soru sormadan uygulandı):**
+- **Yalnızca ekip listelenir** (yazar, editör, yönetici; çizer, hukuk danışmanı,
+  asistan işaretliler). Aydınlatma metni telefona tek amaç veriyor: ekip
+  üyesine dergi işleri için ulaşmak. Düz okuyucunun numarası bu amaca girmez,
+  gösterilmez. Yasaklı ve silinmiş hesaplar da listede yok.
+- **Kart yönetici kartının kopyası değil.** Ana editör yalnızca aramaya
+  gereken şeyi görür: ad, mahlas, rol, telefon. E-posta, doğum tarihi, KVKK
+  onayı, rol işlemleri yönetici sayfasında kalır.
+- Sunucudan hiçbir şey gönderilmez; bağlantılar editörün kendi cihazında
+  telefonu veya WhatsApp'ı açar.
+
+**Hukuk:** Aydınlatma metnindeki amaç satırı "Numaranızı yalnızca yöneticiler
+görür" diyordu; artık yanlış olurdu. Aynı adımda "yöneticiler ve ana editör"
+olarak güncellendi, bağlantının arama da açtığı eklendi. Profil formundaki
+ipucu da aynı şekilde. Metin yalnızca depoda; canlı sürüm D-154'teki gibi
+açık adresle birlikte yayınlanacak. D-245'teki WhatsApp/yurt dışı aktarım
+sorusu ana editör için de geçerli — **hukukçu görüşü gerekiyor**.
+
+**Doğrulama:** `rbac.test.ts` (ana editör, kategori editörü, yönetici, donmuş
+ana editör), `whatsapp.test.ts` (`telHref`), `team-contacts.test.ts`
+(kategori editörü ve yazar 403; ekip listede, okur ve yasaklı yok; e-posta ve
+doğum tarihi dönmüyor; yönetici açabiliyor). Migration yok.

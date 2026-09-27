@@ -245,6 +245,16 @@ export function canReviewTopicProposals(actor: Actor, assignment: EditorAssignme
   return canReviewMainStage(actor, assignment);
 }
 
+/**
+ * Reaching a team member by phone or WhatsApp (D-267). The main editor runs
+ * the review chain with the writers, so they get the same contact line an
+ * admin has; a category editor does not, since the number is personal data
+ * shown only where the work needs it.
+ */
+export function canContactTeam(actor: Actor, assignment: EditorAssignment): boolean {
+  return canReviewMainStage(actor, assignment);
+}
+
 /** The author themselves may write, edit and submit their own draft. */
 export function canAuthorOwnDraft(actor: Actor, article: ArticleForReview): boolean {
   return (

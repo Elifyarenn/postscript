@@ -3,7 +3,7 @@
  * as the member typed them, so the shapes below all really occur.
  */
 import { describe, expect, it } from "vitest";
-import { whatsappHref, whatsappNumber } from "@/lib/whatsapp";
+import { telHref, whatsappHref, whatsappNumber } from "@/lib/whatsapp";
 
 describe("whatsappNumber", () => {
   it("keeps an international number, with or without the plus", () => {
@@ -42,5 +42,17 @@ describe("whatsappHref", () => {
 
   it("gives no link at all when the number cannot be read", () => {
     expect(whatsappHref("yok", "Merhaba")).toBeNull();
+  });
+});
+
+describe("telHref", () => {
+  it("dials the same international number the chat opens", () => {
+    expect(telHref("0532 123 45 67")).toBe("tel:+905321234567");
+    expect(telHref("+447700900123")).toBe("tel:+447700900123");
+  });
+
+  it("gives no link for a number it cannot read", () => {
+    expect(telHref("bilinmiyor")).toBeNull();
+    expect(telHref(null)).toBeNull();
   });
 });

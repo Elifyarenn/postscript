@@ -87,7 +87,7 @@ saklanmaz**.
 | Yazar sözleşmesinin kurulması ve ispatı | (c) Sözleşmenin ifası, (e) Bir hakkın tesisi, kullanılması ve korunması |
 | Her yazı için yayın izninin kurulması ve ispatı: yazıyı gönderdiğinizde hangi metne, hangi sözleşme sürümüne dayanarak ve ne zaman izin verdiğinizin kaydedilmesi | (c) Sözleşmenin ifası, (e) Bir hakkın tesisi, kullanılması ve korunması |
 | Dergi ekibindeki görevinizin (çizer, hukuk danışmanı, asistan) kaydedilmesi ve yönetim panelinde gösterilmesi | (c) Sözleşmenin ifası, (f) Meşru menfaat |
-| Dergi ekibindeyseniz (yazar, editör, çizer, hukuk danışmanı, asistan) dergi işleriyle ilgili size telefonla veya WhatsApp üzerinden ulaşılabilmesi (yönetim panelindeki bağlantı WhatsApp'ı yöneticinin kendi cihazında numaranızla açar; mesajı yönetici gönderir); telefon numaranız eksikse bunu tamamlamanızın e-postayla hatırlatılması. Numaranızı yalnızca yöneticiler görür | (c) Sözleşmenin ifası, (f) Meşru menfaat |
+| Dergi ekibindeyseniz (yazar, editör, çizer, hukuk danışmanı, asistan) dergi işleriyle ilgili size telefonla veya WhatsApp üzerinden ulaşılabilmesi (paneldeki bağlantı WhatsApp'ı veya telefon aramasını yöneticinin ya da ana editörün kendi cihazında numaranızla açar; mesajı o kişi gönderir); telefon numaranız eksikse bunu tamamlamanızın e-postayla hatırlatılması. Numaranızı yalnızca yöneticiler ve ana editör görür | (c) Sözleşmenin ifası, (f) Meşru menfaat |
 | Yazar profilinin ve eserin dergide yayımlanması, künyede ad veya mahlas belirtilmesi | (c) Sözleşmenin ifası |
 | Çizer olarak işaretlenmiş hesapların Hakkında sayfasında mahlas veya topluluk adıyla listelenmesi | (c) Sözleşmenin ifası |
 | Yorum ve topluluk sohbeti işlevlerinin sunulması | (c) Sözleşmenin ifası |

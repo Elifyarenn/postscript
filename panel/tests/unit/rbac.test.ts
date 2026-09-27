@@ -14,6 +14,7 @@ import {
   canModerateCommunity,
   communityBadge,
   canPerformTransition,
+  canContactTeam,
   canReadArticle,
   canReviewCategoryStage,
   canReviewMainStage,
@@ -222,6 +223,14 @@ describe("the staged review chain (D-059)", () => {
     expect(canReviewMainStage(admin, noAssignment)).toBe(true);
     expect(canFinalizePublication(editor)).toBe(false);
     expect(canFinalizePublication(admin)).toBe(true);
+  });
+
+  it("gives the team's phone numbers to a main editor and an admin only (D-267)", () => {
+    expect(canContactTeam(actor({ role: "editor" }), artEditor)).toBe(false);
+    expect(canContactTeam(actor({ role: "editor" }), mainEditor)).toBe(true);
+    expect(canContactTeam(actor({ role: "admin" }), noAssignment)).toBe(true);
+    // A frozen main editor has lost the panel, and the numbers with it
+    expect(canContactTeam(actor({ role: "editor", editorStatus: "suspended" }), mainEditor)).toBe(false);
   });
 
   const article = (status: ArticleStatus, overrides: Partial<{ category: string | null; authorId: string | null }> = {}) => ({
