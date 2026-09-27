@@ -10632,3 +10632,69 @@ Test: `topics.test.ts` — yazar ve editör süren sayıyı görür, çalışma 
 yalnızca admin görür, dönemsiz ve geçmiş sayı takvimde yok, okuyucu 403.
 
 **Yayın notu:** Şema ve migration yok; kişisel veri işleme değişmedi.
+
+## D-265 — Malikâne oyunu dergi sayfası olarak: `/oyun` okuyucunun içinde
+
+**Neden:** D-263'teki `/oyun` kendi karanlık çerçevesiyle ayrı bir web oyunu
+gibi görünüyordu. Ürün sahibi oyunun 2. sayının (Gotizm) Eğlence & Dedikodu
+bölümünden çıkarılmış tek bir dergi sayfası gibi görünmesini istedi. Oyun
+motoru, rota, metin, yetki ve spoiler koruması değişmedi; yalnızca sunum
+değişti.
+
+**Okuyucudan alınanlar (yeniden yazılmadı):**
+- Rota `(reader)` rota grubuna taşındı (`src/app/(reader)/oyun`); adres yine
+  `/oyun`. Böylece okuyucunun kendi yerleşimi (`ps-site reader-frame`, site
+  fontları, `site.css`) birebir kullanılıyor.
+- Üst şerit okuyucunun işaretlemesiyle çiziliyor: `reader-bar`, `reader-icon`
+  (çıkış), `reader-title` / `reader-issue` ("Sayı 02") / `reader-name`
+  ("Gotizm") ve `reader-flag` ("Kapalı önizleme · yayımlanmadı" — okuyucunun
+  "Önizleme · yayımlanmadı" etiketiyle aynı öğe).
+- Sahne `reader-stage` + `reader-pages`, sayfa `page-sheet`. Boyut okuyucunun
+  A4 sayfa formülüyle (`min(100cqh, 100cqw × 1,4142)`, `.page-image` ile
+  aynı): geniş ekranda yüksekliğe, dar ekranda genişliğe oturur.
+- Sayfa anatomisi derginin sayfa tasarımlarından (`issue-preview/pages.tsx`):
+  üstte bölüm/yazı başlığı ve bordo çizgi, altta "postscript · Sayı 02 ·
+  Gotizm" künye satırı, 90/1240 kenar boşluğu, Bodoni başlık, Source Serif
+  gövde, Cormorant italik bordo ses.
+
+**Bilerek alınmayanlar:** okuyucunun sayfa çevirme (Önceki/Sonraki), ilerleme
+çizgisi, içindekiler, yakınlaştırma, çift sayfa ve tam ekran düğmeleri.
+Çevrilecek başka sayfa yok; işe yaramayan düğme koymak sahte olurdu. Çıkış
+simgesi ana sayfaya gider (önizlemede gidilecek bir sayı sayfası yok).
+
+**Sayfa sabit, içerik değişir:** sayfanın kâğıdı, üst başlığı ve künye satırı
+kapaktan son satıra kadar yerinde durur; seçim yapıldığında yalnızca aradaki
+içerik kısa bir solma ile değişir (`prefers-reduced-motion`'da hiç animasyon
+yok). Geniş ekranda uzun metin sayfanın içinde kayar, sayfa boyu değişmez;
+alttaki yumuşak solma sayfanın devam ettiğini gösterir.
+
+**Telefonda:** A4 oranında küçültmek metni okunmaz yapardı. Sayfa genişliği
+korunur, boyu içerikle uzar ve sahne kayar — okuyucunun yakınlaştırılmış
+sayfada yaptığı gibi (D-247). Seçimler en az 3,5 rem yüksekliğinde.
+
+**Kapak:** yazı açılışı düzeni — üstte gece zemininde gravür (fotoğraf
+yerine), altında bölüm adı ve başlık; kâğıt üzerinde spot, "Nasıl oynanır?",
+"Malikâneye gir" çizgiler arasında büyük harfli bir satır (web düğmesi değil).
+
+**Sahneler:** oda gravürü + "I · PostScript Malikânesi" + başlık, bordo baş
+harf, seçimler bölüm baş harfi gibi büyük Bodoni harf ve italik metin;
+üzerine gelince altında bordo çizgi uzar. Mekân varyasyonları sayfa içinde:
+giriş daha büyük açılış, portreler çift çizgili oval çerçeve, balo salonu
+eksende, kütüphane iki yana yaslı eski kitap sayfası, kış bahçesi camda
+yağmur, ikinci kat soğuk ışık, kiler nemli taban, tünel kenarları kararan ve
+daralan sütun.
+
+**Sonlar gece zemininde** (derginin kapak zemini), lore ise "Meraklısına · Ek"
+başlıklı, daha koyu, eski bir kâğıt: derginin ek sayfası.
+
+**Sayfa numarası:** 2. sayının dizilimi belli değil; uydurulmadı. `ManorGame`
+`folio` alır, önizleme `null` verir ve künye satırında numara çıkmaz. Sayı ve
+tema da (`{ number: 2, theme: "Gotizm" }`) önizleme rotasında tek sabit; sayı
+kaydı yok.
+
+**Gelecekteki yayın:** `ManorGame` artık yalnızca sayfanın kendisi; çevresini
+rota verir. Yayında okuyucu aynı bileşeni `reader-pages` içine koyar,
+`issue`/`folio`'yu sayı kaydından ve `returnTo` ile "dergiye dön" bağlantısını
+verir (önizlemede verilmez, sahte bağlantı yok). Oyunun server action'ları
+şimdilik `requireManorGamePreview` ile kilitli; herkese açılırken bu kontrol
+kaldırılır, sayfa değişmez.

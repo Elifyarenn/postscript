@@ -406,7 +406,8 @@ de dergiyi okuyucuyla aynı ekrandan okur. Sayfalar public read model'leri
 veriyi görür; ikisi de yazarın e-postasını, gerçek adını veya doğum tarihini
 göstermez.
 
-Malikâne oyunu (`/oyun`, D-263) şimdilik kapalı önizlemedir: yalnızca admin ve
+Malikâne oyunu (`/oyun`, D-263, D-265) şimdilik kapalı önizlemedir ve okuyucunun
+rota grubunda (`src/app/(reader)/oyun`) tek bir dergi sayfası olarak açılır: yalnızca admin ve
 `src/lib/auth/rbac.ts`'teki `MANOR_GAME_PREVIEW_EMAILS` listesindeki doğrulanmış
 hesaplar açar (`canPreviewManorGame`). Oturumsuz ziyaretçi girişe, diğer
 hesaplar 403'e düşer; oyunun server action'ları aynı kontrolü tekrar yapar.

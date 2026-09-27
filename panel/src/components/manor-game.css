@@ -1,0 +1,675 @@
+/* ═══════════════════════════════════════════════════════════════════
+   The manor game as one page of the magazine (D-263, D-265).
+   The page is the reader's own: the paper, ink, wine and rules of the
+   issue pages (site.css, the preview page designs), sized with the
+   reader's formula for an A4 page. The gothic is printed on it — the
+   engravings, the wine, the night ending — not built around it.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ════════════════ The page ════════════════ */
+
+/* Sized as the reader sizes a delivered A4 page (.page-image): fitted whole,
+   by height on a wide screen and by width on a narrow one */
+.ps-site .reader-pages .page-sheet.manor-page {
+  --page-ratio: 1.4142;
+  --page-w: min(100cqh / var(--page-ratio), 100cqw);
+  /* The preview pages' 90-unit margin on a 1240-unit page */
+  --pad-x: max(1.1rem, calc(var(--page-w) * 0.073));
+  --pad-y: max(1rem, calc(var(--page-w) * 0.055));
+
+  display: flex;
+  width: var(--page-w);
+  height: calc(var(--page-w) * var(--page-ratio));
+  max-width: none;
+  max-height: none;
+  aspect-ratio: auto;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Colours on their own rule, below the sizing one, so the night ending and
+   the appendix's older paper can override them */
+.ps-site .page-sheet.manor-page {
+  --rule: var(--site-rule);
+  --muted: var(--site-muted);
+  --emblem: var(--site-wine);
+
+  background-color: var(--site-paper);
+  color: var(--site-ink);
+  transition:
+    background-color 0.45s ease,
+    color 0.45s ease;
+}
+
+/* The endings are printed on the night ground, like the covers */
+.ps-site .page-sheet.manor-page.manor-page-night {
+  --rule: rgb(222 210 199 / 0.32);
+  --muted: rgb(222 210 199 / 0.72);
+  --emblem: #cfae74;
+  background-color: var(--site-night);
+  color: var(--site-paper);
+}
+
+.ps-site .manor-page :focus-visible {
+  outline: 2px solid var(--site-wine);
+  outline-offset: 3px;
+}
+.ps-site .manor-page-night :focus-visible,
+.ps-site .manor-cover-plate :focus-visible {
+  outline-color: var(--site-paper);
+}
+
+/* Running head and folio: the same two lines every issue page carries */
+.ps-site .manor-running-head,
+.ps-site .manor-folio {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-inline: var(--pad-x);
+  color: var(--muted);
+}
+
+.ps-site .manor-running-head {
+  margin-top: var(--pad-y);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.6rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.ps-site .manor-folio {
+  margin-bottom: calc(var(--pad-y) * 0.8);
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+}
+
+/* Between the two lines: what changes from room to room. On a wide screen it
+   scrolls inside the page, so the page itself never changes size */
+.ps-site .manor-page-body {
+  flex: 1;
+  min-height: 0;
+  padding: 1.4rem var(--pad-x) 2.5rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--rule) transparent;
+  scrollbar-width: thin;
+  /* The words fade into the folio rather than being cut by it: a sign that
+     the page goes on below. The bottom padding clears the last line of it */
+  mask-image: linear-gradient(180deg, #000 calc(100% - 2.25rem), transparent);
+}
+
+.ps-site .manor-screen {
+  animation: manor-in 0.45s ease-out both;
+}
+.ps-site .manor-screen.is-leaving {
+  animation: manor-out 0.24s ease-in both;
+}
+
+@keyframes manor-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes manor-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ps-site .manor-screen,
+  .ps-site .manor-screen.is-leaving {
+    animation: none;
+  }
+  .ps-site .reader-pages .page-sheet.manor-page,
+  .ps-site .manor-choice,
+  .ps-site .manor-choice-letter,
+  .ps-site .manor-choice-label::after,
+  .ps-site .manor-action,
+  .ps-site .manor-action-arrow {
+    transition: none;
+  }
+}
+
+/* ════════════════ Type on the page ════════════════ */
+
+.ps-site .manor-section {
+  color: var(--site-wine);
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+.ps-site .manor-page-night .manor-section {
+  color: #cfae74;
+}
+
+.ps-site .manor-heading {
+  margin-top: 0.35rem;
+  font-family: var(--font-caps), Georgia, serif;
+  font-size: clamp(1.7rem, 4.6vw, 2.35rem);
+  font-weight: 400;
+  line-height: 1.06;
+  letter-spacing: 0.01em;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+.ps-site .manor-page h1:focus {
+  outline: none;
+}
+.ps-site .manor-page h1:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+}
+
+.ps-site .manor-text {
+  margin-top: 1.25rem;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+.ps-site .manor-text p + p {
+  margin-top: 0.75em;
+}
+
+/* The first paragraph opens with a wine initial. It holds its own float, so
+   a one-line opening never pushes the next paragraph in */
+.ps-site .manor-scene .manor-text > p:first-child,
+.ps-site .manor-ending .manor-text > p:first-child,
+.ps-site .manor-lore .manor-text > p:first-child {
+  display: flow-root;
+}
+.ps-site .manor-scene .manor-text > p:first-child::first-letter,
+.ps-site .manor-ending .manor-text > p:first-child::first-letter,
+.ps-site .manor-lore .manor-text > p:first-child::first-letter {
+  float: left;
+  margin: 0.06em 0.1em 0 0;
+  color: var(--site-wine);
+  font-family: var(--font-caps), Georgia, serif;
+  font-size: 3.3em;
+  line-height: 0.8;
+}
+.ps-site .manor-page-night .manor-text > p:first-child::first-letter {
+  color: #cfae74;
+}
+
+.ps-site .manor-text strong {
+  font-weight: 600;
+}
+
+/* "KÜTÜPHANE", "1826", "Bahçe." — a line the text sets apart, in bold */
+.ps-site .manor-display {
+  margin-block: 1.2em !important;
+  font-family: var(--font-caps), Georgia, serif;
+  font-size: 1.45em;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+.ps-site .manor-display strong {
+  font-weight: 400;
+}
+.ps-site .manor-display::before,
+.ps-site .manor-display::after {
+  content: "";
+  display: block;
+  width: 2.25rem;
+  height: 1px;
+  margin: 0.45rem auto;
+  background: var(--site-wine);
+}
+
+/* Whispers — "Gel...", "Seni bekliyorduk." — in the pull-quote voice */
+.ps-site .manor-whisper {
+  color: var(--site-wine);
+  font-family: var(--font-italic), Georgia, serif;
+  font-size: 1.3em;
+  font-style: italic;
+  line-height: 1.4;
+  text-align: center;
+}
+.ps-site .manor-page-night .manor-whisper {
+  color: #e2c9a0;
+}
+
+.ps-site .manor-emblem {
+  display: block;
+  width: 100%;
+  height: auto;
+  color: var(--emblem);
+}
+
+/* ════════════════ The doors ════════════════ */
+
+.ps-site .manor-choices {
+  display: grid;
+  margin-top: 1.75rem;
+  border-top: 1px solid var(--rule);
+}
+
+.ps-site .manor-choice {
+  display: grid;
+  min-height: 3.5rem;
+  grid-template-columns: 2.75rem 1fr;
+  align-items: center;
+  padding: 0.7rem 0.25rem 0.7rem 0;
+  border-bottom: 1px solid var(--rule);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.25s;
+}
+
+/* The letter is an initial, as a chapter would have */
+.ps-site .manor-choice-letter {
+  color: var(--site-wine);
+  font-family: var(--font-caps), Georgia, serif;
+  font-size: 2rem;
+  line-height: 1;
+  transition: transform 0.25s;
+}
+
+.ps-site .manor-choice-label {
+  position: relative;
+  justify-self: start;
+  padding-bottom: 0.2rem;
+  font-family: var(--font-italic), Georgia, serif;
+  font-size: 1.18rem;
+  line-height: 1.3;
+}
+
+/* A wine rule draws itself under the words on hover and focus */
+.ps-site .manor-choice-label::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 1.5rem;
+  height: 1px;
+  background: var(--site-wine);
+  opacity: 0.45;
+  transition:
+    width 0.3s ease,
+    opacity 0.3s ease;
+}
+
+.ps-site .manor-choice:hover:not(:disabled),
+.ps-site .manor-choice:focus-visible {
+  background: rgb(109 30 46 / 0.05);
+}
+.ps-site .manor-choice:hover:not(:disabled) .manor-choice-letter,
+.ps-site .manor-choice:focus-visible .manor-choice-letter {
+  transform: translateX(3px);
+}
+.ps-site .manor-choice:hover:not(:disabled) .manor-choice-label::after,
+.ps-site .manor-choice:focus-visible .manor-choice-label::after {
+  width: 100%;
+  opacity: 1;
+}
+
+.ps-site .manor-choice:disabled,
+.ps-site .manor-action:disabled {
+  cursor: progress;
+}
+
+.ps-site .manor-no-return {
+  margin-top: 0.8rem;
+  color: var(--muted);
+  font-family: var(--font-italic), Georgia, serif;
+  font-size: 1rem;
+  font-style: italic;
+  text-align: right;
+}
+
+/* The page's other ways on: caps lines between rules, not web buttons */
+.ps-site .manor-actions {
+  display: grid;
+  margin-top: 1.75rem;
+  border-top: 1px solid var(--rule);
+}
+
+.ps-site .manor-action {
+  display: flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--rule);
+  background: transparent;
+  color: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-align: left;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.25s;
+}
+
+.ps-site .manor-action-strong {
+  color: var(--site-wine);
+  font-weight: 600;
+}
+.ps-site .manor-page-night .manor-action-strong {
+  color: #e2c9a0;
+}
+
+.ps-site .manor-action-arrow {
+  color: var(--site-wine);
+  font-size: 1rem;
+  letter-spacing: 0;
+  transition: transform 0.25s;
+}
+.ps-site .manor-page-night .manor-action-arrow {
+  color: #cfae74;
+}
+
+.ps-site .manor-action:hover:not(:disabled) {
+  color: var(--site-wine);
+}
+.ps-site .manor-page-night .manor-action:hover:not(:disabled) {
+  color: #fff;
+}
+.ps-site .manor-action:hover:not(:disabled) .manor-action-arrow,
+.ps-site .manor-action:focus-visible .manor-action-arrow {
+  transform: translateX(4px);
+}
+
+.ps-site .manor-tally,
+.ps-site .manor-route {
+  margin-top: 1.25rem;
+  color: var(--muted);
+  font-size: 0.64rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.ps-site .manor-route span {
+  color: inherit;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+}
+.ps-site .manor-route + .manor-tally {
+  margin-top: 0.35rem;
+}
+
+.ps-site .manor-error {
+  margin-top: 1.25rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--site-wine);
+  color: var(--site-wine);
+  font-size: 0.9rem;
+}
+.ps-site .manor-page-night .manor-error {
+  border-color: var(--site-paper);
+  color: var(--site-paper);
+}
+
+/* ════════════════ The opening ════════════════ */
+
+.ps-site .manor-page[data-mood="cover"] .manor-running-head {
+  display: none;
+}
+.ps-site .manor-page[data-mood="cover"] .manor-page-body {
+  padding: 0;
+}
+
+/* The picture block of an article opening, the night ground and an engraving
+   in place of the photograph, the headline set over its foot */
+.ps-site .manor-cover-plate {
+  position: relative;
+  display: flex;
+  min-height: calc(var(--page-w) * 0.8);
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: calc(var(--pad-y) * 1.2) var(--pad-x) 1.5rem;
+  background:
+    radial-gradient(70% 55% at 50% 30%, rgb(109 30 46 / 0.75), transparent 75%),
+    linear-gradient(180deg, transparent 45%, rgb(20 4 8 / 0.7) 100%),
+    var(--site-night);
+  color: var(--site-paper);
+}
+
+.ps-site .manor-cover-emblem {
+  position: absolute;
+  top: calc(var(--pad-y) * 1.2);
+  left: 50%;
+  width: clamp(4.5rem, calc(var(--page-w) * 0.2), 8rem);
+  color: rgb(222 210 199 / 0.85);
+  transform: translateX(-50%);
+}
+
+.ps-site .manor-cover-words {
+  position: relative;
+  padding-top: clamp(7rem, calc(var(--page-w) * 0.34), 12rem);
+}
+
+.ps-site .manor-cover-plate .manor-section {
+  color: var(--site-paper);
+  font-weight: 400;
+  letter-spacing: 0.3em;
+}
+
+.ps-site .manor-cover-title {
+  margin-top: 0.5rem;
+  font-family: var(--font-caps), Georgia, serif;
+  font-size: clamp(1.9rem, calc(var(--page-w) * 0.075), 3.1rem);
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: 0.01em;
+  text-wrap: balance;
+}
+.ps-site .manor-cover-title:focus-visible {
+  outline-color: var(--site-paper);
+}
+
+.ps-site .manor-cover-text {
+  padding: 1.4rem var(--pad-x) 1.6rem;
+}
+
+/* The standfirst in the byline's voice */
+.ps-site .manor-lede {
+  color: var(--site-wine);
+  font-family: var(--font-italic), Georgia, serif;
+  font-size: 1.3rem;
+  font-style: italic;
+  line-height: 1.35;
+}
+
+.ps-site .manor-rules {
+  margin-top: 1.25rem;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+.ps-site .manor-rules h2 {
+  margin-bottom: 0.35rem;
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 400;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+/* ════════════════ A room ════════════════ */
+
+.ps-site .manor-scene-head {
+  display: grid;
+  grid-template-columns: 3.25rem 1fr;
+  align-items: end;
+  gap: 1rem;
+}
+
+/* The entrance opens the story: a larger plate and headline */
+.ps-site .manor-page[data-mood="hall"] .manor-scene-head {
+  grid-template-columns: 4.5rem 1fr;
+}
+.ps-site .manor-page[data-mood="hall"] .manor-heading {
+  font-size: clamp(2rem, 5.4vw, 2.8rem);
+}
+
+/* The portraits' corridor: the engraving hangs in its own framed oval */
+.ps-site .manor-page[data-mood="portraits"] .manor-scene-emblem {
+  padding: 0.3rem;
+  border: 3px double var(--site-wine);
+  border-radius: 50%;
+}
+
+/* The ballroom stands on its axis */
+.ps-site .manor-page[data-mood="ballroom"] .manor-scene-head {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  text-align: center;
+}
+.ps-site .manor-page[data-mood="ballroom"] .manor-scene-emblem {
+  width: 4rem;
+}
+.ps-site .manor-page[data-mood="ballroom"] .manor-text {
+  text-align: center;
+}
+.ps-site .manor-page[data-mood="ballroom"] .manor-text > p:first-child::first-letter {
+  float: none;
+  margin: 0;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+}
+.ps-site .manor-page[data-mood="ballroom"] .manor-no-return {
+  text-align: center;
+}
+
+/* The library: an old book's page, justified, the first line in small caps */
+.ps-site .manor-page[data-mood="library"] {
+  background-image: radial-gradient(130% 100% at 50% 40%, transparent 60%, rgb(110 70 40 / 0.14) 100%);
+}
+.ps-site .manor-page[data-mood="library"] .manor-text {
+  hyphens: auto;
+  text-align: justify;
+}
+/* Justified small caps spread a short line apart; the opening stays ragged */
+.ps-site .manor-page[data-mood="library"] .manor-text > p:first-child {
+  text-align: left;
+}
+.ps-site .manor-page[data-mood="library"] .manor-text > p:first-child::first-line {
+  font-variant: small-caps;
+  letter-spacing: 0.04em;
+}
+
+/* The conservatory: rain on glass over the top of the page */
+.ps-site .manor-page[data-mood="conservatory"] {
+  background-image:
+    linear-gradient(180deg, rgb(96 124 104 / 0.12), transparent 38%),
+    repeating-linear-gradient(100deg, transparent 0 26px, rgb(66 10 20 / 0.035) 26px 27px, transparent 27px 58px);
+}
+
+/* The mirror on the second floor: a cold light on the page */
+.ps-site .manor-page[data-mood="mirror"] {
+  background-image: linear-gradient(180deg, rgb(160 170 185 / 0.16), transparent 42%);
+}
+
+/* The pantry: damp and dim at the foot */
+.ps-site .manor-page[data-mood="pantry"] {
+  background-image: linear-gradient(0deg, rgb(90 60 35 / 0.14), transparent 45%);
+}
+
+/* The passage under the house: the page darkens at its edges and the column
+   narrows, the words pressed in */
+.ps-site .manor-page[data-mood="tunnel"] {
+  box-shadow: inset 0 0 90px rgb(54 11 19 / 0.28);
+}
+.ps-site .manor-page[data-mood="tunnel"] .manor-text,
+.ps-site .manor-page[data-mood="tunnel"] .manor-choices,
+.ps-site .manor-page[data-mood="tunnel"] .manor-no-return {
+  max-width: 24rem;
+  margin-inline: auto;
+}
+.ps-site .manor-page[data-mood="tunnel"] .manor-text {
+  line-height: 1.6;
+}
+
+/* ════════════════ Endings ════════════════ */
+
+.ps-site .manor-ending {
+  text-align: left;
+}
+
+.ps-site .manor-ending-emblem {
+  width: 3.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.ps-site .manor-ending-mark {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.ps-site .manor-ending-mark::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: var(--rule);
+}
+
+.ps-site .manor-ending .manor-heading {
+  font-size: clamp(1.9rem, 5vw, 2.6rem);
+}
+
+.ps-site .manor-verdict {
+  margin-top: 1.75rem;
+  padding: 1.25rem 0.5rem;
+  border-block: 1px solid var(--rule);
+  font-family: var(--font-italic), Georgia, serif;
+  font-size: 1.35rem;
+  font-style: italic;
+  line-height: 1.35;
+  text-align: center;
+}
+.ps-site .manor-verdict p + p {
+  margin-top: 0.3rem;
+}
+
+/* ════════════════ The appendix ════════════════ */
+
+/* "Meraklısına": the issue's supplement, printed on an older, darker sheet */
+.ps-site .page-sheet.manor-page[data-mood="lore"] {
+  background-color: #d4c5b6;
+  background-image: radial-gradient(130% 100% at 50% 45%, transparent 55%, rgb(66 10 20 / 0.18) 100%);
+}
+.ps-site .manor-page[data-mood="lore"] .manor-running-head {
+  border-bottom: 3px double var(--rule);
+}
+.ps-site .manor-lore .manor-text {
+  hyphens: auto;
+  text-align: justify;
+}
+
+/* ════════════════ Phones ════════════════ */
+
+/* A phone keeps the page's width and lets it grow down instead of shrinking
+   an A4 page until it cannot be read: the stage scrolls, as it does when the
+   reader zooms a page (D-247), and nothing scrolls inside the page */
+@media (max-width: 599px) {
+  .ps-site .reader-pages .page-sheet.manor-page {
+    --page-w: 100cqw;
+    height: auto;
+    min-height: 100cqh;
+    overflow: visible;
+  }
+
+  .ps-site .manor-page-body {
+    overflow: visible;
+    mask-image: none;
+  }
+
+  .ps-site .manor-cover-plate {
+    min-height: 0;
+  }
+}
