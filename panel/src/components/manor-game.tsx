@@ -2,12 +2,12 @@
 
 /**
  * The manor game (D-263): an interactive gothic short story, one room at a
- * time — drawn as one page of the magazine (D-265).
+ * time, set on one magazine page that never scrolls (D-266).
  *
- * The page itself stays put: its paper, running head and folio are the same
- * from the opening to the last line, and only what is printed between them
- * changes. It is the page and nothing around it, so the preview route and,
- * later, the issue's own reader can both stand it on their stage.
+ * The page keeps its size; each room is fitted onto it. The type first gets
+ * smaller, then a long text runs in two columns as a magazine page's would,
+ * and only when even that is not enough — a phone, the long endings — does
+ * the room continue on the page's next side, turned with "Devam".
  *
  * Only the screen the reader stands in is rendered, and only what the server
  * handed over for it is in memory: the next room is asked for when a door is
@@ -15,11 +15,10 @@
  * and no history entries either, so the browser's own back button still
  * leaves the page as it would anywhere else. A reload starts over.
  */
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { chooseManorAction, enterManorAction, readManorLoreAction } from "@/app/(reader)/oyun/actions";
+import { chooseManorAction, enterManorAction, readManorLoreAction } from "@/app/oyun/actions";
 import type { ManorCover, ManorSceneView } from "@/services/manor-game";
-import { formatIssueNumber } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { ManorEmblem, type ManorMood } from "./manor-emblems";
 import "./manor-game.css";
@@ -106,48 +105,96 @@ function Paragraph({ text }: { text: string }) {
   );
 }
 
-/**
- * The page's way on, set like the rest of the type rather than as a web
- * button: a caps line between rules. Still a real button, with a focus ring.
- */
-function PageAction({
-  children,
-  onClick,
-  disabled,
-  strong = false,
-}: {
-  children: ReactNode;
-  onClick: () => void;
-  disabled?: boolean;
-  strong?: boolean;
-}) {
-  return (
-    <button type="button" className={cn("manor-action", strong && "manor-action-strong")} onClick={onClick} disabled={disabled}>
-      <span>{children}</span>
-      <span className="manor-action-arrow" aria-hidden>
-        →
-      </span>
-    </button>
-  );
-}
-
 function reducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/* ------------------------------------------------------------------ */
+/* Fitting a room onto the page                                        */
+/* ------------------------------------------------------------------ */
+
+/** The space between two sides of the page when a room runs over. */
+const SIDE_GAP = 48;
+
+type Fit = { font: number; columns: 1 | 2; sides: number };
+
+/**
+ * Finds the largest type that lets the room fit the page: first in one
+ * column down to a comfortable size, then in two columns where the page is
+ * wide enough, then one column at the smallest readable size. When nothing
+ * fits, the room is laid out in page-wide columns — the page's sides — and
+ * the reader turns them. Every step is a real measurement of the page.
+ */
+function fitRoom(box: HTMLElement, flow: HTMLElement): Fit {
+  const width = box.clientWidth;
+  const height = box.clientHeight;
+  const largest = Math.min(19, Math.max(14, width / 28));
+  const smallest = width < 420 ? 13.5 : 13;
+  const comfortable = Math.min(largest, 15.5);
+
+  let dense = false;
+  const lay = (font: number, columns: 1 | 2, sided: boolean) => {
+    flow.style.fontSize = `${font}px`;
+    flow.dataset.columns = String(columns);
+    if (dense) flow.dataset.dense = "";
+    else delete flow.dataset.dense;
+    flow.style.height = sided ? `${height}px` : "";
+    flow.style.columnWidth = sided ? `${width}px` : "";
+    flow.style.columnGap = sided ? `${SIDE_GAP}px` : "";
+  };
+  const fitsAt = (font: number, columns: 1 | 2) => {
+    lay(font, columns, false);
+    return flow.scrollHeight <= height + 1;
+  };
+  const largestFitting = (columns: 1 | 2, floor: number): number | null => {
+    if (!fitsAt(floor, columns)) return null;
+    let low = floor;
+    let high = largest;
+    while (high - low > 0.25) {
+      const middle = (low + high) / 2;
+      if (fitsAt(middle, columns)) low = middle;
+      else high = middle;
+    }
+    return low;
+  };
+
+  // In order: one column at a comfortable size; two columns; the same with
+  // the paragraphs set closer together; one column at the smallest size
+  const wide = width >= 440;
+  const tries: { columns: 1 | 2; floor: number; dense: boolean }[] = [
+    { columns: 1, floor: comfortable, dense: false },
+    ...(wide ? [{ columns: 2 as const, floor: smallest, dense: false }] : []),
+    ...(wide ? [{ columns: 2 as const, floor: smallest, dense: true }] : []),
+    { columns: 1, floor: smallest, dense: false },
+    { columns: 1, floor: smallest, dense: true },
+  ];
+  let fit: Fit | null = null;
+  for (const attempt of tries) {
+    dense = attempt.dense;
+    const font = largestFitting(attempt.columns, attempt.floor);
+    if (font !== null) {
+      fit = { font, columns: attempt.columns, sides: 1 };
+      break;
+    }
+  }
+  if (!fit) {
+    // Nothing fits one side: the room goes on over the page, closely set
+    dense = true;
+    lay(smallest, 1, true);
+    const sides = Math.max(1, Math.round((flow.scrollWidth + SIDE_GAP) / (width + SIDE_GAP)));
+    fit = { font: smallest, columns: 1, sides };
+  }
+  lay(fit.font, fit.columns, fit.sides > 1);
+  return fit;
+}
+
 export function ManorGame({
   cover,
-  issue,
-  folio,
   returnTo,
 }: {
   cover: ManorCover;
-  /** The issue the page belongs to, for the running head and the folio. */
-  issue: { number: number; theme: string };
-  /** The page's number in the issue; null until the issue is laid out. */
-  folio: number | null;
   /**
    * Where the ending sends a reader who is done, once the game sits in a
    * published issue. The preview has nowhere honest to send them, so none.
@@ -160,19 +207,43 @@ export function ManorGame({
   const [pending, setPending] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Bumped on every new screen: remounts the page's contents (for the
-  // entrance) and tells the effect below to move focus, not on the first render
+  // Bumped on every new screen: remounts the room (for its entrance), refits
+  // it and moves focus to its title, but not on the first render
   const [screen, setScreen] = useState(0);
+  const [sides, setSides] = useState(1);
+  // Which side of the page is showing, remembered for the room it was turned
+  // in: a new room always opens on its first side
+  const [turned, setTurned] = useState({ screen: 0, side: 0 });
+  const side = turned.screen === screen ? turned.side : 0;
+  const setSide = useCallback(
+    (next: (current: number) => number) =>
+      setTurned((state) => ({ screen, side: next(state.screen === screen ? state.side : 0) })),
+    [screen],
+  );
+  const [sideWidth, setSideWidth] = useState(0);
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const pageRef = useRef<HTMLElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const flowRef = useRef<HTMLDivElement>(null);
+
+  // Fitted before the room is painted, and again whenever the page changes size
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    const flow = flowRef.current;
+    if (!box || !flow) return;
+    const refit = () => {
+      const fit = fitRoom(box, flow);
+      setSides(fit.sides);
+      setSideWidth(box.clientWidth + SIDE_GAP);
+      setSide((current) => Math.min(current, fit.sides - 1));
+    };
+    refit();
+    const observer = new ResizeObserver(refit);
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, [screen, error, setSide]);
 
   useEffect(() => {
     if (screen === 0) return;
-    // The page scrolls inside itself on a wide screen and with the stage on a
-    // phone; either way the new room starts at its top
-    const page = pageRef.current;
-    page?.querySelector(".manor-page-body")?.scrollTo({ top: 0 });
-    page?.closest(".reader-stage")?.scrollTo({ top: 0 });
     // A keyboard or screen reader user lands on the new room's title
     headingRef.current?.focus({ preventScroll: true });
   }, [screen]);
@@ -189,7 +260,7 @@ export function ManorGame({
       setLeaving(true);
       const [result] = await Promise.all([
         request().catch(() => ({ ok: false as const, error: "Malikânenin kapıları şu an açılmıyor." })),
-        wait(reducedMotion() ? 0 : 240),
+        wait(reducedMotion() ? 0 : 260),
       ]);
       if (result.ok) {
         apply(result.value);
@@ -232,8 +303,15 @@ export function ManorGame({
     setScreen((value) => value + 1);
   };
 
+  /** Tabbing to a door on another side of the page turns the page to it. */
+  const followFocus = (event: React.FocusEvent<HTMLDivElement>) => {
+    const flow = flowRef.current;
+    if (!flow || sides < 2 || sideWidth === 0) return;
+    const offset = event.target.getBoundingClientRect().left - flow.getBoundingClientRect().left;
+    setSide(() => Math.max(0, Math.min(sides - 1, Math.floor((offset + 1) / sideWidth))));
+  };
+
   const mood = moodOf(view);
-  const night = view.kind === "play" && view.scene.kind === "ending";
   const tally =
     reached.length > 0 ? (
       <p className="manor-tally">
@@ -245,48 +323,39 @@ export function ManorGame({
   if (view.kind === "cover") {
     body = (
       <section className="manor-cover" aria-labelledby="manor-title">
-        {/* The opening's picture block, as the issue's article openings have
-            one: here an engraving on the night ground instead of a photograph */}
-        <div className="manor-cover-plate">
-          <ManorEmblem mood="hall" className="manor-emblem manor-cover-emblem" />
-          <div className="manor-cover-words">
-            <p className="manor-section">Eğlence &amp; Dedikodu</p>
-            <h1 id="manor-title" ref={headingRef} tabIndex={-1} className="manor-cover-title">
-              {cover.title}
-            </h1>
-          </div>
+        <ManorEmblem mood="hall" className="manor-emblem manor-cover-emblem" />
+        <p className="manor-kicker">Eğlence &amp; Dedikodu · Gotizm</p>
+        <h1 id="manor-title" ref={headingRef} tabIndex={-1} className="manor-cover-title">
+          {cover.title}
+        </h1>
+        <p className="manor-lede">
+          <Inline text={cover.lede} />
+        </p>
+        <div className="manor-rules">
+          <h2>Nasıl oynanır?</h2>
+          {cover.howToPlay.map((text, at) => (
+            <Paragraph key={at} text={text} />
+          ))}
         </div>
-
-        <div className="manor-cover-text">
-          <p className="manor-lede">
-            <Inline text={cover.lede} />
-          </p>
-          <div className="manor-rules">
-            <h2>Nasıl oynanır?</h2>
-            {cover.howToPlay.map((text, at) => (
-              <Paragraph key={at} text={text} />
-            ))}
-          </div>
-          <div className="manor-actions">
-            <PageAction strong onClick={enter} disabled={pending}>
-              {reached.length > 0 ? "Tekrar malikâneye gir" : "Malikâneye gir"}
-            </PageAction>
-            {reached.length > 0 && (
-              <PageAction onClick={() => openLore(null)} disabled={pending}>
-                PostScript Malikânesi&apos;nin hikâyesini oku
-              </PageAction>
-            )}
-          </div>
-          {tally}
+        <div className="manor-actions">
+          <button type="button" className="manor-button manor-button-primary" onClick={enter} disabled={pending}>
+            {reached.length > 0 ? "Tekrar malikâneye gir" : "Malikâneye gir"}
+          </button>
+          {reached.length > 0 && (
+            <button type="button" className="manor-button" onClick={() => openLore(null)} disabled={pending}>
+              PostScript Malikânesi&apos;nin hikâyesini oku
+            </button>
+          )}
         </div>
+        {tally}
       </section>
     );
   } else if (view.kind === "lore") {
     const { lore, back } = view;
     body = (
       <article className="manor-lore" aria-labelledby="manor-lore-title">
-        <p className="manor-section">Meraklısına · Ek</p>
-        <h1 id="manor-lore-title" ref={headingRef} tabIndex={-1} className="manor-heading">
+        <p className="manor-kicker">Meraklısına</p>
+        <h1 id="manor-lore-title" ref={headingRef} tabIndex={-1} className="manor-title">
           {lore.title}
         </h1>
         <div className="manor-text">
@@ -295,17 +364,19 @@ export function ManorGame({
           ))}
         </div>
         <div className="manor-actions">
-          <PageAction strong onClick={restart}>
+          <button type="button" className="manor-button manor-button-primary" onClick={restart}>
             Tekrar malikâneye gir
-          </PageAction>
-          <PageAction
+          </button>
+          <button
+            type="button"
+            className="manor-button"
             onClick={() => {
               setView(back ? { kind: "play", scene: back } : { kind: "cover" });
               setScreen((value) => value + 1);
             }}
           >
             {back ? "Sona dön" : "Kapıya dön"}
-          </PageAction>
+          </button>
         </div>
       </article>
     );
@@ -313,17 +384,24 @@ export function ManorGame({
     const scene = view.scene;
     body = (
       <article className="manor-ending" aria-labelledby="manor-scene-title">
-        <ManorEmblem mood="ending" className="manor-emblem manor-ending-emblem" />
-        <p className="manor-section manor-ending-mark">Son</p>
-        <h1 id="manor-scene-title" ref={headingRef} tabIndex={-1} className="manor-heading">
-          {scene.title}
-        </h1>
+        <div className="manor-head">
+          <ManorEmblem mood="ending" className="manor-emblem manor-ending-emblem" />
+          <div>
+            <p className="manor-kicker">Son</p>
+            <h1 id="manor-scene-title" ref={headingRef} tabIndex={-1} className="manor-title">
+              {scene.title}
+            </h1>
+          </div>
+        </div>
         <div className="manor-text">
           {scene.paragraphs.map((text, at) => (
             <Paragraph key={at} text={text} />
           ))}
         </div>
         <div className="manor-verdict">
+          <p className="manor-verdict-mark" aria-hidden>
+            Son
+          </p>
           {scene.verdict.map((line, at) => (
             <p key={at}>
               <Inline text={line} />
@@ -335,18 +413,15 @@ export function ManorGame({
         </p>
         {tally}
         <div className="manor-actions">
-          <PageAction strong onClick={restart}>
+          <button type="button" className="manor-button manor-button-primary" onClick={restart}>
             Tekrar malikâneye gir
-          </PageAction>
-          <PageAction onClick={() => openLore(scene)} disabled={pending}>
+          </button>
+          <button type="button" className="manor-button" onClick={() => openLore(scene)} disabled={pending}>
             PostScript Malikânesi&apos;nin hikâyesini oku
-          </PageAction>
+          </button>
           {returnTo && (
-            <Link href={returnTo.href} className="manor-action">
-              <span>{returnTo.label}</span>
-              <span className="manor-action-arrow" aria-hidden>
-                →
-              </span>
+            <Link href={returnTo.href} className="manor-button">
+              {returnTo.label}
             </Link>
           )}
         </div>
@@ -356,18 +431,21 @@ export function ManorGame({
     const scene = view.scene;
     body = (
       <article className="manor-scene" aria-labelledby="manor-scene-title">
-        <header className="manor-scene-head">
-          <ManorEmblem mood={mood as ManorMood} className="manor-emblem manor-scene-emblem" />
+        <div className="manor-head">
+          <ManorEmblem mood={mood as ManorMood} className="manor-emblem" />
           <div>
-            <p className="manor-section">
+            <p className="manor-kicker">
               <span className="sr-only">{route.length + 1}. karar · </span>
-              <span aria-hidden>{roman(route.length + 1)} · </span>PostScript Malikânesi
+              <span className="manor-step" aria-hidden>
+                {roman(route.length + 1)}.
+              </span>
+              PostScript Malikânesi
             </p>
-            <h1 id="manor-scene-title" ref={headingRef} tabIndex={-1} className="manor-heading">
+            <h1 id="manor-scene-title" ref={headingRef} tabIndex={-1} className="manor-title">
               {scene.title}
             </h1>
           </div>
-        </header>
+        </div>
         <div className="manor-text">
           {scene.paragraphs.map((text, at) => (
             <Paragraph key={at} text={text} />
@@ -393,35 +471,57 @@ export function ManorGame({
   }
 
   return (
-    <article
-      ref={pageRef}
-      className={cn("page-sheet manor-page", night && "manor-page-night")}
-      data-mood={mood}
-      aria-busy={pending}
-      aria-label="Lanetli Malikâneden Çıkabilecek Misin?"
-    >
-      {/* The page's furniture, as on every page of the issue: the section and
-          the piece at the top, the issue at the foot */}
-      <p className="manor-running-head" aria-hidden>
-        <span>Eğlence &amp; Dedikodu</span>
-        <span>Lanetli Malikâne</span>
-      </p>
-
-      <div className="manor-page-body">
-        <div key={screen} className={cn("manor-screen", leaving && "is-leaving")}>
-          {body}
+    <div className="manor-game" data-mood={mood} aria-busy={pending}>
+      <div className="manor-atmosphere" aria-hidden />
+      <div className={cn("manor-sheet", view.kind === "lore" && "manor-sheet-paper")}>
+        <div ref={boxRef} className="manor-fit">
+          <div key={screen} className={cn("manor-screen", leaving && "is-leaving")}>
+            <div
+              ref={flowRef}
+              className="manor-flow"
+              onFocus={followFocus}
+              style={sides > 1 ? { transform: `translateX(${-side * sideWidth}px)` } : undefined}
+            >
+              {body}
+            </div>
+          </div>
         </div>
+
         {error && (
           <p className="manor-error" role="alert">
             {error} Bir kez daha dene.
           </p>
         )}
-      </div>
 
-      <p className="manor-folio">
-        <span>postscript · Sayı {formatIssueNumber(issue.number)} · {issue.theme}</span>
-        {folio !== null && <span>{folio}</span>}
-      </p>
-    </article>
+        {/* The page's foot; a room that runs over is turned here */}
+        <div className="manor-sheet-foot">
+          <span>PostScript · Eğlence &amp; Dedikodu</span>
+          {sides > 1 && (
+            <span className="manor-turn" role="group" aria-label="Sayfanın yüzleri">
+              <button
+                type="button"
+                className="manor-turn-button"
+                onClick={() => setSide((value) => Math.max(0, value - 1))}
+                disabled={side === 0}
+                aria-label="Önceki yüz"
+              >
+                ‹
+              </button>
+              <span className="manor-turn-count" aria-live="polite">
+                {side + 1}/{sides}
+              </span>
+              <button
+                type="button"
+                className="manor-turn-button manor-turn-next"
+                onClick={() => setSide((value) => Math.min(sides - 1, value + 1))}
+                disabled={side === sides - 1}
+              >
+                Devam ›
+              </button>
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

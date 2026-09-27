@@ -10698,3 +10698,36 @@ rota verir. Yayında okuyucu aynı bileşeni `reader-pages` içine koyar,
 verir (önizlemede verilmez, sahte bağlantı yok). Oyunun server action'ları
 şimdilik `requireManorGamePreview` ile kilitli; herkese açılırken bu kontrol
 kaldırılır, sayfa değişmez.
+
+## D-266 — Malikâne oyunu: önceki koyu tasarım, tek sayfa, kaydırma yok (D-265'in yerine)
+
+**Neden:** Ürün sahibi D-265'teki kâğıt/okuyucu görünümünü canlıda gördükten
+sonra "önceki tasarımla aynı olsun ve kaydırılmasın, bir dergi sayfasına
+sığdır" dedi. D-265 geri alındı: rota yeniden `src/app/oyun`'da, okuyucu rota
+grubunun dışında; D-263'ün koyu gotik çerçevesi (logo, "Kapalı önizleme",
+alt bilgi, oda ışıkları, yağmur, seçim kartları, kâğıt renkli lore) geri geldi.
+Oyun motoru, metin, rotalar, yetki ve spoiler koruması yine değişmedi.
+
+**Tek sayfa:** her ekran ortada tek bir A4 dergi sayfasında durur (çift çizgili
+koyu sayfa). Pencere hiçbir boyutta kaymaz (`html`/`body` taşması kapalı,
+çerçeve `100dvh`); sayfa, başlık ile alt bilgi arasındaki alana A4 oranında
+oturur. Telefon dikey tutulduğunda A4 yüksekliğin yarısını boş bırakacağı için
+sayfa orada alanın tamamını alır.
+
+**Sığdırma (ölçerek):** sayfanın içindeki her ölçü `em`; tek bir yazı boyutu
+bütün odayı ölçekler. `fitRoom` sırayla dener: tek sütun rahat boyutta
+(15,5 px'e kadar), iki sütun (sayfa ≥ 440 px ise), iki sütun sık paragraf,
+tek sütun en küçük boyut (13 px, telefonda 13,5 px), tek sütun sık paragraf.
+Hiçbiri sığmazsa oda sayfanın bir sonraki yüzünde devam eder: sayfa genişliğinde
+sütunlar, alttaki "Devam ›" / "Önceki yüz" ile çevrilir. Bu kaydırma değil,
+sayfa çevirme; önceki seçime dönüş hiç yok. Sekme ile başka yüzdeki bir kapıya
+gelinince sayfa kendiliğinden o yüze döner. Pencere boyutu değişince yeniden
+ölçülür.
+
+**Ölçülen sonuçlar (görsel denetim, pencere kayması her ekranda 0):**
+1920×1080'de bütün sahneler ve finaller tek yüz (13–17 px); 1440×900'de bütün
+sahneler tek yüz (13–15 px, iki sütun), iki uzun final 2 yüz; tablette
+(768×1024) sahneler ve "Bitmeyen Vals" tek yüz; telefonda kapak tek yüz,
+sahneler 2, uzun finaller 3 yüz; lore (≈2.900 karakter) her ekranda 2–4 yüz —
+derginin ek sayfası gibi.
+Okunabilirlik için 13 px'in altına inilmez; o boyutta sığmayan metin çevrilir.

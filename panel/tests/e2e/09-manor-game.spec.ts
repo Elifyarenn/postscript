@@ -20,6 +20,27 @@ test.describe.configure({ mode: "serial" });
 
 const GAME_TEXT = /Büyük meşe kapı|Fırtınadan kaçarken|MERAKLISINA/;
 
+/**
+ * Presses a button on the game page. A long room continues on the page's next
+ * side (D-266), so the page is turned with "Devam" until the button is on the
+ * side being shown — as a reader would.
+ */
+async function press(page: Page, name: string | RegExp) {
+  const button = page.getByRole("button", { name, exact: typeof name === "string" });
+  for (let turn = 0; turn < 8; turn++) {
+    const [target, box] = await Promise.all([button.boundingBox(), page.locator(".manor-fit").boundingBox()]);
+    // On the side being shown when its middle is on the page (a hovered door
+    // leans a few pixels out, which is not another side)
+    if (target && box && Math.abs(target.x + target.width / 2 - (box.x + box.width / 2)) < box.width / 2) break;
+    const next = page.getByRole("button", { name: /^Devam/ });
+    if ((await next.count()) === 0 || (await next.isDisabled())) break;
+    await next.click();
+    // The page slides to its next side; measure once it has arrived
+    await page.waitForTimeout(450);
+  }
+  await button.click();
+}
+
 async function loginAs(page: Page, credentials: { email: string; password: string }) {
   await submitLogin(page, credentials);
   await completeTwoFactorIfAsked(page);
@@ -61,7 +82,7 @@ test("lets an admin play through, one room at a time, and refuses the same steps
 
   // Entering asks the server for the first room; keep that request to replay it later
   const actionRequest = page.waitForRequest((request) => request.method() === "POST" && !!request.headers()["next-action"]);
-  await page.getByRole("button", { name: "Malikâneye gir" }).click();
+  await press(page, "Malikâneye gir");
   const entered = await actionRequest;
   await expect(page.getByRole("heading", { level: 1, name: "GİRİŞ KAPISI" })).toBeVisible();
   // Only the room the reader stands in is in the page
@@ -75,33 +96,34 @@ test("lets an admin play through, one room at a time, and refuses the same steps
   await expect(page.getByRole("heading", { level: 1, name: "PORTRELER KORİDORU" })).toBeVisible();
   expect(await page.content()).not.toMatch(/Son basamağa çıktığında/);
 
-  await page.getByRole("button", { name: /Piyano sesini takip et/ }).click();
+  await press(page, /Piyano sesini takip et/);
   await expect(page.getByRole("heading", { level: 1, name: "BALO SALONU" })).toBeVisible();
-  await page.getByRole("button", { name: /Piyanoya koş ve melodiyi durdur/ }).click();
+  await press(page, /Piyanoya koş ve melodiyi durdur/);
 
   await expect(page.getByRole("heading", { level: 1, name: "BİTMEYEN VALS" })).toBeVisible();
   await expect(page.getByText("Malikâne yalnızca yeni bir müzisyen buldu.")).toBeVisible();
   await expect(page.getByText("İzlediğin yol: A · C · H")).toBeVisible();
   await expect(page.getByText("Ulaştığın sonlar: 1/5")).toBeVisible();
   // There is no way back to the previous room
-  await expect(page.getByRole("button", { name: /geri|önceki/i })).toHaveCount(0);
+  // ("Önceki yüz" turns the same page back, it does not undo a choice)
+  await expect(page.getByRole("button", { name: /geri|önceki seçim/i })).toHaveCount(0);
 
   // The history comes only after an ending
-  await page.getByRole("button", { name: "PostScript Malikânesi'nin hikâyesini oku" }).click();
+  await press(page, "PostScript Malikânesi'nin hikâyesini oku");
   await expect(page.getByRole("heading", { level: 1, name: "POSTSCRIPT MALİKÂNESİ'NİN HİKÂYESİ" })).toBeVisible();
   await expect(page.getByText("“Hikâye henüz bitmedi.”")).toBeVisible();
-  await page.getByRole("button", { name: "Sona dön" }).click();
+  await press(page, "Sona dön");
   await expect(page.getByRole("heading", { level: 1, name: "BİTMEYEN VALS" })).toBeVisible();
 
   // Starting again forgets the route, keeps the tally
-  await page.getByRole("button", { name: "Tekrar malikâneye gir" }).click();
+  await press(page, "Tekrar malikâneye gir");
   await expect(page.getByRole("heading", { level: 1, name: "LANETLİ MALİKÂNEDEN ÇIKABİLECEK MİSİN?" })).toBeVisible();
   await expect(page.getByText("Ulaştığın sonlar: 1/5")).toBeVisible();
-  await page.getByRole("button", { name: "Tekrar malikâneye gir" }).click();
-  await page.getByRole("button", { name: /Merdivenlerden ikinci kata çık/ }).click();
-  await page.getByRole("button", { name: /Arkana bile bakmadan merdivenlerden aşağı kaç/ }).click();
+  await press(page, "Tekrar malikâneye gir");
+  await press(page, /Merdivenlerden ikinci kata çık/);
+  await press(page, /Arkana bile bakmadan merdivenlerden aşağı kaç/);
   await expect(page.getByRole("heading", { level: 1, name: "KIŞ BAHÇESİ" })).toBeVisible();
-  await page.getByRole("button", { name: /Gümüş anahtarı al/ }).click();
+  await press(page, /Gümüş anahtarı al/);
   await expect(page.getByRole("heading", { level: 1, name: "TAŞTAN MİSAFİR" })).toBeVisible();
   await expect(page.getByText("İzlediğin yol: B · F · M")).toBeVisible();
   await expect(page.getByText("Ulaştığın sonlar: 2/5")).toBeVisible();
@@ -148,7 +170,7 @@ test("lets the listed writer in once the address is verified", async ({ page }) 
   await loginAs(page, writer);
   const response = await page.goto("/oyun");
   expect(response?.status()).toBe(200);
-  await page.getByRole("button", { name: "Malikâneye gir" }).click();
+  await press(page, "Malikâneye gir");
   await expect(page.getByRole("heading", { level: 1, name: "GİRİŞ KAPISI" })).toBeVisible();
 });
 
@@ -157,7 +179,7 @@ test("runs no animation for a reader who asked for reduced motion", async ({ bro
   const page = await context.newPage();
   await loginAs(page, SEED.admin);
   await page.goto("/oyun");
-  await page.getByRole("button", { name: "Malikâneye gir" }).click();
+  await press(page, "Malikâneye gir");
   await expect(page.getByRole("heading", { level: 1, name: "GİRİŞ KAPISI" })).toBeVisible();
   expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
   await context.close();

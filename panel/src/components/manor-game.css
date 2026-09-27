@@ -1,675 +1,948 @@
 /* ═══════════════════════════════════════════════════════════════════
-   The manor game as one page of the magazine (D-263, D-265).
-   The page is the reader's own: the paper, ink, wine and rules of the
-   issue pages (site.css, the preview page designs), sized with the
-   reader's formula for an A4 page. The gothic is printed on it — the
-   engravings, the wine, the night ending — not built around it.
+   The manor game (D-263) — dark gothic editorial, on one page (D-266).
+   The magazine's burgundy and paper, turned down to candlelight: night
+   ground, paper-coloured type, wine rules. Each room sits on a single
+   magazine page that never scrolls; everything inside the page is sized
+   in em, so fitting the room is a matter of one font size.
    ═══════════════════════════════════════════════════════════════════ */
 
-/* ════════════════ The page ════════════════ */
-
-/* Sized as the reader sizes a delivered A4 page (.page-image): fitted whole,
-   by height on a wide screen and by width on a narrow one */
-.ps-site .reader-pages .page-sheet.manor-page {
-  --page-ratio: 1.4142;
-  --page-w: min(100cqh / var(--page-ratio), 100cqw);
-  /* The preview pages' 90-unit margin on a 1240-unit page */
-  --pad-x: max(1.1rem, calc(var(--page-w) * 0.073));
-  --pad-y: max(1rem, calc(var(--page-w) * 0.055));
-
-  display: flex;
-  width: var(--page-w);
-  height: calc(var(--page-w) * var(--page-ratio));
-  max-width: none;
-  max-height: none;
-  aspect-ratio: auto;
-  flex-direction: column;
-  padding: 0;
+/* The page behind the frame, so an overscroll never flashes the cream panel */
+html:has(.manor),
+html:has(.manor) body {
   overflow: hidden;
+  background-color: #0e0507;
 }
 
-/* Colours on their own rule, below the sizing one, so the night ending and
-   the appendix's older paper can override them */
-.ps-site .page-sheet.manor-page {
-  --rule: var(--site-rule);
-  --muted: var(--site-muted);
-  --emblem: var(--site-wine);
+.manor {
+  --m-night: #0e0507;
+  --m-deep: #1b080d;
+  --m-wine: #6d1e2e;
+  --m-wine-bright: #9a3a4c;
+  --m-paper: #ebe1d5;
+  --m-paper-dim: #bcab9d;
+  --m-gold: #cfae74;
+  --m-rule: rgb(222 210 199 / 0.2);
+  --m-rule-strong: rgb(222 210 199 / 0.42);
+  --m-inset: clamp(0.5rem, 1.6vw, 1.1rem);
 
-  background-color: var(--site-paper);
-  color: var(--site-ink);
-  transition:
-    background-color 0.45s ease,
-    color 0.45s ease;
+  position: relative;
+  display: flex;
+  height: 100vh;
+  height: 100dvh;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--m-night);
+  color: var(--m-paper);
+  font-family: var(--font-body), Georgia, serif;
 }
 
-/* The endings are printed on the night ground, like the covers */
-.ps-site .page-sheet.manor-page.manor-page-night {
-  --rule: rgb(222 210 199 / 0.32);
-  --muted: rgb(222 210 199 / 0.72);
-  --emblem: #cfae74;
-  background-color: var(--site-night);
-  color: var(--site-paper);
+/* The double rule the magazine draws round every page, here in wine */
+.manor::before,
+.manor::after {
+  content: "";
+  position: fixed;
+  z-index: 3;
+  pointer-events: none;
+  border: 1px solid var(--m-rule);
+}
+.manor::before {
+  inset: var(--m-inset);
+}
+.manor::after {
+  inset: calc(var(--m-inset) + 4px);
+  border-color: rgb(109 30 46 / 0.55);
 }
 
-.ps-site .manor-page :focus-visible {
-  outline: 2px solid var(--site-wine);
+.manor-skip {
+  position: absolute;
+  top: -10rem;
+  left: 1rem;
+  z-index: 10;
+  padding: 0.6rem 1rem;
+  background: var(--m-paper);
+  color: var(--m-night);
+}
+.manor-skip:focus {
+  top: 1rem;
+}
+
+.manor :focus-visible {
+  outline: 2px solid var(--m-paper);
   outline-offset: 3px;
 }
-.ps-site .manor-page-night :focus-visible,
-.ps-site .manor-cover-plate :focus-visible {
-  outline-color: var(--site-paper);
-}
 
-/* Running head and folio: the same two lines every issue page carries */
-.ps-site .manor-running-head,
-.ps-site .manor-folio {
+/* ════════════════ Header and footer ════════════════ */
+
+.manor-bar,
+.manor-foot {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  margin-inline: var(--pad-x);
-  color: var(--muted);
+  gap: 0.25rem 1rem;
+  padding-inline: calc(var(--m-inset) + 1.1rem);
 }
 
-.ps-site .manor-running-head {
-  margin-top: var(--pad-y);
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--rule);
-  font-size: 0.6rem;
-  letter-spacing: 0.24em;
+.manor-bar {
+  padding-top: calc(var(--m-inset) + 0.75rem);
+}
+
+.manor-brand {
+  color: var(--m-paper);
+  opacity: 0.9;
+  transition: opacity 0.2s;
+}
+.manor-brand:hover {
+  opacity: 1;
+}
+
+.manor .site-wordmark {
+  display: block;
+  width: clamp(7rem, 20vw, 10rem);
+  background-color: currentColor;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.manor-badge {
+  padding: 0.25rem 0.65rem;
+  border: 1px solid var(--m-rule-strong);
+  color: var(--m-paper-dim);
+  font-family: var(--font-caps), Georgia, serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
 }
 
-.ps-site .manor-folio {
-  margin-bottom: calc(var(--pad-y) * 0.8);
-  padding-top: 0.55rem;
-  border-top: 1px solid var(--rule);
-  font-size: 0.66rem;
-  letter-spacing: 0.1em;
+.manor-foot {
+  padding-bottom: calc(var(--m-inset) + 0.6rem);
+  color: var(--m-paper-dim);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+}
+.manor-foot a {
+  color: var(--m-paper);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
-/* Between the two lines: what changes from room to room. On a wide screen it
-   scrolls inside the page, so the page itself never changes size */
-.ps-site .manor-page-body {
+/* ════════════════ Stage and atmosphere ════════════════ */
+
+/* The space between the header and the footer; the page is fitted into it */
+.manor-main {
+  position: relative;
+  z-index: 1;
+  display: flex;
   flex: 1;
   min-height: 0;
-  padding: 1.4rem var(--pad-x) 2.5rem;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-color: var(--rule) transparent;
-  scrollbar-width: thin;
-  /* The words fade into the folio rather than being cut by it: a sign that
-     the page goes on below. The bottom padding clears the last line of it */
-  mask-image: linear-gradient(180deg, #000 calc(100% - 2.25rem), transparent);
+  padding: 0.75rem calc(var(--m-inset) + 0.9rem);
+}
+.manor-main:focus {
+  outline: none;
 }
 
-.ps-site .manor-screen {
-  animation: manor-in 0.45s ease-out both;
+.manor-game {
+  /* Each room sets where its light comes from and what colour it is */
+  --glow-at: 50% 0%;
+  --glow: rgb(109 30 46 / 0.55);
+  --glow-size: 70% 60%;
+
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  place-items: center;
+  container-type: size;
 }
-.ps-site .manor-screen.is-leaving {
-  animation: manor-out 0.24s ease-in both;
+
+.manor-atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(var(--glow-size) at var(--glow-at), var(--glow), transparent 72%),
+    radial-gradient(120% 90% at 50% 50%, transparent 40%, rgb(0 0 0 / 0.75) 100%),
+    var(--m-night);
+  transition: background 0.8s ease;
+}
+
+/* A fine grain over everything: old paper and old print, barely there */
+.manor-atmosphere::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.09;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 0.95  0 0 0 0 0.9  0 0 0 0.9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  mix-blend-mode: soft-light;
+}
+
+/* Rain, only where the text has it falling: the hall's windows and the conservatory */
+.manor-atmosphere::before {
+  content: "";
+  position: absolute;
+  inset: -20% 0 0;
+  opacity: 0;
+  background-image: repeating-linear-gradient(
+    104deg,
+    transparent 0 22px,
+    rgb(222 210 199 / 0.05) 22px 23px,
+    transparent 23px 61px
+  );
+  transition: opacity 0.8s ease;
+}
+
+.manor-game[data-mood="cover"] .manor-atmosphere::before,
+.manor-game[data-mood="hall"] .manor-atmosphere::before,
+.manor-game[data-mood="conservatory"] .manor-atmosphere::before {
+  opacity: 1;
+  animation: manor-rain 1.6s linear infinite;
+}
+
+.manor-game[data-mood="cover"] {
+  --glow-at: 50% 18%;
+  --glow: rgb(109 30 46 / 0.6);
+}
+.manor-game[data-mood="hall"] {
+  --glow-at: 70% 0%;
+  --glow: rgb(120 132 160 / 0.2);
+}
+.manor-game[data-mood="portraits"] {
+  --glow-at: 12% 40%;
+  --glow: rgb(207 174 116 / 0.18);
+}
+.manor-game[data-mood="mirror"] {
+  --glow-at: 20% 30%;
+  --glow: rgb(190 196 206 / 0.14);
+}
+.manor-game[data-mood="ballroom"] {
+  --glow-at: 50% 0%;
+  --glow: rgb(207 174 116 / 0.24);
+  --glow-size: 60% 55%;
+}
+.manor-game[data-mood="pantry"] {
+  --glow-at: 80% 100%;
+  --glow: rgb(120 72 40 / 0.22);
+}
+.manor-game[data-mood="library"] {
+  --glow-at: 18% 70%;
+  --glow: rgb(207 150 90 / 0.22);
+}
+.manor-game[data-mood="conservatory"] {
+  --glow-at: 50% 0%;
+  --glow: rgb(96 124 104 / 0.2);
+}
+.manor-game[data-mood="tunnel"] {
+  --glow-at: 90% 50%;
+  --glow: rgb(190 110 50 / 0.16);
+  --glow-size: 40% 50%;
+}
+.manor-game[data-mood="ending"] {
+  --glow-at: 50% 12%;
+  --glow: rgb(109 30 46 / 0.8);
+  --glow-size: 80% 55%;
+}
+.manor-game[data-mood="lore"] {
+  --glow-at: 50% 50%;
+  --glow: rgb(207 174 116 / 0.12);
+}
+
+/* ════════════════ The page ════════════════ */
+
+/* One A4 page, as big as the space allows. A phone held upright has far more
+   height than an A4 page would use, so there the page takes the whole space */
+.manor-sheet {
+  --page-w: min(100cqw, 100cqh / 1.4142);
+
+  position: relative;
+  display: flex;
+  width: var(--page-w);
+  height: calc(var(--page-w) * 1.4142);
+  flex-direction: column;
+  padding: max(1rem, calc(var(--page-w) * 0.065)) max(1rem, calc(var(--page-w) * 0.07))
+    max(0.6rem, calc(var(--page-w) * 0.035));
+  border: 1px solid var(--m-rule-strong);
+  outline: 1px solid rgb(109 30 46 / 0.75);
+  outline-offset: 5px;
+  background: rgb(22 7 11 / 0.82);
+  box-shadow: 0 30px 80px rgb(0 0 0 / 0.55);
+  transition:
+    background-color 0.5s ease,
+    color 0.5s ease;
+}
+
+@container (max-aspect-ratio: 3 / 4) {
+  .manor-sheet {
+    --page-w: 100cqw;
+    height: 100cqh;
+  }
+}
+
+/* The room's box: the room is fitted to it, nothing in it ever scrolls */
+.manor-fit {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: clip;
+  /* The doors ask how wide the page is, not the window */
+  container-type: inline-size;
+}
+
+.manor-screen {
+  height: 100%;
+  animation: manor-in 0.5s ease-out both;
+}
+.manor-screen.is-leaving {
+  animation: manor-out 0.26s ease-in both;
+}
+
+/* Laid out by the fitter: its font size, and on a long room the page's sides */
+.manor-flow {
+  column-fill: auto;
+  transition: transform 0.35s ease;
+}
+
+.manor-sheet-foot {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--m-rule);
+  color: var(--m-paper-dim);
+  font-family: var(--font-caps), Georgia, serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.manor-sheet-foot > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* On a narrow page the turning controls take the whole foot */
+@container (max-width: 480px) {
+  .manor-sheet-foot:has(.manor-turn) > span:first-child {
+    display: none;
+  }
+  .manor-sheet-foot:has(.manor-turn) {
+    justify-content: flex-end;
+  }
+}
+
+/* Turning a long room's sides */
+.manor-turn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.manor-turn-button {
+  display: inline-flex;
+  white-space: nowrap;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.6rem;
+  border: 1px solid var(--m-rule-strong);
+  background: transparent;
+  color: var(--m-paper);
+  font: inherit;
+  font-size: 0.66rem;
+  letter-spacing: 0.2em;
+  cursor: pointer;
+}
+.manor-turn-button:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+.manor-turn-next:not(:disabled) {
+  border-color: var(--m-wine-bright);
+  background: var(--m-wine);
+}
+.manor-turn-count {
+  min-width: 2.2rem;
+  text-align: center;
 }
 
 @keyframes manor-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    filter: blur(3px);
   }
   to {
     opacity: 1;
-    transform: none;
+    filter: none;
   }
 }
 
 @keyframes manor-out {
   to {
     opacity: 0;
+    filter: blur(2px);
+  }
+}
+
+@keyframes manor-rain {
+  to {
+    transform: translate(-12px, 61px);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ps-site .manor-screen,
-  .ps-site .manor-screen.is-leaving {
-    animation: none;
+  .manor-screen,
+  .manor-screen.is-leaving,
+  .manor-game .manor-atmosphere::before {
+    animation: none !important;
   }
-  .ps-site .reader-pages .page-sheet.manor-page,
-  .ps-site .manor-choice,
-  .ps-site .manor-choice-letter,
-  .ps-site .manor-choice-label::after,
-  .ps-site .manor-action,
-  .ps-site .manor-action-arrow {
-    transition: none;
+  .manor-atmosphere,
+  .manor-atmosphere::before,
+  .manor-flow,
+  .manor-sheet,
+  .manor-choice,
+  .manor-button {
+    transition: none !important;
   }
 }
 
-/* ════════════════ Type on the page ════════════════ */
+/* ════════════════ Type on the page (em: the fitter sets the size) ════════════════ */
 
-.ps-site .manor-section {
-  color: var(--site-wine);
-  font-size: 0.64rem;
-  font-weight: 600;
-  letter-spacing: 0.24em;
+.manor-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+  color: var(--m-paper-dim);
+  font-family: var(--font-caps), Georgia, serif;
+  font-size: 0.66em;
+  letter-spacing: 0.26em;
   text-transform: uppercase;
 }
-.ps-site .manor-page-night .manor-section {
-  color: #cfae74;
+.manor-kicker::after {
+  content: "";
+  height: 1px;
+  flex: 0 1 3.5em;
+  background: var(--m-wine-bright);
 }
 
-.ps-site .manor-heading {
-  margin-top: 0.35rem;
+/* The decision's number, in roman capitals */
+.manor-step {
+  color: var(--m-wine-bright);
+  font-size: 1.5em;
+  letter-spacing: 0.04em;
+}
+
+.manor-title {
+  margin-top: 0.3em;
   font-family: var(--font-caps), Georgia, serif;
-  font-size: clamp(1.7rem, 4.6vw, 2.35rem);
+  font-size: 2.1em;
   font-weight: 400;
-  line-height: 1.06;
-  letter-spacing: 0.01em;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
   overflow-wrap: break-word;
   text-wrap: balance;
 }
-.ps-site .manor-page h1:focus {
+.manor h1:focus {
   outline: none;
 }
-.ps-site .manor-page h1:focus-visible {
+.manor h1:focus-visible {
   outline: 2px solid currentColor;
-  outline-offset: 4px;
 }
 
-.ps-site .manor-text {
-  margin-top: 1.25rem;
-  font-size: 1rem;
-  line-height: 1.7;
+/* A room's drawing beside its title */
+.manor-head {
+  display: grid;
+  grid-template-columns: 3.4em 1fr;
+  align-items: end;
+  gap: 1em;
 }
-.ps-site .manor-text p + p {
-  margin-top: 0.75em;
+.manor-head .manor-emblem {
+  opacity: 0.85;
 }
 
-/* The first paragraph opens with a wine initial. It holds its own float, so
-   a one-line opening never pushes the next paragraph in */
-.ps-site .manor-scene .manor-text > p:first-child,
-.ps-site .manor-ending .manor-text > p:first-child,
-.ps-site .manor-lore .manor-text > p:first-child {
+.manor-text {
+  margin-top: 1.1em;
+  line-height: 1.6;
+}
+.manor-text p + p {
+  margin-top: 0.7em;
+}
+.manor-text p {
+  break-inside: avoid;
+}
+
+/* A long room, set closer: the paragraphs keep their breaks, not their air */
+.manor-flow[data-dense] .manor-text p + p {
+  margin-top: 0.3em;
+}
+.manor-flow[data-dense] .manor-text {
+  margin-top: 0.8em;
+  line-height: 1.5;
+}
+.manor-flow[data-dense] .manor-display {
+  margin-block: 0.5em !important;
+}
+
+/* A long room runs in two columns, as a magazine page would set it */
+.manor-flow[data-columns="2"] .manor-text {
+  column-count: 2;
+  column-gap: 1.6em;
+}
+.manor-flow[data-columns="2"] .manor-text > p:first-child {
+  margin-top: 0;
+}
+
+/* The first line of a room opens with a drop of wine. The paragraph holds its
+   own float, so a one-line opening never pushes the next paragraph in */
+.manor-scene .manor-text > p:first-child,
+.manor-ending .manor-text > p:first-child {
   display: flow-root;
 }
-.ps-site .manor-scene .manor-text > p:first-child::first-letter,
-.ps-site .manor-ending .manor-text > p:first-child::first-letter,
-.ps-site .manor-lore .manor-text > p:first-child::first-letter {
+.manor-scene .manor-text > p:first-child::first-letter,
+.manor-ending .manor-text > p:first-child::first-letter {
   float: left;
-  margin: 0.06em 0.1em 0 0;
-  color: var(--site-wine);
+  margin: 0.08em 0.12em 0 0;
+  color: var(--m-wine-bright);
   font-family: var(--font-caps), Georgia, serif;
-  font-size: 3.3em;
+  font-size: 3.2em;
   line-height: 0.8;
 }
-.ps-site .manor-page-night .manor-text > p:first-child::first-letter {
-  color: #cfae74;
-}
 
-.ps-site .manor-text strong {
+.manor-text strong {
   font-weight: 600;
+  color: #fff6ec;
+}
+.manor-text em {
+  font-style: italic;
 }
 
-/* "KÜTÜPHANE", "1826", "Bahçe." — a line the text sets apart, in bold */
-.ps-site .manor-display {
-  margin-block: 1.2em !important;
+/* "KÜTÜPHANE", "1826", "Bahçe." — a line the text puts on its own, in bold */
+.manor-display {
+  margin-block: 1em !important;
   font-family: var(--font-caps), Georgia, serif;
-  font-size: 1.45em;
+  font-size: 1.4em;
   letter-spacing: 0.08em;
   text-align: center;
 }
-.ps-site .manor-display strong {
+.manor-display strong {
   font-weight: 400;
 }
-.ps-site .manor-display::before,
-.ps-site .manor-display::after {
+.manor-display::before,
+.manor-display::after {
   content: "";
   display: block;
-  width: 2.25rem;
+  width: 2.25em;
   height: 1px;
-  margin: 0.45rem auto;
-  background: var(--site-wine);
+  margin: 0.4em auto;
+  background: var(--m-wine-bright);
 }
 
-/* Whispers — "Gel...", "Seni bekliyorduk." — in the pull-quote voice */
-.ps-site .manor-whisper {
-  color: var(--site-wine);
+/* Whispers: "Gel...", "Seni bekliyorduk." */
+.manor-whisper {
+  color: var(--m-paper-dim);
   font-family: var(--font-italic), Georgia, serif;
-  font-size: 1.3em;
+  font-size: 1.25em;
   font-style: italic;
   line-height: 1.4;
-  text-align: center;
-}
-.ps-site .manor-page-night .manor-whisper {
-  color: #e2c9a0;
 }
 
-.ps-site .manor-emblem {
+.manor-emblem {
   display: block;
   width: 100%;
   height: auto;
-  color: var(--emblem);
+  color: var(--m-paper);
 }
 
-/* ════════════════ The doors ════════════════ */
+/* ════════════════ Buttons ════════════════ */
 
-.ps-site .manor-choices {
-  display: grid;
-  margin-top: 1.75rem;
-  border-top: 1px solid var(--rule);
+.manor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6em;
+  margin-top: 1.4em;
 }
 
-.ps-site .manor-choice {
-  display: grid;
-  min-height: 3.5rem;
-  grid-template-columns: 2.75rem 1fr;
+.manor-button {
+  display: inline-flex;
+  min-height: max(2.75rem, 3em);
   align-items: center;
-  padding: 0.7rem 0.25rem 0.7rem 0;
-  border-bottom: 1px solid var(--rule);
+  justify-content: center;
+  padding: 0.7em 1.2em;
+  border: 1px solid var(--m-rule-strong);
   background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: background-color 0.25s;
-}
-
-/* The letter is an initial, as a chapter would have */
-.ps-site .manor-choice-letter {
-  color: var(--site-wine);
+  color: var(--m-paper);
   font-family: var(--font-caps), Georgia, serif;
-  font-size: 2rem;
-  line-height: 1;
-  transition: transform 0.25s;
-}
-
-.ps-site .manor-choice-label {
-  position: relative;
-  justify-self: start;
-  padding-bottom: 0.2rem;
-  font-family: var(--font-italic), Georgia, serif;
-  font-size: 1.18rem;
-  line-height: 1.3;
-}
-
-/* A wine rule draws itself under the words on hover and focus */
-.ps-site .manor-choice-label::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 1.5rem;
-  height: 1px;
-  background: var(--site-wine);
-  opacity: 0.45;
+  font-size: 0.74em;
+  letter-spacing: 0.18em;
+  text-align: center;
+  text-transform: uppercase;
+  cursor: pointer;
   transition:
-    width 0.3s ease,
-    opacity 0.3s ease;
+    background-color 0.25s,
+    border-color 0.25s,
+    box-shadow 0.25s;
+}
+.manor-button:hover {
+  border-color: var(--m-paper);
 }
 
-.ps-site .manor-choice:hover:not(:disabled),
-.ps-site .manor-choice:focus-visible {
-  background: rgb(109 30 46 / 0.05);
+.manor-button-primary {
+  border-color: var(--m-wine-bright);
+  background: var(--m-wine);
+  box-shadow:
+    inset 0 0 0 3px var(--m-wine),
+    inset 0 0 0 4px rgb(235 225 213 / 0.35);
 }
-.ps-site .manor-choice:hover:not(:disabled) .manor-choice-letter,
-.ps-site .manor-choice:focus-visible .manor-choice-letter {
-  transform: translateX(3px);
-}
-.ps-site .manor-choice:hover:not(:disabled) .manor-choice-label::after,
-.ps-site .manor-choice:focus-visible .manor-choice-label::after {
-  width: 100%;
-  opacity: 1;
+.manor-button-primary:hover {
+  border-color: var(--m-paper);
+  background: #7e2436;
+  box-shadow:
+    inset 0 0 0 3px #7e2436,
+    inset 0 0 0 4px rgb(235 225 213 / 0.6),
+    0 0 28px rgb(154 58 76 / 0.45);
 }
 
-.ps-site .manor-choice:disabled,
-.ps-site .manor-action:disabled {
+.manor-button:disabled,
+.manor-choice:disabled {
   cursor: progress;
 }
 
-.ps-site .manor-no-return {
-  margin-top: 0.8rem;
-  color: var(--muted);
-  font-family: var(--font-italic), Georgia, serif;
-  font-size: 1rem;
-  font-style: italic;
-  text-align: right;
-}
-
-/* The page's other ways on: caps lines between rules, not web buttons */
-.ps-site .manor-actions {
-  display: grid;
-  margin-top: 1.75rem;
-  border-top: 1px solid var(--rule);
-}
-
-.ps-site .manor-action {
-  display: flex;
-  min-height: 3rem;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid var(--rule);
-  background: transparent;
-  color: inherit;
-  font-size: 0.72rem;
-  letter-spacing: 0.2em;
-  text-align: left;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: color 0.25s;
-}
-
-.ps-site .manor-action-strong {
-  color: var(--site-wine);
-  font-weight: 600;
-}
-.ps-site .manor-page-night .manor-action-strong {
-  color: #e2c9a0;
-}
-
-.ps-site .manor-action-arrow {
-  color: var(--site-wine);
-  font-size: 1rem;
-  letter-spacing: 0;
-  transition: transform 0.25s;
-}
-.ps-site .manor-page-night .manor-action-arrow {
-  color: #cfae74;
-}
-
-.ps-site .manor-action:hover:not(:disabled) {
-  color: var(--site-wine);
-}
-.ps-site .manor-page-night .manor-action:hover:not(:disabled) {
-  color: #fff;
-}
-.ps-site .manor-action:hover:not(:disabled) .manor-action-arrow,
-.ps-site .manor-action:focus-visible .manor-action-arrow {
-  transform: translateX(4px);
-}
-
-.ps-site .manor-tally,
-.ps-site .manor-route {
-  margin-top: 1.25rem;
-  color: var(--muted);
-  font-size: 0.64rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-}
-.ps-site .manor-route span {
-  color: inherit;
-  font-weight: 600;
-  letter-spacing: 0.3em;
-}
-.ps-site .manor-route + .manor-tally {
-  margin-top: 0.35rem;
-}
-
-.ps-site .manor-error {
-  margin-top: 1.25rem;
-  padding: 0.7rem 0.9rem;
-  border: 1px solid var(--site-wine);
-  color: var(--site-wine);
-  font-size: 0.9rem;
-}
-.ps-site .manor-page-night .manor-error {
-  border-color: var(--site-paper);
-  color: var(--site-paper);
-}
-
-/* ════════════════ The opening ════════════════ */
-
-.ps-site .manor-page[data-mood="cover"] .manor-running-head {
-  display: none;
-}
-.ps-site .manor-page[data-mood="cover"] .manor-page-body {
-  padding: 0;
-}
-
-/* The picture block of an article opening, the night ground and an engraving
-   in place of the photograph, the headline set over its foot */
-.ps-site .manor-cover-plate {
-  position: relative;
-  display: flex;
-  min-height: calc(var(--page-w) * 0.8);
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: calc(var(--pad-y) * 1.2) var(--pad-x) 1.5rem;
-  background:
-    radial-gradient(70% 55% at 50% 30%, rgb(109 30 46 / 0.75), transparent 75%),
-    linear-gradient(180deg, transparent 45%, rgb(20 4 8 / 0.7) 100%),
-    var(--site-night);
-  color: var(--site-paper);
-}
-
-.ps-site .manor-cover-emblem {
-  position: absolute;
-  top: calc(var(--pad-y) * 1.2);
-  left: 50%;
-  width: clamp(4.5rem, calc(var(--page-w) * 0.2), 8rem);
-  color: rgb(222 210 199 / 0.85);
-  transform: translateX(-50%);
-}
-
-.ps-site .manor-cover-words {
-  position: relative;
-  padding-top: clamp(7rem, calc(var(--page-w) * 0.34), 12rem);
-}
-
-.ps-site .manor-cover-plate .manor-section {
-  color: var(--site-paper);
-  font-weight: 400;
-  letter-spacing: 0.3em;
-}
-
-.ps-site .manor-cover-title {
-  margin-top: 0.5rem;
+.manor-tally,
+.manor-route {
+  margin-top: 1em;
+  color: var(--m-paper-dim);
   font-family: var(--font-caps), Georgia, serif;
-  font-size: clamp(1.9rem, calc(var(--page-w) * 0.075), 3.1rem);
+  font-size: 0.66em;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.manor-route span {
+  color: var(--m-paper);
+  letter-spacing: 0.3em;
+}
+.manor-route + .manor-tally {
+  margin-top: 0.4em;
+}
+
+.manor-error {
+  margin-top: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--m-wine-bright);
+  background: rgb(109 30 46 / 0.35);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* ════════════════ Cover ════════════════ */
+
+.manor-cover {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.manor-cover-emblem {
+  width: 5.5em;
+  margin-bottom: 1em;
+  opacity: 0.85;
+}
+
+.manor-cover .manor-kicker {
+  justify-content: center;
+}
+.manor-cover .manor-kicker::before {
+  content: "";
+  height: 1px;
+  flex: 0 1 3.5em;
+  background: var(--m-wine-bright);
+}
+
+.manor-cover-title {
+  margin-top: 0.4em;
+  font-family: var(--font-caps), Georgia, serif;
+  font-size: 2.7em;
   font-weight: 400;
   line-height: 1.02;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.03em;
   text-wrap: balance;
 }
-.ps-site .manor-cover-title:focus-visible {
-  outline-color: var(--site-paper);
-}
 
-.ps-site .manor-cover-text {
-  padding: 1.4rem var(--pad-x) 1.6rem;
-}
-
-/* The standfirst in the byline's voice */
-.ps-site .manor-lede {
-  color: var(--site-wine);
+.manor-lede {
+  margin-top: 1em;
   font-family: var(--font-italic), Georgia, serif;
-  font-size: 1.3rem;
+  font-size: 1.28em;
   font-style: italic;
-  line-height: 1.35;
+  line-height: 1.45;
 }
 
-.ps-site .manor-rules {
-  margin-top: 1.25rem;
-  font-size: 0.92rem;
-  line-height: 1.6;
+.manor-rules {
+  width: 100%;
+  margin-top: 1.3em;
+  padding: 0.9em 0.5em 1em;
+  border-block: 1px solid var(--m-rule);
+  color: var(--m-paper-dim);
+  font-size: 0.92em;
+  line-height: 1.55;
 }
-.ps-site .manor-rules h2 {
-  margin-bottom: 0.35rem;
-  color: var(--muted);
-  font-size: 0.62rem;
+.manor-rules h2 {
+  margin-bottom: 0.45em;
+  color: var(--m-paper);
+  font-family: var(--font-caps), Georgia, serif;
+  font-size: 0.75em;
   font-weight: 400;
-  letter-spacing: 0.24em;
+  letter-spacing: 0.28em;
   text-transform: uppercase;
+}
+.manor-rules p + p {
+  margin-top: 0.2em;
+}
+
+.manor-cover .manor-actions {
+  flex-direction: column;
+  align-items: stretch;
+  width: min(100%, 19em);
+}
+/* A small page sets the opening tighter so it stays one side */
+@container (max-width: 419px) {
+  .manor-cover .manor-kicker {
+    font-size: 0.58em;
+    letter-spacing: 0.16em;
+  }
+  .manor-cover .manor-kicker::before,
+  .manor-cover .manor-kicker::after {
+    display: none;
+  }
+  .manor-cover-emblem {
+    width: 3.2em;
+    margin-bottom: 0.5em;
+  }
+  .manor-cover-title {
+    font-size: 2.3em;
+  }
+  .manor-lede {
+    margin-top: 0.7em;
+    font-size: 1.12em;
+  }
+  .manor-rules {
+    margin-top: 0.9em;
+    padding: 0.6em 0.2em 0.7em;
+  }
+  .manor-cover .manor-actions {
+    margin-top: 1em;
+  }
+}
+
+.manor-cover .manor-button-primary {
+  min-height: max(2.75rem, 3.4em);
+  font-size: 0.82em;
+  letter-spacing: 0.24em;
 }
 
 /* ════════════════ A room ════════════════ */
 
-.ps-site .manor-scene-head {
+.manor-choices {
   display: grid;
-  grid-template-columns: 3.25rem 1fr;
-  align-items: end;
-  gap: 1rem;
+  gap: 0.6em;
+  margin-top: 1.3em;
+  padding-top: 1.1em;
+  border-top: 1px solid var(--m-rule);
+  break-inside: avoid;
 }
 
-/* The entrance opens the story: a larger plate and headline */
-.ps-site .manor-page[data-mood="hall"] .manor-scene-head {
-  grid-template-columns: 4.5rem 1fr;
-}
-.ps-site .manor-page[data-mood="hall"] .manor-heading {
-  font-size: clamp(2rem, 5.4vw, 2.8rem);
+/* Two doors side by side where the page is wide enough */
+@container (min-width: 460px) {
+  .manor-choices {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
-/* The portraits' corridor: the engraving hangs in its own framed oval */
-.ps-site .manor-page[data-mood="portraits"] .manor-scene-emblem {
-  padding: 0.3rem;
-  border: 3px double var(--site-wine);
-  border-radius: 50%;
+.manor-choice {
+  display: grid;
+  min-height: max(2.75rem, 3.4em);
+  grid-template-columns: 2.9em 1fr;
+  align-items: stretch;
+  border: 1px solid var(--m-rule-strong);
+  background: rgb(27 8 13 / 0.6);
+  color: var(--m-paper);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.25s,
+    background-color 0.25s,
+    box-shadow 0.25s,
+    transform 0.25s;
+}
+
+.manor-choice-letter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--m-rule);
+  color: var(--m-gold);
+  font-family: var(--font-caps), Georgia, serif;
+  font-size: 1.6em;
+  line-height: 1;
+}
+
+.manor-choice-label {
+  display: flex;
+  align-items: center;
+  padding: 0.55em 0.85em;
+  font-family: var(--font-italic), Georgia, serif;
+  font-size: 1.15em;
+  line-height: 1.25;
+}
+
+.manor-choice:hover:not(:disabled) {
+  border-color: var(--m-paper);
+  background: rgb(109 30 46 / 0.35);
+  box-shadow: 0 0 26px rgb(207 174 116 / 0.12);
+  transform: translateX(3px);
+}
+
+.manor-no-return {
+  margin-top: 0.7em;
+  color: var(--m-paper-dim);
+  font-family: var(--font-italic), Georgia, serif;
+  font-size: 1em;
+  font-style: italic;
+  text-align: right;
+}
+
+/* The passage under the house: a narrower column, the words pressed in */
+.manor-game[data-mood="tunnel"] .manor-scene {
+  padding-inline: 6%;
 }
 
 /* The ballroom stands on its axis */
-.ps-site .manor-page[data-mood="ballroom"] .manor-scene-head {
+.manor-game[data-mood="ballroom"] .manor-head {
   grid-template-columns: 1fr;
   justify-items: center;
   text-align: center;
 }
-.ps-site .manor-page[data-mood="ballroom"] .manor-scene-emblem {
-  width: 4rem;
+.manor-game[data-mood="ballroom"] .manor-head .manor-emblem {
+  width: 3.4em;
 }
-.ps-site .manor-page[data-mood="ballroom"] .manor-text {
+.manor-game[data-mood="ballroom"] .manor-kicker {
+  justify-content: center;
+}
+.manor-game[data-mood="ballroom"] .manor-kicker::before {
+  content: "";
+  height: 1px;
+  flex: 0 1 3.5em;
+  background: var(--m-wine-bright);
+}
+.manor-game[data-mood="ballroom"] .manor-text,
+.manor-game[data-mood="ballroom"] .manor-no-return {
   text-align: center;
 }
-.ps-site .manor-page[data-mood="ballroom"] .manor-text > p:first-child::first-letter {
+.manor-game[data-mood="ballroom"] .manor-text > p:first-child::first-letter {
   float: none;
   margin: 0;
   color: inherit;
   font-family: inherit;
   font-size: inherit;
 }
-.ps-site .manor-page[data-mood="ballroom"] .manor-no-return {
-  text-align: center;
-}
-
-/* The library: an old book's page, justified, the first line in small caps */
-.ps-site .manor-page[data-mood="library"] {
-  background-image: radial-gradient(130% 100% at 50% 40%, transparent 60%, rgb(110 70 40 / 0.14) 100%);
-}
-.ps-site .manor-page[data-mood="library"] .manor-text {
-  hyphens: auto;
-  text-align: justify;
-}
-/* Justified small caps spread a short line apart; the opening stays ragged */
-.ps-site .manor-page[data-mood="library"] .manor-text > p:first-child {
-  text-align: left;
-}
-.ps-site .manor-page[data-mood="library"] .manor-text > p:first-child::first-line {
-  font-variant: small-caps;
-  letter-spacing: 0.04em;
-}
-
-/* The conservatory: rain on glass over the top of the page */
-.ps-site .manor-page[data-mood="conservatory"] {
-  background-image:
-    linear-gradient(180deg, rgb(96 124 104 / 0.12), transparent 38%),
-    repeating-linear-gradient(100deg, transparent 0 26px, rgb(66 10 20 / 0.035) 26px 27px, transparent 27px 58px);
-}
-
-/* The mirror on the second floor: a cold light on the page */
-.ps-site .manor-page[data-mood="mirror"] {
-  background-image: linear-gradient(180deg, rgb(160 170 185 / 0.16), transparent 42%);
-}
-
-/* The pantry: damp and dim at the foot */
-.ps-site .manor-page[data-mood="pantry"] {
-  background-image: linear-gradient(0deg, rgb(90 60 35 / 0.14), transparent 45%);
-}
-
-/* The passage under the house: the page darkens at its edges and the column
-   narrows, the words pressed in */
-.ps-site .manor-page[data-mood="tunnel"] {
-  box-shadow: inset 0 0 90px rgb(54 11 19 / 0.28);
-}
-.ps-site .manor-page[data-mood="tunnel"] .manor-text,
-.ps-site .manor-page[data-mood="tunnel"] .manor-choices,
-.ps-site .manor-page[data-mood="tunnel"] .manor-no-return {
-  max-width: 24rem;
-  margin-inline: auto;
-}
-.ps-site .manor-page[data-mood="tunnel"] .manor-text {
-  line-height: 1.6;
-}
 
 /* ════════════════ Endings ════════════════ */
 
-.ps-site .manor-ending {
-  text-align: left;
+.manor-ending-emblem {
+  color: var(--m-gold);
 }
 
-.ps-site .manor-ending-emblem {
-  width: 3.5rem;
-  margin-bottom: 0.75rem;
-}
-
-.ps-site .manor-ending-mark {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-.ps-site .manor-ending-mark::after {
-  content: "";
-  height: 1px;
-  flex: 1;
-  background: var(--rule);
-}
-
-.ps-site .manor-ending .manor-heading {
-  font-size: clamp(1.9rem, 5vw, 2.6rem);
-}
-
-.ps-site .manor-verdict {
-  margin-top: 1.75rem;
-  padding: 1.25rem 0.5rem;
-  border-block: 1px solid var(--rule);
+.manor-verdict {
+  margin-top: 1.4em;
+  padding: 1.1em 0.9em 1.2em;
+  border: 1px solid var(--m-rule-strong);
+  outline: 1px solid rgb(109 30 46 / 0.7);
+  outline-offset: 4px;
+  background: rgb(14 5 7 / 0.55);
   font-family: var(--font-italic), Georgia, serif;
-  font-size: 1.35rem;
+  font-size: 1.3em;
   font-style: italic;
-  line-height: 1.35;
+  line-height: 1.3;
   text-align: center;
+  break-inside: avoid;
 }
-.ps-site .manor-verdict p + p {
-  margin-top: 0.3rem;
+.manor-verdict p + p {
+  margin-top: 0.3em;
 }
-
-/* ════════════════ The appendix ════════════════ */
-
-/* "Meraklısına": the issue's supplement, printed on an older, darker sheet */
-.ps-site .page-sheet.manor-page[data-mood="lore"] {
-  background-color: #d4c5b6;
-  background-image: radial-gradient(130% 100% at 50% 45%, transparent 55%, rgb(66 10 20 / 0.18) 100%);
-}
-.ps-site .manor-page[data-mood="lore"] .manor-running-head {
-  border-bottom: 3px double var(--rule);
-}
-.ps-site .manor-lore .manor-text {
-  hyphens: auto;
-  text-align: justify;
+.manor-verdict-mark {
+  margin-bottom: 0.6em;
+  color: var(--m-gold);
+  font-family: var(--font-caps), Georgia, serif;
+  font-size: 0.55em;
+  font-style: normal;
+  letter-spacing: 0.5em;
+  text-transform: uppercase;
 }
 
-/* ════════════════ Phones ════════════════ */
+.manor-ending .manor-actions {
+  display: grid;
+  grid-template-columns: minmax(0, max-content);
+}
 
-/* A phone keeps the page's width and lets it grow down instead of shrinking
-   an A4 page until it cannot be read: the stage scrolls, as it does when the
-   reader zooms a page (D-247), and nothing scrolls inside the page */
-@media (max-width: 599px) {
-  .ps-site .reader-pages .page-sheet.manor-page {
-    --page-w: 100cqw;
-    height: auto;
-    min-height: 100cqh;
-    overflow: visible;
-  }
+/* ════════════════ The manor's history ════════════════ */
 
-  .ps-site .manor-page-body {
-    overflow: visible;
-    mask-image: none;
-  }
-
-  .ps-site .manor-cover-plate {
-    min-height: 0;
-  }
+/* An old document: the only paper-coloured sheet in the game */
+.manor-sheet.manor-sheet-paper {
+  border-color: #b9a19b;
+  outline-color: var(--m-rule);
+  background:
+    radial-gradient(120% 90% at 50% 40%, transparent 55%, rgb(66 10 20 / 0.22) 100%),
+    #ded2c7;
+  color: #2b0a11;
+}
+.manor-sheet-paper .manor-sheet-foot {
+  border-color: #b9a19b;
+  color: #75625e;
+}
+.manor-sheet-paper .manor-turn-button {
+  border-color: #9a7f78;
+  color: #2b0a11;
+}
+.manor-sheet-paper .manor-turn-next:not(:disabled) {
+  border-color: var(--m-wine);
+  color: var(--m-paper);
+}
+.manor-sheet-paper .manor-kicker {
+  color: #75625e;
+}
+.manor-sheet-paper .manor-kicker::after {
+  background: #6d1e2e;
+}
+.manor-sheet-paper .manor-title {
+  color: #420a14;
+}
+.manor-sheet-paper .manor-text strong {
+  color: #420a14;
+}
+.manor-sheet-paper .manor-display::before,
+.manor-sheet-paper .manor-display::after {
+  background: #6d1e2e;
+}
+.manor-sheet-paper .manor-button {
+  border-color: #9a7f78;
+  color: #2b0a11;
+}
+.manor-sheet-paper .manor-button:hover {
+  border-color: #2b0a11;
+}
+.manor-sheet-paper .manor-button-primary {
+  border-color: var(--m-wine);
+  color: var(--m-paper);
+}
+.manor-sheet-paper :focus-visible {
+  outline-color: #420a14;
 }
