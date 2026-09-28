@@ -1,0 +1,2 @@
+DROP INDEX "topic_proposals_issue_author_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "topic_proposals_issue_author_area_unique" ON "topic_proposals" USING btree ("issue_id","author_id",coalesce("category", '')) WHERE "topic_proposals"."deleted_at" is null;

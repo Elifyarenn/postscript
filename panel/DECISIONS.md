@@ -10950,3 +10950,45 @@ oldu. D-270'in e-postası da kuyruğa taşındı (`queueMails`, anahtar
 "bir kez" sahiplenmesi aynen duruyor, böylece yayından önce duyurulmuş bir
 dönem yeniden duyurulmaz. `/api/cron/mail` önce açılan dönemleri kuyruğa alır,
 sonra kuyruğu işler.
+
+## D-271 — İkinci alanı olan yazar her alanı için ayrı konu önerir
+
+**Sorun (ürün sahibi, 2026-09-28):** "İkinci alanı olan yazarlar konu
+belirleyemiyor 2. alanları için." D-261 bir sayıda yazar başına tek konu
+koyuyordu: `(issue_id, author_id)` canlı satırlar için tekildi, ikinci öneri
+"Bu sayı için zaten bir konu öneriniz var." ile 409 alıyordu.
+
+**Karar:**
+- Kural "sayı + yazar + alan başına bir canlı konu" oldu. Index
+  `topic_proposals_issue_author_area_unique` (`issue_id`, `author_id`,
+  `coalesce(category, '')`, `deleted_at is null`); migration
+  `0051_topic_per_area` eski index'i düşürüp bunu kurar. Yeni kural eskisinden
+  gevşek olduğu için var olan hiçbir satırla çakışamaz.
+- Servis (`resolveCategory`, `topicCapacity`): iki ya da daha çok alanı olan
+  yazar alanı seçmek zorunda (seçmezse 400); tek alanlı yazarın konusu
+  kendiliğinden o alana yazılır (önceden alan boş kalabiliyordu); alanı olmayan
+  için boş kalır. Bir sayıda en çok `max(1, alan sayısı)` canlı konu; bu sayım,
+  alan zorunlu olmadan önce alansız gönderilmiş eski konuyu da sınıra katar.
+  Aynı alana ikinci konu ve yeniden gönderimde dolu alana taşıma 409.
+  Editörün alanları da `selectableWriterCategories` ile sayılır (karma
+  yazar-editör), makalelerdeki kuralın aynısı.
+- `listWriterIssues` artık sayı başına `proposals` listesi, `openAreas`
+  (konusu olmayan alanlar) ve `canProposeMore` döndürür.
+- `/writer/topics`: her konu kendi bloğunda (alan adı, rozet, not, düzenleme,
+  "Yazıya başla", geçmiş); konu dönemi açıkken boş alan varsa "Diğer alanınız
+  için konu belirleyin (…)" formu yalnızca boş alanları sunar. Yazar genel
+  bakışındaki takvimde her konu ve boş alan ayrı satır. "Yeni yazı"
+  sayfası her kabul edilmiş konuyu listeler. D-270 e-postası iki kabul edilmiş
+  konuyu virgülle yazar.
+- Editör tarafı değişmedi: değerlendirme listesi zaten öneri öneri.
+
+**Hukuk:** Yeni veri yok; aydınlatma metni değişmedi.
+
+**Doğrulama:** `tests/integration/topics.test.ts` — iki alanlı yazar alan
+seçmeden 400, her alana bir konu, aynı alana ikincisi 409, üçüncüsü yok;
+ilk konudan sonra ikinci alan açık görünür; yeniden gönderimde dolu alana
+taşıma 409; tek alanlı yazarın konusu alanını alır ve tek kalır; alansız eski
+konu sınıra sayılır.
+
+**Yayın notu:** Migration var (`0051_topic_per_area`); D-269'un `0050`'sinden
+sonra, onunla birlikte uygulanır.

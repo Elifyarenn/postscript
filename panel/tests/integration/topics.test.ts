@@ -176,6 +176,107 @@ describe("proposing a topic", () => {
   });
 });
 
+describe("a writer with two areas (D-271)", () => {
+  const FIRST = "Sanat & Edebiyat";
+  const SECOND = "Felsefe & Düşünce";
+
+  async function twoAreaWriter(): Promise<User> {
+    const writer = await writerWithArea();
+    await db.update(users).set({ writerArea2: SECOND }).where(eq(users.id, writer.id));
+    return writer;
+  }
+
+  it("proposes one topic for each area, and no more", async () => {
+    const { issue } = await scenario();
+    const writer = actorOf(await twoAreaWriter());
+
+    // Which area must be said: each one takes its own topic
+    await expectStatus(submitTopicProposal(writer, issue.id, TOPIC, noMeta, DURING_TOPIC), 400);
+
+    const first = await submitTopicProposal(writer, issue.id, { ...TOPIC, category: FIRST }, noMeta, DURING_TOPIC);
+    expect(first.category).toBe(FIRST);
+    await expectStatus(
+      submitTopicProposal(writer, issue.id, { ...TOPIC, title: "Bir daha", category: FIRST }, noMeta, DURING_TOPIC),
+      409,
+    );
+
+    const second = await submitTopicProposal(
+      writer,
+      issue.id,
+      { title: "Düşüncenin takıntısı", description: "Felsefede saplantı fikri üzerine bir deneme.", category: SECOND },
+      noMeta,
+      DURING_TOPIC,
+    );
+    expect(second.category).toBe(SECOND);
+
+    const [entry] = (await listWriterIssues(writer)).filter((row) => row.issue.id === issue.id);
+    expect(entry!.proposals.map(({ proposal }) => proposal.category)).toEqual([FIRST, SECOND]);
+    expect(entry!.openAreas).toEqual([]);
+    expect(entry!.canProposeMore).toBe(false);
+  });
+
+  it("shows the second area as still open after the first topic", async () => {
+    const { issue } = await scenario();
+    const writer = actorOf(await twoAreaWriter());
+    await submitTopicProposal(writer, issue.id, { ...TOPIC, category: SECOND }, noMeta, DURING_TOPIC);
+
+    const [entry] = (await listWriterIssues(writer)).filter((row) => row.issue.id === issue.id);
+    expect(entry!.openAreas).toEqual([FIRST]);
+    expect(entry!.canProposeMore).toBe(true);
+  });
+
+  it("cannot move a revised topic onto the area that already has one", async () => {
+    const { issue, mainEditor } = await scenario();
+    const writer = actorOf(await twoAreaWriter());
+    await submitTopicProposal(writer, issue.id, { ...TOPIC, category: FIRST }, noMeta, DURING_TOPIC);
+    const other = await submitTopicProposal(
+      writer,
+      issue.id,
+      { ...TOPIC, title: "İkinci konu", category: SECOND },
+      noMeta,
+      DURING_TOPIC,
+    );
+    await decideTopicProposal(
+      actorOf(mainEditor),
+      other.id,
+      { decision: "revision", note: "Başka bir açıdan bakın.", expectedVersion: 1 },
+      noMeta,
+    );
+
+    await expectStatus(
+      reviseTopicProposal(writer, other.id, { ...TOPIC, category: FIRST }, 2, noMeta, DURING_TOPIC),
+      409,
+    );
+    const revised = await reviseTopicProposal(writer, other.id, { ...TOPIC, category: SECOND }, 2, noMeta, DURING_TOPIC);
+    expect(revised.status).toBe("submitted");
+  });
+
+  it("gives a single-area writer's topic their area, as before one topic", async () => {
+    const { writer, issue } = await scenario();
+    const proposal = await submitTopicProposal(actorOf(writer), issue.id, TOPIC, noMeta, DURING_TOPIC);
+    expect(proposal.category).toBe(FIRST);
+  });
+
+  it("counts a topic sent before areas were required against the same limit", async () => {
+    const { issue } = await scenario();
+    const writer = await twoAreaWriter();
+    // An older topic with no area (D-261 allowed that)
+    await db.insert(topicProposals).values({
+      issueId: issue.id,
+      authorId: writer.id,
+      title: "Eski konu",
+      description: "Alan seçmeden gönderilmiş bir konu.",
+      status: "submitted",
+    });
+
+    await submitTopicProposal(actorOf(writer), issue.id, { ...TOPIC, category: FIRST }, noMeta, DURING_TOPIC);
+    await expectStatus(
+      submitTopicProposal(actorOf(writer), issue.id, { ...TOPIC, category: SECOND }, noMeta, DURING_TOPIC),
+      409,
+    );
+  });
+});
+
 describe("the main editor's decision", () => {
   it("accepts; a category editor and the writer may not decide", async () => {
     const { writer, mainEditor, categoryEditor, issue } = await scenario();
@@ -409,7 +510,7 @@ describe("what each side sees", () => {
     const clock = new Date("2026-10-01T12:00:00Z");
     const running = entries.filter((entry) => isIssueInProgress(entry.issue, clock));
     expect(running.map((entry) => entry.issue.number)).toEqual([2]);
-    expect(running[0]!.proposal?.title).toBe(TOPIC.title);
+    expect(running[0]!.proposals.map(({ proposal }) => proposal.title)).toEqual([TOPIC.title]);
     expect(entries.find((entry) => entry.issue.id === past.id)).toBeDefined();
     expect(isIssueInProgress(past, clock)).toBe(false);
   });

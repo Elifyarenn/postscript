@@ -33,8 +33,10 @@ export default async function WriterNewArticlePage({
   ]);
 
   // Accepted topics that have no article yet
-  const topics = entries.flatMap(({ issue, proposal }) =>
-    proposal && proposal.status === "accepted" && !proposal.articleId ? [{ issue, proposal }] : [],
+  const topics = entries.flatMap(({ issue, proposals }) =>
+    proposals
+      .filter(({ proposal }) => proposal.status === "accepted" && !proposal.articleId)
+      .map(({ proposal }) => ({ issue, proposal })),
   );
   const chosen = topics.find((row) => row.proposal.id === konu) ?? null;
 

@@ -119,7 +119,12 @@ async function mailWriters(issue: typeof issues.$inferSelect): Promise<number> {
         displayName: writer.displayName,
         issueLabel,
         closesAt,
-        acceptedTopic: accepted.find((row) => row.authorId === writer.id)?.title ?? null,
+        // A writer with two areas may have two accepted topics (D-271)
+        acceptedTopic:
+          accepted
+            .filter((row) => row.authorId === writer.id)
+            .map((row) => row.title)
+            .join(", ") || null,
         url,
       }),
       dedupeKey: `submission-open:${issue.id}:${opensKey}:${writer.id}`,

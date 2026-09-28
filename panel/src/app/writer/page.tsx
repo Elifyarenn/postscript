@@ -83,24 +83,46 @@ export default async function WriterDashboard() {
           extra={(issue) => {
             const entry = issueEntries.find((row) => row.issue.id === issue.id);
             if (!entry) return null;
-            const { proposal, articles: issueArticles } = entry;
-            const article = proposal?.articleId
-              ? (issueArticles.find((row) => row.id === proposal.articleId) ?? null)
-              : null;
-            const stage = writerStage({
-              topicState: periodState(topicPeriod(issue), now),
-              submissionState: periodState(submissionPeriod(issue), now),
-              proposalStatus: proposal?.status ?? null,
-              articleStatus: article?.status ?? null,
+            const { proposals, articles: issueArticles, canProposeMore, openAreas } = entry;
+            const topicState = periodState(topicPeriod(issue), now);
+            const submissionState = periodState(submissionPeriod(issue), now);
+            // One line per topic (a writer with two areas may hold two, D-271), and one
+            // for an area still without a topic while topics are being taken
+            const lines = proposals.map(({ proposal }) => {
+              const article = proposal.articleId
+                ? (issueArticles.find((row) => row.id === proposal.articleId) ?? null)
+                : null;
+              return {
+                key: proposal.id,
+                area: proposal.category,
+                stage: writerStage({
+                  topicState,
+                  submissionState,
+                  proposalStatus: proposal.status,
+                  articleStatus: article?.status ?? null,
+                }),
+              };
             });
+            if (proposals.length === 0 || (canProposeMore && topicState === "open")) {
+              lines.push({
+                key: "missing",
+                area: proposals.length > 0 ? openAreas.join(", ") || null : null,
+                stage: writerStage({ topicState, submissionState, proposalStatus: null, articleStatus: null }),
+              });
+            }
             return (
-              <p className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                <StatusBadge status={stage} />
-                {WRITER_STAGE_TEXT[stage]}
-                <Link href="/writer/topics" className="text-accent underline">
-                  {stage === "topic_missing" ? "Konu Belirle" : "Ayrıntılar"}
-                </Link>
-              </p>
+              <div className="mt-3 space-y-2">
+                {lines.map((line) => (
+                  <p key={line.key} className="flex flex-wrap items-center gap-2 text-sm">
+                    <StatusBadge status={line.stage} />
+                    {line.area && <span className="text-muted">{line.area}:</span>}
+                    {WRITER_STAGE_TEXT[line.stage]}
+                    <Link href="/writer/topics" className="text-accent underline">
+                      {line.stage === "topic_missing" ? "Konu Belirle" : "Ayrıntılar"}
+                    </Link>
+                  </p>
+                ))}
+              </div>
             );
           }}
         />

@@ -1113,8 +1113,10 @@ export const topicProposals = pgTable(
     deletedAt: deletedAt(),
   },
   (t) => [
-    uniqueIndex("topic_proposals_issue_author_unique")
-      .on(t.issueId, t.authorId)
+    // One live topic per writer, issue and area (D-271): a writer with a second
+    // area proposes one for each. No area counts as one area of its own.
+    uniqueIndex("topic_proposals_issue_author_area_unique")
+      .on(t.issueId, t.authorId, sql`coalesce(${t.category}, '')`)
       .where(sql`${t.deletedAt} is null`),
     uniqueIndex("topic_proposals_article_unique")
       .on(t.articleId)

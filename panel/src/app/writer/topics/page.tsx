@@ -38,9 +38,22 @@ const EVENT_LABELS: Record<string, string> = {
   rejected: "reddedildi",
 };
 
-/** The topic form, empty for a new topic or filled for a revision. */
-function TopicFields({ categories, proposal }: { categories: string[]; proposal: TopicProposal | null }) {
-  const key = proposal?.id ?? "new";
+/**
+ * The topic form, empty for a new topic or filled for a revision. A writer with
+ * two areas must name the area, since each area takes its own topic (D-271).
+ */
+function TopicFields({
+  categories,
+  proposal,
+  requireArea,
+  formKey,
+}: {
+  categories: string[];
+  proposal: TopicProposal | null;
+  requireArea: boolean;
+  formKey: string;
+}) {
+  const key = proposal?.id ?? formKey;
   return (
     <>
       <Field label="Konu başlığı" htmlFor={`topic-title-${key}`}>
@@ -66,8 +79,15 @@ function TopicFields({ categories, proposal }: { categories: string[]; proposal:
       </Field>
       {categories.length > 0 && (
         <Field label="Alan" htmlFor={`topic-category-${key}`}>
-          <Select id={`topic-category-${key}`} name="category" defaultValue={proposal?.category ?? ""}>
-            <option value="">Seçmedim</option>
+          <Select
+            id={`topic-category-${key}`}
+            name="category"
+            required={requireArea}
+            defaultValue={proposal?.category ?? (requireArea && categories.length === 1 ? categories[0] : "")}
+          >
+            <option value="" disabled={requireArea}>
+              {requireArea ? "Alan seçin" : "Seçmedim"}
+            </option>
             {categories.map((name) => (
               <option key={name} value={name}>
                 {name}
@@ -119,17 +139,16 @@ export default async function WriterTopicsPage() {
           <EmptyState>Şu anda konu ya da yazı kabul eden bir sayı yok.</EmptyState>
         )}
 
-        {running.map(({ issue, proposal, events, articles }) => {
+        {running.map(({ issue, proposals, openAreas, canProposeMore, articles }) => {
           const topicState = periodState(topicPeriod(issue), now);
           const submissionState = periodState(submissionPeriod(issue), now);
-          const article = proposal?.articleId
-            ? (articles.find((row) => row.id === proposal.articleId) ?? null)
-            : null;
-          const stage = writerStage({
+          // Two areas: each topic names its area, so the form offers only the free ones (D-271)
+          const requireArea = categories.length >= 2;
+          const emptyStage = writerStage({
             topicState,
             submissionState,
-            proposalStatus: proposal?.status ?? null,
-            articleStatus: article?.status ?? null,
+            proposalStatus: null,
+            articleStatus: null,
           });
 
           return (
@@ -138,92 +157,136 @@ export default async function WriterTopicsPage() {
                 <h2 className="font-serif text-lg">
                   Sayı {issue.number} · {issue.title}
                 </h2>
-                <StatusBadge status={stage} />
+                {proposals.length === 0 && <StatusBadge status={emptyStage} />}
               </div>
 
               <IssueWindows issue={issue} now={now} />
 
-              <p className="mt-4 text-sm font-medium">{WRITER_STAGE_TEXT[stage]}</p>
+              {proposals.length === 0 && (
+                <p className="mt-4 text-sm font-medium">{WRITER_STAGE_TEXT[emptyStage]}</p>
+              )}
 
               {/* No topic yet */}
-              {!proposal && topicState === "upcoming" && issue.topicOpensAt && (
+              {proposals.length === 0 && topicState === "upcoming" && issue.topicOpensAt && (
                 <p className="mt-2 text-sm text-muted">
                   Konu gönderimi {formatPeriodMoment(issue.topicOpensAt)}&apos;de açılır.
                 </p>
               )}
-              {!proposal && topicState === "open" && (
-                <div className="mt-4 border-t border-line pt-4">
-                  <h3 className="mb-3 text-sm font-medium">Konu Belirle</h3>
+
+              {/* One block per topic: a writer with two areas may hold two */}
+              {proposals.map(({ proposal, events }) => {
+                const article = proposal.articleId
+                  ? (articles.find((row) => row.id === proposal.articleId) ?? null)
+                  : null;
+                const stage = writerStage({
+                  topicState,
+                  submissionState,
+                  proposalStatus: proposal.status,
+                  articleStatus: article?.status ?? null,
+                });
+
+                return (
+                  <section key={proposal.id} className="mt-5 border-t border-line pt-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <h3 className="text-sm font-medium">
+                        {proposal.category ? `Konunuz · ${proposal.category}` : "Konunuz"}
+                      </h3>
+                      <StatusBadge status={stage} />
+                    </div>
+                    <p className="mt-1 text-sm">{WRITER_STAGE_TEXT[stage]}</p>
+
+                    <div className="mt-3 rounded-md border border-line bg-paper px-4 py-3 text-sm">
+                      <p className="font-medium break-words">{proposal.title}</p>
+                      <p className="mt-2 whitespace-pre-wrap">{proposal.description}</p>
+                      <p className="mt-2 text-xs text-muted">Gönderim: {formatDateTime(proposal.submittedAt)}</p>
+                    </div>
+
+                    {proposal.editorNote &&
+                      (proposal.status === "revision_requested" || proposal.status === "rejected") && (
+                        <div className="mt-4">
+                          <Alert tone={proposal.status === "rejected" ? "danger" : "warning"} title="Editörün notu">
+                            <span className="whitespace-pre-wrap">{proposal.editorNote}</span>
+                          </Alert>
+                        </div>
+                      )}
+
+                    {proposal.status === "revision_requested" &&
+                      (mayResubmit(issue, now) ? (
+                        <div className="mt-4">
+                          <h4 className="mb-3 text-sm font-medium">Konuyu düzenle ve yeniden gönder</h4>
+                          <PanelForm action={reviseTopicAction} csrfToken={csrfToken} submitLabel="Yeniden gönder">
+                            <input type="hidden" name="proposalId" value={proposal.id} />
+                            <input type="hidden" name="version" value={proposal.version} />
+                            <TopicFields
+                              categories={
+                                requireArea
+                                  ? [...(proposal.category ? [proposal.category] : []), ...openAreas]
+                                  : categories
+                              }
+                              proposal={proposal}
+                              requireArea={requireArea}
+                              formKey={proposal.id}
+                            />
+                          </PanelForm>
+                        </div>
+                      ) : (
+                        <p className="mt-3 text-sm text-muted">Bu sayının süresi doldu; konu yeniden gönderilemez.</p>
+                      ))}
+
+                    {proposal.status === "accepted" && (
+                      <p className="mt-4 text-sm">
+                        {article ? (
+                          <Link href={`/writer/articles/${article.id}`} className="text-accent underline">
+                            Yazınıza gidin: {article.title}
+                          </Link>
+                        ) : submissionState === "closed" ? (
+                          <span className="text-muted">Yazı kabul süresi doldu.</span>
+                        ) : (
+                          <Link
+                            href={`/writer/articles/new?konu=${proposal.id}`}
+                            className="inline-flex min-h-10 items-center rounded-md border border-accent bg-accent px-4 py-2 font-medium text-white hover:bg-accent/90"
+                          >
+                            Yazıya başla
+                          </Link>
+                        )}
+                      </p>
+                    )}
+
+                    {events.length > 1 && (
+                      <details className="mt-4 text-sm">
+                        <summary className="cursor-pointer text-muted">Konu geçmişi ({events.length})</summary>
+                        <ol className="mt-2 space-y-1 border-l border-line pl-4 text-xs">
+                          {events.map((event) => (
+                            <li key={event.id}>
+                              {formatDateTime(event.createdAt)} · {EVENT_LABELS[event.kind] ?? event.kind}
+                              {event.note && <span className="text-muted"> — {event.note}</span>}
+                            </li>
+                          ))}
+                        </ol>
+                      </details>
+                    )}
+                  </section>
+                );
+              })}
+
+              {/* A new topic: the first one, or one for an area still without a topic */}
+              {topicState === "open" && canProposeMore && (!requireArea || openAreas.length > 0) && (
+                <div className="mt-5 border-t border-line pt-4">
+                  <h3 className="mb-3 text-sm font-medium">
+                    {proposals.length === 0
+                      ? "Konu Belirle"
+                      : `Diğer alanınız için konu belirleyin (${openAreas.join(", ")})`}
+                  </h3>
                   <PanelForm action={submitTopicAction} csrfToken={csrfToken} submitLabel="Konuyu gönder">
                     <input type="hidden" name="issueId" value={issue.id} />
-                    <TopicFields categories={categories} proposal={null} />
+                    <TopicFields
+                      categories={requireArea ? openAreas : categories}
+                      proposal={null}
+                      requireArea={requireArea}
+                      formKey={`new-${issue.id}`}
+                    />
                   </PanelForm>
                 </div>
-              )}
-
-              {/* The topic as it stands */}
-              {proposal && (
-                <div className="mt-4 rounded-md border border-line bg-paper px-4 py-3 text-sm">
-                  <p className="font-medium break-words">{proposal.title}</p>
-                  {proposal.category && <p className="text-xs text-muted">{proposal.category}</p>}
-                  <p className="mt-2 whitespace-pre-wrap">{proposal.description}</p>
-                  <p className="mt-2 text-xs text-muted">Gönderim: {formatDateTime(proposal.submittedAt)}</p>
-                </div>
-              )}
-
-              {proposal?.editorNote && (proposal.status === "revision_requested" || proposal.status === "rejected") && (
-                <div className="mt-4">
-                  <Alert tone={proposal.status === "rejected" ? "danger" : "warning"} title="Editörün notu">
-                    <span className="whitespace-pre-wrap">{proposal.editorNote}</span>
-                  </Alert>
-                </div>
-              )}
-
-              {proposal?.status === "revision_requested" &&
-                (mayResubmit(issue, now) ? (
-                  <div className="mt-4 border-t border-line pt-4">
-                    <h3 className="mb-3 text-sm font-medium">Konuyu düzenle ve yeniden gönder</h3>
-                    <PanelForm action={reviseTopicAction} csrfToken={csrfToken} submitLabel="Yeniden gönder">
-                      <input type="hidden" name="proposalId" value={proposal.id} />
-                      <input type="hidden" name="version" value={proposal.version} />
-                      <TopicFields categories={categories} proposal={proposal} />
-                    </PanelForm>
-                  </div>
-                ) : (
-                  <p className="mt-3 text-sm text-muted">Bu sayının süresi doldu; konu yeniden gönderilemez.</p>
-                ))}
-
-              {proposal?.status === "accepted" && (
-                <p className="mt-4 text-sm">
-                  {article ? (
-                    <Link href={`/writer/articles/${article.id}`} className="text-accent underline">
-                      Yazınıza gidin: {article.title}
-                    </Link>
-                  ) : submissionState === "closed" ? (
-                    <span className="text-muted">Yazı kabul süresi doldu.</span>
-                  ) : (
-                    <Link
-                      href={`/writer/articles/new?konu=${proposal.id}`}
-                      className="inline-flex min-h-10 items-center rounded-md border border-accent bg-accent px-4 py-2 font-medium text-white hover:bg-accent/90"
-                    >
-                      Yazıya başla
-                    </Link>
-                  )}
-                </p>
-              )}
-
-              {events.length > 1 && (
-                <details className="mt-4 text-sm">
-                  <summary className="cursor-pointer text-muted">Konu geçmişi ({events.length})</summary>
-                  <ol className="mt-2 space-y-1 border-l border-line pl-4 text-xs">
-                    {events.map((event) => (
-                      <li key={event.id}>
-                        {formatDateTime(event.createdAt)} · {EVENT_LABELS[event.kind] ?? event.kind}
-                        {event.note && <span className="text-muted"> — {event.note}</span>}
-                      </li>
-                    ))}
-                  </ol>
-                </details>
               )}
             </Card>
           );
@@ -233,16 +296,18 @@ export default async function WriterTopicsPage() {
           <Card>
             <h2 className="mb-3 font-serif text-lg">Geçmiş sayılar</h2>
             <ul className="divide-y divide-line text-sm">
-              {past.map(({ issue, proposal, articles }) => (
+              {past.map(({ issue, proposals, articles }) => (
                 <li key={issue.id} className="py-3">
                   <p className="font-medium">
                     Sayı {issue.number} · {issue.title}
                   </p>
-                  {proposal && (
-                    <p className="mt-1 flex flex-wrap items-center gap-2 text-muted">
-                      Konu: {proposal.title} <StatusBadge status={`topic_${proposal.status}`} />
+                  {proposals.map(({ proposal }) => (
+                    <p key={proposal.id} className="mt-1 flex flex-wrap items-center gap-2 text-muted">
+                      Konu: {proposal.title}
+                      {proposal.category && ` (${proposal.category})`}{" "}
+                      <StatusBadge status={`topic_${proposal.status}`} />
                     </p>
-                  )}
+                  ))}
                   {articles.length > 0 && (
                     <ul className="mt-1 space-y-1">
                       {articles.map((row) => (

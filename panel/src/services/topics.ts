@@ -9,7 +9,7 @@
  * of the request; the pages only mirror it.
  */
 import "server-only";
-import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
 import {
@@ -111,16 +111,34 @@ export const topicInputSchema = z.strictObject({
   category: z.string().trim().max(80).optional().nullable(),
 });
 
-/** The category, when given, must be one of the writer's areas, as for articles. */
-async function allowedCategory(actor: Actor, category: string | null | undefined) {
-  const value = category?.trim() || null;
-  if (!value) return null;
+/**
+ * The topic's area (D-271). A given one must be one of the writer's areas, as
+ * for articles. A writer with a single area proposes for it without choosing;
+ * one with two or more must say which, since each area gets its own topic.
+ */
+async function resolveCategory(actor: Actor, category: string | null | undefined) {
   const allowed = await selectableWriterCategories(actor);
-  if (!allowed.includes(value)) {
-    throw badRequest(`"${value}" alanı size tanımlı değil.`, { category: ["Alan size tanımlı değil."] });
+  const value = category?.trim() || null;
+  if (value) {
+    if (!allowed.includes(value)) {
+      throw badRequest(`"${value}" alanı size tanımlı değil.`, { category: ["Alan size tanımlı değil."] });
+    }
+    return { category: value, allowed };
   }
-  return value;
+  if (allowed.length >= 2) {
+    throw badRequest("Konunun hangi alanınız için olduğunu seçin.", {
+      category: ["Hangi alanınız için olduğunu seçin."],
+    });
+  }
+  return { category: allowed[0] ?? null, allowed };
 }
+
+/** How many live topics a writer may hold in one issue: one per area, at least one. */
+export function topicCapacity(areas: readonly string[]): number {
+  return Math.max(1, areas.length);
+}
+
+const SAME_AREA_MESSAGE = "Bu sayı için bu alanda zaten bir konu öneriniz var.";
 
 export async function submitTopicProposal(
   actor: Actor,
@@ -141,7 +159,27 @@ export async function submitTopicProposal(
   if (state !== "open") {
     throw conflict(windowMessage(TOPIC_PERIOD_TEXT, state, formatPeriod(topicPeriod(issue))));
   }
-  const category = await allowedCategory(actor, parsed.data.category);
+  const { category, allowed } = await resolveCategory(actor, parsed.data.category);
+
+  // Older proposals may have no area (D-261); the count keeps them within the
+  // same limit the index sets for the rest
+  const [held] = await db
+    .select({ total: count() })
+    .from(topicProposals)
+    .where(
+      and(
+        eq(topicProposals.issueId, issue.id),
+        eq(topicProposals.authorId, actor.id),
+        isNull(topicProposals.deletedAt),
+      ),
+    );
+  if (Number(held?.total ?? 0) >= topicCapacity(allowed)) {
+    throw conflict(
+      allowed.length >= 2
+        ? "Bu sayı için her alanınıza birer konu önerdiniz."
+        : "Bu sayı için zaten bir konu öneriniz var.",
+    );
+  }
 
   let proposal: TopicProposal;
   try {
@@ -173,7 +211,9 @@ export async function submitTopicProposal(
   } catch (error) {
     // The unique index, not a read-then-write, is what stops a double click
     // or a replayed request from making a second proposal
-    if (isUniqueViolation(error)) throw conflict("Bu sayı için zaten bir konu öneriniz var.");
+    if (isUniqueViolation(error)) {
+      throw conflict(allowed.length >= 2 ? SAME_AREA_MESSAGE : "Bu sayı için zaten bir konu öneriniz var.");
+    }
     throw error;
   }
 
@@ -224,8 +264,9 @@ export async function reviseTopicProposal(
   if (!mayResubmit(issue, now)) {
     throw conflict("Bu sayının yazı kabul süresi doldu; konu artık yeniden gönderilemez.");
   }
-  const category = await allowedCategory(actor, parsed.data.category);
+  const { category } = await resolveCategory(actor, parsed.data.category);
 
+  // Moving the topic onto an area that already has one is refused by the index
   const updated = await db.transaction(async (tx) => {
     // Conditional on the version the writer saw, so a second tab or a replay
     // cannot resubmit twice or over a decision made in between
@@ -259,6 +300,9 @@ export async function reviseTopicProposal(
       actorId: actor.id,
     });
     return row;
+  }).catch((error: unknown) => {
+    if (isUniqueViolation(error)) throw conflict(SAME_AREA_MESSAGE);
+    throw error;
   });
   if (!updated) throw conflict("Konu bu arada değişti; sayfayı yenileyip tekrar deneyin.");
 
@@ -480,11 +524,14 @@ async function eventsFor(proposalIds: string[]): Promise<Map<string, ProposalEve
   return byProposal;
 }
 
-/** The writer's panel: every issue they can take part in, with their own topic and articles. */
+/**
+ * The writer's panel: every issue they can take part in, with their own topics
+ * (one per area, D-271), the areas still without one, and their articles.
+ */
 export async function listWriterIssues(actor: Actor) {
   if (!canProposeTopics(actor)) throw forbidden();
 
-  const [issueRows, ownProposals, ownArticles] = await Promise.all([
+  const [issueRows, ownProposals, ownArticles, areas] = await Promise.all([
     db
       .select()
       .from(issues)
@@ -493,26 +540,35 @@ export async function listWriterIssues(actor: Actor) {
     db
       .select()
       .from(topicProposals)
-      .where(and(eq(topicProposals.authorId, actor.id), isNull(topicProposals.deletedAt))),
+      .where(and(eq(topicProposals.authorId, actor.id), isNull(topicProposals.deletedAt)))
+      .orderBy(asc(topicProposals.createdAt)),
     db
       .select({ id: articles.id, title: articles.title, status: articles.status, issueId: articles.issueId })
       .from(articles)
       .where(and(eq(articles.authorId, actor.id), isNull(articles.deletedAt))),
+    selectableWriterCategories(actor),
   ]);
   const events = await eventsFor(ownProposals.map((row) => row.id));
 
   return issueRows
     .map((issue) => {
-      const proposal = ownProposals.find((row) => row.issueId === issue.id) ?? null;
+      const proposals = ownProposals
+        .filter((row) => row.issueId === issue.id)
+        .map((proposal) => ({ proposal, events: events.get(proposal.id) ?? [] }));
+      const used = new Set(proposals.map(({ proposal }) => proposal.category));
       return {
         issue,
-        proposal,
-        events: proposal ? (events.get(proposal.id) ?? []) : [],
+        proposals,
+        // Areas that can still take a topic; a single-area writer's topic fills theirs
+        openAreas: areas.filter((name) => !used.has(name)),
+        canProposeMore: proposals.length < topicCapacity(areas),
         articles: ownArticles.filter((row) => row.issueId === issue.id),
       };
     })
     // An issue without windows the writer has nothing in is not theirs to see
-    .filter((entry) => usesIssueWindows(entry.issue) || entry.proposal || entry.articles.length > 0);
+    .filter(
+      (entry) => usesIssueWindows(entry.issue) || entry.proposals.length > 0 || entry.articles.length > 0,
+    );
 }
 
 /** An issue's process is still running while its delivery window has not closed. */
