@@ -9,7 +9,7 @@ import "server-only";
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users } from "@/db/schema";
-import { sendMail } from "@/lib/mail/transport";
+import { queueMails } from "@/services/mail-queue";
 import type { Template } from "@emails/templates";
 
 /**
@@ -31,10 +31,10 @@ export async function mailAdmins(message: Template): Promise<void> {
         ),
       );
 
-    for (const admin of admins) {
-      await sendMail({ to: admin.email, subject: message.subject, text: message.text });
-    }
+    await queueMails(admins.map((admin) => ({ to: admin.email, ...message })));
   } catch (error) {
-    console.error(`Admin mail failed for subject "${message.subject}"`, error);
+    // First line only: driver errors carry the query parameters (addresses) after it
+    const reason = (error instanceof Error ? error.message : String(error)).split("\n")[0];
+    console.error(`Admin mail failed (${message.kind}): ${reason}`);
   }
 }

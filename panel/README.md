@@ -151,6 +151,7 @@ Tam liste `.env.example` içindedir. Kritik olanlar:
 | `SESSION_MAX_AGE_DAYS` / `SESSION_IDLE_DAYS` | Oturum ömrü (30) ve hareketsizlik sınırı (7) |
 | `SMTP_*`, `MAIL_FROM` | E-posta gönderimi |
 | `MAIL_TRANSPORT=file`, `MAIL_DIR` | SMTP yerine dosyaya yazar (yalnızca geliştirme) |
+| `CRON_SECRET` | `/api/cron/daily` ve `/api/cron/mail` için Bearer anahtarı; en az 32 karakter, tanımsızsa iki uç da kapalıdır |
 | `S3_*` | Nesne depolama (medya ve sözleşme PDF'leri). |
 | `REVALIDATE_WEBHOOK_URL` / `_SECRET` | Yayın ve geri çekme sonrası ön yüz önbelleğini tazeler; gövde HMAC-SHA256 ile imzalanır (`x-postscript-signature`). |
 | `PASSWORD_HIBP_CHECK=true` | Şifreleri HIBP k-anonymity ile de kontrol eder (varsayılan kapalı) |
@@ -490,6 +491,8 @@ yanıt 500 döner ve Vercel çalışmayı başarısız işaretler:
 | `prune_traffic`, `prune_posts`, `prune_community`, `prune_direct_messages`, `prune_anon_messages`, `prune_reports` | 1 yılı dolan kayıtlar | 5651 m. 5, KVKK §7 |
 | `prune_auth_attempts` | 30 günden eski giriş denemesi kayıtları | KVKK §7 |
 | `prune_sessions` | Son kullanımı 1 yıldan eski, süresi dolmuş oturumlar | 5651 m. 5, KVKK §7 |
+| `prune_mail_jobs` | Gönderimi biten veya kesin başarısız olan e-posta kayıtları (30 gün) | D-269, KVKK §7 |
+| `process_mail_queue` | Sırası gelen ve yeniden denenecek e-postaları gönderir (en çok 2 dk) | D-269 |
 
 Vercel Hobby planı cron'u günde bir kez çalıştırır ve saati ±59 dakika
 kaydırabilir. Zamanlanmış bir makale bu yüzden en geç ertesi sabah yayımlanır;
@@ -503,6 +506,24 @@ crontab karşılığı:
 ```cron
 0 3 * * *  cd /app && pnpm housekeeping
 ```
+
+### E-posta kuyruğu (D-269)
+
+Servisler e-postayı doğrudan göndermez. `sendMail` ve `queueMails`
+(`src/services/mail-queue.ts`) iletiyi önce `mail_jobs` tablosuna yazar, sonra
+yanıttan sonra (`after()`) gönderir. Gönderilemeyen ileti 1 dk, 5 dk, 30 dk,
+2 sa ve 8 sa arayla yeniden denenir; altıncı başarısızlıkta `failed` olur ve
+`/admin/mail` ekranında görünür. Kuyruk ayrıca günlük cron'da, yöneticinin
+"Kuyruğu şimdi işle" düğmesiyle ve `GET /api/cron/mail` ile işlenir.
+
+Hobby planında cron günde bir kez çalışır. Binlerce alıcılı bir toplu gönderimin
+aynı saatte bitmesi gerekiyorsa `/api/cron/mail` dışarıdaki bir zamanlayıcıyla
+çağrılabilir (ör. 5 dakikada bir, `Authorization: Bearer <CRON_SECRET>`).
+
+Üretimde `MAIL_FROM` `.local`, `.test` gibi ayrılmış bir alan adını gösteriyorsa
+ya da `SMTP_HOST` yerelse gönderim yapılmaz; ileti nedeniyle birlikte kuyrukta
+bekler. Tüm e-postalar `emails/layout.ts` içindeki tek düzenle hem düz metin
+hem HTML olarak üretilir.
 
 ---
 

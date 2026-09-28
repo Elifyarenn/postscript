@@ -23,7 +23,7 @@ import { writeAudit } from "@/lib/audit";
 import { canManageAgreements, type Actor } from "@/lib/auth/rbac";
 import { env } from "@/lib/env";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
-import { sendMail } from "@/lib/mail/transport";
+import { sendMail } from "@/services/mail-queue";
 import { renderDocumentPdf } from "@/lib/pdf";
 import {
   AgreementRenderError,
@@ -425,8 +425,7 @@ export async function acceptAgreement(
   });
   await sendMail({
     to: writer.email,
-    subject: message.subject,
-    text: message.text,
+    ...message,
     attachments: [
       {
         filename: `postscript-sozlesme-v${current.version}.pdf`,

@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import * as templates from "@emails/templates";
 import { badRequest, rateLimited } from "@/lib/errors";
-import { sendMail } from "@/lib/mail/transport";
+import { sendMail } from "@/services/mail-queue";
 import { consumeAttempt } from "@/lib/rate-limit";
 import { assertHuman } from "@/lib/turnstile";
 import { buildImprint } from "@/lib/legal";
@@ -56,5 +56,5 @@ export async function sendContactMessage(
     topic: input.topic || null,
     message: input.message,
   });
-  await sendMail({ to: inbox, subject: message.subject, text: message.text });
+  await sendMail({ to: inbox, ...message });
 }

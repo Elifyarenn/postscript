@@ -10,8 +10,9 @@
  * two runs that meet (two dashboard views, the cron) only one inserts it and
  * sends. A reopened window has a new moment, hence a new key.
  *
- * Runs from the daily cron and after the panel dashboards render — the latter
- * is what sends it close to the minute, since the Hobby cron runs once a day.
+ * Runs from the daily cron, from `/api/cron/mail` and after the panel
+ * dashboards render — the last is what sends it close to the minute, since
+ * the Hobby cron runs once a day.
  */
 import "server-only";
 import { and, eq, gt, gte, inArray, isNotNull, isNull, lte, ne } from "drizzle-orm";
@@ -20,7 +21,7 @@ import { issues, siteSettings, topicProposals, users } from "@/db/schema";
 import { runInBackground } from "@/lib/background";
 import { env } from "@/lib/env";
 import { formatPeriodMoment } from "@/lib/issue-periods";
-import { sendMail } from "@/lib/mail/transport";
+import { queueMails } from "@/services/mail-queue";
 import { notify } from "@/services/notifications";
 import * as templates from "@emails/templates";
 
@@ -99,7 +100,6 @@ async function mailWriters(issue: typeof issues.$inferSelect): Promise<number> {
   const url = `${env().APP_URL}/writer/topics`;
 
   for (const writer of writers) {
-    const acceptedTopic = accepted.find((row) => row.authorId === writer.id)?.title ?? null;
     // The bell in the panel too, for whoever reads the panel before the mail
     await notify({
       userId: writer.id,
@@ -108,17 +108,23 @@ async function mailWriters(issue: typeof issues.$inferSelect): Promise<number> {
       body: `Son teslim: ${closesAt}`,
       href: "/writer/topics",
     });
-    const message = templates.submissionWindowOpened({
-      displayName: writer.displayName,
-      issueLabel,
-      closesAt,
-      acceptedTopic,
-      url,
-    });
-    // Never throws: a failed address is logged and the others still go out
-    await sendMail({ to: writer.email, subject: message.subject, text: message.text });
   }
-  return writers.length;
+
+  // Queued, so a failed address is retried and every send shows on /admin/mail (D-269)
+  const opensKey = issue.submissionOpensAt!.getTime();
+  return queueMails(
+    writers.map((writer) => ({
+      to: writer.email,
+      ...templates.submissionWindowOpened({
+        displayName: writer.displayName,
+        issueLabel,
+        closesAt,
+        acceptedTopic: accepted.find((row) => row.authorId === writer.id)?.title ?? null,
+        url,
+      }),
+      dedupeKey: `submission-open:${issue.id}:${opensKey}:${writer.id}`,
+    })),
+  );
 }
 
 /** For the dashboards: checked after the response, never in the reader's way. */

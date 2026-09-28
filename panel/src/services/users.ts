@@ -52,7 +52,7 @@ import { clearEditorAreas } from "./editor-categories";
 import { revokeAllSessions } from "@/lib/auth/session";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { env } from "@/lib/env";
-import { sendMail } from "@/lib/mail/transport";
+import { sendMail } from "@/services/mail-queue";
 import { slugify } from "@/lib/slug";
 import * as templates from "@emails/templates";
 import { removeProfileImages } from "./profile-images";
@@ -388,7 +388,7 @@ export async function promoteToWriter(
 
   const url = `${env().APP_URL}/writer`;
   const message = templates.promotedToWriter({ displayName: target.displayName, url });
-  await sendMail({ to: target.email, subject: message.subject, text: message.text });
+  await sendMail({ to: target.email, ...message });
 
   return updated;
 }

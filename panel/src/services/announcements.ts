@@ -20,7 +20,7 @@ import { writeAudit } from "@/lib/audit";
 import { canAccessEditorPanel, hasRole, type Actor } from "@/lib/auth/rbac";
 import { env } from "@/lib/env";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
-import { sendMail } from "@/lib/mail/transport";
+import { queueMails } from "@/services/mail-queue";
 import * as templates from "@emails/templates";
 import type { RequestMeta } from "./auth";
 
@@ -182,10 +182,11 @@ export async function publishAnnouncement(
     .where(eq(announcements.id, announcementId))
     .returning();
 
-  // §12: a mandatory announcement is also mailed, because it blocks the panel
+  // §12: a mandatory announcement is also mailed, because it blocks the panel. The
+  // mails are only queued here; the admin is not kept waiting for the mail server (D-269)
   if (published!.requiresAcknowledgement) {
     const recipients = await db
-      .select({ email: users.email, displayName: users.displayName })
+      .select({ id: users.id, email: users.email, displayName: users.displayName })
       .from(users)
       .where(
         and(
@@ -198,14 +199,19 @@ export async function publishAnnouncement(
         ),
       );
 
-    for (const recipient of recipients) {
-      const message = templates.mandatoryAnnouncement({
-        displayName: recipient.displayName,
-        title: published!.title,
-        url: `${env().APP_URL}/writer/announcements`,
-      });
-      await sendMail({ to: recipient.email, subject: message.subject, text: message.text });
-    }
+    const url = `${env().APP_URL}/writer/announcements`;
+    await queueMails(
+      recipients.map((recipient) => ({
+        to: recipient.email,
+        ...templates.mandatoryAnnouncement({
+          displayName: recipient.displayName,
+          title: published!.title,
+          url,
+        }),
+        // A double-submitted publish cannot mail anyone twice
+        dedupeKey: `announcement:${announcementId}:${recipient.id}`,
+      })),
+    );
   }
 
   await writeAudit({

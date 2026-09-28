@@ -1,0 +1,138 @@
+{
+  "verifyEmail": [
+    {
+      "subject": "postscript · E-posta adresinizi doğrulayın",
+      "text": "Merhaba Ada <b>Yazar</b>,\n\nHesabınızı kullanmaya başlamak için e-posta adresinizi doğrulayın:\nhttps://example.com/verify-email?token=abc\n\nBağlantı 24 saat geçerlidir. Bu isteği siz yapmadıysanız bu iletiyi yok sayabilirsiniz.\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    }
+  ],
+  "resetPassword": [
+    {
+      "subject": "postscript · Şifre sıfırlama",
+      "text": "Merhaba Ada,\n\nŞifrenizi sıfırlamak için aşağıdaki bağlantıyı kullanın:\nhttps://example.com/reset-password?token=def\n\nBağlantı 30 dakika geçerlidir ve yalnızca bir kez kullanılabilir.\nŞifreniz sıfırlandığında tüm açık oturumlarınız kapatılır.\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    }
+  ],
+  "changeEmail": [
+    {
+      "subject": "postscript · E-posta adresinizi doğrulayın",
+      "text": "Merhaba Ada,\n\nHesabınızın e-posta adresini yeni@example.com adresine değiştirmek istediniz. Bu adresi doğrulamak için aşağıdaki bağlantıyı kullanın:\nhttps://example.com/verify-email?token=ghi\n\nBağlantı 24 saat geçerlidir. Bu isteği siz yapmadıysanız bu iletiyi yok sayabilirsiniz; adresiniz değişmez.\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    }
+  ],
+  "promotedToWriter": [
+    {
+      "subject": "postscript · Yazar olarak yetkilendirildiniz",
+      "text": "Merhaba Ada,\n\nHesabınız yazar olarak onaylandı; yazar sayfalarınız açık. Çerçeve sözleşme size ayrıca iletilecek.\n\nhttps://example.com/writer\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    }
+  ],
+  "applicationSubmitted": [
+    {
+      "subject": "postscript · Yazar başvurunuz alındı",
+      "text": "Merhaba Ada,\n\nYazar başvurunuz alındı. Önce editörlerimiz, ardından yönetim başvurunuzu değerlendirecek. Durum, Hesabım sayfasından takip edilebilir.\n\nDeğerlendirme sürerken yeni başvuru gönderilemez.\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    }
+  ],
+  "applicationEditorApproved": [
+    {
+      "subject": "postscript · Yazar başvurunuz editör onayından geçti",
+      "text": "Merhaba Ada,\n\nÖrnek eseriniz editörlerimiz tarafından onaylandı. Başvurunuz artık yönetim onayına gönderildi.\n\nSonuç, Hesabım sayfasından takip edilebilir.\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    }
+  ],
+  "applicationRejected": [
+    {
+      "subject": "postscript · Yazar başvurunuzla ilgili karar",
+      "text": "Merhaba Ada,\n\nYazar başvurunuz şu anda kabul edilmedi.\n\nDeğerlendirme notu: Örnek metin <script>alert(1)</script> kısa kaldı.\n\nGerekli koşulları sağladıktan sonra 30 günün ardından yeniden başvurabilirsiniz.\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    }
+  ],
+  "applicationContractReady": [
+    {
+      "subject": "postscript · Yazar sözleşmeniz hazır",
+      "text": "Merhaba Ada,\n\nBaşvurunuz yönetim tarafından onaylandı. Yazar olmanın son adımı, çerçeve sözleşmeyi okuyup imzalamak:\nhttps://example.com/writer-application/contract\n\nSözleşmeyi imzaladığınızda hesabınız otomatik olarak yazar rolüne geçer.\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    }
+  ],
+  "newAgreementVersion": [
+    {
+      "subject": "postscript · Yeni sözleşme sürümü (v3) onayınızı bekliyor",
+      "text": "Merhaba Ada,\n\nÇerçeve sözleşmenin 3. sürümü yayınlandı. Yazar sayfalarına yeniden erişebilmek için yeni sürümü okuyup onaylamanız gerekiyor:\nhttps://example.com/writer/agreement\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    }
+  ],
+  "agreementAccepted": [
+    {
+      "subject": "postscript · Sözleşme onayınız kaydedildi (v2)",
+      "text": "Merhaba Ada,\n\nYazar sözleşmesinin 2. sürümünü onayladınız. Onayladığınız metnin tam kopyası PDF olarak bu iletiye eklendi; kayıtlarınız için saklayın.\n\nYazar sayfalarınız açıldı.\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    }
+  ],
+  "rightsGrantPending": [
+    {
+      "subject": "postscript · Eser Onayı bekliyor: Kış & \"Sessizlik\"",
+      "text": "Merhaba Ada,\n\n\"Kış & \"Sessizlik\"\" başlıklı yazınız yayına kabul edildi ve Eser Onayınızı bekliyor. Onay ekranında eserin metin özetini ve sözleşme sürümünü görecek, adınızın nasıl görüneceğini seçeceksiniz:\nhttps://example.com/writer/approvals/1\n\nOnay verilmeden eser hiçbir mecrada yayımlanmaz (Sözleşme m. 5.4).\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    }
+  ],
+  "rightsGrantReminder": [
+    {
+      "subject": "postscript · Hatırlatma: Kış için Eser Onayı",
+      "text": "Merhaba Ada,\n\n\"Kış\" başlıklı yazınız hâlâ Eser Onayınızı bekliyor:\nhttps://example.com/writer/approvals/1\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    }
+  ],
+  "rightsGrantSigned": [
+    {
+      "subject": "postscript · Eser Onayı kaydedildi: Kış",
+      "text": "Merhaba Ada,\n\n\"Kış\" başlıklı eseriniz için ruhsat onayı verdiniz. Onay kaydının PDF kopyası bu iletiye eklendi; kayıtlarınız için saklayın.\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    }
+  ],
+  "articleStatusChanged": [
+    {
+      "subject": "postscript · \"Kış\" — revizyon istendi",
+      "text": "Merhaba Ada,\n\n\"Kış\" başlıklı yazının durumu değişti: revizyon istendi.\n\nEditör notu: Giriş\nkısalsın.\n\nAyrıntılar: https://example.com/writer/articles/1\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    },
+    {
+      "subject": "postscript · \"Kış\" — yayınlandı",
+      "text": "Merhaba Ada,\n\n\"Kış\" başlıklı yazının durumu değişti: yayınlandı.\n\nAyrıntılar: https://example.com/writer/articles/1\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    },
+    {
+      "subject": "postscript · \"Kış\" — some_other",
+      "text": "Merhaba Ada,\n\n\"Kış\" başlıklı yazının durumu değişti: some_other.\n\nAyrıntılar: https://example.com/writer/articles/1\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    }
+  ],
+  "adminReportReceived": [
+    {
+      "subject": "postscript · Yeni içerik bildirimi: 24 saat içinde sonuçlandırılmalı",
+      "text": "Merhaba,\n\nTopluluktan yeni bir içerik bildirimi geldi.\n\nBildirilen: Hesap\nBildirim türü: Reklam veya spam\n\n5651 sayılı Kanun gereği en geç 24 saat içinde sonuçlandırılmalıdır. İçerik ve hesaplar yalnızca panelde görünür:\nhttps://example.com/admin/community\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    }
+  ],
+  "adminApplicationAwaiting": [
+    {
+      "subject": "postscript · Yönetim onayı bekleyen yazar başvurusu",
+      "text": "Merhaba,\n\nBir yazar başvurusu editör onayından geçti ve yönetim kararını bekliyor. Başvuru sahibinin bilgileri yalnızca panelde görünür:\nhttps://example.com/admin/applications\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    }
+  ],
+  "recoveryCodeUsed": [
+    {
+      "subject": "postscript · Kurtarma kodu kullanıldı",
+      "text": "Merhaba Ada,\n\nHesabınıza iki adımlı doğrulama kurtarma koduyla giriş yapıldı. Kullanılmamış 7 kurtarma kodunuz kaldı.\n\nBu girişi siz yapmadıysanız hemen şifrenizi değiştirin, Hesabım sayfasından diğer oturumları kapatın ve yeni kurtarma kodları oluşturun.\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    }
+  ],
+  "kvkkNewVersion": [
+    {
+      "subject": "postscript · KVKK aydınlatma metni güncellendi (sürüm 4)",
+      "text": "Merhaba Ada,\n\nKişisel verilerinizin nasıl işlendiğini anlatan aydınlatma metnimizin 4. sürümü yayınlandı. Yeni metni buradan okuyabilirsiniz:\nhttps://example.com/kvkk\n\nBu bir bilgilendirmedir; sizden onay istenmiyor.\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    }
+  ],
+  "mandatoryAnnouncement": [
+    {
+      "subject": "postscript · Onayınız gereken duyuru: Toplantı <önemli>",
+      "text": "Merhaba Ada,\n\n\"Toplantı <önemli>\" başlıklı duyuru onayınızı bekliyor. Onaylamadan diğer yazar sayfalarına erişemezsiniz:\nhttps://example.com/writer/announcements\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    }
+  ],
+  "contactMessage": [
+    {
+      "subject": "postscript · İletişim formu: Soru",
+      "text": "İletişim formundan yeni bir mesaj geldi.\n\nAd: Ziyaretçi <img src=x>\nE-posta: z@example.com\nKonu: Soru\nBaşlık: —\n\nMesaj:\nMerhaba,\n<a href=\"javascript:alert(1)\">tık</a>\nİyi günler.\n\nYanıtlamak için gönderenin e-posta adresine yazın.\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    },
+    {
+      "subject": "postscript · İletişim formu: Künye",
+      "text": "İletişim formundan yeni bir mesaj geldi.\n\nAd: Ziyaretçi\nE-posta: z@example.com\nKonu: —\nBaşlık: Künye\n\nMesaj:\nTek satır\n\nYanıtlamak için gönderenin e-posta adresine yazın.\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    },
+    {
+      "subject": "postscript · İletişim formu: yeni mesaj",
+      "text": "İletişim formundan yeni bir mesaj geldi.\n\nAd: Ziyaretçi\nE-posta: z@example.com\nKonu: —\nBaşlık: —\n\nMesaj:\nTek satır\n\nYanıtlamak için gönderenin e-posta adresine yazın.\n\n—\npostscript\nBu ileti otomatik olarak gönderildi."
+    }
+  ]
+}

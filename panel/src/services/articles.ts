@@ -33,7 +33,7 @@ import {
 } from "@/lib/auth/rbac";
 import { env } from "@/lib/env";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
-import { sendMail } from "@/lib/mail/transport";
+import { sendMail } from "@/services/mail-queue";
 import { triggerRevalidate } from "@/lib/revalidate";
 import { slugify, uniqueSlug } from "@/lib/slug";
 import * as templates from "@emails/templates";
@@ -982,7 +982,7 @@ async function notifyAuthorOfStatus(
     note,
     url: `${env().APP_URL}/writer/articles`,
   });
-  await sendMail({ to: author.email, subject: message.subject, text: message.text });
+  await sendMail({ to: author.email, ...message });
 }
 
 /**

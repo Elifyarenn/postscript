@@ -28,7 +28,7 @@ import { hashDocument } from "@/lib/agreement/normalise";
 import { formatContractDateTime } from "@/lib/agreement/render";
 import { env } from "@/lib/env";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
-import { sendMail } from "@/lib/mail/transport";
+import { sendMail } from "@/services/mail-queue";
 import { renderDocumentPdf } from "@/lib/pdf";
 import * as templates from "@emails/templates";
 import { storeGeneratedPdf } from "./media";
@@ -116,7 +116,7 @@ export async function openApprovalForArticle(
     articleTitle: article.title,
     url,
   });
-  await sendMail({ to: writer.email, subject: message.subject, text: message.text });
+  await sendMail({ to: writer.email, ...message });
 
   await writeAudit({
     actorId: options.actorId,
@@ -522,8 +522,7 @@ export async function approveWork(
   });
   await sendMail({
     to: writer.email,
-    subject: message.subject,
-    text: message.text,
+    ...message,
     attachments: [
       { filename: `eser-onayi-${article.slug}.pdf`, content: pdf, contentType: "application/pdf" },
     ],
@@ -625,7 +624,7 @@ export async function sendApprovalReminders(now: Date = new Date()): Promise<num
       articleTitle: row.articleTitle,
       url: `${env().APP_URL}/writer/approvals`,
     });
-    await sendMail({ to: row.email, subject: message.subject, text: message.text });
+    await sendMail({ to: row.email, ...message });
 
     await db
       .update(rightsGrants)

@@ -99,6 +99,7 @@ export const ADMIN_NAV: NavGroup[] = [
     items: [
       { href: "/admin/agreements", label: "Sözleşme sürümleri" },
       { href: "/admin/audit", label: "Denetim kaydı" },
+      { href: "/admin/mail", label: "E-posta kuyruğu" },
       { href: "/admin/settings", label: "Sistem" },
     ],
   },

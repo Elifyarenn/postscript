@@ -10823,3 +10823,130 @@ yalnızca etkin yazarlar ve bir kez, panel bildirimi, iki çalışma buluşunca 
 gönderim, açılış anından önce gönderim yok, taşınan dönem yeniden duyurulur,
 çalışma sayısı / 3 günden eski / kapanmış dönem sessiz, yayıncı ayarları
 değişmez.
+
+## D-269 — E-posta kuyruğu, yeniden deneme ve ortak HTML düzeni
+
+**İstek (ürün sahibi):** Mail altyapısını üretime uygun hâle getir: üretim
+gönderici ayarını denetle, kalıcı kuyruk ve yeniden deneme kur, toplu
+gönderimleri istekten çıkar, bütün şablonları ortak bir HTML düzenine geçir.
+Düz metin sürümleri, mevcut akışlar ve "mail hatası ana işlemi geri almaz"
+davranışı korunacak.
+
+**Denetim (27 Eylül 2026):**
+- Vercel'de `MAIL_FROM` = `postscript <noreply@postscriptmag.com>`
+  (Production ve Preview). `SMTP_*` tanımlı; değerleri gizli, okunmadı.
+  Vercel'de `CRON_SECRET` **yok** (D-103'teki eksik sürüyor).
+- DNS: `resend._domainkey` DKIM, `send.postscriptmag.com` SPF
+  (`include:amazonses.com`) ve MX (`feedback-smtp.ap-northeast-1.amazonses.com`)
+  var. **DMARC kaydı yok.** Resend panelinde oturum açık değildi; alan adının
+  Resend'de "verified" olduğu ve plan kotası oradan doğrulanamadı.
+- Kodda `MAIL_FROM` tanımsızsa `noreply@postscript.local` varsayılanına
+  düşülüyordu; üretimde bunu durduran bir şey yoktu.
+- `sendMail` hatayı yalnızca logluyordu; ileti kayboluyordu. Log satırı hata
+  nesnesinin tamamını basıyordu (SMTP yanıtı alıcı adresini içerebilir).
+- Duyuru ve KVKK bildirimi, alıcıları döngüyle gezip her biri için SMTP'yi
+  istek içinde bekliyordu.
+
+**Karar:**
+- **Kuyruk:** yeni tablo `mail_jobs` (migration `0050_mail_outbox`). Durumlar
+  `pending → processing → sent`, olmadıkça `pending`'e geri, sonunda `failed`.
+  Satır işlenmiş iletiyi taşır (alıcı, konu, metin, HTML, ekler base64), şablonu
+  bilmez; `kind` yalnızca yönetim listesi için. İleride `notification → email /
+  in-app / push` katmanı bu kuyruğun önüne bir kanal olarak oturur.
+- **Arayüz korunuyor:** servisler yine `sendMail({ to, ...template })` çağırır;
+  içe aktarma `@/lib/mail/transport` yerine `@/services/mail-queue`. Transport
+  artık yalnızca adaptörler ve `deliverMail`; bellek ve dosya adaptörleri aynen
+  duruyor (dosya adaptörü JSON'a `html` ve ek adlarını da yazıyor).
+- **Teslim zamanı:** Vercel'de sürekli çalışan işçi yok. Kuyruğa yazılan ileti
+  `after()` ile yanıttan sonra gönderilir (`src/lib/background.ts`); istek
+  dışında (betik, test) aynı iş yerinde çalışır, bu yüzden mevcut testler
+  değişmeden geçer. Her yeni ileti, zamanı gelmiş 10 yeniden denemeyi de
+  yanına alır. Ayrıca günlük cron (`process_mail_queue`, 2 dk), yönetimdeki
+  "Kuyruğu şimdi işle" (4 dk) ve `GET /api/cron/mail` (4 dk, `CRON_SECRET`).
+  Hobby cron günde bir kez; `/api/cron/mail` bu yüzden dış zamanlayıcı için.
+- **Yeniden deneme:** en çok 6 deneme; aralar 1 dk, 5 dk, 30 dk, 2 sa, 8 sa
+  (toplam ≈11 saat). Kalıcı sayılan hatalar (SMTP 501/550/551/553, `EENVELOPE`)
+  hemen `failed`. Yapılandırma hatası geçici sayılır: ayar düzelince gider.
+  Sonsuz deneme yok; `failed` iş yönetim ekranında görünür, içeriği duruyorsa
+  "Yeniden dene" ile tekrar kuyruğa girer (`mail.retry` denetim kaydı).
+- **Çift gönderim:** iş, "hâlâ sırası gelmiş mi" koşulunu tekrarlayan bir
+  güncellemeyle sahiplenilir; aynı işi iki çalışmadan yalnızca biri alır.
+  Sahiplenme 10 dk kilitlidir; yarıda kesilen çalışmanın işi ancak kilit
+  düşünce yeniden alınır. Sonuç yazılırken deneme sayısı da eşleşmeli. SMTP
+  kabul ettikten sonra, "gönderildi" yazılmadan süreç ölürse ileti ikinci kez
+  gidebilir; SMTP'de bunu önleyecek bir kimlik yok (bilinen sınır).
+- **Toplu gönderim:** `queueMails` tüm alıcıları 500'lük dilimlerle tek seferde
+  yazar ve döner; gönderim yanıttan sonra, 45 sn'lik bütçeyle başlar, kalanı
+  sonraki çalışmalar alır. `dedupe_key` benzersiz: `announcement:<id>:<üye>`,
+  `kvkk:<sürüm>:<üye>`. Aynı toplu işlem iki kez tetiklense de kimseye ikinci
+  ileti yazılmaz. Gönderimler arasında 600 ms (Resend: saniyede 2 istek).
+- **Kuyruğa yazılamazsa** (ör. kod, migration'dan önce yayına çıktıysa) ileti
+  eskisi gibi doğrudan gönderilir; tablo eksikliği postayı değil yalnızca
+  yeniden denemeyi kaybettirir.
+- **Üretim göndericisi:** `src/lib/mail/config.ts`. Üretimde `MAIL_FROM`
+  boş, geçersiz ya da ayrılmış bir alan adındaysa (`.local`, `.localhost`,
+  `.test`, `.example`, `.invalid`, `.internal`, `localhost`), `SMTP_HOST`
+  yerelse veya kullanıcı var şifre yoksa SMTP adaptörü göndermez; iş kuyrukta
+  nedeniyle bekler. Denetim `env()` şemasına konmadı: şema hatası bütün siteyi
+  düşürür, yanlış gönderici yalnızca postayı durdurmalı. Mesajlar değişkenin
+  adını söyler, değerini yazmaz.
+- **Güvenlik:** hata metni ilk satır, en çok 300 karakter, adres ve
+  bağlantılar `[adres]`/`[bağlantı]` ile değiştirilmiş hâliyle loglanır ve
+  saklanır. Doğrulama, e-posta değişikliği ve şifre sıfırlama iletileri
+  `sensitive`: içerik gönderilince, kesin başarısızlıkta ya da bağlantının
+  süresi dolunca hemen silinir; süresi dolmuş bağlantı hiç gönderilmez
+  (`expires_at`, jetonun ömrüyle aynı). nodemailer zaman aşımları 10/10/20 sn.
+- **İçerik saklama:** her gönderilen iletinin gövdesi ve ekleri gönderildiği an
+  silinir. Satırlar (alıcı, konu, tür, durum, zamanlar) bittikten 30 gün sonra
+  günlük `prune_mail_jobs` ile silinir.
+- **HTML düzeni:** `emails/layout.ts`. Şablon iletisini birkaç blokla anlatır
+  (paragraf, eylem, alan listesi, not, alıntı); aynı bloklardan düz metin ve
+  HTML üretilir. Düz metin karakteri karakterine eskisiyle aynı
+  (`tests/fixtures/mail-text-baseline.json`, 20 şablon, 24 örnek). HTML:
+  tablo tabanlı, satır içi stil, web fontu ve görsel yok (istemciler görselleri
+  engeller), panelin paleti (#5c152a bordo, #f5f3ec kâğıt), Georgia başlık,
+  yazı logosu "PostScript / The things left unsaid", tek düğme ve altında aynı
+  adres, 600 px altında daralan kart, Outlook için MSO sarmalayıcı. Bütün
+  değerler kaçışlanır; yalnızca `http(s)` adresleri bağlantı olur. Duyuru
+  e-postası yalnızca başlığı taşır (gövde Markdown'ı e-postaya girmez).
+  Şablonlarda yeni rota uydurulmadı; bağlantılar servislerin verdiği adresler.
+- **Yönetim:** `/admin/mail` (yalnızca admin, `canManageMailQueue`): durum
+  sayıları, bekleyen/başarısız/gönderilen listesi, son hata, yeniden dene,
+  kuyruğu şimdi işle ve HTML tasarım önizlemesi (`sandbox` iframe).
+
+**Hukuk:** Aydınlatma metni aynı adımda güncellendi: yeni veri kategorisi
+"E-posta gönderim kaydı", amaç satırı (c)+(f), iletişim formu "sitede
+saklanmaz" ifadesi kuyrukta bekleme süresini söyleyecek şekilde düzeltildi,
+§7'ye iki saklama satırı eklendi. Yeni sağlayıcı veya yurt dışı aktarım yok
+(Resend zaten listede). Amaç satırının hukuki sebebi — **hukukçu görüşü
+gerekiyor**; metin yalnızca depoda, canlı sürüm yöneticinin yayınlamasıyla
+çıkar.
+
+**Doğrulama:** `tests/unit/mail-templates.test.ts` (20 şablonun düz metni
+eskisiyle aynı, her birinde HTML, kaçışlama, `javascript:` bağlantı olmaz,
+doğrulama adresi HTML'de aynen), `tests/unit/mail-config.test.ts` (üretimde
+`.local` reddi), `tests/integration/mail-queue.test.ts` (bellek ve dosya
+adaptörü, başarılı iş `sent`, geçici hata yeniden deneme, 6 denemeden sonra
+`failed`, 550 hemen `failed`, yapılandırma hatası beklemede, süresi dolmuş
+bağlantı gönderilmez, SMTP çöktüğünde terfi geri alınmaz, tablo yokken doğrudan
+gönderim, iki eşzamanlı çalışma bir işi bir kez gönderir, aynı anahtar ikinci
+işi yazmaz, duyuru isteği tek e-posta gitmeden döner, ek taşınır ve silinir,
+doğrulama bağlantısı hesabı açar, yönetim yeniden deneme ve 403, 30 gün
+saklama).
+
+**Yayın notu:** Migration var (`0050_mail_outbox`): önce üretime uygulanmalı
+(D-079), sonra push. Kod migration'sız yayına çıksa da posta kaybolmaz
+(doğrudan gönderime düşer), ama yeniden deneme olmaz ve `/admin/mail` açılmaz.
+Ortak klasörde commit'lenmemiş `0050_lean_silhouette` (sorun bildirme) ile
+D-268 için `0051`/`0052` var. Bu adım `mail-outbox` dalında, `main`'in üzerinde
+0050 olarak üretildi; `main`'e ikinci giren iş, migration'ını yeniden üretmeli.
+
+**Yayına alınması (2026-09-28):** Ürün sahibi "mail gönderimlerini kontrol
+etmem görmem için bir sekme yap panelde" dedi. Gönderimleri görmek için her
+iletinin bir kaydı gerekir; bu, kuyruğun kendisidir. Bu yüzden D-269 bütünüyle
+yayına alındı ve sekme `/admin/mail` ("Yasal & Sistem → E-posta kuyruğu")
+oldu. D-270'in e-postası da kuyruğa taşındı (`queueMails`, anahtar
+`submission-open:<sayı>:<açılış anı>:<yazar>`); `site_settings` üzerinden
+"bir kez" sahiplenmesi aynen duruyor, böylece yayından önce duyurulmuş bir
+dönem yeniden duyurulmaz. `/api/cron/mail` önce açılan dönemleri kuyruğa alır,
+sonra kuyruğu işler.

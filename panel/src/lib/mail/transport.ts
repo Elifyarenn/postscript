@@ -1,20 +1,25 @@
 /**
  * E-mail transport behind an adapter (specification §2).
  *
- * The application only ever calls `sendMail`. Swapping SMTP for Resend or SES
- * means writing one more adapter here and changing nothing else. Tests use the
- * in-memory adapter and assert on what would have been sent.
+ * The transport only knows how to hand one message to a mail server. Services
+ * do not call it: they call `sendMail` in `@/services/mail-queue`, which stores
+ * the message first and delivers it through this module (D-269). Swapping SMTP
+ * for Resend's API or SES means writing one more adapter here and changing
+ * nothing else. Tests use the in-memory adapter and assert on what was sent.
  */
 import "server-only";
 import nodemailer from "nodemailer";
 import { env } from "@/lib/env";
+import { MailConfigError, mailConfigProblems } from "@/lib/mail/config";
+
+export type MailAttachment = { filename: string; content: Buffer; contentType?: string };
 
 export type MailMessage = {
   to: string;
   subject: string;
   text: string;
   html?: string;
-  attachments?: { filename: string; content: Buffer; contentType?: string }[];
+  attachments?: MailAttachment[];
 };
 
 export type MailAdapter = {
@@ -32,6 +37,10 @@ function createSmtpAdapter(): MailAdapter {
     host: config.SMTP_HOST,
     port: config.SMTP_PORT,
     secure: config.SMTP_SECURE,
+    // nodemailer waits two minutes by default; a serverless run cannot
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 20_000,
     ...(config.SMTP_USER
       ? { auth: { user: config.SMTP_USER, pass: config.SMTP_PASSWORD ?? "" } }
       : {}),
@@ -40,6 +49,16 @@ function createSmtpAdapter(): MailAdapter {
   return {
     name: "smtp",
     async send(message) {
+      // Checked on every send, so a fixed variable takes effect with the next attempt
+      const problems = mailConfigProblems({
+        nodeEnv: process.env.NODE_ENV,
+        mailFrom: config.MAIL_FROM,
+        smtpHost: config.SMTP_HOST,
+        smtpUser: config.SMTP_USER,
+        smtpPassword: config.SMTP_PASSWORD,
+      });
+      if (problems.length > 0) throw new MailConfigError(problems);
+
       await transporter.sendMail({
         from: config.MAIL_FROM,
         to: message.to,
@@ -58,7 +77,7 @@ function createSmtpAdapter(): MailAdapter {
  * SMTP server, but verification and reset links still have to be readable.
  * The end to end tests read the same directory.
  */
-function createFileAdapter(directory: string): MailAdapter {
+export function createFileAdapter(directory: string): MailAdapter {
   return {
     name: "file",
     async send(message) {
@@ -75,6 +94,8 @@ function createFileAdapter(directory: string): MailAdapter {
             to: message.to,
             subject: message.subject,
             text: message.text,
+            html: message.html,
+            attachments: message.attachments?.map((a) => a.filename),
             sentAt: new Date().toISOString(),
           },
           null,
@@ -128,14 +149,7 @@ export function getMailAdapter(): MailAdapter {
   return adapter;
 }
 
-/**
- * Sends a message. Delivery problems are logged, never thrown: a failing mail
- * server must not roll back a promotion or a signature that already happened.
- */
-export async function sendMail(message: MailMessage): Promise<void> {
-  try {
-    await getMailAdapter().send(message);
-  } catch (error) {
-    console.error(`Mail delivery failed for subject "${message.subject}"`, error);
-  }
+/** Hands one message to the active adapter. Throws on failure; the queue decides what next. */
+export async function deliverMail(message: MailMessage): Promise<void> {
+  await getMailAdapter().send(message);
 }

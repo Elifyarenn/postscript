@@ -18,8 +18,9 @@ import { pruneDeletedCommunityContent } from "@/services/community";
 import { pruneDeletedDirectMessages } from "@/services/direct-messages";
 import { pruneDeletedPosts } from "@/services/posts";
 import { pruneResolvedReports } from "@/services/reports";
-import { sendApprovalReminders } from "@/services/rights";
+import { processMailQueue, pruneMailJobs } from "@/services/mail-queue";
 import { announceOpenedSubmissionWindows } from "@/services/issue-mail";
+import { sendApprovalReminders } from "@/services/rights";
 import { anonymiseUser } from "@/services/users";
 
 const DAY_MS = 86_400_000;
@@ -105,7 +106,6 @@ export type HousekeepingTask = {
 export const DAILY_TASKS: readonly HousekeepingTask[] = [
   { name: "publish_scheduled", run: async (now) => (await publishScheduledArticles(now)).length },
   { name: "approval_reminders", run: sendApprovalReminders },
-  { name: "announce_submission_windows", run: announceOpenedSubmissionWindows },
   { name: "process_deletions", run: processDueDeletions },
   { name: "purge_unverified", run: purgeUnverifiedAccounts },
   { name: "prune_traffic", run: pruneTrafficLogs },
@@ -122,6 +122,10 @@ export const DAILY_TASKS: readonly HousekeepingTask[] = [
     },
   },
   { name: "prune_sessions", run: pruneEndedSessions },
+  { name: "prune_mail_jobs", run: pruneMailJobs },
+  { name: "announce_submission_windows", run: announceOpenedSubmissionWindows },
+  // Last, so the reminders queued above go out in the same run; retries left over from the day too
+  { name: "process_mail_queue", run: () => processMailQueue({ budgetMs: 120_000, limit: 1000 }) },
 ];
 
 export type TaskOutcome =

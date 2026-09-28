@@ -63,6 +63,11 @@ export function canAccessAdminPanel(actor: Actor): boolean {
   return isOperational(actor) && hasRole(actor.role, "admin");
 }
 
+/** The e-mail outbox holds addresses and message subjects, so only admins see it (D-269). */
+export function canManageMailQueue(actor: Actor): boolean {
+  return canAccessAdminPanel(actor);
+}
+
 /**
  * Where the PANEL button on the front page leads (D-086). Built on the same
  * checks the panel guards run, so the button never points at a door that would

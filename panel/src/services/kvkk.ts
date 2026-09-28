@@ -16,7 +16,7 @@ import { hasRole, type Actor } from "@/lib/auth/rbac";
 import { sha256Hex } from "@/lib/crypto";
 import { env } from "@/lib/env";
 import { badRequest, conflict, forbidden } from "@/lib/errors";
-import { sendMail } from "@/lib/mail/transport";
+import { queueMails } from "@/services/mail-queue";
 import * as templates from "@emails/templates";
 import { notify } from "@/services/notifications";
 import type { RequestMeta } from "./auth";
@@ -129,9 +129,16 @@ async function tellMembers(version: number): Promise<number> {
         title: `KVKK aydınlatma metni güncellendi (sürüm ${version})`,
         href: "/kvkk",
       });
-      const message = templates.kvkkNewVersion({ displayName: member.displayName, version, url });
-      await sendMail({ to: member.email, subject: message.subject, text: message.text });
     }
+
+    // Queued, not sent: the admin publishing the notice does not wait for every mailbox (D-269)
+    await queueMails(
+      members.map((member) => ({
+        to: member.email,
+        ...templates.kvkkNewVersion({ displayName: member.displayName, version, url }),
+        dedupeKey: `kvkk:${version}:${member.id}`,
+      })),
+    );
     return members.length;
   } catch (error) {
     // First line only: driver errors carry query parameters (addresses) after it

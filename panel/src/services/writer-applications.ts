@@ -37,7 +37,7 @@ import {
 } from "@/lib/auth/rbac";
 import { env } from "@/lib/env";
 import { badRequest, conflict, forbidden, isAppError, notFound, rateLimited } from "@/lib/errors";
-import { sendMail } from "@/lib/mail/transport";
+import { sendMail } from "@/services/mail-queue";
 import { buildStorageKey, getStorage } from "@/lib/storage";
 import { renderDocumentPdf } from "@/lib/pdf";
 import { renderAgreementForWriter, getCurrentAgreement, stripMarkdown } from "./agreements";
@@ -220,7 +220,7 @@ export async function submitWriterApplication(
   });
 
   const message = templates.applicationSubmitted({ displayName: user.displayName });
-  await sendMail({ to: user.email, subject: message.subject, text: message.text });
+  await sendMail({ to: user.email, ...message });
 
   return application!;
 }
@@ -313,7 +313,7 @@ export async function editorDecideApplication(
     const message = templates.applicationEditorApproved({
       displayName: applicant.displayName,
     });
-    await sendMail({ to: applicant.email, subject: message.subject, text: message.text });
+    await sendMail({ to: applicant.email, ...message });
 
     // The next move is the admin's, and they may not be looking at the panel (D-098)
     await mailAdmins(
@@ -324,7 +324,7 @@ export async function editorDecideApplication(
       displayName: applicant.displayName,
       reason: note ?? "Açıklama belirtilmedi.",
     });
-    await sendMail({ to: applicant.email, subject: message.subject, text: message.text });
+    await sendMail({ to: applicant.email, ...message });
   }
 
   return updated!;
@@ -397,13 +397,13 @@ export async function adminDecideApplication(
       displayName: applicant.displayName,
       url,
     });
-    await sendMail({ to: applicant.email, subject: message.subject, text: message.text });
+    await sendMail({ to: applicant.email, ...message });
   } else {
     const message = templates.applicationRejected({
       displayName: applicant.displayName,
       reason: note ?? "Açıklama belirtilmedi.",
     });
-    await sendMail({ to: applicant.email, subject: message.subject, text: message.text });
+    await sendMail({ to: applicant.email, ...message });
   }
 
   return updated!;
@@ -533,8 +533,7 @@ export async function signApplicationContract(
   });
   await sendMail({
     to: user.email,
-    subject: message.subject,
-    text: message.text,
+    ...message,
     attachments: [
       {
         filename: `postscript-sozlesme-v${current.version}.pdf`,

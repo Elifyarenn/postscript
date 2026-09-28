@@ -21,7 +21,7 @@ import { loginChallenges, totpRecoveryCodes, users, type User } from "@/db/schem
 import { decryptSecret, encryptSecret, hashToken, randomToken } from "@/lib/crypto";
 import { env } from "@/lib/env";
 import { badRequest, conflict, forbidden, notFound, rateLimited } from "@/lib/errors";
-import { sendMail } from "@/lib/mail/transport";
+import { sendMail } from "@/services/mail-queue";
 import { verifyPassword } from "@/lib/password";
 import { consumeAttempt } from "@/lib/rate-limit";
 import { writeAudit } from "@/lib/audit";
@@ -377,7 +377,7 @@ export async function verifyLoginCode(
       ip: meta?.ip ?? null,
     });
     const message = templates.recoveryCodeUsed({ displayName: user.displayName, remaining });
-    await sendMail({ to: user.email, subject: message.subject, text: message.text });
+    await sendMail({ to: user.email, ...message });
   }
 
   return factor !== null;

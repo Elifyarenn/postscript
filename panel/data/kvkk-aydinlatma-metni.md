@@ -38,7 +38,8 @@ ortaklık adına tek başına temsile yetkilidir.
 | Trafik kaydı | Her yorum, sohbet mesajı, özel mesaj, anonim mesaj, gönderi ve yanıt için: gönderen hesap, IP adresi, tarayıcı bilgisi (user-agent), işlem türü ve zamanı |
 | Moderasyon | Yasaklama durumu ve gerekçesi, kaldırılan içerik kayıtları |
 | Denetim | Panelde yapılan işlemlerin kaydı: kimin, ne zaman, hangi işlemi, hangi IP adresinden yaptığı |
-| İletişim formu | İletişim sayfasındaki formu doldurduğunuzda yazdığınız ad, e-posta adresi, konu ve mesajınız. Bu bilgiler sitede saklanmaz; doğrudan derginin e-posta kutusuna iletilir |
+| İletişim formu | İletişim sayfasındaki formu doldurduğunuzda yazdığınız ad, e-posta adresi, konu ve mesajınız. Bu bilgiler sitede kalıcı olarak saklanmaz; derginin e-posta kutusuna iletilir. İletilene kadar e-posta gönderim kuyruğunda bekler ve iletildiği anda içeriği silinir |
+| E-posta gönderim kaydı | Size (veya iletişim formunda derginin kutusuna) gönderilen her e-posta için: alıcı adresi, konu, e-postanın türü (ör. doğrulama, duyuru), gönderim durumu, deneme sayısı, varsa gönderim hatasının adres ve bağlantı içermeyen özeti, oluşturulma, deneme ve gönderim zamanları. E-postanın içeriği (metni, varsa eki) yalnızca gönderilene kadar tutulur |
 | Profil görselleri | Topluluk profilinize yüklediğiniz profil fotoğrafı ve kapak fotoğrafı; yükleyen hesap, dosya türü ve boyutu. Bu görselleri giriş yapmış diğer üyeler görür; yüklemek zorunlu değildir |
 | Ekip avatarı | Panelde bir süre açık kalan ekip avatarı oluşturucusunu ve ekip formunu kullandıysanız, o dönemde kaydedilmiş: seçtiğiniz çizim parçaları (ten tonu, yüz şekli, göz ve kirpik, kaş, burun, ağız ve dudak rengi, saç modeli, dokusu ve rengi, sakal, çil, ben, allık, göz altı, yara izi, gözlük, piercing, küpe, kolye, kıyafet ve şapka gibi ekstralar), bu seçimlerden sunucuda çizilen PNG görseli, girdiğiniz görünen isim ve ekipteki rolünüz, kaydın hesabınızla ilişkisi, oluşturulma ve güncellenme zamanı. Avatarınızı gönderdiyseniz ayrıca doldurabileceğiniz ekip formunun yanıtları: kendinizden yazdığınız en çok 55 karakterlik bir söz, ekip sayfasında adınızın mı mahlasınızın mı yazmasını istediğiniz, burcunuz ve formu yanıtladığınız zaman. Oluşturucu ve form panelden kaldırıldı; artık yeni avatar veya form yanıtı alınmıyor, var olan kayıtlar veritabanında saklanıyor ve panelde gösterilmiyor |
 | Müzik çalar | Üye olarak giriş yapmışken ana sayfadaki Spotify çalarını açtığınızda tarayıcınızın Spotify ile kurduğu bağlantıda iletilen IP adresi ve tarayıcı bilgisi; bu veriler dergiye değil, doğrudan Spotify AB şirketine gider |
@@ -101,6 +102,7 @@ saklanmaz**.
 | Yetkili kamu kurum ve kuruluşlarının hukuka uygun taleplerinin karşılanması | (a) Kanunlarda açıkça öngörülmesi, (ç) Hukuki yükümlülük |
 | Panel içi bildirim ve duyuruların iletilmesi | (c) Sözleşmenin ifası |
 | Yazarsanız, sayı takvimindeki dönemlerin (ör. yazı kabul döneminin başladığı) ve varsa kabul edilen konunuzun panel bildirimi ve e-postayla size iletilmesi | (c) Sözleşmenin ifası |
+| E-postaların gönderim kuyruğunda tutulması, iletilemeyenlerin yeniden denenmesi ve gönderim durumunun yöneticilerce izlenmesi | (c) Sözleşmenin ifası, (f) Meşru menfaat |
 | Aydınlatma metninin yeni sürümlerinin duyurulması ve hangi sürümün ne zaman okunduğunun kaydedilmesi | (ç) Veri sorumlusunun hukuki yükümlülüğü — KVKK m. 10 |
 | İletişim formundan gönderdiğiniz mesajı okumak ve size cevap vermek | Meşru menfaat (KVKK m. 5/2-f): bize yazan kişiye cevap verebilmek. Formu doldurmak zorunda değilsiniz; aynı adrese doğrudan da yazabilirsiniz |
 | Sayının çalma listesinin, yalnızca üye olarak giriş yapmışken siz çal düğmesine bastığınızda Spotify çaları yüklenerek dinletilmesi | Açık rıza (KVKK m. 5/1): çalar, düğmeye basmanızdan önce hiçbir veri iletmez; basmazsanız yüklenmez |
@@ -120,7 +122,8 @@ Kişisel verileriniz tamamen elektronik ortamda toplanır:
   oturum kaydı ile sunucu tarafında oluşan IP adresi, tarayıcı bilgisi ve işlem
   zamanı kayıtları.
 - **İletişim formunu gönderdiğinizde:** Yazdığınız ad, e-posta adresi, konu ve
-  mesaj derginin e-posta kutusuna iletilir; site bu bilgileri kaydetmez. Formun
+  mesaj derginin e-posta kutusuna iletilir; site bu bilgileri yalnızca iletilene
+  kadar gönderim kuyruğunda tutar, iletildiği anda içeriği siler. Formun
   kötüye kullanılmasını önlemek için gönderim sırasında IP adresiniz sayaç
   amacıyla kullanılır.
 - **Bot doğrulaması sırasında:** Kayıt ve doğrulama e-postası formlarındaki
@@ -176,7 +179,9 @@ esas alınarak gerçekleştirilmektedir.
 | Veri | Saklama süresi |
 |---|---|
 | Hesap verileri (kimlik, iletişim, profil) | Hesap açık kaldığı sürece. Silme talebiniz üzerine 30 gün sonra anonimleştirilir. |
-| İletişim formu mesajları | Sitede saklanmaz. Derginin e-posta kutusunda, talebiniz karşılandıktan sonra en geç 1 yıl içinde silinir. |
+| İletişim formu mesajları | Sitede kalıcı olarak saklanmaz: gönderim kuyruğunda iletilene kadar bekler, iletildiği anda silinir. Derginin e-posta kutusunda, talebiniz karşılandıktan sonra en geç 1 yıl içinde silinir. |
+| E-posta içeriği (gönderim kuyruğunda) | Gönderilene kadar; gönderildiği anda silinir. Doğrulama, e-posta değişikliği ve şifre sıfırlama e-postalarının içeriği kesin olarak gönderilemediğinde veya bağlantının süresi dolduğunda da hemen silinir; diğer e-postalar gönderilemezse yeniden gönderilebilmesi için en çok 30 gün tutulur. |
+| E-posta gönderim kayıtları (alıcı, konu, tür, durum, zamanlar) | Gönderim tamamlandıktan veya kesin olarak başarısız olduktan sonra 30 gün |
 | Profil ve kapak fotoğrafı | Siz kaldırana kadar. Yenisini yüklediğinizde eskisi hemen silinir; hesabınız silindiğinde dosyalar da silinir. |
 | Ekip avatarı ve ekip formu yanıtları (seçimler, görsel, görünen isim, ekip rolü, söz, ad/mahlas tercihi, burç) | Hesabınız silinene veya Bölüm 9'daki yolla silinmesini isteyene kadar; ikisi de kaydı ve görseli kalıcı olarak siler. Yönetimin daha önce indirdiği kopyalar sistemin dışında kalır; bunların silinmesini de aynı yolla isteyebilirsiniz. |
 | Tamamlanmamış (e-postası doğrulanmamış) kayıtlar | 7 gün |

@@ -1,38 +1,62 @@
 /**
  * E-mail templates (specification §12).
  *
- * Each template is a pure function returning a subject and a plain text body.
- * Keeping them free of imports from the service layer means they can be
- * previewed and unit tested on their own.
+ * Each template is a pure function describing its message as blocks; the
+ * shared layout (`./layout`, D-269) turns them into a subject, a plain text
+ * body and an HTML body. Keeping them free of imports from the service layer
+ * means they can be previewed and unit tested on their own.
+ *
+ * Links are built by the calling service from `APP_URL`; the templates never
+ * invent a route.
  */
+import { renderMail, type Template } from "./layout";
 
-export type Template = { subject: string; text: string };
-
-const signature = "\n\n—\npostscript\nBu ileti otomatik olarak gönderildi.";
+export type { Template } from "./layout";
 
 export function verifyEmail(input: { displayName: string; url: string }): Template {
-  return {
+  return renderMail({
+    kind: "verify_email",
+    sensitive: true,
     subject: "postscript · E-posta adresinizi doğrulayın",
-    text:
-      `Merhaba ${input.displayName},\n\n` +
-      "Hesabınızı kullanmaya başlamak için e-posta adresinizi doğrulayın:\n" +
-      `${input.url}\n\n` +
-      "Bağlantı 24 saat geçerlidir. Bu isteği siz yapmadıysanız bu iletiyi yok sayabilirsiniz." +
-      signature,
-  };
+    heading: "E-posta adresinizi doğrulayın",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "action",
+        lead: "Hesabınızı kullanmaya başlamak için e-posta adresinizi doğrulayın:",
+        url: input.url,
+        label: "Adresimi doğrula",
+      },
+      {
+        type: "paragraph",
+        text: "Bağlantı 24 saat geçerlidir. Bu isteği siz yapmadıysanız bu iletiyi yok sayabilirsiniz.",
+      },
+    ],
+  });
 }
 
 export function resetPassword(input: { displayName: string; url: string }): Template {
-  return {
+  return renderMail({
+    kind: "reset_password",
+    sensitive: true,
     subject: "postscript · Şifre sıfırlama",
-    text:
-      `Merhaba ${input.displayName},\n\n` +
-      "Şifrenizi sıfırlamak için aşağıdaki bağlantıyı kullanın:\n" +
-      `${input.url}\n\n` +
-      "Bağlantı 30 dakika geçerlidir ve yalnızca bir kez kullanılabilir.\n" +
-      "Şifreniz sıfırlandığında tüm açık oturumlarınız kapatılır." +
-      signature,
-  };
+    heading: "Şifrenizi sıfırlayın",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "action",
+        lead: "Şifrenizi sıfırlamak için aşağıdaki bağlantıyı kullanın:",
+        url: input.url,
+        label: "Yeni şifre belirle",
+      },
+      {
+        type: "paragraph",
+        text:
+          "Bağlantı 30 dakika geçerlidir ve yalnızca bir kez kullanılabilir.\n" +
+          "Şifreniz sıfırlandığında tüm açık oturumlarınız kapatılır.",
+      },
+    ],
+  });
 }
 
 export function changeEmail(input: {
@@ -40,81 +64,126 @@ export function changeEmail(input: {
   newEmail: string;
   url: string;
 }): Template {
-  return {
+  return renderMail({
+    kind: "change_email",
+    sensitive: true,
     subject: "postscript · E-posta adresinizi doğrulayın",
-    text:
-      `Merhaba ${input.displayName},\n\n` +
-      `Hesabınızın e-posta adresini ${input.newEmail} adresine değiştirmek istediniz. ` +
-      "Bu adresi doğrulamak için aşağıdaki bağlantıyı kullanın:\n" +
-      `${input.url}\n\n` +
-      "Bağlantı 24 saat geçerlidir. Bu isteği siz yapmadıysanız bu iletiyi yok sayabilirsiniz; " +
-      "adresiniz değişmez." +
-      signature,
-  };
+    heading: "Yeni e-posta adresinizi doğrulayın",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "action",
+        lead:
+          `Hesabınızın e-posta adresini ${input.newEmail} adresine değiştirmek istediniz. ` +
+          "Bu adresi doğrulamak için aşağıdaki bağlantıyı kullanın:",
+        url: input.url,
+        label: "Yeni adresimi doğrula",
+      },
+      {
+        type: "paragraph",
+        text:
+          "Bağlantı 24 saat geçerlidir. Bu isteği siz yapmadıysanız bu iletiyi yok sayabilirsiniz; " +
+          "adresiniz değişmez.",
+      },
+    ],
+  });
 }
 
 export function promotedToWriter(input: { displayName: string; url: string }): Template {
-  return {
+  return renderMail({
+    kind: "promoted_to_writer",
     subject: "postscript · Yazar olarak yetkilendirildiniz",
-    text:
-      `Merhaba ${input.displayName},\n\n` +
-      "Hesabınız yazar olarak onaylandı; yazar sayfalarınız açık. Çerçeve sözleşme " +
-      "size ayrıca iletilecek.\n\n" +
-      `${input.url}` +
-      signature,
-  };
+    heading: "Yazar olarak yetkilendirildiniz",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "paragraph",
+        text:
+          "Hesabınız yazar olarak onaylandı; yazar sayfalarınız açık. Çerçeve sözleşme " +
+          "size ayrıca iletilecek.",
+      },
+      { type: "action", url: input.url, label: "Yazar paneline git" },
+    ],
+  });
 }
 
 export function applicationSubmitted(input: { displayName: string }): Template {
-  return {
+  return renderMail({
+    kind: "application_submitted",
     subject: "postscript · Yazar başvurunuz alındı",
-    text:
-      `Merhaba ${input.displayName},\n\n` +
-      "Yazar başvurunuz alındı. Önce editörlerimiz, ardından yönetim başvurunuzu " +
-      "değerlendirecek. Durum, Hesabım sayfasından takip edilebilir.\n\n" +
-      "Değerlendirme sürerken yeni başvuru gönderilemez." +
-      signature,
-  };
+    heading: "Yazar başvurunuz alındı",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "paragraph",
+        text:
+          "Yazar başvurunuz alındı. Önce editörlerimiz, ardından yönetim başvurunuzu " +
+          "değerlendirecek. Durum, Hesabım sayfasından takip edilebilir.",
+      },
+      { type: "paragraph", text: "Değerlendirme sürerken yeni başvuru gönderilemez." },
+    ],
+  });
 }
 
 export function applicationEditorApproved(input: { displayName: string }): Template {
-  return {
+  return renderMail({
+    kind: "application_editor_approved",
     subject: "postscript · Yazar başvurunuz editör onayından geçti",
-    text:
-      `Merhaba ${input.displayName},\n\n` +
-      "Örnek eseriniz editörlerimiz tarafından onaylandı. Başvurunuz artık yönetim " +
-      "onayına gönderildi.\n\n" +
-      "Sonuç, Hesabım sayfasından takip edilebilir." +
-      signature,
-  };
+    heading: "Başvurunuz editör onayından geçti",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "paragraph",
+        text:
+          "Örnek eseriniz editörlerimiz tarafından onaylandı. Başvurunuz artık yönetim " +
+          "onayına gönderildi.",
+      },
+      { type: "paragraph", text: "Sonuç, Hesabım sayfasından takip edilebilir." },
+    ],
+  });
 }
 
 export function applicationRejected(input: { displayName: string; reason: string }): Template {
-  return {
+  return renderMail({
+    kind: "application_rejected",
     subject: "postscript · Yazar başvurunuzla ilgili karar",
-    text:
-      `Merhaba ${input.displayName},\n\n` +
-      "Yazar başvurunuz şu anda kabul edilmedi.\n\n" +
-      `Değerlendirme notu: ${input.reason}\n\n` +
-      "Gerekli koşulları sağladıktan sonra 30 günün ardından yeniden başvurabilirsiniz." +
-      signature,
-  };
+    heading: "Yazar başvurunuzla ilgili karar",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      { type: "paragraph", text: "Yazar başvurunuz şu anda kabul edilmedi." },
+      { type: "note", label: "Değerlendirme notu:", text: input.reason },
+      {
+        type: "paragraph",
+        text: "Gerekli koşulları sağladıktan sonra 30 günün ardından yeniden başvurabilirsiniz.",
+      },
+    ],
+  });
 }
 
 export function applicationContractReady(input: {
   displayName: string;
   url: string;
 }): Template {
-  return {
+  return renderMail({
+    kind: "application_contract_ready",
     subject: "postscript · Yazar sözleşmeniz hazır",
-    text:
-      `Merhaba ${input.displayName},\n\n` +
-      "Başvurunuz yönetim tarafından onaylandı. Yazar olmanın son adımı, çerçeve " +
-      "sözleşmeyi okuyup imzalamak:\n" +
-      `${input.url}\n\n` +
-      "Sözleşmeyi imzaladığınızda hesabınız otomatik olarak yazar rolüne geçer." +
-      signature,
-  };
+    heading: "Yazar sözleşmeniz hazır",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "action",
+        lead:
+          "Başvurunuz yönetim tarafından onaylandı. Yazar olmanın son adımı, çerçeve " +
+          "sözleşmeyi okuyup imzalamak:",
+        url: input.url,
+        label: "Sözleşmeyi oku",
+      },
+      {
+        type: "paragraph",
+        text: "Sözleşmeyi imzaladığınızda hesabınız otomatik olarak yazar rolüne geçer.",
+      },
+    ],
+  });
 }
 
 export function newAgreementVersion(input: {
@@ -122,27 +191,40 @@ export function newAgreementVersion(input: {
   version: number;
   url: string;
 }): Template {
-  return {
+  return renderMail({
+    kind: "new_agreement_version",
     subject: `postscript · Yeni sözleşme sürümü (v${input.version}) onayınızı bekliyor`,
-    text:
-      `Merhaba ${input.displayName},\n\n` +
-      `Çerçeve sözleşmenin ${input.version}. sürümü yayınlandı. Yazar sayfalarına ` +
-      "yeniden erişebilmek için yeni sürümü okuyup onaylamanız gerekiyor:\n" +
-      `${input.url}` +
-      signature,
-  };
+    heading: `Sözleşmenin ${input.version}. sürümü onayınızı bekliyor`,
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "action",
+        lead:
+          `Çerçeve sözleşmenin ${input.version}. sürümü yayınlandı. Yazar sayfalarına ` +
+          "yeniden erişebilmek için yeni sürümü okuyup onaylamanız gerekiyor:",
+        url: input.url,
+        label: "Yeni sürümü oku",
+      },
+    ],
+  });
 }
 
 export function agreementAccepted(input: { displayName: string; version: number }): Template {
-  return {
+  return renderMail({
+    kind: "agreement_accepted",
     subject: `postscript · Sözleşme onayınız kaydedildi (v${input.version})`,
-    text:
-      `Merhaba ${input.displayName},\n\n` +
-      `Yazar sözleşmesinin ${input.version}. sürümünü onayladınız. Onayladığınız metnin ` +
-      "tam kopyası PDF olarak bu iletiye eklendi; kayıtlarınız için saklayın.\n\n" +
-      "Yazar sayfalarınız açıldı." +
-      signature,
-  };
+    heading: "Sözleşme onayınız kaydedildi",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "paragraph",
+        text:
+          `Yazar sözleşmesinin ${input.version}. sürümünü onayladınız. Onayladığınız metnin ` +
+          "tam kopyası PDF olarak bu iletiye eklendi; kayıtlarınız için saklayın.",
+      },
+      { type: "paragraph", text: "Yazar sayfalarınız açıldı." },
+    ],
+  });
 }
 
 export function rightsGrantPending(input: {
@@ -150,17 +232,27 @@ export function rightsGrantPending(input: {
   articleTitle: string;
   url: string;
 }): Template {
-  return {
+  return renderMail({
+    kind: "rights_grant_pending",
     subject: `postscript · Eser Onayı bekliyor: ${input.articleTitle}`,
-    text:
-      `Merhaba ${input.displayName},\n\n` +
-      `"${input.articleTitle}" başlıklı yazınız yayına kabul edildi ve Eser Onayınızı ` +
-      "bekliyor. Onay ekranında eserin metin özetini ve sözleşme sürümünü görecek, " +
-      "adınızın nasıl görüneceğini seçeceksiniz:\n" +
-      `${input.url}\n\n` +
-      "Onay verilmeden eser hiçbir mecrada yayımlanmaz (Sözleşme m. 5.4)." +
-      signature,
-  };
+    heading: "Eser Onayınız bekleniyor",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "action",
+        lead:
+          `"${input.articleTitle}" başlıklı yazınız yayına kabul edildi ve Eser Onayınızı ` +
+          "bekliyor. Onay ekranında eserin metin özetini ve sözleşme sürümünü görecek, " +
+          "adınızın nasıl görüneceğini seçeceksiniz:",
+        url: input.url,
+        label: "Onay ekranına git",
+      },
+      {
+        type: "paragraph",
+        text: "Onay verilmeden eser hiçbir mecrada yayımlanmaz (Sözleşme m. 5.4).",
+      },
+    ],
+  });
 }
 
 export function rightsGrantReminder(input: {
@@ -168,28 +260,40 @@ export function rightsGrantReminder(input: {
   articleTitle: string;
   url: string;
 }): Template {
-  return {
+  return renderMail({
+    kind: "rights_grant_reminder",
     subject: `postscript · Hatırlatma: ${input.articleTitle} için Eser Onayı`,
-    text:
-      `Merhaba ${input.displayName},\n\n` +
-      `"${input.articleTitle}" başlıklı yazınız hâlâ Eser Onayınızı bekliyor:\n` +
-      `${input.url}` +
-      signature,
-  };
+    heading: "Eser Onayınız hâlâ bekleniyor",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "action",
+        lead: `"${input.articleTitle}" başlıklı yazınız hâlâ Eser Onayınızı bekliyor:`,
+        url: input.url,
+        label: "Onay ekranına git",
+      },
+    ],
+  });
 }
 
 export function rightsGrantSigned(input: {
   displayName: string;
   articleTitle: string;
 }): Template {
-  return {
+  return renderMail({
+    kind: "rights_grant_signed",
     subject: `postscript · Eser Onayı kaydedildi: ${input.articleTitle}`,
-    text:
-      `Merhaba ${input.displayName},\n\n` +
-      `"${input.articleTitle}" başlıklı eseriniz için ruhsat onayı verdiniz. ` +
-      "Onay kaydının PDF kopyası bu iletiye eklendi; kayıtlarınız için saklayın." +
-      signature,
-  };
+    heading: "Eser Onayınız kaydedildi",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "paragraph",
+        text:
+          `"${input.articleTitle}" başlıklı eseriniz için ruhsat onayı verdiniz. ` +
+          "Onay kaydının PDF kopyası bu iletiye eklendi; kayıtlarınız için saklayın.",
+      },
+    ],
+  });
 }
 
 export function articleStatusChanged(input: {
@@ -206,15 +310,17 @@ export function articleStatusChanged(input: {
   };
   const label = labels[input.status] ?? input.status;
 
-  return {
+  return renderMail({
+    kind: "article_status_changed",
     subject: `postscript · "${input.articleTitle}" — ${label}`,
-    text:
-      `Merhaba ${input.displayName},\n\n` +
-      `"${input.articleTitle}" başlıklı yazının durumu değişti: ${label}.\n` +
-      (input.note ? `\nEditör notu: ${input.note}\n` : "") +
-      `\nAyrıntılar: ${input.url}` +
-      signature,
-  };
+    heading: `Yazınızın durumu: ${label}`,
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      { type: "paragraph", text: `"${input.articleTitle}" başlıklı yazının durumu değişti: ${label}.` },
+      ...(input.note ? [{ type: "note" as const, label: "Editör notu:", text: input.note }] : []),
+      { type: "action", lead: "Ayrıntılar:", inline: true, url: input.url, label: "Yazıyı aç" },
+    ],
+  });
 }
 
 /**
@@ -227,31 +333,50 @@ export function adminReportReceived(input: {
   category: string;
   url: string;
 }): Template {
-  return {
+  return renderMail({
+    kind: "admin_report_received",
     subject: "postscript · Yeni içerik bildirimi: 24 saat içinde sonuçlandırılmalı",
-    text:
-      "Merhaba,\n\n" +
-      "Topluluktan yeni bir içerik bildirimi geldi.\n\n" +
-      `Bildirilen: ${input.target}\n` +
-      `Bildirim türü: ${input.category}\n\n` +
-      "5651 sayılı Kanun gereği en geç 24 saat içinde sonuçlandırılmalıdır. " +
-      "İçerik ve hesaplar yalnızca panelde görünür:\n" +
-      `${input.url}` +
-      signature,
-  };
+    heading: "Yeni içerik bildirimi",
+    greeting: "Merhaba,",
+    blocks: [
+      { type: "paragraph", text: "Topluluktan yeni bir içerik bildirimi geldi." },
+      {
+        type: "details",
+        rows: [
+          ["Bildirilen", input.target],
+          ["Bildirim türü", input.category],
+        ],
+      },
+      {
+        type: "action",
+        lead:
+          "5651 sayılı Kanun gereği en geç 24 saat içinde sonuçlandırılmalıdır. " +
+          "İçerik ve hesaplar yalnızca panelde görünür:",
+        url: input.url,
+        label: "Bildirimi incele",
+      },
+    ],
+  });
 }
 
 /** Tells an admin an application passed the editor and needs their decision (D-098). */
 export function adminApplicationAwaiting(input: { url: string }): Template {
-  return {
+  return renderMail({
+    kind: "admin_application_awaiting",
     subject: "postscript · Yönetim onayı bekleyen yazar başvurusu",
-    text:
-      "Merhaba,\n\n" +
-      "Bir yazar başvurusu editör onayından geçti ve yönetim kararını bekliyor. " +
-      "Başvuru sahibinin bilgileri yalnızca panelde görünür:\n" +
-      `${input.url}` +
-      signature,
-  };
+    heading: "Yönetim onayı bekleyen başvuru",
+    greeting: "Merhaba,",
+    blocks: [
+      {
+        type: "action",
+        lead:
+          "Bir yazar başvurusu editör onayından geçti ve yönetim kararını bekliyor. " +
+          "Başvuru sahibinin bilgileri yalnızca panelde görünür:",
+        url: input.url,
+        label: "Başvuruları aç",
+      },
+    ],
+  });
 }
 
 /**
@@ -259,16 +384,26 @@ export function adminApplicationAwaiting(input: { url: string }): Template {
  * them, this mail is how they find out before the codes run out.
  */
 export function recoveryCodeUsed(input: { displayName: string; remaining: number }): Template {
-  return {
+  return renderMail({
+    kind: "recovery_code_used",
     subject: "postscript · Kurtarma kodu kullanıldı",
-    text:
-      `Merhaba ${input.displayName},\n\n` +
-      "Hesabınıza iki adımlı doğrulama kurtarma koduyla giriş yapıldı. " +
-      `Kullanılmamış ${input.remaining} kurtarma kodunuz kaldı.\n\n` +
-      "Bu girişi siz yapmadıysanız hemen şifrenizi değiştirin, Hesabım sayfasından " +
-      "diğer oturumları kapatın ve yeni kurtarma kodları oluşturun." +
-      signature,
-  };
+    heading: "Kurtarma kodu kullanıldı",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "paragraph",
+        text:
+          "Hesabınıza iki adımlı doğrulama kurtarma koduyla giriş yapıldı. " +
+          `Kullanılmamış ${input.remaining} kurtarma kodunuz kaldı.`,
+      },
+      {
+        type: "paragraph",
+        text:
+          "Bu girişi siz yapmadıysanız hemen şifrenizi değiştirin, Hesabım sayfasından " +
+          "diğer oturumları kapatın ve yeni kurtarma kodları oluşturun.",
+      },
+    ],
+  });
 }
 
 /**
@@ -280,16 +415,23 @@ export function kvkkNewVersion(input: {
   version: number;
   url: string;
 }): Template {
-  return {
+  return renderMail({
+    kind: "kvkk_new_version",
     subject: `postscript · KVKK aydınlatma metni güncellendi (sürüm ${input.version})`,
-    text:
-      `Merhaba ${input.displayName},\n\n` +
-      "Kişisel verilerinizin nasıl işlendiğini anlatan aydınlatma metnimizin " +
-      `${input.version}. sürümü yayınlandı. Yeni metni buradan okuyabilirsiniz:\n` +
-      `${input.url}\n\n` +
-      "Bu bir bilgilendirmedir; sizden onay istenmiyor." +
-      signature,
-  };
+    heading: "Aydınlatma metnimiz güncellendi",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "action",
+        lead:
+          "Kişisel verilerinizin nasıl işlendiğini anlatan aydınlatma metnimizin " +
+          `${input.version}. sürümü yayınlandı. Yeni metni buradan okuyabilirsiniz:`,
+        url: input.url,
+        label: "Metni oku",
+      },
+      { type: "paragraph", text: "Bu bir bilgilendirmedir; sizden onay istenmiyor." },
+    ],
+  });
 }
 
 export function mandatoryAnnouncement(input: {
@@ -297,15 +439,22 @@ export function mandatoryAnnouncement(input: {
   title: string;
   url: string;
 }): Template {
-  return {
+  return renderMail({
+    kind: "mandatory_announcement",
     subject: `postscript · Onayınız gereken duyuru: ${input.title}`,
-    text:
-      `Merhaba ${input.displayName},\n\n` +
-      `"${input.title}" başlıklı duyuru onayınızı bekliyor. Onaylamadan diğer yazar ` +
-      "sayfalarına erişemezsiniz:\n" +
-      `${input.url}` +
-      signature,
-  };
+    heading: "Onayınız gereken bir duyuru var",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "action",
+        lead:
+          `"${input.title}" başlıklı duyuru onayınızı bekliyor. Onaylamadan diğer yazar ` +
+          "sayfalarına erişemezsiniz:",
+        url: input.url,
+        label: "Duyuruyu oku",
+      },
+    ],
+  });
 }
 
 export function contactMessage(input: {
@@ -315,18 +464,25 @@ export function contactMessage(input: {
   topic: string | null;
   message: string;
 }): Template {
-  return {
+  return renderMail({
+    kind: "contact_message",
     subject: `postscript · İletişim formu: ${input.subject ?? input.topic ?? "yeni mesaj"}`,
-    text:
-      "İletişim formundan yeni bir mesaj geldi.\n\n" +
-      `Ad: ${input.name}\n` +
-      `E-posta: ${input.email}\n` +
-      `Konu: ${input.subject ?? "—"}\n` +
-      `Başlık: ${input.topic ?? "—"}\n\n` +
-      `Mesaj:\n${input.message}\n\n` +
-      "Yanıtlamak için gönderenin e-posta adresine yazın." +
-      signature,
-  };
+    heading: "İletişim formundan yeni mesaj",
+    blocks: [
+      { type: "paragraph", text: "İletişim formundan yeni bir mesaj geldi." },
+      {
+        type: "details",
+        rows: [
+          ["Ad", input.name],
+          ["E-posta", input.email],
+          ["Konu", input.subject ?? "—"],
+          ["Başlık", input.topic ?? "—"],
+        ],
+      },
+      { type: "quote", label: "Mesaj:", text: input.message },
+      { type: "paragraph", text: "Yanıtlamak için gönderenin e-posta adresine yazın." },
+    ],
+  });
 }
 
 /**
@@ -341,19 +497,38 @@ export function submissionWindowOpened(input: {
   acceptedTopic: string | null;
   url: string;
 }): Template {
-  return {
+  return renderMail({
+    kind: "submission_window_opened",
     subject: `postscript · ${input.issueLabel} için yazı kabul dönemi başladı`,
-    text:
-      `Merhaba ${input.displayName},\n\n` +
-      `${input.issueLabel} için yazı kabul dönemi başladı.\n\n` +
-      `Son teslim: ${input.closesAt}\n\n` +
-      (input.acceptedTopic
-        ? `Kabul edilen konunuz: ${input.acceptedTopic}\n\n` +
-          "Yazınızı konunuzdan başlatıp dönem bitmeden incelemeye gönderebilirsiniz:\n"
-        : "Bu dönemde yalnızca konusu kabul edilmiş yazılar teslim edilebilir. Sayının " +
-          "takvimini ve konunuzun durumunu buradan görebilirsiniz:\n") +
-      `${input.url}\n\n` +
-      "Saatler Türkiye saatidir." +
-      signature,
-  };
+    heading: "Yazı kabul dönemi başladı",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "paragraph",
+        text: `${input.issueLabel} için yazı kabul dönemi başladı.`,
+      },
+      { type: "details", rows: [["Son teslim", input.closesAt]] },
+      ...(input.acceptedTopic
+        ? [
+            { type: "note" as const, label: "Kabul edilen konunuz:", text: input.acceptedTopic },
+            {
+              type: "action" as const,
+              lead: "Yazınızı konunuzdan başlatıp dönem bitmeden incelemeye gönderebilirsiniz:",
+              url: input.url,
+              label: "Yazımı teslim et",
+            },
+          ]
+        : [
+            {
+              type: "action" as const,
+              lead:
+                "Bu dönemde yalnızca konusu kabul edilmiş yazılar teslim edilebilir. Sayının " +
+                "takvimini ve konunuzun durumunu buradan görebilirsiniz:",
+              url: input.url,
+              label: "Sayı takvimini aç",
+            },
+          ]),
+      { type: "paragraph", text: "Saatler Türkiye saatidir." },
+    ],
+  });
 }

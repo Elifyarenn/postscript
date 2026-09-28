@@ -18,7 +18,7 @@ import { revokeAllSessions } from "@/lib/auth/session";
 import { calculateAge } from "@/lib/age";
 import { clearAttempts, consumeAttempt, currentAttemptCount, failureDelayMs } from "@/lib/rate-limit";
 import { writeAudit } from "@/lib/audit";
-import { sendMail } from "@/lib/mail/transport";
+import { sendMail } from "@/services/mail-queue";
 import { assertHuman } from "@/lib/turnstile";
 import * as templates from "@emails/templates";
 
@@ -26,6 +26,11 @@ export type RequestMeta = { ip: string | null; userAgent: string | null };
 
 const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60_000;
 const RESET_TOKEN_TTL_MS = 30 * 60_000;
+
+/** A link mailed after its token has lapsed is only confusing; the outbox drops it instead (D-269). */
+function linkExpiry(ttlMs: number): Date {
+  return new Date(Date.now() + ttlMs);
+}
 
 /* ------------------------------------------------------------------ */
 /* Schemas                                                             */
@@ -139,7 +144,7 @@ export async function register(
 
   const url = `${env().APP_URL}/verify-email?token=${encodeURIComponent(verificationToken)}`;
   const message = templates.verifyEmail({ displayName: input.displayName, url });
-  await sendMail({ to: email, subject: message.subject, text: message.text });
+  await sendMail({ to: email, ...message, expiresAt: linkExpiry(VERIFY_TOKEN_TTL_MS) });
 
   return { email, verificationToken };
 }
@@ -382,7 +387,7 @@ export async function resendVerificationEmail(
     });
     const url = `${env().APP_URL}/verify-email?token=${encodeURIComponent(token)}`;
     const message = templates.verifyEmail({ displayName: pendingRow.displayName, url });
-    await sendMail({ to: normalised, subject: message.subject, text: message.text });
+    await sendMail({ to: normalised, ...message, expiresAt: linkExpiry(VERIFY_TOKEN_TTL_MS) });
     return;
   }
 
@@ -408,7 +413,7 @@ export async function resendVerificationEmail(
   const token = await issueEmailToken(user.id, "verify_email", VERIFY_TOKEN_TTL_MS);
   const url = `${env().APP_URL}/verify-email?token=${encodeURIComponent(token)}`;
   const message = templates.verifyEmail({ displayName: user.displayName, url });
-  await sendMail({ to: user.email, subject: message.subject, text: message.text });
+  await sendMail({ to: user.email, ...message, expiresAt: linkExpiry(VERIFY_TOKEN_TTL_MS) });
 }
 
 /* ------------------------------------------------------------------ */
@@ -472,7 +477,7 @@ export async function requestEmailChange(
   const token = await issueEmailToken(user.id, "change_email", CHANGE_EMAIL_TTL_MS);
   const url = `${env().APP_URL}/verify-email/change?token=${encodeURIComponent(token)}`;
   const message = templates.changeEmail({ displayName: user.displayName, newEmail, url });
-  await sendMail({ to: newEmail, subject: message.subject, text: message.text });
+  await sendMail({ to: newEmail, ...message, expiresAt: linkExpiry(CHANGE_EMAIL_TTL_MS) });
 
   await writeAudit({
     actorId: userId,
@@ -622,7 +627,7 @@ export async function requestPasswordReset(rawInput: unknown, meta: RequestMeta)
   const token = await issueEmailToken(user.id, "reset_password", RESET_TOKEN_TTL_MS);
   const url = `${env().APP_URL}/reset-password?token=${encodeURIComponent(token)}`;
   const message = templates.resetPassword({ displayName: user.displayName, url });
-  await sendMail({ to: user.email, subject: message.subject, text: message.text });
+  await sendMail({ to: user.email, ...message, expiresAt: linkExpiry(RESET_TOKEN_TTL_MS) });
 }
 
 /**

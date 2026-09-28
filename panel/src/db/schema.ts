@@ -1346,6 +1346,66 @@ export const notifications = pgTable(
 );
 
 /* ------------------------------------------------------------------ */
+/* mail_jobs (the e-mail outbox, D-269)                                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * pending → processing → sent, or back to pending with a later
+ * `next_attempt_at` until the attempts run out → failed.
+ */
+export const mailJobStatusEnum = pgEnum("mail_job_status", [
+  "pending",
+  "processing",
+  "sent",
+  "failed",
+]);
+
+/** An attachment kept until the job is delivered; base64 because jsonb holds text. */
+export type StoredMailAttachment = { filename: string; contentType?: string; contentBase64: string };
+
+/**
+ * One rendered message waiting for, or done with, delivery. The queue knows
+ * nothing about templates: it carries what a channel renderer produced, so a
+ * later notification layer can add in-app or push channels beside it.
+ *
+ * Bodies are removed (`purged_at`) once they are no longer needed: after
+ * delivery, and at once for a message that carried a sign-in or reset link.
+ */
+export const mailJobs = pgTable(
+  "mail_jobs",
+  {
+    id: id(),
+    kind: text("kind").notNull(),
+    recipient: text("recipient").notNull(),
+    subject: text("subject").notNull(),
+    textBody: text("text_body"),
+    htmlBody: text("html_body"),
+    attachments: jsonb("attachments").$type<StoredMailAttachment[]>(),
+    status: mailJobStatusEnum("status").notNull().default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    maxAttempts: integer("max_attempts").notNull().default(6),
+    // The same bulk send reaching the same person twice is refused by the index
+    dedupeKey: text("dedupe_key"),
+    sensitive: boolean("sensitive").notNull().default(false),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }).notNull().defaultNow(),
+    lockedUntil: timestamp("locked_until", { withTimezone: true }),
+    lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
+    lastError: text("last_error"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    failedAt: timestamp("failed_at", { withTimezone: true }),
+    purgedAt: timestamp("purged_at", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("mail_jobs_dedupe_key_idx").on(t.dedupeKey),
+    index("mail_jobs_due_idx").on(t.status, t.nextAttemptAt),
+    index("mail_jobs_created_idx").on(t.createdAt),
+  ],
+);
+
+/* ------------------------------------------------------------------ */
 /* community (blog comments, chat, banned words)                       */
 /* ------------------------------------------------------------------ */
 
@@ -1903,3 +1963,5 @@ export type ReportCategory = (typeof reportCategoryEnum.enumValues)[number];
 export type ReportStatus = (typeof reportStatusEnum.enumValues)[number];
 export type DmPolicy = (typeof dmPolicyEnum.enumValues)[number];
 export type TeamAvatar = typeof teamAvatars.$inferSelect;
+export type MailJob = typeof mailJobs.$inferSelect;
+export type MailJobStatus = (typeof mailJobStatusEnum.enumValues)[number];
