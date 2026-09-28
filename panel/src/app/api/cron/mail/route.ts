@@ -13,7 +13,7 @@ import { isCronRequestAuthorised } from "@/lib/cron";
 import { env } from "@/lib/env";
 import { unauthorized } from "@/lib/errors";
 import { processMailQueue } from "@/services/mail-queue";
-import { announceOpenedSubmissionWindows } from "@/services/issue-mail";
+import { announceOpenedIssueWindows } from "@/services/issue-mail";
 
 // Two sends a second leave room for about 400 mails in one run
 export const maxDuration = 300;
@@ -23,8 +23,8 @@ export async function GET(request: Request) {
     return errorJson(unauthorized("Zamanlanmış iş isteği doğrulanamadı."));
   }
 
-  // A delivery window that opened since the last run is queued first (D-270)
-  const announced = await announceOpenedSubmissionWindows();
+  // A topic or delivery window that opened since the last run is queued first (D-270, D-272)
+  const announced = await announceOpenedIssueWindows();
   // Counts only: the response is kept in Vercel's logs
   const result = await processMailQueue({ budgetMs: 240_000, limit: 1000 });
   return NextResponse.json({ ok: true, announced, ...result }, { headers: { "cache-control": "no-store" } });

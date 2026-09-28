@@ -43,4 +43,9 @@ export const MAIL_SAMPLES: Record<string, Record<string, unknown>[]> = {
 };
 
 /** Templates written after the layout: they have no pre-layout text to match. */
-export const ADDED_AFTER_LAYOUT = new Set(["submissionWindowOpened"]);
+export const ADDED_AFTER_LAYOUT = new Set(["submissionWindowOpened", "topicWindowOpened"]);
+
+MAIL_SAMPLES.topicWindowOpened = [
+  { displayName: "Ada", issueLabel: "Sayı 2 · Gotizm", theme: "Gotik <karanlık>", closesAt: "8 Ekim 18:00", areas: ["Sanat & Edebiyat", "Felsefe & Düşünce"], url: "https://example.com/writer/topics" },
+  { displayName: "Ada", issueLabel: "Sayı 2 · Gotizm", theme: null, closesAt: "8 Ekim 18:00", areas: ["Sanat & Edebiyat"], url: "https://example.com/writer/topics" },
+];

@@ -6,9 +6,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
-import { issues, notifications, topicProposals } from "@/db/schema";
+import { issues, notifications, topicProposals, users } from "@/db/schema";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
-import { announceOpenedSubmissionWindows } from "@/services/issue-mail";
+import { announceOpenedIssueWindows, announceOpenedSubmissionWindows } from "@/services/issue-mail";
 import { getSiteSettings } from "@/services/site-settings";
 import * as templates from "@emails/templates";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
@@ -159,5 +159,72 @@ describe("the delivery window opening", () => {
     const before = await getSiteSettings();
     await announceOpenedSubmissionWindows();
     expect(await getSiteSettings()).toEqual(before);
+  });
+});
+
+describe("the topic window opening (D-272)", () => {
+  async function topicIssueOpenedAgo(openedMsAgo: number) {
+    const now = Date.now();
+    const [row] = await db
+      .insert(issues)
+      .values({
+        number: 2,
+        title: "Gotizm",
+        theme: "Gotik karanlık",
+        topicOpensAt: new Date(now - openedMsAgo),
+        topicClosesAt: new Date(now - openedMsAgo + 10 * DAY),
+        submissionOpensAt: new Date(now - openedMsAgo + 12 * DAY),
+        submissionClosesAt: new Date(now - openedMsAgo + 20 * DAY),
+      })
+      .returning();
+    return row!;
+  }
+
+  it("mails and notifies each active writer once, reminding two-area writers of both", async () => {
+    await topicIssueOpenedAgo(HOUR);
+    const twoAreas = await writer("iki@example.com");
+    await db
+      .update(users)
+      .set({ writerArea: "Sanat & Edebiyat", writerArea2: "Felsefe & Düşünce" })
+      .where(eq(users.id, twoAreas.id));
+    const oneArea = await writer("tek@example.com");
+    await db.update(users).set({ writerArea: "Sanat & Edebiyat" }).where(eq(users.id, oneArea.id));
+    await writer("askida@example.com", { writerStatus: "suspended" });
+
+    // Only the topic window is open; the delivery one is days away
+    expect(await announceOpenedIssueWindows()).toBe(2);
+
+    const both = mailbox.lastTo("iki@example.com");
+    expect(both?.subject).toBe("postscript · Sayı 2 · Gotizm için konu belirleme dönemi başladı");
+    expect(both?.text).toContain("Tema: Gotik karanlık");
+    expect(both?.text).toContain("Son gün:");
+    expect(both?.text).toContain("Alanlarınızın her biri için ayrı bir konu önerebilirsiniz: Sanat & Edebiyat, Felsefe & Düşünce.");
+    expect(both?.html).toContain("Konumu öner");
+    expect(mailbox.lastTo("tek@example.com")?.text).not.toContain("her biri için");
+    expect(mailbox.lastTo("askida@example.com")).toBeUndefined();
+
+    const bells = await db.select().from(notifications).where(eq(notifications.kind, "issue.topic_opened"));
+    expect(bells).toHaveLength(2);
+
+    mailbox.clear();
+    expect(await announceOpenedIssueWindows()).toBe(0);
+    expect(mailbox.outbox).toHaveLength(0);
+  });
+
+  it("announces the delivery window separately when its turn comes", async () => {
+    await topicIssueOpenedAgo(HOUR);
+    await writer("yazar@example.com");
+
+    expect(await announceOpenedIssueWindows()).toBe(1);
+    // Twelve days on the topic window has closed and the delivery one opened
+    const later = new Date(Date.now() + 12 * DAY + 60_000);
+    expect(await announceOpenedIssueWindows(later)).toBe(1);
+    expect(mailbox.lastTo("yazar@example.com")?.subject).toContain("yazı kabul dönemi başladı");
+  });
+
+  it("stays quiet for a topic window that opened more than three days ago", async () => {
+    await topicIssueOpenedAgo(4 * DAY);
+    await writer("yazar@example.com");
+    expect(await announceOpenedIssueWindows()).toBe(0);
   });
 });

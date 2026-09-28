@@ -10992,3 +10992,33 @@ konu sınıra sayılır.
 
 **Yayın notu:** Migration var (`0051_topic_per_area`); D-269'un `0050`'sinden
 sonra, onunla birlikte uygulanır.
+
+## D-272 — "Konu belirleme dönemi başladı" e-postası
+
+**İstek (ürün sahibi, 2026-09-28):** "Hani eposta gönder dedim sana konu
+belirleme zamanı ile ilgili." D-270 yalnızca yazı kabul dönemini duyuruyordu;
+istenen, konu belirleme döneminin açıldığının da bildirilmesiydi.
+
+**Karar:**
+- Yeni şablon `topicWindowOpened`: konu "postscript · Sayı N · Başlık için
+  konu belirleme dönemi başladı"; tema (varsa) ve son gün (Türkiye saati);
+  iki alanı olan yazara "Alanlarınızın her biri için ayrı bir konu
+  önerebilirsiniz: …" (D-271); "Konumu öner" → `/writer/topics`.
+- `src/services/issue-mail.ts` iki dönemi aynı yolla duyurur: dönem başına
+  `site_settings` sahiplenmesi (`announced.topic_open.<sayı>.<açılış anı>`;
+  yazı kabulünün anahtarı canlıdaki adıyla kaldı), aynı alıcılar (etkin
+  yazarlar), panel bildirimi (`issue.topic_opened`) ve kuyruk anahtarı
+  `topic-open:<sayı>:<açılış anı>:<yazar>`. 3 günden eski ya da kapanmış dönem
+  duyurulmaz, çalışma sayısı hiç.
+- Tetikleyiciler aynı: panel genel bakışları, günlük cron
+  (`announce_issue_windows`), `/api/cron/mail`.
+- Sayı 2'nin konu dönemi 28 Eylül 13:00'te açıldı; yayından sonra ilk panel
+  ziyaretinde duyurulur (3 günlük süre içinde).
+
+**Hukuk:** Aydınlatma metnindeki D-270 satırı ("sayı takvimindeki dönemler")
+bunu zaten kapsıyor; yeni veri yok.
+
+**Doğrulama:** `tests/integration/issue-mail.test.ts` — etkin yazarlara bir
+kez, iki alanlı yazara iki alan hatırlatması, tema ve son gün, askıdaki
+yazar almaz, panel bildirimi, ikinci çalışma boş; yazı kabul dönemi sırası
+gelince ayrıca duyurulur; 3 günden eski dönem sessiz. Migration yok.

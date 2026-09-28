@@ -486,6 +486,51 @@ export function contactMessage(input: {
 }
 
 /**
+ * The issue's topic window has opened (D-272). A writer with two areas is
+ * reminded that each area takes its own topic (D-271).
+ */
+export function topicWindowOpened(input: {
+  displayName: string;
+  issueLabel: string;
+  theme: string | null;
+  closesAt: string;
+  areas: string[];
+  url: string;
+}): Template {
+  return renderMail({
+    kind: "topic_window_opened",
+    subject: `postscript · ${input.issueLabel} için konu belirleme dönemi başladı`,
+    heading: "Konu belirleme dönemi başladı",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      { type: "paragraph", text: `${input.issueLabel} için konu belirleme dönemi başladı.` },
+      {
+        type: "details",
+        rows: [
+          ...(input.theme ? [["Tema", input.theme] as [string, string]] : []),
+          ["Son gün", input.closesAt],
+        ],
+      },
+      ...(input.areas.length >= 2
+        ? [
+            {
+              type: "paragraph" as const,
+              text: `Alanlarınızın her biri için ayrı bir konu önerebilirsiniz: ${input.areas.join(", ")}.`,
+            },
+          ]
+        : []),
+      {
+        type: "action",
+        lead: "Konunuzu yazar panelinden önerebilirsiniz; editör değerlendirdikten sonra yazınıza başlarsınız:",
+        url: input.url,
+        label: "Konumu öner",
+      },
+      { type: "paragraph", text: "Saatler Türkiye saatidir." },
+    ],
+  });
+}
+
+/**
  * The issue's delivery window has opened (D-270). Only an article for an
  * accepted topic may be handed in (D-261), so a writer without one is told
  * that rather than invited to send something the panel will refuse.

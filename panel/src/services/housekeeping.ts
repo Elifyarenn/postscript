@@ -19,7 +19,7 @@ import { pruneDeletedDirectMessages } from "@/services/direct-messages";
 import { pruneDeletedPosts } from "@/services/posts";
 import { pruneResolvedReports } from "@/services/reports";
 import { processMailQueue, pruneMailJobs } from "@/services/mail-queue";
-import { announceOpenedSubmissionWindows } from "@/services/issue-mail";
+import { announceOpenedIssueWindows } from "@/services/issue-mail";
 import { sendApprovalReminders } from "@/services/rights";
 import { anonymiseUser } from "@/services/users";
 
@@ -123,7 +123,7 @@ export const DAILY_TASKS: readonly HousekeepingTask[] = [
   },
   { name: "prune_sessions", run: pruneEndedSessions },
   { name: "prune_mail_jobs", run: pruneMailJobs },
-  { name: "announce_submission_windows", run: announceOpenedSubmissionWindows },
+  { name: "announce_issue_windows", run: announceOpenedIssueWindows },
   // Last, so the reminders queued above go out in the same run; retries left over from the day too
   { name: "process_mail_queue", run: () => processMailQueue({ budgetMs: 120_000, limit: 1000 }) },
 ];
