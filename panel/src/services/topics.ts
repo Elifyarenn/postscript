@@ -25,6 +25,7 @@ import {
   type TopicProposalStatus,
 } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
+import { env } from "@/lib/env";
 import {
   canAccessAdminPanel,
   canAccessEditorPanel,
@@ -44,6 +45,8 @@ import {
   usesIssueWindows,
   type PeriodState,
 } from "@/lib/issue-periods";
+import { sendMail } from "@/services/mail-queue";
+import * as templates from "@emails/templates";
 import { getEditorAssignment, selectableWriterCategories } from "./editor-categories";
 import type { RequestMeta } from "./auth";
 
@@ -95,6 +98,40 @@ async function notifyAuthor(proposal: TopicProposal, title: string, body: string
     body,
     href: "/writer/topics",
   });
+}
+
+/**
+ * The decision also goes out by e-mail (D-273): a change request seen late
+ * can cost the writer the window. A closed or anonymised account is skipped.
+ */
+async function mailAuthor(
+  proposal: TopicProposal,
+  decision: "accept" | "revision" | "reject",
+  note: string | null,
+) {
+  const rows = await db
+    .select({
+      email: users.email,
+      displayName: users.displayName,
+      issueNumber: issues.number,
+      issueTitle: issues.title,
+    })
+    .from(users)
+    .innerJoin(issues, eq(issues.id, proposal.issueId))
+    .where(and(eq(users.id, proposal.authorId), isNull(users.deletedAt), isNull(users.anonymizedAt)))
+    .limit(1);
+  const author = rows[0];
+  if (!author) return;
+
+  const message = templates.topicDecided({
+    displayName: author.displayName,
+    issueLabel: `Sayı ${author.issueNumber} · ${author.issueTitle}`,
+    topicTitle: proposal.title,
+    decision,
+    note,
+    url: `${env().APP_URL}/writer/topics`,
+  });
+  await sendMail({ to: author.email, ...message });
 }
 
 /* ------------------------------------------------------------------ */
@@ -426,6 +463,7 @@ export async function decideTopicProposal(
         ? `Konunuz için değişiklik istendi: ${updated.title}`
         : `Konunuz kabul edilmedi: ${updated.title}`;
   await notifyAuthor(updated, heading, note);
+  await mailAuthor(updated, decision, note);
 
   return updated;
 }

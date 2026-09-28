@@ -101,7 +101,7 @@ saklanmaz**.
 | İçerik moderasyonu, hesap yasaklama, kural ihlallerinin takibi | (f) Meşru menfaat |
 | Yetkili kamu kurum ve kuruluşlarının hukuka uygun taleplerinin karşılanması | (a) Kanunlarda açıkça öngörülmesi, (ç) Hukuki yükümlülük |
 | Panel içi bildirim ve duyuruların iletilmesi | (c) Sözleşmenin ifası |
-| Yazarsanız, sayı takvimindeki dönemlerin (ör. yazı kabul döneminin başladığı) ve varsa kabul edilen konunuzun panel bildirimi ve e-postayla size iletilmesi | (c) Sözleşmenin ifası |
+| Yazarsanız, sayı takvimindeki dönemlerin (ör. yazı kabul döneminin başladığı), varsa kabul edilen konunuzun ve konu önerinize verilen kararın (kabul, değişiklik isteği, ret; editörün notuyla birlikte) panel bildirimi ve e-postayla size iletilmesi | (c) Sözleşmenin ifası |
 | E-postaların gönderim kuyruğunda tutulması, iletilemeyenlerin yeniden denenmesi ve gönderim durumunun yöneticilerce izlenmesi | (c) Sözleşmenin ifası, (f) Meşru menfaat |
 | Aydınlatma metninin yeni sürümlerinin duyurulması ve hangi sürümün ne zaman okunduğunun kaydedilmesi | (ç) Veri sorumlusunun hukuki yükümlülüğü — KVKK m. 10 |
 | İletişim formundan gönderdiğiniz mesajı okumak ve size cevap vermek | Meşru menfaat (KVKK m. 5/2-f): bize yazan kişiye cevap verebilmek. Formu doldurmak zorunda değilsiniz; aynı adrese doğrudan da yazabilirsiniz |

@@ -531,6 +531,56 @@ export function topicWindowOpened(input: {
 }
 
 /**
+ * The main editor has decided on a writer's topic proposal (D-273). The
+ * editor's note goes in as written: for a change request or a refusal it is
+ * the whole point of the message.
+ */
+export function topicDecided(input: {
+  displayName: string;
+  issueLabel: string;
+  topicTitle: string;
+  decision: "accept" | "revision" | "reject";
+  note: string | null;
+  url: string;
+}): Template {
+  const copy = {
+    accept: {
+      label: "kabul edildi",
+      heading: "Konunuz kabul edildi",
+      lead: "Yazı kabul dönemi açıldığında yazınızı bu konudan başlatabilirsiniz:",
+      button: "Konularımı aç",
+    },
+    revision: {
+      label: "değişiklik istendi",
+      heading: "Konunuz için değişiklik istendi",
+      lead: "Konunuzu editörün notuna göre düzenleyip yeniden gönderebilirsiniz:",
+      button: "Konumu düzenle",
+    },
+    reject: {
+      label: "kabul edilmedi",
+      heading: "Konunuz kabul edilmedi",
+      lead: "Ayrıntıları yazar panelinde görebilirsiniz:",
+      button: "Konularımı aç",
+    },
+  }[input.decision];
+
+  return renderMail({
+    kind: "topic_decided",
+    subject: `postscript · "${input.topicTitle}" — ${copy.label}`,
+    heading: copy.heading,
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "paragraph",
+        text: `${input.issueLabel} için önerdiğiniz "${input.topicTitle}" konusu ${copy.label}.`,
+      },
+      ...(input.note ? [{ type: "note" as const, label: "Editör notu:", text: input.note }] : []),
+      { type: "action", lead: copy.lead, url: input.url, label: copy.button },
+    ],
+  });
+}
+
+/**
  * The issue's delivery window has opened (D-270). Only an article for an
  * accepted topic may be handed in (D-261), so a writer without one is told
  * that rather than invited to send something the panel will refuse.

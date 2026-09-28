@@ -37,10 +37,11 @@ import {
 } from "../helpers/factories";
 
 let database: Database;
+const mailbox = new MemoryMailAdapter();
 
 beforeAll(async () => {
   database = await setupTestDatabase();
-  setMailAdapter(new MemoryMailAdapter());
+  setMailAdapter(mailbox);
 });
 
 afterAll(async () => {
@@ -367,6 +368,77 @@ describe("the main editor's decision", () => {
     );
     const [row] = await db.select().from(topicProposals).where(eq(topicProposals.id, proposal.id));
     expect(row!.status).toBe("accepted");
+  });
+});
+
+describe("the writer hears about the decision by e-mail (D-273)", () => {
+  it("sends one mail per decision, with the editor's note", async () => {
+    const { writer, mainEditor, issue } = await scenario();
+    const proposal = await submitTopicProposal(actorOf(writer), issue.id, TOPIC, noMeta, DURING_TOPIC);
+    mailbox.clear();
+
+    const sentBack = await decideTopicProposal(
+      actorOf(mainEditor),
+      proposal.id,
+      { decision: "revision", note: "Daha dar bir çerçeve seçin.", expectedVersion: 1 },
+      noMeta,
+    );
+    expect(mailbox.outbox).toHaveLength(1);
+    const revisionMail = mailbox.lastTo(writer.email)!;
+    expect(revisionMail.subject).toContain("değişiklik istendi");
+    expect(revisionMail.text).toContain("Sayı 2 · İkinci");
+    expect(revisionMail.text).toContain("Daha dar bir çerçeve seçin.");
+    expect(revisionMail.text).toContain("/writer/topics");
+
+    const revised = await reviseTopicProposal(
+      actorOf(writer),
+      proposal.id,
+      TOPIC,
+      sentBack.version,
+      noMeta,
+      DURING_TOPIC,
+    );
+    // The writer's own resubmission is not mailed back to them
+    expect(mailbox.outbox).toHaveLength(1);
+
+    await decideTopicProposal(
+      actorOf(mainEditor),
+      proposal.id,
+      { decision: "accept", expectedVersion: revised.version },
+      noMeta,
+    );
+    expect(mailbox.outbox).toHaveLength(2);
+    expect(mailbox.lastTo(writer.email)!.subject).toContain("kabul edildi");
+  });
+
+  it("tells a refused writer why, and sends nothing when the decision fails", async () => {
+    const { writer, otherWriter, mainEditor, admin, issue } = await scenario();
+    const proposal = await submitTopicProposal(actorOf(writer), issue.id, TOPIC, noMeta, DURING_TOPIC);
+    mailbox.clear();
+
+    await expectStatus(
+      decideTopicProposal(actorOf(mainEditor), proposal.id, { decision: "reject", expectedVersion: 1 }, noMeta),
+      400,
+    );
+    expect(mailbox.outbox).toHaveLength(0);
+
+    await decideTopicProposal(
+      actorOf(admin),
+      proposal.id,
+      { decision: "reject", note: "Temaya uymuyor.", expectedVersion: 1 },
+      noMeta,
+    );
+    const mail = mailbox.lastTo(writer.email)!;
+    expect(mail.subject).toContain("kabul edilmedi");
+    expect(mail.text).toContain("Temaya uymuyor.");
+    expect(mailbox.lastTo(otherWriter.email)).toBeUndefined();
+
+    // A second tab's late decision is refused and mails nobody
+    await expectStatus(
+      decideTopicProposal(actorOf(mainEditor), proposal.id, { decision: "accept", expectedVersion: 1 }, noMeta),
+      409,
+    );
+    expect(mailbox.outbox).toHaveLength(1);
   });
 });
 

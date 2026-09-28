@@ -43,7 +43,13 @@ export const MAIL_SAMPLES: Record<string, Record<string, unknown>[]> = {
 };
 
 /** Templates written after the layout: they have no pre-layout text to match. */
-export const ADDED_AFTER_LAYOUT = new Set(["submissionWindowOpened", "topicWindowOpened"]);
+export const ADDED_AFTER_LAYOUT = new Set(["submissionWindowOpened", "topicWindowOpened", "topicDecided"]);
+
+MAIL_SAMPLES.topicDecided = [
+  { displayName: "Ada", issueLabel: "Sayı 2 · Gotizm", topicTitle: "Karanlık <mimari>", decision: "accept", note: null, url: "https://example.com/writer/topics" },
+  { displayName: "Ada", issueLabel: "Sayı 2 · Gotizm", topicTitle: "Karanlık mimari", decision: "revision", note: "Daha dar\nbir çerçeve.", url: "https://example.com/writer/topics" },
+  { displayName: "Ada", issueLabel: "Sayı 2 · Gotizm", topicTitle: "Karanlık mimari", decision: "reject", note: "Temaya uymuyor.", url: "https://example.com/writer/topics" },
+];
 
 MAIL_SAMPLES.topicWindowOpened = [
   { displayName: "Ada", issueLabel: "Sayı 2 · Gotizm", theme: "Gotik <karanlık>", closesAt: "8 Ekim 18:00", areas: ["Sanat & Edebiyat", "Felsefe & Düşünce"], url: "https://example.com/writer/topics" },

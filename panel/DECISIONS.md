@@ -11022,3 +11022,39 @@ bunu zaten kapsıyor; yeni veri yok.
 kez, iki alanlı yazara iki alan hatırlatması, tema ve son gün, askıdaki
 yazar almaz, panel bildirimi, ikinci çalışma boş; yazı kabul dönemi sırası
 gelince ayrıca duyurulur; 3 günden eski dönem sessiz. Migration yok.
+
+## D-273 — Konu önerisine verilen karar yazara e-postayla da gider
+
+**İstek (ürün sahibi, 2026-09-28):** "Editör/admin yazardan herhangi bir
+değişiklik istediğinde bunu mail olarak gönder; mesela konu belirleme
+sisteminde konusu reddedilen, onaylanan, değişiklik istenen yazarlara mail
+gitsin."
+
+**Denetim:** Editörün yazara bir şey istediği yollar tarandı.
+- Makalede "revizyon istendi" (ve yayın, geri çekme) zaten e-posta gidiyordu
+  (`notifyAuthorOfStatus`, `AUTHOR_TOLD_STATUSES`, editör notuyla).
+- Konu önerisi kararları (D-261) yalnızca panel bildirimi bırakıyordu; eksik
+  olan buydu.
+- Başvuru reddi/onayı ve Eser Onayı iletileri zaten e-posta.
+
+**Karar:**
+- Yeni şablon `topicDecided` (tür `topic_decided`): konu `postscript ·
+  "<konu>" — kabul edildi / değişiklik istendi / kabul edilmedi`; sayı etiketi
+  ("Sayı N · Başlık"), editör notu (değişiklik ve ret için zorunlu olduğundan
+  hep var), düğme → `/writer/topics`.
+- `decideTopicProposal`, karar kaydedilip panel bildirimi yazıldıktan sonra
+  e-postayı kuyruğa (`sendMail`) alır. Kuyruk hata fırlatmaz; e-posta
+  kararı geri almaz (D-269). Silinmiş veya anonimleştirilmiş hesaba gitmez.
+- Reddedilen/çakışan karar (eksik not 400, ikinci sekme 409) e-posta
+  göndermez: gönderim yalnızca başarılı güncellemeden sonra.
+- Yazarın kendi yeniden gönderimi kendisine e-postalanmaz.
+
+**Hukuk:** Aydınlatma metninin amaç satırı ("sayı takvimindeki dönemler…")
+konu kararlarını ve editör notunu da sayacak şekilde genişletildi. Yeni veri
+kalemi, sağlayıcı veya saklama süresi yok (gönderim kaydı D-269'da tanımlı).
+
+**Doğrulama:** `tests/integration/topics.test.ts` — değişiklik isteği tek
+e-posta (sayı etiketi, not, bağlantı), yeniden gönderim e-posta üretmez,
+kabul ikinci e-posta; ret notuyla gider, başka yazara gitmez; notsuz ret
+(400) ve geç kalan sekme (409) e-posta göndermez. `mail-templates` üç örnekle
+(kabul, değişiklik, ret) HTML ve kaçışlamayı sınar. Migration yok.
