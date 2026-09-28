@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { announceOpenedSubmissionWindowsSoon } from "@/services/issue-mail";
 import { guardPanel } from "@/lib/auth/guard";
 import { listArticles } from "@/services/articles";
 import { listIssues } from "@/services/issues";
@@ -20,6 +21,8 @@ export const metadata = { title: "Editör paneli" };
  */
 export default async function EditorDashboard() {
   const { user } = await guardPanel("editor");
+  // The Hobby cron runs once a day; a panel visit is what sends this on time (D-270)
+  await announceOpenedSubmissionWindowsSoon();
   const actor = { ...user };
   const isAdmin = user.role === "admin";
   const assignment = isAdmin ? null : await getEditorAssignment(user.id);

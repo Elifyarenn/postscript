@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { announceOpenedSubmissionWindowsSoon } from "@/services/issue-mail";
 import { and, asc, count, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users } from "@/db/schema";
@@ -13,6 +14,8 @@ export const metadata = { title: "Yönetim" };
 
 export default async function AdminDashboard() {
   const { user } = await guardPanel("admin");
+  // The Hobby cron runs once a day; a panel visit is what sends this on time (D-270)
+  await announceOpenedSubmissionWindowsSoon();
 
   const now = new Date();
   const [byRole, agreement, pending, issueSummaries] = await Promise.all([

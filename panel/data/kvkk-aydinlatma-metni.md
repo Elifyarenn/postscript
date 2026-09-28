@@ -100,6 +100,7 @@ saklanmaz**.
 | İçerik moderasyonu, hesap yasaklama, kural ihlallerinin takibi | (f) Meşru menfaat |
 | Yetkili kamu kurum ve kuruluşlarının hukuka uygun taleplerinin karşılanması | (a) Kanunlarda açıkça öngörülmesi, (ç) Hukuki yükümlülük |
 | Panel içi bildirim ve duyuruların iletilmesi | (c) Sözleşmenin ifası |
+| Yazarsanız, sayı takvimindeki dönemlerin (ör. yazı kabul döneminin başladığı) ve varsa kabul edilen konunuzun panel bildirimi ve e-postayla size iletilmesi | (c) Sözleşmenin ifası |
 | Aydınlatma metninin yeni sürümlerinin duyurulması ve hangi sürümün ne zaman okunduğunun kaydedilmesi | (ç) Veri sorumlusunun hukuki yükümlülüğü — KVKK m. 10 |
 | İletişim formundan gönderdiğiniz mesajı okumak ve size cevap vermek | Meşru menfaat (KVKK m. 5/2-f): bize yazan kişiye cevap verebilmek. Formu doldurmak zorunda değilsiniz; aynı adrese doğrudan da yazabilirsiniz |
 | Sayının çalma listesinin, yalnızca üye olarak giriş yapmışken siz çal düğmesine bastığınızda Spotify çaları yüklenerek dinletilmesi | Açık rıza (KVKK m. 5/1): çalar, düğmeye basmanızdan önce hiçbir veri iletmez; basmazsanız yüklenmez |

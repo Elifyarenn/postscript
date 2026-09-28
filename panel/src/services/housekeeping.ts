@@ -19,6 +19,7 @@ import { pruneDeletedDirectMessages } from "@/services/direct-messages";
 import { pruneDeletedPosts } from "@/services/posts";
 import { pruneResolvedReports } from "@/services/reports";
 import { sendApprovalReminders } from "@/services/rights";
+import { announceOpenedSubmissionWindows } from "@/services/issue-mail";
 import { anonymiseUser } from "@/services/users";
 
 const DAY_MS = 86_400_000;
@@ -104,6 +105,7 @@ export type HousekeepingTask = {
 export const DAILY_TASKS: readonly HousekeepingTask[] = [
   { name: "publish_scheduled", run: async (now) => (await publishScheduledArticles(now)).length },
   { name: "approval_reminders", run: sendApprovalReminders },
+  { name: "announce_submission_windows", run: announceOpenedSubmissionWindows },
   { name: "process_deletions", run: processDueDeletions },
   { name: "purge_unverified", run: purgeUnverifiedAccounts },
   { name: "prune_traffic", run: pruneTrafficLogs },

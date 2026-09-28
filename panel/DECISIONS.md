@@ -10776,3 +10776,50 @@ sorusu ana editör için de geçerli — **hukukçu görüşü gerekiyor**.
 ana editör), `whatsapp.test.ts` (`telHref`), `team-contacts.test.ts`
 (kategori editörü ve yazar 403; ekip listede, okur ve yasaklı yok; e-posta ve
 doğum tarihi dönmüyor; yönetici açabiliyor). Migration yok.
+
+## D-270 — "Yazı kabul dönemi başladı" e-postası, sayı takvimine bağlı
+
+**İstek (ürün sahibi, 2026-09-28):** Yazı kabul dönemi başladı e-postasının
+taslağını hazırla; takvimdeki tarih ve saat geldiğinde kullanıcılara gitsin.
+Ardından: yalnızca bu e-postayı yayına al.
+
+**Karar:**
+- Yeni şablon `submissionWindowOpened` (`emails/templates.ts`): konu
+  "postscript · Sayı N · Başlık için yazı kabul dönemi başladı"; son teslim
+  anı (Türkiye saati), kabul edilmiş konusu olan yazara konusu ve "yazınızı
+  konunuzdan başlatıp gönderin", olmayana "bu dönemde yalnızca konusu kabul
+  edilmiş yazılar teslim edilebilir" (D-261'in kuralı) ve `/writer/topics`.
+- **Alıcılar:** etkin yazarlar, `isActiveWriter` ile aynı sorgu (yazar
+  durumu etkin, rolü okuyucu değil, yasaklı/silinmiş/anonim değil, e-postası
+  doğrulanmış). Askıdaki yazar, okur ve editörlük dışı hesaplar almaz. Aynı
+  anda panel bildirimi (`issue.submission_opened`) de yazılır.
+- **Zamanlama:** önceden bir şey planlanmaz. Her çalışma "başlamış ama
+  duyurulmamış dönem var mı" diye sorar; admin tarihi değiştirirse yeni
+  saatinde yakalanır. Çalıştığı yerler: yazar, editör ve yönetim genel
+  bakış sayfaları (yanıttan sonra, `after()`) ve günlük cron
+  (`announce_submission_windows`). Hobby cron'u günde bir kez çalıştığı ve
+  üretimde `CRON_SECRET` olmadığı için dakikaya yakın gönderimi panel
+  ziyaretleri sağlar: dönem başladıktan sonra ekipten biri paneli açınca gider.
+- **Bir kez:** her açılış `site_settings`'e birincil anahtarı
+  `announced.submission_open.<sayı>.<açılış anı>` olan bir satırla sahiplenilir
+  (`on conflict do nothing`). İki çalışma buluşursa yalnızca biri gönderir.
+  Yeniden açılan dönemin anı farklı olduğu için yeniden duyurulur. Yayıncı
+  ayarları (`getSiteSettings`) yalnızca kendi anahtarlarını okuduğundan bu
+  satırlardan etkilenmez; sohbet modu da aynı tabloyu böyle kullanıyor.
+- Başlangıcından 3 günden sonra fark edilen dönem duyurulmaz (bayat haber),
+  kapanmış dönem ve yönetimin çalışma sayısı (D-240) hiç duyurulmaz.
+- **Migration yok.** D-269'daki kalıcı kuyruk henüz `main`'de değil; bu e-posta
+  bugünkü `sendMail` ile gider: tek bir adrese gönderim başarısız olursa loglanır,
+  diğerleri gider, yeniden denenmez. Sahiplenmeden sonra süreç ölürse kalan
+  yazarlar e-postayı almaz (panel bildirimi de yazılmaz). Kuyruk yayına
+  alındığında bu servis `queueMails`'e taşınacak (`mail-outbox` dalında hazır).
+
+**Hukuk:** Aydınlatma metnine amaç satırı eklendi (yazarlara sayı takvimi
+bildirimi, (c) sözleşmenin ifası). Yeni veri kategorisi, sağlayıcı veya süre
+yok. Metin yalnızca depoda; canlı sürüm yöneticinin yayınlamasıyla çıkar.
+
+**Doğrulama:** `tests/integration/issue-mail.test.ts` — şablonun iki hâli,
+yalnızca etkin yazarlar ve bir kez, panel bildirimi, iki çalışma buluşunca tek
+gönderim, açılış anından önce gönderim yok, taşınan dönem yeniden duyurulur,
+çalışma sayısı / 3 günden eski / kapanmış dönem sessiz, yayıncı ayarları
+değişmez.

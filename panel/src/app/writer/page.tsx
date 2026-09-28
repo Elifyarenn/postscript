@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { announceOpenedSubmissionWindowsSoon } from "@/services/issue-mail";
 import { guardPanel } from "@/lib/auth/guard";
 import { pendingAcknowledgements } from "@/services/announcements";
 import { listApprovalsForWriter } from "@/services/rights";
@@ -16,6 +17,8 @@ export const metadata = { title: "Yazar paneli" };
 
 export default async function WriterDashboard() {
   const { user } = await guardPanel("writer");
+  // The Hobby cron runs once a day; a panel visit is what sends this on time (D-270)
+  await announceOpenedSubmissionWindowsSoon();
 
   const [pending, approvals, articles, current, acceptances, issueEntries, calendar] = await Promise.all([
     pendingAcknowledgements({ ...user }),

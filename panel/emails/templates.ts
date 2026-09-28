@@ -328,3 +328,32 @@ export function contactMessage(input: {
       signature,
   };
 }
+
+/**
+ * The issue's delivery window has opened (D-270). Only an article for an
+ * accepted topic may be handed in (D-261), so a writer without one is told
+ * that rather than invited to send something the panel will refuse.
+ */
+export function submissionWindowOpened(input: {
+  displayName: string;
+  issueLabel: string;
+  closesAt: string;
+  acceptedTopic: string | null;
+  url: string;
+}): Template {
+  return {
+    subject: `postscript · ${input.issueLabel} için yazı kabul dönemi başladı`,
+    text:
+      `Merhaba ${input.displayName},\n\n` +
+      `${input.issueLabel} için yazı kabul dönemi başladı.\n\n` +
+      `Son teslim: ${input.closesAt}\n\n` +
+      (input.acceptedTopic
+        ? `Kabul edilen konunuz: ${input.acceptedTopic}\n\n` +
+          "Yazınızı konunuzdan başlatıp dönem bitmeden incelemeye gönderebilirsiniz:\n"
+        : "Bu dönemde yalnızca konusu kabul edilmiş yazılar teslim edilebilir. Sayının " +
+          "takvimini ve konunuzun durumunu buradan görebilirsiniz:\n") +
+      `${input.url}\n\n` +
+      "Saatler Türkiye saatidir." +
+      signature,
+  };
+}
