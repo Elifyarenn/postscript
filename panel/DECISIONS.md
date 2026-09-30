@@ -11426,3 +11426,17 @@ eserleri" listesi ve onaylı "kaldır" düğmesi (yalnızca admin,
   taslakları; imzalanmamış, gönderilmemiş).
 - Her eser için `article.removed_unlicensed_former_writer` denetim kaydı.
   KVKK: yeni veri yok.
+
+## D-280 — Belgelerde Dergi tarafı: "PostScript Dergisi adına Fatma Tuanna Demir"
+
+Ürün sahibi: Genel Katkı Sağlayan Sözleşmesi ve Eser Bazlı Kullanım Ruhsatı
+Formu şablonlarında Dergi tarafı "PostScript Dergisi adına Fatma Tuanna Demir"
+oldu; "adi ortaklık / ortaklar / tek başına temsil" ifadeleri ve
+`{{dergi.ortak_1}}`, `{{dergi.ortak_2}}` bu iki şablondan kalktı. Dergi adına
+imza bloğunda ad soyad "Fatma Tuanna Demir" yazılı. Adres/e-posta satırları
+aynı kaldı; başka madde, hukuki metin ve akış değişmedi.
+
+Sürüm yükseltilmedi: ruhsat formu şablon sürümü 1 kalır, çünkü henüz kimse
+imzalamadı; 1. sürüm bu metinle kurulur (ürün sahibi). PDF ile kelimesi
+kelimesine test, bu dört değişiklik dışında metnin teslim edilen PDF ile aynı
+kaldığını denetler.

@@ -38,19 +38,52 @@ function pdfText(file: string): string {
   return text;
 }
 
+/**
+ * The only change made to the delivered text (D-280): the magazine is party
+ * through Fatma Tuanna Demir, and the partnership wording is gone. Everything
+ * else must still match the PDF word for word.
+ */
+const PARTY_CHANGES: [before: string, after: string][] = [
+  [
+    "Dergi: Postscript Dergisi (Postscript Dergisi adı altında faaliyet gösteren adi ortaklık adına ortaklar: {{dergi.ortak_1}}, {{dergi.ortak_2}}. Ortaklardan her biri Dergi adına tek başına temsile yetkilidir. Tebligat",
+    "Dergi: PostScript Dergisi adına Fatma Tuanna Demir (Tebligat",
+  ],
+  [
+    "Ruhsat alan (Dergi): Postscript Dergisi (Postscript Dergisi adı altında faaliyet gösteren adi ortaklık adına ortaklar: {{dergi.ortak_1}}, {{dergi.ortak_2}}. Ortaklardan her biri Dergi adına tek başına temsile yetkilidir. Adres",
+    "Ruhsat alan (Dergi): PostScript Dergisi adına Fatma Tuanna Demir (Adres",
+  ],
+  ["Postscript Dergisi adına yetkili Ad Soyad: ________________________", "PostScript Dergisi adına Ad Soyad: Fatma Tuanna Demir"],
+  ["Ruhsat alan (Postscript Dergisi adına) Ad Soyad: ______________________", "Ruhsat alan (PostScript Dergisi adına) Ad Soyad: Fatma Tuanna Demir"],
+];
+
+/** Applied on the comparable form, so line breaks in the PDF do not matter. */
+function withPartyChange(pdf: string): string {
+  let text = comparable(pdf);
+  for (const [before, after] of PARTY_CHANGES) text = text.replace(comparable(before), comparable(after));
+  return text;
+}
+
 describe("the templates are the delivered documents", () => {
   it.each([
     [CONTRIBUTOR_AGREEMENT_FILE, "01-genel-katki-saglayan-sozlesmesi-ISLAK-IMZA-DIJITAL.pdf"],
     [LICENCE_FORM_FILE, "02-eser-bazli-kullanim-ruhsati-formu-DIJITAL-GUNCEL.pdf"],
-  ])("%s says word for word what the PDF says", (template, pdf) => {
-    expect(comparable(readFileSync(contracts(template), "utf8"))).toBe(comparable(pdfText(pdf)));
+  ])("%s says word for word what the PDF says, but for the party change of D-280", (template, pdf) => {
+    expect(comparable(readFileSync(contracts(template), "utf8"))).toBe(withPartyChange(pdfText(pdf)));
   });
 
   it("keeps both signature blocks: the contributor and the magazine", () => {
     for (const file of [CONTRIBUTOR_AGREEMENT_FILE, LICENCE_FORM_FILE]) {
       const text = readFileSync(contracts(file), "utf8");
-      expect(text).toContain("Postscript Dergisi adına");
+      expect(text).toMatch(/PostScript Dergisi adına\)?\n\nAd Soyad: Fatma Tuanna Demir/);
       expect(text).toMatch(/Katkı Sağlayan \/ Eser Sahibi/);
+    }
+  });
+
+  it("names Fatma Tuanna Demir for the magazine, with no partnership wording left", () => {
+    for (const file of [CONTRIBUTOR_AGREEMENT_FILE, LICENCE_FORM_FILE]) {
+      const text = readFileSync(contracts(file), "utf8");
+      expect(text).toMatch(/: PostScript Dergisi adına Fatma Tuanna Demir\n/);
+      expect(text).not.toMatch(/adi ortaklık|ortaklar:|Ortaklardan|tek başına temsil|dergi\.ortak_/);
     }
   });
 });

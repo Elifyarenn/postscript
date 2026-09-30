@@ -8,8 +8,8 @@ Bu form, 5846 sayılı Fikir ve Sanat Eserleri Kanunu'nun (FSEK) 48, 52 ve 56. m
 
 ## Taraflar
 
-Ruhsat alan (Dergi): Postscript Dergisi
-(Postscript Dergisi adı altında faaliyet gösteren adi ortaklık adına ortaklar: {{dergi.ortak_1}}, {{dergi.ortak_2}}. Ortaklardan her biri Dergi adına tek başına temsile yetkilidir. Adres: {{dergi.adres}})
+Ruhsat alan (Dergi): PostScript Dergisi adına Fatma Tuanna Demir
+(Adres: {{dergi.adres}})
 
 Ruhsat veren (Katkı Sağlayan / Eser Sahibi): {{katki.ad_soyad}}
 
@@ -146,9 +146,9 @@ Yer: ______________________
 
 İmza:
 
-Ruhsat alan (Postscript Dergisi adına)
+Ruhsat alan (PostScript Dergisi adına)
 
-Ad Soyad: ______________________
+Ad Soyad: Fatma Tuanna Demir
 Tarih: ____ / ____ / ________
 
 İmza:

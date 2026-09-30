@@ -5,8 +5,8 @@ Yayın tarihi: {{agreement.published_at}}
 
 ## Taraflar
 
-Dergi: Postscript Dergisi
-(Postscript Dergisi adı altında faaliyet gösteren adi ortaklık adına ortaklar: {{dergi.ortak_1}}, {{dergi.ortak_2}}. Ortaklardan her biri Dergi adına tek başına temsile yetkilidir. Tebligat adresi: {{dergi.adres}} - E-posta: {{dergi.eposta}})
+Dergi: PostScript Dergisi adına Fatma Tuanna Demir
+(Tebligat adresi: {{dergi.adres}} - E-posta: {{dergi.eposta}})
 
 Katkı Sağlayan / Eser Sahibi: {{katki.ad_soyad}}
 Rol / katkı türü: {{katki.rol}}
@@ -134,9 +134,9 @@ Yer: ________________________
 
 El yazısıyla imza:
 
-Postscript Dergisi adına yetkili
+PostScript Dergisi adına
 
-Ad Soyad: ________________________
+Ad Soyad: Fatma Tuanna Demir
 Tarih: ____ / ____ / ________
 
 İmza:
