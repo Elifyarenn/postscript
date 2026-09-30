@@ -22,7 +22,7 @@ import {
   setLegalAdvisor,
   setWriterStatus,
 } from "@/services/users";
-import { createVersionFromTemplate, publishAgreementVersion } from "@/services/agreements";
+import { createVersionFromTemplate, publishAgreementVersion, replaceVersionTextWithTemplate } from "@/services/agreements";
 import { adminDecideApplication } from "@/services/writer-applications";
 import { approveSignedContract, rejectSignedContract, VERIFIED_MESSAGE } from "@/services/signed-contracts";
 import { clearContributorDocuments, prepareContributorDocuments } from "@/services/contributor-documents";
@@ -507,6 +507,22 @@ export async function prepareContributorDocumentsAction(
         `Genel sözleşme: ${summary.generalCreated} yeni · Ruhsat formu: ${summary.licenceCreated} yeni · ` +
         `İnceleme gerekiyor: ${summary.needsReview.total} · Önceden hazır: ${summary.alreadyPrepared.general + summary.alreadyPrepared.licence} · ` +
         `Atlanan kayıt: ${skipped}. E-posta gönderilmedi.`,
+    };
+  });
+}
+
+/** Makes the template's text the current version's text, keeping its number (D-283). */
+export async function replaceCurrentVersionTextAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const version = await replaceVersionTextWithTemplate({ ...user }, text(formData, "versionId"), await requestMetadata());
+    revalidatePath("/admin/agreements");
+    return {
+      success: `v${version.version} artık Genel Katkı Sağlayan Sözleşmesi. Belgeleri yenilemek için "Hazırlanan belgelerin hepsini sil" ve ardından "Belgeleri hazırla".`,
     };
   });
 }

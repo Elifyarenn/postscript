@@ -11462,3 +11462,21 @@ silinmemiş eser.
 `/admin/agreements` sayfasının yer tutucu listesinde D-276'nın `katki.*`
 adları eksikti; sayfa şablonu "sözlük dışı" sayıp "Şablondan sürüm oluştur"u
 gizliyordu. Liste tamamlandı (servis zaten gerçek sözlüğü kullanıyordu).
+
+## D-283 — Genel Katkı Sağlayan Sözleşmesi v2 değil, v1'in kendisi olur
+
+Ürün sahibi: sözleşme v1 olacak. Canlıdaki v1 (6 Eyl 2026) eski "Yazar
+Sözleşmesi ve Kullanım Ruhsatı Taahhüdü" metniydi ve kimse onun imzalı
+kopyasını yüklemedi. `/admin/agreements`'ta "Şablonu v1 yap"
+(`replaceVersionTextWithTemplate`): güncel sürümün metni ve özeti şablonla
+değişir; sürüm numarası, yayın tarihi ve güncel olması aynı kalır.
+
+- O sürüm için yüklenmiş herhangi bir imzalı sözleşme varsa reddedilir (409):
+  imza, üzerinde atıldığı metni bağlar.
+- Eski metnin tamamı ve özeti `agreement.text_replaced_with_template` denetim
+  kaydının `before` alanında saklanır; eski şablon dosyası da depoda durur.
+- O sürüme ait eski onay kutusu kayıtları silinmez, `superseded_at` ile
+  işaretlenir: onayladıkları metin artık o sürümün metni değil. Bunlar D-275'ten
+  beri zaten geçerli sayılmıyordu.
+- Sürüm ilkesine ("metin değişikliği yeni sürüm") bilinçli bir istisna; ürün
+  sahibinin kararı, imza olmadığı için kimsenin imzaladığı metin değişmiyor.

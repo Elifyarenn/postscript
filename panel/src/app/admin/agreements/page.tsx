@@ -22,6 +22,7 @@ import {
   publishAgreementAction,
   rejectSignedContractAction,
   removeUnlicensedFormerWriterWorksAction,
+  replaceCurrentVersionTextAction,
 } from "../actions";
 
 export const metadata = { title: "Sözleşme sürümleri" };
@@ -74,6 +75,7 @@ export default async function AdminAgreementsPage() {
 
   const alreadyVersioned = versions.some((version) => version.bodyHash === hash);
   const drafts = versions.filter((version) => version.publishedAt === null);
+  const current = versions.find((version) => version.isCurrent) ?? null;
 
   // Which publisher details are still missing; without them nothing renders
   const missingSettings = Object.entries(settings)
@@ -150,6 +152,22 @@ export default async function AdminAgreementsPage() {
               Bu şablon metni zaten bir sürüm olarak kayıtlı. Yeni sürüm için önce dosyayı
               değiştirin.
             </Alert>
+          ) : current && !signed.some((row) => row.version === current.version) ? (
+            <div className="space-y-2">
+              <p className="text-sm text-muted">
+                Güncel sürüm (v{current.version}) için henüz imzalı sözleşme yüklenmedi. Şablonun metni
+                v{current.version}&apos;in metni olarak konabilir; sürüm numarası ve yayın tarihi aynı kalır, eski
+                metin denetim kaydında saklanır (D-283).
+              </p>
+              <ActionButton
+                action={replaceCurrentVersionTextAction}
+                csrfToken={csrfToken}
+                label={`Şablonu v${current.version} yap`}
+                variant="primary"
+                fields={{ versionId: current.id }}
+                confirmMessage={`v${current.version}'in metni şablondaki Genel Katkı Sağlayan Sözleşmesi ile değiştirilecek. Eski metin denetim kaydında saklanır. Devam edilsin mi?`}
+              />
+            </div>
           ) : (
             <PanelForm
               action={createVersionFromTemplateAction}

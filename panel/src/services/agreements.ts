@@ -256,6 +256,68 @@ export async function createVersionFromTemplate(
   return draft!;
 }
 
+/**
+ * Puts the template's text into an existing version, keeping its number and
+ * publication (D-283). The owner wants the contributor contract to be v1
+ * itself, not a v2. Allowed only while nobody has uploaded a signed copy of
+ * that version: a signature binds the text it was made on. The old text goes
+ * into the audit log whole, and the old checkbox acceptances of the version
+ * are marked superseded, since what they accepted is no longer its text.
+ */
+export async function replaceVersionTextWithTemplate(
+  actor: Actor,
+  versionId: string,
+  meta: RequestMeta,
+): Promise<AgreementVersion> {
+  if (!canManageAgreements(actor)) throw forbidden();
+
+  const version = await findVersion(versionId);
+  const template = readAgreementTemplate();
+  const bodyHash = hashDocument(template);
+  if (version.bodyHash === bodyHash) throw conflict("Bu sürümün metni zaten şablonla aynı.");
+
+  const [signed] = await db
+    .select({ id: signedContracts.id })
+    .from(signedContracts)
+    .where(eq(signedContracts.agreementVersionId, versionId))
+    .limit(1);
+  if (signed) throw conflict("Bu sürüm için yüklenmiş imzalı sözleşme var; metni değiştirilemez.");
+
+  const [other] = await db
+    .select({ version: agreementVersions.version })
+    .from(agreementVersions)
+    .where(and(eq(agreementVersions.bodyHash, bodyHash), ne(agreementVersions.id, versionId)))
+    .limit(1);
+  if (other) throw conflict(`Bu şablon metni zaten ${other.version}. sürüm olarak kayıtlı.`);
+
+  const now = new Date();
+  const updated = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(agreementVersions)
+      .set({ title: "PostScript Genel Katkı Sağlayan Sözleşmesi", bodyMarkdown: template, bodyHash, updatedAt: now })
+      .where(eq(agreementVersions.id, versionId))
+      .returning();
+    await tx
+      .update(agreementAcceptances)
+      .set({ supersededAt: now, updatedAt: now })
+      .where(and(eq(agreementAcceptances.agreementVersionId, versionId), isNull(agreementAcceptances.supersededAt)));
+    await writeAudit(
+      {
+        actorId: actor.id,
+        action: "agreement.text_replaced_with_template",
+        entityType: "agreement_versions",
+        entityId: versionId,
+        before: { version: version.version, title: version.title, bodyHash: version.bodyHash, bodyMarkdown: version.bodyMarkdown },
+        after: { version: version.version, bodyHash },
+        ip: meta.ip,
+      },
+      tx,
+    );
+    return row!;
+  });
+  return updated;
+}
+
 async function findVersion(versionId: string): Promise<AgreementVersion> {
   const rows = await db
     .select()
