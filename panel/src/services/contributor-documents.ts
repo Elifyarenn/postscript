@@ -44,7 +44,6 @@ import {
   previewTemplate,
 } from "@/lib/agreement/render";
 import {
-  ACCEPTED_WORK_STATUSES,
   CONTRIBUTOR_AGREEMENT_FILE,
   contributionRoleLabel,
   DOCUMENT_KIND_LABELS,
@@ -143,11 +142,7 @@ async function draftLicence(
 ): Promise<Draft & { contentHash: string | null }> {
   const reasons: string[] = [];
   if (versionReason) reasons.push(versionReason);
-  if (work.status === "withdrawn") {
-    reasons.push("Eser geri çekildi");
-  } else if (!ACCEPTED_WORK_STATUSES.includes(work.status)) {
-    reasons.push(`Eser henüz Dergi tarafından kabul edilmedi (durum: ${work.status})`);
-  }
+  // The work's status is not a condition: every listed work gets its form (D-287)
 
   const { values, words, contentHash } = await licenceValues(version, work, author, bylineChoice, formId, now);
   if (words === 0) reasons.push("Eser metni boş");

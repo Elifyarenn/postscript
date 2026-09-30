@@ -178,9 +178,10 @@ describe("preparing", () => {
     }
     expect(of(s.accepted.id).status).toBe("needs_review");
     expect(of(s.accepted.id).reviewReasons).toEqual(["Doğum tarihi kayıtlı değil"]);
-    expect(of(s.draft.id).reviewReasons).toEqual(["Eser henüz Dergi tarafından kabul edilmedi (durum: draft)"]);
+    // The work's status is no condition: a draft gets its form as well (D-287)
+    expect(of(s.draft.id).status).toBe("prepared");
 
-    expect(summary.needsReview.total).toBe(3);
+    expect(summary.needsReview.total).toBe(2);
   });
 
   it("sends nothing and changes no work, author or approval", async () => {
@@ -348,9 +349,9 @@ describe("mailing a contributor their documents (D-285)", () => {
       expect(attachment.contentType).toBe("application/pdf");
       expect(attachment.content.subarray(0, 5).toString("ascii")).toBe("%PDF-");
     }
-    // The draft's form is still under review, so it is not among them
+    // Every prepared form goes, whatever the work's status (D-287)
     expect(mail.text).toContain("Yayımlanmış Yazı");
-    expect(mail.text).not.toContain("Taslak Yazı");
+    expect(mail.text).toContain("Taslak Yazı");
 
     // The same PDF the panel gives
     const own = await contributorDocumentPdf(actorOf(s.complete), prepared[0]!.id);
@@ -433,8 +434,8 @@ describe("reading and downloading", () => {
     expect((await captureError(contributorDocumentPdf(actorOf(s.complete), "not-a-uuid")))?.status).toBe(404);
 
     // A document under review has no PDF yet
-    const review = (await listOwnContributorDocuments(actorOf(s.complete))).find((row) => row.status === "needs_review")!;
-    expect((await captureError(contributorDocumentPdf(actorOf(s.complete), review.id)))?.status).toBe(409);
+    const review = (await listOwnContributorDocuments(actorOf(s.noBirthDate))).find((row) => row.status === "needs_review")!;
+    expect((await captureError(contributorDocumentPdf(actorOf(s.noBirthDate), review.id)))?.status).toBe(409);
   });
 
   it("GET /api/contributor-documents/:id/pdf follows the same rule", async () => {

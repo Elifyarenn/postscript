@@ -6,7 +6,7 @@
  * do not say is not filled in: the document is kept as `needs_review` with the
  * reason, and nobody guesses a birth date, a byline or a licence period.
  */
-import type { ArticleStatus, Role } from "@/db/schema";
+import type { Role } from "@/db/schema";
 
 /** The licence form as delivered (contracts/eser-bazli-kullanim-ruhsati-formu.md). */
 export const LICENCE_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu.md";
@@ -42,20 +42,6 @@ export function contributionRoleLabel(input: {
   if (input.isIllustrator) labels.push("Çizer");
   return labels.length > 0 ? labels.join(" ve ") : null;
 }
-
-/**
- * The statuses in which the magazine has accepted a text. The form speaks of
- * "Dergi tarafından kabul edilen … eser"; a draft or a text still in review
- * is not that yet, and a withdrawn one no longer is.
- */
-export const ACCEPTED_WORK_STATUSES: readonly ArticleStatus[] = [
-  "ready_for_publishing",
-  "accepted",
-  "awaiting_rights",
-  "scheduled",
-  "published",
-  "archived",
-];
 
 /** Words in a markdown body, for the form's technical description. */
 export function wordCount(markdown: string): number {

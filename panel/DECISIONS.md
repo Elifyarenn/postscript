@@ -11517,3 +11517,13 @@ teslim (en fazla 10 bekleyen iş) veya günlük cron da bekleyenleri gönderebil
 Aynı kişiye aynı belge seti (belge kimliği + metin özeti) ikinci kez kuyruğa
 girmez (`dedupe_key`); ikinci basış yalnızca belgeleri değişen kişileri ekler.
 İncelemedeki belgeler ve silinmiş hesaplar kuyruğa girmez.
+
+## D-287 — Ruhsat formu eserin durumuna bakmadan hazırlanır
+
+Ürün sahibi: eser onayı beklenmeyecek, listelenen tüm yazılar hazır sayılır;
+kabul imzaya kadar tamamlanır. D-276'daki "eser Dergi tarafından kabul edilmiş
+olmalı" (ve "geri çekilmiş") koşulu kaldırıldı; `ACCEPTED_WORK_STATUSES` silindi.
+Yalnızca metni boş olan eser incelemede kalır: formdaki kelime sayısı ve metin
+özeti boş metinden doldurulamaz. Canlıda bu koşul yüzünden bekleyen 18 form
+(13 `pending_admin_approval`, 5 `in_review`) "Belgeleri hazırla" ile yeniden
+denendiğinde hazır olur.
