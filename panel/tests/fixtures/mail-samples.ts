@@ -55,3 +55,12 @@ MAIL_SAMPLES.topicWindowOpened = [
   { displayName: "Ada", issueLabel: "Sayı 2 · Gotizm", theme: "Gotik <karanlık>", closesAt: "8 Ekim 18:00", areas: ["Sanat & Edebiyat", "Felsefe & Düşünce"], url: "https://example.com/writer/topics" },
   { displayName: "Ada", issueLabel: "Sayı 2 · Gotizm", theme: null, closesAt: "8 Ekim 18:00", areas: ["Sanat & Edebiyat"], url: "https://example.com/writer/topics" },
 ];
+
+MAIL_SAMPLES.contributorDocumentsSent = [
+  {
+    displayName: "Ada <b>Yazar</b>",
+    documents: ["Genel Katkı Sağlayan Sözleşmesi", "Eser Bazlı Kullanım Ruhsatı Formu — Kış & <Sessizlik>"],
+    url: "https://example.com/account",
+  },
+];
+ADDED_AFTER_LAYOUT.add("contributorDocumentsSent");

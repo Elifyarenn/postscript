@@ -11489,3 +11489,18 @@ bir tercih yoksa ya da "mahlas" seçilmiş ama hesapta mahlas yoksa
 düşmez. Mahlasıyla yayın yalnızca yazarın o eser için mahlası seçtiği ve mahlası
 kayıtlı olduğu durumda yazılır. Sitede gösterilen yazar adı (`publicByline`)
 değişmedi; formdaki adla sitedeki adın ayrışabileceği ürün sahibine bildirildi.
+
+## D-285 — Hazır belgeler admin aksiyonuyla PDF ekli e-postayla gönderilir
+
+- **Panelde indirme:** değişmedi (D-276); katkı sağlayan "Hesabım"da (yazarlar
+  ayrıca "Sözleşmem"de) hazır belgelerini PDF olarak indirir.
+- **Mail:** `/admin/agreements` tablosunda her kişinin ilk satırında "Belgelerini
+  mail gönder (n)" (onaylı, yalnızca admin, `mailContributorDocuments`). Kişinin
+  bütün hazır belgeleri tek iletide PDF eki olarak `sendMail` kuyruğuna (D-269)
+  girer; incelemedeki belgeler gönderilmez, hiç hazır belgesi yoksa 409. Ekler
+  paneldeki indirmeyle aynı fonksiyondan (`pdfOf`) çizilir.
+- **Otomatik gönderim yok:** hazırlamak, silmek, yeniden hazırlamak mail atmaz;
+  tekrar basmak yeniden gönderir (bilinçli: admin kararı).
+- Şablon `contributorDocumentsSent`; her gönderim `contributor_documents.mailed`
+  denetim kaydı (belge kimlikleriyle). KVKK "Sözleşme" satırına e-postayla
+  iletim eklendi. Belge metinleri, ruhsat kapsamı ve hazır belgeler değişmedi.

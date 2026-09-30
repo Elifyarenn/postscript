@@ -17,6 +17,7 @@ import { formatDate, formatDateTime } from "@/lib/utils";
 import {
   approveSignedContractAction,
   clearContributorDocumentsAction,
+  mailContributorDocumentsAction,
   createVersionFromTemplateAction,
   prepareContributorDocumentsAction,
   publishAgreementAction,
@@ -64,6 +65,10 @@ export default async function AdminAgreementsPage() {
   const documents = await listContributorDocuments(actor);
   const unlicensed = await listUnlicensedFormerWriterWorks(actor);
   const reviewCount = documents.filter((row) => row.status === "needs_review").length;
+  const preparedByUser = new Map<string, number>();
+  for (const row of documents) {
+    if (row.status === "prepared") preparedByUser.set(row.userId, (preparedByUser.get(row.userId) ?? 0) + 1);
+  }
   // Waiting ones first; the rest stay listed as the record of what was decided
   const ordered = [...signed.filter((row) => row.status === "pending"), ...signed.filter((row) => row.status !== "pending")];
   const settings = await getSiteSettings();
@@ -286,7 +291,8 @@ export default async function AdminAgreementsPage() {
             Ruhsatı Formu her esere (eserin yazarının hesabına) hazırlanır. Kayıtlarda olmayan ya da
             şüpheli bir bilgi tahminle doldurulmaz; belge &ldquo;İnceleme gerekiyor&rdquo; olarak nedeniyle
             kalır. Tekrar çalıştırmak yalnızca eksikleri ekler ve incelemedekileri yeniden dener; hazır
-            belgelere dokunmaz. E-posta gönderilmez.
+            belgelere dokunmaz. Hazırlamak e-posta göndermez; hazır belgeler yalnızca kişinin satırındaki
+            &ldquo;Belgelerini mail gönder&rdquo; ile PDF ekiyle gönderilir.
           </p>
           <div className="mb-4 flex flex-wrap gap-2">
             <ActionButton
@@ -325,7 +331,7 @@ export default async function AdminAgreementsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {documents.map((row) => (
+                  {documents.map((row, index) => (
                     <tr key={row.id}>
                       <Td className="text-xs">
                         <Link href={`/admin/users/${row.userId}`} className="underline">
@@ -334,6 +340,18 @@ export default async function AdminAgreementsPage() {
                         <span className="block">
                           <StatusBadge status={row.userRole} />
                         </span>
+                        {/* One button per person, on their first row; mail goes only on this click */}
+                        {documents[index - 1]?.userId !== row.userId && (preparedByUser.get(row.userId) ?? 0) > 0 && (
+                          <span className="mt-1 block">
+                            <ActionButton
+                              action={mailContributorDocumentsAction}
+                              csrfToken={csrfToken}
+                              label={`Belgelerini mail gönder (${preparedByUser.get(row.userId)})`}
+                              fields={{ userId: row.userId }}
+                              confirmMessage={`${row.userName} adlı kullanıcıya ${preparedByUser.get(row.userId)} hazır belge PDF ekiyle e-postayla gönderilecek. Devam edilsin mi?`}
+                            />
+                          </span>
+                        )}
                       </Td>
                       <Td className="text-xs">
                         <Link href={`/admin/agreements/documents/${row.id}`} className="text-accent underline">

@@ -24,6 +24,7 @@ import {
   contributorDocumentPdf,
   listContributorDocuments,
   listOwnContributorDocuments,
+  mailContributorDocuments,
   prepareContributorDocuments,
   viewContributorDocument,
 } from "@/services/contributor-documents";
@@ -319,6 +320,56 @@ describe("clearing the prepared documents (D-281)", () => {
       expect((await captureError(clearContributorDocuments(actor, noMeta)))?.status).toBe(403);
     }
     expect(await db.select().from(contributorDocuments)).toHaveLength(count);
+  });
+});
+
+describe("mailing a contributor their documents (D-285)", () => {
+  it("queues one mail with every prepared document as a PDF, only when the admin asks", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    expect(await db.select().from(mailJobs)).toHaveLength(0);
+
+    const prepared = (await listOwnContributorDocuments(actorOf(s.complete))).filter((row) => row.status === "prepared");
+    const result = await mailContributorDocuments(actorOf(s.admin), s.complete.id, noMeta);
+    expect(result.sent).toBe(prepared.length);
+
+    // Through the outbox (D-269), then delivered; the delivered copy is checked
+    const jobs = await db.select().from(mailJobs);
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]!.recipient).toBe(s.complete.email);
+    expect(jobs[0]!.kind).toBe("contributor_documents");
+    expect(mailbox.outbox).toHaveLength(1);
+    const mail = mailbox.outbox[0]!;
+    expect(mail.to).toBe(s.complete.email);
+    const attachments = mail.attachments!;
+    expect(attachments).toHaveLength(prepared.length);
+    for (const attachment of attachments) {
+      expect(attachment.contentType).toBe("application/pdf");
+      expect(attachment.content.subarray(0, 5).toString("ascii")).toBe("%PDF-");
+    }
+    // The draft's form is still under review, so it is not among them
+    expect(mail.text).toContain("Yayımlanmış Yazı");
+    expect(mail.text).not.toContain("Taslak Yazı");
+
+    // The same PDF the panel gives
+    const own = await contributorDocumentPdf(actorOf(s.complete), prepared[0]!.id);
+    expect(attachments.some((a) => a.filename === own.fileName)).toBe(true);
+  });
+
+  it("sends nothing for someone whose documents are all under review", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    expect((await captureError(mailContributorDocuments(actorOf(s.admin), s.noBirthDate.id, noMeta)))?.status).toBe(409);
+    expect(await db.select().from(mailJobs)).toHaveLength(0);
+  });
+
+  it("is the admin's alone", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    for (const actor of [actorOf(s.complete), actorOf(s.editor)]) {
+      expect((await captureError(mailContributorDocuments(actor, s.complete.id, noMeta)))?.status).toBe(403);
+    }
+    expect(await db.select().from(mailJobs)).toHaveLength(0);
   });
 });
 

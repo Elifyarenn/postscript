@@ -4,7 +4,8 @@
  * contributor, and an Eser Bazlı Kullanım Ruhsatı Formu for every work, on
  * the account of the work's own author.
  *
- * Preparing is all this does. Nothing is sent (no e-mail at this stage), no
+ * Preparing is all this does. Nothing is sent (mail goes out only when an
+ * admin asks for it per person, `mailContributorDocuments`, D-285), no
  * work is licensed, and no work, author or status is touched — the records
  * are only read. A value the records do not hold, or hold doubtfully, is not
  * filled in: the document is kept as `needs_review` with the reason.
@@ -56,6 +57,9 @@ import {
 } from "@/lib/contributor-documents";
 import { conflict, forbidden, notFound } from "@/lib/errors";
 import { renderDocumentPdf } from "@/lib/pdf";
+import { env } from "@/lib/env";
+import { sendMail } from "@/services/mail-queue";
+import * as templates from "@emails/templates";
 import { buildAgreementContext, getCurrentAgreement, stripMarkdown } from "./agreements";
 import { articleHash, LICENCE_TERMS } from "./rights";
 import type { RequestMeta } from "./auth";
@@ -528,7 +532,12 @@ export async function contributorDocumentPdf(
   if (row.status !== "prepared" || !row.renderedMarkdown || !row.textHash) {
     throw conflict("Bu belge incelemede; PDF'i hazır değil.");
   }
+  return pdfOf(row);
+}
 
+/** The PDF of a prepared document, drawn from its stored text: the panel and the mail send the same file. */
+async function pdfOf(row: ContributorDocument): Promise<{ fileName: string; body: Buffer }> {
+  if (!row.renderedMarkdown || !row.textHash) throw conflict("Bu belge incelemede; PDF'i hazır değil.");
   const body = await renderDocumentPdf({
     title: `postscript ${DOCUMENT_KIND_LABELS[row.kind]}`,
     sections: [{ body: stripMarkdown(row.renderedMarkdown) }],
@@ -536,4 +545,58 @@ export async function contributorDocumentPdf(
   });
   const name = row.kind === "general_agreement" ? `genel-katki-saglayan-sozlesmesi-v${row.templateVersion}` : `eser-ruhsati-${row.id.slice(0, 8)}`;
   return { fileName: `${name}.pdf`, body };
+}
+
+/**
+ * Mails one contributor their prepared documents as PDF attachments (D-285).
+ * Only an admin's explicit action calls this; preparing documents never
+ * sends anything. A document still under review is not sent.
+ */
+export async function mailContributorDocuments(
+  actor: Actor,
+  userId: string,
+  meta: RequestMeta,
+): Promise<{ sent: number }> {
+  if (!canManageAgreements(actor)) throw forbidden();
+  if (!UUID.test(userId)) throw notFound("Kullanıcı bulunamadı.");
+
+  const [person] = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.id, userId), isNull(users.deletedAt)))
+    .limit(1);
+  if (!person) throw notFound("Kullanıcı bulunamadı.");
+
+  const rows = await db
+    .select({ document: contributorDocuments, articleTitle: articles.title })
+    .from(contributorDocuments)
+    .leftJoin(articles, eq(contributorDocuments.articleId, articles.id))
+    .where(and(eq(contributorDocuments.userId, userId), eq(contributorDocuments.status, "prepared")))
+    .orderBy(contributorDocuments.kind, contributorDocuments.createdAt);
+  if (rows.length === 0) throw conflict("Bu kullanıcının hazır belgesi yok; incelemedeki belgeler gönderilmez.");
+
+  const attachments = [];
+  for (const { document } of rows) {
+    const pdf = await pdfOf(document);
+    attachments.push({ filename: pdf.fileName, content: pdf.body, contentType: "application/pdf" });
+  }
+
+  const message = templates.contributorDocumentsSent({
+    displayName: person.displayName,
+    documents: rows.map(({ document, articleTitle }) =>
+      articleTitle ? `${DOCUMENT_KIND_LABELS[document.kind]} — ${articleTitle}` : DOCUMENT_KIND_LABELS[document.kind],
+    ),
+    url: `${env().APP_URL}/account`,
+  });
+  await sendMail({ to: person.email, ...message, attachments });
+
+  await writeAudit({
+    actorId: actor.id,
+    action: "contributor_documents.mailed",
+    entityType: "users",
+    entityId: person.id,
+    after: { documentIds: rows.map(({ document }) => document.id) },
+    ip: meta.ip,
+  });
+  return { sent: rows.length };
 }

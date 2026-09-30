@@ -627,3 +627,34 @@ export function submissionWindowOpened(input: {
     ],
   });
 }
+
+/**
+ * The contributor's prepared documents, sent only when an admin asks (D-285).
+ * The PDFs travel as attachments; the link leads to the same copies in the panel.
+ */
+export function contributorDocumentsSent(input: {
+  displayName: string;
+  documents: string[];
+  url: string;
+}): Template {
+  return renderMail({
+    kind: "contributor_documents",
+    subject: "postscript · Sözleşme ve ruhsat belgeleriniz",
+    heading: "Belgeleriniz ektedir",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "paragraph",
+        text:
+          "PostScript Dergisi ile imzalamanız için hazırlanan belgeleriniz bu iletiye PDF olarak eklendi:\n" +
+          input.documents.map((name) => `- ${name}`).join("\n"),
+      },
+      {
+        type: "paragraph",
+        text:
+          "Belgeleri yazdırıp el yazısıyla imzalayın. Aynı belgeleri panelde de görüp indirebilirsiniz.",
+      },
+      { type: "action", lead: "Belgelerinizin bulunduğu sayfa:", url: input.url, label: "Belgelerimi aç" },
+    ],
+  });
+}

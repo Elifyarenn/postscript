@@ -25,7 +25,11 @@ import {
 import { createVersionFromTemplate, publishAgreementVersion, replaceVersionTextWithTemplate } from "@/services/agreements";
 import { adminDecideApplication } from "@/services/writer-applications";
 import { approveSignedContract, rejectSignedContract, VERIFIED_MESSAGE } from "@/services/signed-contracts";
-import { clearContributorDocuments, prepareContributorDocuments } from "@/services/contributor-documents";
+import {
+  clearContributorDocuments,
+  mailContributorDocuments,
+  prepareContributorDocuments,
+} from "@/services/contributor-documents";
 import { removeUnlicensedFormerWriterWorks } from "@/services/unlicensed-works";
 import { createAnnouncement, publishAnnouncement } from "@/services/announcements";
 import type { AnnouncementSeverity } from "@/db/schema";
@@ -524,6 +528,20 @@ export async function replaceCurrentVersionTextAction(
     return {
       success: `v${version.version} artık Genel Katkı Sağlayan Sözleşmesi. Belgeleri yenilemek için "Hazırlanan belgelerin hepsini sil" ve ardından "Belgeleri hazırla".`,
     };
+  });
+}
+
+/** Mails one contributor their prepared documents as PDFs, on the admin's word only (D-285). */
+export async function mailContributorDocumentsAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const result = await mailContributorDocuments({ ...user }, text(formData, "userId"), await requestMetadata());
+    revalidatePath("/admin/agreements");
+    return { success: `${result.sent} belge PDF olarak e-posta kuyruğuna alındı.` };
   });
 }
 
