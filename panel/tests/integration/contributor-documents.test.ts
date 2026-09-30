@@ -26,6 +26,7 @@ import {
   prepareContributorDocuments,
 } from "@/services/contributor-documents";
 import { articleHash } from "@/services/rights";
+import { ADAPTATION_SCOPE_TEXT, LICENCE_DURATION_TEXT } from "@/lib/contributor-documents";
 import { GET as getPdfRoute } from "@/app/api/contributor-documents/[id]/pdf/route";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
 import { actorOf, createUser, noMeta, publishContract, testIssueId } from "../helpers/factories";
@@ -149,27 +150,33 @@ describe("preparing", () => {
     expect(of(s.noBirthDate).renderedMarkdown).toBeNull();
   });
 
-  it("does not guess the licence period, the adaptation limit, a byline or an unaccepted work", async () => {
+  it("fills the fixed period and adaptation limit, and does not guess a byline or an unaccepted work", async () => {
     const s = await scenario();
     const summary = await prepareContributorDocuments(actorOf(s.admin), noMeta);
     const rows = await db.select().from(contributorDocuments).where(eq(contributorDocuments.kind, "work_licence"));
     const of = (id: string) => rows.find((row) => row.articleId === id)!;
 
     for (const row of rows) {
-      expect(row.status).toBe("needs_review");
-      expect(row.reviewReasons).toContain("Ruhsat süresi sistemde tanımlı değil");
-      expect(row.reviewReasons).toContain("İşleme hakkının yazılı kapsamı sistemde tanımlı değil");
+      expect(row.reviewReasons).not.toContain("Ruhsat süresi sistemde tanımlı değil");
+      expect(row.reviewReasons).not.toContain("İşleme hakkının yazılı kapsamı sistemde tanımlı değil");
     }
-    // The signed approval recorded a byline for this one; the others have none
-    expect(of(s.published.id).reviewReasons).not.toContain(
-      "Bu eser için yayın adı tercihi (gerçek ad / mahlas) kayıtlı değil",
-    );
-    expect(of(s.accepted.id).reviewReasons).toContain("Bu eser için yayın adı tercihi (gerçek ad / mahlas) kayıtlı değil");
-    expect(of(s.draft.id).reviewReasons).toContain("Eser henüz Dergi tarafından kabul edilmedi (durum: draft)");
-    expect(of(s.accepted.id).reviewReasons).toContain("Doğum tarihi kayıtlı değil");
+    // The signed approval recorded a byline for this one, so nothing is left to review
+    const ready = of(s.published.id);
+    expect(ready.status).toBe("prepared");
+    expect(ready.renderedMarkdown).toContain(LICENCE_DURATION_TEXT);
+    expect(ready.renderedMarkdown).toContain(ADAPTATION_SCOPE_TEXT);
+    expect(ready.renderedMarkdown).toContain("Mahlasıyla (Mahlas)");
+    expect(ready.renderedMarkdown).not.toMatch(/\{\{/);
 
-    expect(summary.needsReview.total).toBe(4);
-    expect(summary.needsReview.reasons["Ruhsat süresi sistemde tanımlı değil"]).toBe(3);
+    // The others have no choice on record, and none is guessed
+    expect(of(s.accepted.id).status).toBe("needs_review");
+    expect(of(s.accepted.id).reviewReasons).toContain("Bu eser için yayın adı tercihi (gerçek ad / mahlas) kayıtlı değil");
+    expect(of(s.accepted.id).reviewReasons).toContain("Doğum tarihi kayıtlı değil");
+    expect(of(s.draft.id).reviewReasons).toContain("Bu eser için yayın adı tercihi (gerçek ad / mahlas) kayıtlı değil");
+    expect(of(s.draft.id).reviewReasons).toContain("Eser henüz Dergi tarafından kabul edilmedi (durum: draft)");
+
+    expect(summary.needsReview.total).toBe(3);
+    expect(summary.needsReview.reasons["Bu eser için yayın adı tercihi (gerçek ad / mahlas) kayıtlı değil"]).toBe(2);
   });
 
   it("sends nothing and changes no work, author or approval", async () => {

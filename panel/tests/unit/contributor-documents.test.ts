@@ -8,6 +8,7 @@ import * as mupdf from "mupdf";
 import { describe, expect, it } from "vitest";
 import { AgreementRenderError, extractPlaceholders, fillTemplate } from "@/lib/agreement/render";
 import {
+  ADAPTATION_SCOPE_TEXT,
   CONTRIBUTOR_AGREEMENT_FILE,
   contributionRoleLabel,
   LICENCE_FORM_FILE,
@@ -85,11 +86,22 @@ describe("licenceFormValues", () => {
     expect(values["form.byline_label"]).toBe("Mahlasıyla (Mahlas)");
   });
 
-  it("leaves the licence period, the adaptation limit and an unchosen byline unfilled", () => {
+  it("fills the magazine's fixed period and adaptation limit", () => {
     const values = licenceFormValues({ terms, bylineChoice: null, displayName: "Ad Soyad", penName: null });
-    expect(values["form.duration_label"]).toBeNull();
-    expect(values["form.adaptation_scope"]).toBeNull();
+    expect(values["form.duration_label"]).toBe(
+      "FSEK uyarınca ilgili mali hakkın geçerli koruma süresi boyunca",
+    );
+    expect(values["form.adaptation_scope"]).toBe(ADAPTATION_SCOPE_TEXT);
+    expect(ADAPTATION_SCOPE_TEXT).toMatch(/^Eserin özünü, anlamını .* bu kapsamda değildir\.$/);
+    expect(licenceFormValues({ terms: { ...terms, rightAdaptation: false }, bylineChoice: null, displayName: "Ad Soyad", penName: null })["form.adaptation_scope"]).toBe("—");
+  });
+
+  it("leaves an unchosen byline unfilled", () => {
+    const values = licenceFormValues({ terms, bylineChoice: null, displayName: "Ad Soyad", penName: null });
     expect(values["form.byline_label"]).toBeNull();
+    expect(
+      licenceFormValues({ terms, bylineChoice: "real_name", displayName: "Ad Soyad", penName: "Mahlas" })["form.byline_label"],
+    ).toBe("Gerçek adıyla (Ad Soyad)");
   });
 
   it("does not print a pen name that does not exist", () => {

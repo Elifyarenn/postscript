@@ -92,14 +92,18 @@ const TERRITORY_LABELS: Record<string, string> = { worldwide: "Tüm dünya" };
 
 const yesNo = (value: boolean) => (value ? "Evet" : "Hayır");
 
+/** The licence period, as the magazine fixed it (D-277). */
+export const LICENCE_DURATION_TEXT = "FSEK uyarınca ilgili mali hakkın geçerli koruma süresi boyunca";
+
+/** The written limit of the adaptation right, as the magazine fixed it (D-277). */
+export const ADAPTATION_SCOPE_TEXT =
+  "Eserin özünü, anlamını ve eser sahibinin hususiyetini değiştirmemek kaydıyla; dergi sayfa düzenine ve dijital yayın formatlarına uyarlanması için gerekli kırpma, boyutlandırma, yerleşim ve teknik format düzenlemeleriyle sınırlıdır. Çeviri, dramatizasyon, seslendirme veya eserin başka bir eser türüne dönüştürülmesi bu kapsamda değildir.";
+
 /**
  * The form's `form.*` values. The ones the records cannot supply come back
- * null, and the render then names them as the reason for review:
- *
- *  - `form.duration_label`: no licence period exists anywhere in the system;
- *  - `form.adaptation_scope`: the adaptation right is on, but its written
- *    limit belonged to article 4.2 of the old contract, not to this form;
- *  - `form.byline_label`: known only when the author chose it for this work.
+ * null, and the render then names them as the reason for review. The period
+ * and the adaptation limit are the magazine's fixed texts (D-277); the byline
+ * is known only when the author chose it for this work, and is never guessed.
  */
 export function licenceFormValues(input: {
   terms: LicenceTerms;
@@ -121,14 +125,13 @@ export function licenceFormValues(input: {
     "form.right_distribution": yesNo(terms.rightDistribution),
     "form.right_communication_to_public": yesNo(terms.rightCommunicationToPublic),
     "form.right_adaptation": yesNo(terms.rightAdaptation),
-    // A written limit is required when the right is given; none is recorded
-    "form.adaptation_scope": terms.rightAdaptation ? null : "—",
+    "form.adaptation_scope": terms.rightAdaptation ? ADAPTATION_SCOPE_TEXT : "—",
     "form.channel_web": yesNo(terms.channels.includes("web")),
     "form.channel_pdf_issue": yesNo(terms.channels.includes("pdf_issue")),
     "form.channel_social": yesNo(terms.channels.includes("social")),
     "form.channel_newsletter": yesNo(terms.channels.includes("newsletter")),
     "form.territory_label": TERRITORY_LABELS[terms.territory] ?? null,
-    "form.duration_label": null,
+    "form.duration_label": LICENCE_DURATION_TEXT,
     "form.exclusivity_label":
       terms.grantType === "exclusive_license"
         ? terms.exclusivityMonths

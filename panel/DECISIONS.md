@@ -11369,3 +11369,24 @@ tam/eksik genel sözleşme, ruhsatta tahmin edilmeyen alanlar, e-posta yok ve
 eser/yazar/onay değişmez, tekrar yok + veri düzelince çözülme, farklı sürüm
 metni, yalnızca admin, kendi belgeleri, PDF sahip/admin/404/409, rota 200/404/401);
 `agreement-render.test.ts` yeni şablona göre genişletildi.
+
+## D-277 — Eser ruhsatı formunda süre ve işleme kapsamı sabit metin; yayın adı tahmin edilmez
+
+D-276'nın `needs_review` nedenlerinden üçü yönetimin verdiği metinlerle çözüldü
+(`src/lib/contributor-documents.ts`):
+
+- **Ruhsat süresi** (`form.duration_label`): "FSEK uyarınca ilgili mali hakkın
+  geçerli koruma süresi boyunca".
+- **İşleme kapsamı** (`form.adaptation_scope`, işleme hakkı verildiğinde): "Eserin
+  özünü, anlamını ve eser sahibinin hususiyetini değiştirmemek kaydıyla; dergi
+  sayfa düzenine ve dijital yayın formatlarına uyarlanması için gerekli kırpma,
+  boyutlandırma, yerleşim ve teknik format düzenlemeleriyle sınırlıdır. Çeviri,
+  dramatizasyon, seslendirme veya eserin başka bir eser türüne dönüştürülmesi bu
+  kapsamda değildir."
+- **Yayın adı:** değişmedi; yalnızca yazarın o eser için imzalı onayda seçtiği
+  tercih (`rights_grants.byline_choice`, eser başına tek etkin kayıt) kullanılır.
+  Tercih yoksa veya mahlas seçilmiş ama mahlas yoksa belge `needs_review` kalır.
+
+Şablon metni, ruhsat kapsamı (`LICENCE_TERMS`), imza yapısı, migration ve e-posta
+değişmedi. Önceden `needs_review` kalan belgeler "Belgeleri hazırla" yeniden
+çalıştırılınca aynı satırda yeniden denenir.
