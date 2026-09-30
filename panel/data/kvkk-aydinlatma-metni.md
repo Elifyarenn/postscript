@@ -27,7 +27,7 @@ ortaklık adına tek başına temsile yetkilidir.
 | Profil | Topluluk kullanıcı adı, kısa biyografi, profil görseli, sosyal medya bağlantıları, yazı alanı, topluluk ayarlarında sabit bir listeden seçtiğiniz ilgi alanları (yalnızca size gösterilir) |
 | Yazarlık | Yazarlık başvurusu, başvuruya eklenen örnek çalışma ve başvuru notu, editör değerlendirme notları, rol değişikliği kayıtları |
 | Bilgilendirme | Aydınlatma metninin hangi sürümünü ne zaman okuduğunuzu belirttiğiniz (kayıt sırasında ve sonraki sürümlerde); önceki kayıt panel işlem kayıtlarında saklanır |
-| Sözleşme | Yazar sözleşmesini kabul kaydınız: tarih-saat, IP adresi, tarayıcı bilgisi, kabul ettiğiniz metnin tam hâli ve SHA-256 özeti, PDF kopyası |
+| Sözleşme | Yüklediğiniz imzalı Yazar Sözleşmesi PDF dosyası ve içindeki bilgiler (ad-soyad, imza ve sözleşmeye yazdığınız diğer bilgiler), dosyanın SHA-256 özeti, hangi sözleşme sürümüne ait olduğu, yükleme tarihi, doğrulama durumu (inceleniyor, doğrulandı, reddedildi), doğrulayan veya reddeden yönetici, işlem tarihi ve varsa ret nedeni. Daha önce panelde onay kutusuyla verdiğiniz kabul kaydı (tarih-saat, IP adresi, tarayıcı bilgisi, kabul ettiğiniz metnin tam hâli ve SHA-256 özeti, PDF kopyası) geçmiş kayıt olarak saklanır |
 | Yayın izni | Bir yazıyı "İncelemeye gönder" ile gönderdiğinizde oluşan izin beyanı kaydı: gönderdiğiniz **metnin o andaki tam hâli** ve SHA-256 özeti, yazının sürüm numarası, dayandığı sözleşme sürümü, hesabınız, tarih-saat, IP adresi ve tarayıcı bilgisi. Yazıyı yeniden gönderdiğinizde önceki beyan kayıt olarak saklanır |
 | Görev işareti | Hesabınızın dergiye çizen bir hesap (çizer), derginin hukuk danışmanı veya asistan olarak işaretlenmiş olması. Bu işaretler bir rol değildir; hangi görevi üstlendiğinizi kaydeder |
 | İçerik | Dergiye gönderilen eserler ve sürümleri, yazı üzerindeki editör notları |
@@ -85,7 +85,7 @@ saklanmaz**.
 | Yazarlık için aranan 18 yaş şartının denetlenmesi | (c) Sözleşmenin kurulması, (e) Bir hakkın tesisi ve korunması |
 | Özel mesajlaşma işlevinin sunulması, mesajın karşı tarafça okunduğunun göndereni bilgilendirecek şekilde işaretlenmesi ve bu işlevin 18 yaşını doldurmuş üyelerle sınırlandırılması | (c) Sözleşmenin ifası, (f) Meşru menfaat |
 | Derginin anonim kutusunun sunulması, gönderilen metinlerin onayınızla Eğlence & Dedikodu bölümünde adınız olmadan yayımlanması; anonim mesajın göndereninin yetkili merci talebi hâlinde belirlenebilmesi için hesapla ilişkilendirilerek saklanması | (c) Sözleşmenin ifası, (ç) Hukuki yükümlülük — 5651 sayılı Kanun m. 5, (f) Meşru menfaat |
-| Yazar sözleşmesinin kurulması ve ispatı | (c) Sözleşmenin ifası, (e) Bir hakkın tesisi, kullanılması ve korunması |
+| Yazar sözleşmesinin kurulması ve ispatı: imzalı sözleşme dosyanızın alınması, yöneticilerce kontrol edilip doğrulanması veya gerekçesiyle reddedilmesi | (c) Sözleşmenin kurulması veya ifası, (e) Bir hakkın tesisi, kullanılması ve korunması |
 | Her yazı için yayın izninin kurulması ve ispatı: yazıyı gönderdiğinizde hangi metne, hangi sözleşme sürümüne dayanarak ve ne zaman izin verdiğinizin kaydedilmesi | (c) Sözleşmenin ifası, (e) Bir hakkın tesisi, kullanılması ve korunması |
 | Dergi ekibindeki görevinizin (çizer, hukuk danışmanı, asistan) kaydedilmesi ve yönetim panelinde gösterilmesi | (c) Sözleşmenin ifası, (f) Meşru menfaat |
 | Dergi ekibindeyseniz (yazar, editör, çizer, hukuk danışmanı, asistan) dergi işleriyle ilgili size telefonla veya WhatsApp üzerinden ulaşılabilmesi (paneldeki bağlantı WhatsApp'ı veya telefon aramasını yöneticinin ya da ana editörün kendi cihazında numaranızla açar; mesajı o kişi gönderir); telefon numaranız eksikse bunu tamamlamanızın e-postayla hatırlatılması. Numaranızı yalnızca yöneticiler ve ana editör görür | (c) Sözleşmenin ifası, (f) Meşru menfaat |
@@ -196,7 +196,7 @@ esas alınarak gerçekleştirilmektedir.
 | Özel mesajlar | Hesabınız açık kaldığı sürece. "Konuşmayı sil" yalnızca sizin görünümünüzden kaldırır, karşı taraf görmeye devam eder. Hesabınız silindiğinde veya mesaj bildirim üzerine kaldırıldığında karşı taraftan da kalkar ve 1 yıl sonra kalıcı olarak silinir. |
 | Anonim mesajlar | Yazıldıktan 1 yıl sonra kalıcı olarak silinir (derginin kutusundakiler ve kapatılan üye kutularından kalanlar). Dergide yayımlanan metin, adınız olmadan, yayın arşivinin parçası olarak kalır. Susturma kayıtları hesabınız silinene kadar tutulur. |
 | Takip, engelleme, kaydetme, beğeni, yeniden paylaşım ve topluluk üyeliği kayıtları | Siz geri alana kadar. Geri aldığınızda veya hesabınız silindiğinde kalıcı olarak silinir. |
-| Sözleşme kabul kaydı ve yayın izni beyanları (gönderilen metnin tam hâli dahil) | Sözleşme ilişkisi sona erdikten sonra 10 yıl — Türk Borçlar Kanunu m. 146 |
+| İmzalı sözleşme dosyası ve doğrulama kaydı, önceki sözleşme kabul kaydı ve yayın izni beyanları (gönderilen metnin tam hâli dahil) | Sözleşme ilişkisi sona erdikten sonra 10 yıl — Türk Borçlar Kanunu m. 146 |
 | Görev işaretleri (çizer, hukuk danışmanı, asistan) | İşaret kaldırılana veya hesabınız silinene kadar |
 | Panel işlem (denetim) kayıtları | 10 yıl |
 | Yayımlanmış eserler ve künyedeki ad veya mahlas | Yayın arşivinin parçası olarak süresiz |

@@ -16,7 +16,7 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db/client";
-import { agreementAcceptances, media, rightsGrants, writerApplications } from "@/db/schema";
+import { agreementAcceptances, media, rightsGrants, signedContracts, writerApplications } from "@/db/schema";
 import { requireAuth } from "@/lib/auth/session";
 import { canAccessAdminPanel, canAccessEditorPanel, canViewContractDocuments } from "@/lib/auth/rbac";
 import { getStorage } from "@/lib/storage";
@@ -93,7 +93,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }
 }
 
-/** True when this PDF is the user's own contract acceptance or work approval. */
+/** True when this PDF is the user's own contract acceptance, signed contract (D-275) or work approval. */
 async function ownsContract(userId: string, mediaId: string): Promise<boolean> {
   const acceptance = await db
     .select({ id: agreementAcceptances.id })
@@ -103,6 +103,13 @@ async function ownsContract(userId: string, mediaId: string): Promise<boolean> {
     )
     .limit(1);
   if (acceptance.length > 0) return true;
+
+  const signed = await db
+    .select({ id: signedContracts.id })
+    .from(signedContracts)
+    .where(and(eq(signedContracts.fileMediaId, mediaId), eq(signedContracts.userId, userId)))
+    .limit(1);
+  if (signed.length > 0) return true;
 
   const approval = await db
     .select({ id: rightsGrants.id })

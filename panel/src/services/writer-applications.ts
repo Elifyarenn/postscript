@@ -18,9 +18,8 @@ import "server-only";
 import { and, desc, eq, gte, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
-import { db } from "@/db/client";
+import { db, type Database } from "@/db/client";
 import {
-  agreementAcceptances,
   media,
   users,
   writerApplications,
@@ -39,9 +38,7 @@ import { env } from "@/lib/env";
 import { badRequest, conflict, forbidden, isAppError, notFound, rateLimited } from "@/lib/errors";
 import { sendMail } from "@/services/mail-queue";
 import { buildStorageKey, getStorage } from "@/lib/storage";
-import { renderDocumentPdf } from "@/lib/pdf";
-import { renderAgreementForWriter, getCurrentAgreement, stripMarkdown } from "./agreements";
-import { storeGeneratedPdf } from "./media";
+import { getCurrentAgreement } from "./agreements";
 import { checkWriterEligibility, findUserById } from "./users";
 import { mailAdmins } from "./staff-mail";
 import type { RequestMeta } from "./auth";
@@ -413,135 +410,52 @@ export async function adminDecideApplication(
 /* Contract signing (§6 of the writer-application module)              */
 /* ------------------------------------------------------------------ */
 
-export const applicationSignSchema = z.strictObject({
-  agreementVersionId: z.uuid(),
-  /** Hash of the filled text the browser displayed, re-derived server side. */
-  renderedHash: z.string().length(64),
-  acknowledged: z.literal(true, { message: "Onay kutusunu işaretlemeniz gerekiyor." }),
-});
+type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
 /**
- * The last stage: the applicant signs the contract that was defined at admin
- * approval. The signature records the acceptance, closes the application and
- * turns the account into an active writer — all or nothing, in one
- * transaction, with the `role_changes` row that every role change requires.
+ * The last stage, since D-275: the applicant uploads the signed contract and
+ * an admin verifies it (`approveSignedContract`). Inside that verification's
+ * transaction the application closes and the account becomes an active
+ * writer, with the `role_changes` row every role change requires — the
+ * verifying admin is the one who changed it.
  */
-export async function signApplicationContract(
-  actor: Actor,
-  applicationId: string,
-  rawInput: unknown,
-  meta: RequestMeta,
+export async function completeApplicationWithSignedContract(
+  tx: Transaction,
+  input: { applicationId: string; userId: string; oldRole: Role; verifiedBy: string; at: Date; ip: string | null },
 ): Promise<void> {
-  const parsed = applicationSignSchema.safeParse(rawInput);
-  if (!parsed.success) {
-    throw badRequest("Onay isteği geçersiz.", z.flattenError(parsed.error).fieldErrors);
-  }
+  await tx
+    .update(writerApplications)
+    .set({ status: "signed", signedAt: input.at, updatedAt: input.at })
+    .where(and(eq(writerApplications.id, input.applicationId), eq(writerApplications.status, "admin_approved")));
 
-  const application = await findApplication(applicationId);
-  if (application.userId !== actor.id) throw forbidden("Bu başvuru size ait değil.");
-  if (application.status !== "admin_approved") {
-    throw conflict("Bu başvurunun sözleşmesi henüz imzalanmaya hazır değil.");
-  }
+  await tx
+    .update(users)
+    .set({ role: "writer", writerStatus: "active", updatedAt: input.at })
+    .where(eq(users.id, input.userId));
 
-  const user = await findUserById(actor.id);
-  if (user.role !== "user") {
-    throw conflict("Zaten yazar veya üzeri bir role sahipsiniz.");
-  }
+  await recordRoleChange(
+    {
+      userId: input.userId,
+      oldRole: input.oldRole,
+      newRole: "writer",
+      changedBy: input.verifiedBy,
+      note: `Yazar başvurusu: imzalı sözleşme doğrulandı (${input.applicationId})`,
+      ip: input.ip,
+    },
+    tx,
+  );
 
-  // The contract defined at admin approval; if a newer version was published
-  // since, the applicant signs the newer one, exactly like every writer does
-  const current = await getCurrentAgreement();
-  if (!current) throw notFound("Yayınlanmış bir çerçeve sözleşme yok.");
-  if (current.id !== parsed.data.agreementVersionId) {
-    throw conflict("Sözleşmenin daha yeni bir sürümü var. Sayfayı yenileyin.");
-  }
-
-  // The hash the browser echoes is never trusted: render again and compare
-  const preview = await renderAgreementForWriter(user);
-  if (preview.hash !== parsed.data.renderedHash) {
-    throw conflict("Gösterilen metin ile kayıtlı metin eşleşmiyor. Sayfayı yenileyin.");
-  }
-
-  const acceptedAt = new Date();
-
-  // The acceptance is stamped into the text: this is the final document
-  const final = await renderAgreementForWriter(user, { acceptedAt, ip: meta.ip });
-
-  // The readable copy, generated outside the transaction like `acceptAgreement`
-  const pdf = await renderDocumentPdf({
-    title: "postscript Yazar Sözleşmesi ve Kullanım Ruhsatı Taahhüdü",
-    subtitle: `Sürüm ${current.version} · ${user.displayName}`,
-    sections: [{ body: stripMarkdown(final.markdown) }],
-    footerNote: `Sürüm ${current.version} — ${preview.hash.slice(0, 16)} — ${acceptedAt.toISOString()}`,
-  });
-
-  const pdfMedia = await storeGeneratedPdf(pdf, {
-    prefix: "contracts",
-    fileName: `sozlesme-v${current.version}-${user.id}.pdf`,
-    uploadedBy: user.id,
-  });
-
-  await db.transaction(async (tx) => {
-    await tx
-      .insert(agreementAcceptances)
-      .values({
-        userId: user.id,
-        agreementVersionId: current.id,
-        acceptedAt,
-        ip: meta.ip,
-        userAgent: meta.userAgent,
-        bodyHashAtAcceptance: preview.hash,
-        renderedMarkdown: final.markdown,
-        pdfMediaId: pdfMedia.id,
-      })
-      .onConflictDoNothing();
-
-    // Signing is what closes the application…
-    await tx
-      .update(writerApplications)
-      .set({ status: "signed", signedAt: acceptedAt, updatedAt: acceptedAt })
-      .where(eq(writerApplications.id, application.id));
-
-    // …and what makes the account an active writer
-    await tx
-      .update(users)
-      .set({ role: "writer", writerStatus: "active", updatedAt: acceptedAt })
-      .where(eq(users.id, user.id));
-  });
-
-  await recordRoleChange({
-    userId: user.id,
-    oldRole: "user",
-    newRole: "writer",
-    changedBy: user.id,
-    note: `Yazar başvurusu sözleşmesi imzalandı (${application.id})`,
-    ip: meta.ip,
-  });
-
-  await writeAudit({
-    actorId: user.id,
-    action: "writer_application.signed",
-    entityType: "writer_applications",
-    entityId: application.id,
-    after: { version: current.version, bodyHashAtAcceptance: preview.hash },
-    ip: meta.ip,
-  });
-
-  const message = templates.agreementAccepted({
-    displayName: user.displayName,
-    version: current.version,
-  });
-  await sendMail({
-    to: user.email,
-    ...message,
-    attachments: [
-      {
-        filename: `postscript-sozlesme-v${current.version}.pdf`,
-        content: pdf,
-        contentType: "application/pdf",
-      },
-    ],
-  });
+  await writeAudit(
+    {
+      actorId: input.verifiedBy,
+      action: "writer_application.signed",
+      entityType: "writer_applications",
+      entityId: input.applicationId,
+      after: { userId: input.userId },
+      ip: input.ip,
+    },
+    tx,
+  );
 }
 
 /* ------------------------------------------------------------------ */

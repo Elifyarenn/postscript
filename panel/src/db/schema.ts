@@ -768,6 +768,61 @@ export const agreementAcceptances = pgTable(
 );
 
 /* ------------------------------------------------------------------ */
+/* signed_contracts                                                    */
+/* ------------------------------------------------------------------ */
+
+export const signedContractStatusEnum = pgEnum("signed_contract_status", [
+  "pending",
+  "approved",
+  "rejected",
+]);
+
+/**
+ * A signed Yazar Sözleşmesi uploaded as a PDF, and the admin's signed
+ * contract verification of it (D-275). This replaces the checkbox as the proof
+ * that a member has a contract: `agreement_acceptances` rows stay as they are,
+ * but nothing counts them any more.
+ *
+ * A row is never deleted or re-used. A rejected upload stays with its reason;
+ * the member uploads a new file, which is a new row.
+ */
+export const signedContracts = pgTable(
+  "signed_contracts",
+  {
+    id: id(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    /** The contract version the member signed: the current one at upload. */
+    agreementVersionId: uuid("agreement_version_id")
+      .notNull()
+      .references(() => agreementVersions.id, { onDelete: "restrict" }),
+    /** The PDF, stored privately under `contracts/` like every contract document. */
+    fileMediaId: uuid("file_media_id")
+      .notNull()
+      .references(() => media.id, { onDelete: "restrict" }),
+    /** SHA-256 of the uploaded bytes, so the verified file can be told apart from any other. */
+    fileSha256: text("file_sha256").notNull(),
+    status: signedContractStatusEnum("status").notNull().default("pending"),
+    uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }),
+    /** Required when rejected; shown to the member. */
+    rejectionReason: text("rejection_reason"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("signed_contracts_user_idx").on(t.userId, t.uploadedAt),
+    index("signed_contracts_status_idx").on(t.status),
+    // One upload waiting at a time: a second one would race the first's review
+    uniqueIndex("signed_contracts_one_pending").on(t.userId).where(sql`${t.status} = 'pending'`),
+  ],
+);
+
+export type SignedContract = typeof signedContracts.$inferSelect;
+
+/* ------------------------------------------------------------------ */
 /* announcements                                                       */
 /* ------------------------------------------------------------------ */
 

@@ -36,11 +36,13 @@ import { slugify } from "@/lib/slug";
 import { normalizeBannedWord } from "@/lib/moderation";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import {
-  acceptAgreement,
   createVersionFromTemplate,
   publishAgreementVersion,
   renderAgreementForWriter,
+  stripMarkdown,
 } from "@/services/agreements";
+import { approveSignedContract, uploadSignedContract } from "@/services/signed-contracts";
+import { renderDocumentPdf } from "@/lib/pdf";
 import { saveSiteSettings } from "@/services/site-settings";
 import type { Actor } from "@/lib/auth/rbac";
 
@@ -349,19 +351,22 @@ async function main(): Promise<void> {
         emailVerifiedAt: new Date(),
         isBanned: false,
       };
+      // Stands in for the signed PDF a real writer uploads; the admin verifies it (D-275)
       const writerRow = await db.select().from(users).where(eq(users.id, writerId)).limit(1);
       const preview = await renderAgreementForWriter(writerRow[0]!);
-
-      await acceptAgreement(
+      const pdf = await renderDocumentPdf({
+        title: "postscript Yazar Sözleşmesi (örnek imzalı kopya)",
+        sections: [{ body: stripMarkdown(preview.markdown) }],
+        footerNote: "Örnek veri — seed",
+      });
+      const meta = { ip: "127.0.0.1", userAgent: "seed" };
+      const upload = await uploadSignedContract(
         writerActor,
-        {
-          agreementVersionId: published.id,
-          renderedHash: preview.hash,
-          acknowledged: true,
-        },
-        { ip: "127.0.0.1", userAgent: "seed" },
+        { buffer: pdf, fileName: "imzali-sozlesme.pdf", declaredMime: "application/pdf" },
+        meta,
       );
-      console.log("  · seeded writer accepted it");
+      await approveSignedContract(adminActor, upload.id, meta);
+      console.log("  · seeded writer's signed contract verified");
     }
   } else {
     console.log("  · already present");

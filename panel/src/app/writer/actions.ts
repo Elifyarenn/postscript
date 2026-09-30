@@ -1,14 +1,14 @@
 "use server";
 
 /**
- * Writer panel actions: acknowledging announcements, accepting the framework
- * agreement, signing or declining a rights grant, and the author's own
+ * Writer panel actions: acknowledging announcements, uploading the signed
+ * contract (D-275), signing or declining a rights grant, and the author's own
  * article writing (step 1 of the review chain, D-059).
  */
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { acknowledge, markRead } from "@/services/announcements";
-import { acceptAgreement } from "@/services/agreements";
+import { uploadSignedContract } from "@/services/signed-contracts";
 import {
   createArticleAsWriter,
   declineWorkAndReturnForRevision,
@@ -16,7 +16,8 @@ import {
   updateArticleAsWriter,
 } from "@/services/articles";
 import { approveWork, confirmUncoveredSubmissions } from "@/services/rights";
-import { requestMetadata, requireRole } from "@/lib/auth/session";
+import { requestMetadata, requireAuth, requireRole } from "@/lib/auth/session";
+import { badRequest } from "@/lib/errors";
 import { assertCsrfFromForm } from "@/lib/csrf";
 import { checkbox, numberField, optionalText, runAction, text, type ActionState } from "@/lib/action";
 import { reviseTopicProposal, submitTopicProposal } from "@/services/topics";
@@ -50,32 +51,31 @@ export async function markAnnouncementReadAction(
   });
 }
 
-export async function acceptAgreementAction(
+/**
+ * The signed contract, as a PDF (D-275). Used by team members from their
+ * panel and by an approved applicant, so the session is enough here; the
+ * service decides who may upload.
+ */
+export async function uploadSignedContractAction(
   _state: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
   return runAction(async () => {
     await assertCsrfFromForm(formData);
-    const { user } = await requireRole("writer");
-    const meta = await requestMetadata();
+    const { user } = await requireAuth();
 
-    await acceptAgreement(
+    const file = formData.get("file");
+    if (!(file instanceof File) || file.size === 0) throw badRequest("Dosya seçilmedi.");
+
+    await uploadSignedContract(
       { ...user },
-      {
-        agreementVersionId: text(formData, "agreementVersionId"),
-        renderedHash: text(formData, "renderedHash"),
-        acknowledged: checkbox(formData, "acknowledged") as true,
-      },
-      meta,
+      { buffer: Buffer.from(await file.arrayBuffer()), fileName: file.name, declaredMime: file.type },
+      await requestMetadata(),
     );
 
-    // The whole writer panel unlocks on acceptance, so refresh the shell too
     revalidatePath("/writer", "layout");
-    // A frozen writer's acceptance is recorded, but only an admin lifts the freeze (D-248)
-    if (user.writerStatus === "suspended") {
-      return { success: "Sözleşmeyi onayladınız. Göreviniz dondurulmuş; yeniden açılması için yöneticiye başvurun." };
-    }
-    return { success: "Sözleşmeyi onayladınız. Yazar sayfalarınız açıldı." };
+    revalidatePath("/writer-application/contract");
+    return { success: "Sözleşmeniz yüklendi. Yönetici doğruladığında burada göreceksiniz." };
   });
 }
 

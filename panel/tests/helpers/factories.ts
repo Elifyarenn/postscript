@@ -147,20 +147,30 @@ export async function publishKvkkVersion(): Promise<void> {
   });
 }
 
-/** Walks a writer through accepting the current contract. */
+/** The smallest byte string the upload accepts as a PDF: the magic bytes decide. */
+export function tinyPdf(tag = ""): Buffer {
+  return Buffer.from(`%PDF-1.4
+% imzali sozlesme ${tag}
+1 0 obj<<>>endobj
+trailer<<>>
+%%EOF
+`);
+}
+
+/**
+ * Gives a writer a verified signed contract for the current version (D-275):
+ * the writer uploads a PDF, a separate admin verifies it.
+ */
 export async function acceptCurrentContract(writer: User): Promise<void> {
-  const { acceptAgreement, getCurrentAgreement, renderAgreementForWriter } = await import(
-    "@/services/agreements"
-  );
+  const { approveSignedContract, uploadSignedContract } = await import("@/services/signed-contracts");
 
-  const current = await getCurrentAgreement();
-  const preview = await renderAgreementForWriter(writer);
-
-  await acceptAgreement(
-    actorOf({ ...writer, role: "writer", writerStatus: "pending_agreement" }),
-    { agreementVersionId: current!.id, renderedHash: preview.hash, acknowledged: true },
+  const upload = await uploadSignedContract(
+    actorOf({ ...writer, role: writer.role === "user" ? "writer" : writer.role }),
+    { buffer: tinyPdf(writer.id), fileName: "imzali-sozlesme.pdf", declaredMime: "application/pdf" },
     noMeta,
   );
+  const verifier = await createUser({ role: "admin" });
+  await approveSignedContract(actorOf(verifier), upload.id, noMeta);
 }
 
 /**

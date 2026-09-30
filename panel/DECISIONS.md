@@ -11188,3 +11188,96 @@ bırakılması; yeni sıra ve manifestten çıkan sayfa; geri alma: kimlikler,
 görsel, alan, çift geri alma reddi, sonra yeniden aktarım). Kapı: typecheck,
 lint, 1092 test, build (15 görsel ve `renders.json` sayfa fonksiyonuna
 paketlendi, `mupdf` paketlenmedi).
+
+---
+
+## D-275 — Onay kutusu yerine imzalı sözleşme yükleme ve imzalı sözleşme doğrulaması
+
+**İstek (ürün sahibi):** Yazar sözleşmesinin panel onay kutusu akışı kaldırılsın;
+ekip üyesi imzalı sözleşmeyi PDF olarak yüklesin, admin "imzalı sözleşme
+doğrulaması" yapsın (onay veya gerekçeli ret). Eski onay kayıtları silinmesin
+ama geçerli doğrulama sayılmasın. Eser kayıtları, eser durumu/hash'i, yayın
+sistemi ve eser bazlı ruhsat sistemine dokunulmasın. Push/deploy yok.
+
+### Hangi koda kuruldu
+
+`main` (canlıdaki panel) üzerine, temiz bir worktree'de. Ortak ağaçtaki D-268
+(beklemede, commit'lenmemiş) de onay kutusunu değiştiriyor; ama sahibinin
+talimatıyla test/migration yapılmıyor ve migration zinciri `main`'in
+0050/0051'iyle çakışıyor (orada `db:generate` `mail_jobs`'ı da migration'a
+katardı). D-268 yeniden ele alındığında onay kutusu kabulü bu kararla
+değiştirilmiş sayılmalı: `approval-methods.ts`'e ikinci bir yöntem eklemek
+yerine bu tablo kullanılır.
+
+### Veri
+
+Migration `0052_handy_rocket_racer.sql`, yalnızca ekleyici: `signed_contract_status`
+enum'u (`pending`, `approved`, `rejected`) ve `signed_contracts` tablosu — üye
+(`user_id`), dosya (`file_media_id` + `file_sha256`), sözleşme sürümü
+(`agreement_version_id`), `status`, `uploaded_at`, `reviewed_at`, `reviewed_by`,
+`rejection_reason`. Kullanıcı başına tek `pending` (kısmi benzersiz indeks).
+Satır silinmez, yeniden kullanılmaz; ret sonrası yeni yükleme yeni satırdır.
+`agreement_acceptances`'a dokunulmadı; hiçbir satır silinmedi veya değişmedi (testi var).
+
+### Akış
+
+- **Üye ("Sözleşmem", `/writer/agreement`):** güncel sürümün kendisine
+  doldurulmuş metnini görür, imzalı PDF'i yükler → `pending`. Kendi yüklemelerini,
+  durumlarını, ret nedenini ve dosyasını görür; ret sonrası yeniden yükler.
+  Doğrulanınca "İmzalı sözleşmeniz doğrulandı." Eski onay kutusu kayıtları
+  "geçerli doğrulama yerine geçmez" notuyla listelenir.
+- **Başvuru sahibi (`/writer-application/contract`):** onay kutusu yerine aynı
+  yükleme. Admin doğruladığında aynı işlemde başvuru `signed` olur, hesap aktif
+  yazar olur, `role_changes` satırı yazılır (`changed_by` = doğrulayan admin);
+  terfi ön koşulları (`checkWriterEligibility`) o anda yeniden aranır.
+- **Admin (`/admin/agreements`):** "İmzalı sözleşme doğrulaması" listesi (üye adı,
+  rolü, yükleme tarihi, sürüm, durum, PDF'yi aç/indir). "Doğrula" `reviewed_by` ve
+  `reviewed_at`'i yazar; bekleyen yazar aktifleşir (dondurulmuş yazar hariç,
+  D-248). "Reddet" gerekçe ister (3–1000 karakter). Admin kendi yüklemesini
+  doğrulayamaz (iki admin birbirininkini doğrular). Eski sürüme ait yükleme
+  doğrulanmaz (409); reddedilip güncel sürüm istenir.
+- **Kapı:** `hasAcceptedCurrentAgreement` artık yalnızca güncel sürüm için
+  `approved` bir `signed_contracts` satırına bakar. `articles.ts` ve `rights.ts`
+  kodu değişmedi; ikisi de bu fonksiyonu çağırdığı için yazı gönderimi ve eser
+  onayı artık doğrulanmış imzalı sözleşme ister. **Sonuç:** yalnızca onay kutusuyla
+  kabul etmiş mevcut yazarlar, imzalı sözleşmeleri doğrulanana kadar yeni yazı
+  gönderemez ve eser onayı veremez.
+- Kaldırılanlar: `acceptAgreement`, `acceptanceSchema`, `signApplicationContract`,
+  `applicationSignSchema`, onay kutusu formu (`accept-form.tsx`) ve iki eylemi.
+
+### Güvenlik
+
+- Dosya özel depoda, `contracts/signed/` altında, `contract_pdf` etiketiyle
+  (`storeGeneratedPdf`): mevcut `/api/media/:id` kapısı sahibine ve admine açar,
+  editöre 403 (D-248); R2'de 5 dakikalık imzalı bağlantı. Sahiplik kontrolüne
+  `signed_contracts` eklendi. Kitaplıkta listelenmez, yeniden etiketlenemez,
+  yazıya eklenemez (güvenlik testleri artık imzalı PDF üzerinden koşuyor).
+- Yalnızca PDF: dosya adı `.pdf`, bildirilen tür `application/pdf` ve ilk baytlar
+  `%PDF-`; üçü de tutmalı. Sınır 4 MB (Vercel'in 4,5 MB istek sınırı, D-161).
+- Yükleme: yazar ve üstü (doğrulanmış e-posta, yasaksız) veya admin onaylı başvurusu
+  olan kullanıcı; doğrulama/ret/liste: yalnızca admin. Hepsi serviste.
+
+### Hukuk
+
+- **KVKK aydınlatma metni** güncellendi (veri kategorisi, amaç, saklama satırı):
+  imzalı PDF ve içindeki bilgiler, özet, sürüm, doğrulama durumu, doğrulayan,
+  ret nedeni; saklama mevcut sözleşme kaydı satırında (ilişki bitiminden sonra 10
+  yıl). Canlıdaki metin, yönetici panelinden yeni KVKK sürümü yayımlanınca değişir.
+- **Hukukçu görüşü gerekiyor:** sözleşme şablonunun 16.2. maddesi kabulün
+  "elektronik ortamda, Madde 5.3'teki kayıtlarla" verildiğini söylüyor; yeni
+  yöntem (ıslak/elektronik imzalı PDF + admin doğrulaması) metne yansıtılmadı.
+  Şablon değişikliği yeni sürüm demek; danışmanla birlikte yapılmalı.
+- `articles.ts` ve `rights.ts`'teki ret mesajları hâlâ "sözleşmeyi kabul etmeniz
+  gerekiyor" diyor; o dosyalara dokunulmaması istendiği için bırakıldı.
+
+**Doğrulama:** `tests/integration/signed-contracts.test.ts` (12 senaryo: ad/tür/bayt/
+boyut reddi, özel depolama ve `pending`, tek bekleyen, yetkisiz yükleme, onayda
+`reviewed_by/at` ve yazarın aktifleşmesi, gerekçesiz ret reddi ve yeniden yükleme,
+editör/yazar/sahip için 403, kendi yüklemesini doğrulayamama, admin listesi,
+yalnızca kendi kayıtları, eski sürüm 409, eski onay kutusu kaydının sayılmaması ve
+değişmemesi, dosya rotası sahip/admin 200, başkası/editör 403, oturumsuz 401);
+`writer-applications.test.ts` başvuru bölümü yeni akışa göre yazıldı (5 senaryo);
+`security-audit.test.ts` sözleşme PDF testleri imzalı PDF üzerinden. E2E
+`07-writer-application.spec.ts` yeni akışa göre güncellendi, çalıştırılmadı
+(yerel sunucu açılmıyor). Seed demo yazar için örnek PDF yükleyip admin'e
+doğrulatıyor.

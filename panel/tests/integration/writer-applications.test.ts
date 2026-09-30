@@ -3,8 +3,8 @@
  *
  * Covers the whole flow against a real PostgreSQL: submitting with a sample
  * work, the 30 day cooldown, the staged editor → admin approvals, and the
- * contract signature that is the only thing that turns the account into a
- * writer.
+ * admin's verification of the uploaded signed contract, which is the only
+ * thing that turns the account into a writer (D-275).
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
@@ -16,10 +16,10 @@ import {
   editorDecideApplication,
   latestApplication,
   listApplicationsByStatus,
-  signApplicationContract,
   submitWriterApplication,
 } from "@/services/writer-applications";
-import { getCurrentAgreement, renderAgreementForWriter } from "@/services/agreements";
+import { getCurrentAgreement } from "@/services/agreements";
+import { approveSignedContract, uploadSignedContract } from "@/services/signed-contracts";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import { MemoryStorageAdapter, setStorageAdapter } from "@/lib/storage";
 import { isAppError } from "@/lib/errors";
@@ -30,6 +30,7 @@ import {
   noMeta,
   publishContract,
   reloadUser,
+  tinyPdf,
 } from "../helpers/factories";
 import type { User } from "@/db/schema";
 
@@ -281,7 +282,7 @@ describe("admin stage", () => {
   });
 });
 
-describe("contract signing", () => {
+describe("contract signing (D-275: signed PDF, admin verification)", () => {
   /** A fully approved application whose contract the applicant can sign. */
   async function approvedApplication(email: string) {
     const admin = await createUser({ role: "admin" });
@@ -292,88 +293,51 @@ describe("contract signing", () => {
     const application = await submitAs(applicant);
     await editorDecideApplication(actorOf(editor), application.id, "approve", null, noMeta);
     await adminDecideApplication(actorOf(admin), application.id, "approve", null, noMeta);
-    return { applicant, application };
+    return { admin, applicant, application };
   }
 
-  it("turns the applicant into an active writer on signature", async () => {
-    const { applicant, application } = await approvedApplication("imzalayan@example.com");
-
-    const current = await getCurrentAgreement();
-    const preview = await renderAgreementForWriter(applicant);
-
-    await signApplicationContract(
-      actorOf(applicant),
-      application.id,
-      { agreementVersionId: current!.id, renderedHash: preview.hash, acknowledged: true },
+  const upload = (who: User) =>
+    uploadSignedContract(
+      actorOf(who),
+      { buffer: tinyPdf(), fileName: "imzali.pdf", declaredMime: "application/pdf" },
       noMeta,
     );
 
-    // The account is now a writer and active
+  it("turns the applicant into an active writer when the admin verifies the signed PDF", async () => {
+    const { admin, applicant } = await approvedApplication("imzalayan@example.com");
+
+    const { id } = await upload(applicant);
+    // Uploading alone changes nothing about the account
+    expect((await reloadUser(applicant.id)).role).toBe("user");
+
+    await approveSignedContract(actorOf(admin), id, noMeta);
+
     const updated = await reloadUser(applicant.id);
     expect(updated.role).toBe("writer");
     expect(updated.writerStatus).toBe("active");
 
-    // The application is closed
     const closed = await latestApplication(applicant.id);
     expect(closed!.status).toBe("signed");
     expect(closed!.signedAt).not.toBeNull();
 
-    // The acceptance and the role change are both recorded
-    const acceptances = await db
-      .select()
-      .from(agreementAcceptances)
-      .where(eq(agreementAcceptances.userId, applicant.id));
-    expect(acceptances).toHaveLength(1);
-
-    const changes = await db
-      .select()
-      .from(roleChanges)
-      .where(eq(roleChanges.userId, applicant.id));
+    // The role change names the verifying admin; no checkbox acceptance is written
+    const changes = await db.select().from(roleChanges).where(eq(roleChanges.userId, applicant.id));
     expect(changes).toHaveLength(1);
     expect(changes[0]!.oldRole).toBe("user");
     expect(changes[0]!.newRole).toBe("writer");
-
-    expect(mailbox.lastTo("imzalayan@example.com")?.subject).toContain("Sözleşme onayınız");
+    expect(changes[0]!.changedBy).toBe(admin.id);
+    expect(await db.select().from(agreementAcceptances).where(eq(agreementAcceptances.userId, applicant.id))).toHaveLength(0);
   });
 
-  it("refuses a signature from anyone but the owner", async () => {
-    const { application } = await approvedApplication("sahip@example.com");
+  it("refuses an upload from someone without an approved application", async () => {
+    await approvedApplication("sahip@example.com");
     const stranger = await createUser({ email: "yabanci@example.com" });
 
-    const current = await getCurrentAgreement();
-    const preview = await renderAgreementForWriter(stranger);
-
-    const error = await captureError(
-      signApplicationContract(
-        actorOf(stranger),
-        application.id,
-        { agreementVersionId: current!.id, renderedHash: preview.hash, acknowledged: true },
-        noMeta,
-      ),
-    );
+    const error = await captureError(upload(stranger));
     expect(error.status).toBe(403);
   });
 
-  it("refuses a signature whose hash does not match the rendered text", async () => {
-    const { applicant, application } = await approvedApplication("hash@example.com");
-
-    const current = await getCurrentAgreement();
-    const error = await captureError(
-      signApplicationContract(
-        actorOf(applicant),
-        application.id,
-        {
-          agreementVersionId: current!.id,
-          renderedHash: "0".repeat(64),
-          acknowledged: true,
-        },
-        noMeta,
-      ),
-    );
-    expect(error.status).toBe(409);
-  });
-
-  it("refuses signing before the admin approval", async () => {
+  it("refuses an upload before the admin approval", async () => {
     const editor = await createUser({ role: "editor" });
     const admin = await createUser({ role: "admin" });
     await publishContract(actorOf(admin));
@@ -382,40 +346,29 @@ describe("contract signing", () => {
     const application = await submitAs(applicant);
     await editorDecideApplication(actorOf(editor), application.id, "approve", null, noMeta);
 
-    const current = await getCurrentAgreement();
-    const preview = await renderAgreementForWriter(applicant);
-
-    const error = await captureError(
-      signApplicationContract(
-        actorOf(applicant),
-        application.id,
-        { agreementVersionId: current!.id, renderedHash: preview.hash, acknowledged: true },
-        noMeta,
-      ),
-    );
-    expect(error.status).toBe(409);
+    const error = await captureError(upload(applicant));
+    expect(error.status).toBe(403);
   });
 
-  it("refuses a signature once the applicant already holds a staff role", async () => {
-    const { applicant, application } = await approvedApplication("once-terfi@example.com");
+  it("re-checks the promotion prerequisites at verification", async () => {
+    const { admin, applicant } = await approvedApplication("yasakli-oldu@example.com");
+    const { id } = await upload(applicant);
+    await db.update(users).set({ isBanned: true }).where(eq(users.id, applicant.id));
 
-    // The applicant was promoted directly by the admin in the meantime
-    await db
-      .update(users)
-      .set({ role: "editor", updatedAt: new Date() })
-      .where(eq(users.id, applicant.id));
-
-    const current = await getCurrentAgreement();
-    const preview = await renderAgreementForWriter(applicant);
-
-    const error = await captureError(
-      signApplicationContract(
-        actorOf({ ...applicant, role: "editor" }),
-        application.id,
-        { agreementVersionId: current!.id, renderedHash: preview.hash, acknowledged: true },
-        noMeta,
-      ),
-    );
+    const error = await captureError(approveSignedContract(actorOf(admin), id, noMeta));
     expect(error.status).toBe(409);
+    expect((await reloadUser(applicant.id)).role).toBe("user");
+  });
+
+  it("does not demote an applicant who already holds a staff role", async () => {
+    const { admin, applicant } = await approvedApplication("once-terfi@example.com");
+    await db.update(users).set({ role: "editor", updatedAt: new Date() }).where(eq(users.id, applicant.id));
+
+    const { id } = await upload({ ...applicant, role: "editor" });
+    await approveSignedContract(actorOf(admin), id, noMeta);
+
+    expect((await reloadUser(applicant.id)).role).toBe("editor");
+    expect((await latestApplication(applicant.id))!.status).toBe("admin_approved");
+    expect(await db.select().from(roleChanges).where(eq(roleChanges.userId, applicant.id))).toHaveLength(0);
   });
 });

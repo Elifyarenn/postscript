@@ -24,6 +24,7 @@ import {
 } from "@/services/users";
 import { createVersionFromTemplate, publishAgreementVersion } from "@/services/agreements";
 import { adminDecideApplication } from "@/services/writer-applications";
+import { approveSignedContract, rejectSignedContract, VERIFIED_MESSAGE } from "@/services/signed-contracts";
 import { createAnnouncement, publishAnnouncement } from "@/services/announcements";
 import type { AnnouncementSeverity } from "@/db/schema";
 import {
@@ -480,6 +481,38 @@ export async function createVersionFromTemplateAction(
 
     revalidatePath("/admin/agreements");
     return { success: `Şablondan ${draft.version}. sürüm taslağı oluşturuldu.` };
+  });
+}
+
+/** The signed contract verification (D-275): the admin checked the uploaded PDF. */
+export async function approveSignedContractAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+
+    await approveSignedContract({ ...user }, text(formData, "id"), await requestMetadata());
+
+    revalidatePath("/admin/agreements");
+    return { success: `Doğrulandı. Üyenin göreceği mesaj: “${VERIFIED_MESSAGE}”` };
+  });
+}
+
+/** Refuses an uploaded contract; the reason is required and shown to the member. */
+export async function rejectSignedContractAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+
+    await rejectSignedContract({ ...user }, text(formData, "id"), optionalText(formData, "reason") ?? "", await requestMetadata());
+
+    revalidatePath("/admin/agreements");
+    return { success: "Reddedildi. Üye nedeni görüp yeni dosya yükleyebilir." };
   });
 }
 

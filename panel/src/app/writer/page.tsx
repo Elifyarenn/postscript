@@ -4,7 +4,7 @@ import { guardPanel } from "@/lib/auth/guard";
 import { pendingAcknowledgements } from "@/services/announcements";
 import { listApprovalsForWriter } from "@/services/rights";
 import { listArticlesForWriter } from "@/services/articles";
-import { getCurrentAgreement, listAcceptancesForUser } from "@/services/agreements";
+import { getCurrentAgreement, hasAcceptedCurrentAgreement } from "@/services/agreements";
 import { Alert, Card, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
 import { canProposeTopics } from "@/lib/auth/rbac";
@@ -20,20 +20,19 @@ export default async function WriterDashboard() {
   // The Hobby cron runs once a day; a panel visit is what sends this on time (D-270)
   await announceOpenedSubmissionWindowsSoon();
 
-  const [pending, approvals, articles, current, acceptances, issueEntries, calendar] = await Promise.all([
+  const [pending, approvals, articles, current, agreementAccepted, issueEntries, calendar] = await Promise.all([
     pendingAcknowledgements({ ...user }),
     listApprovalsForWriter({ ...user }),
     listArticlesForWriter({ ...user }),
     getCurrentAgreement(),
-    listAcceptancesForUser(user.id),
+    // A verified signed contract, not a checkbox (D-275)
+    hasAcceptedCurrentAgreement(user.id),
     canProposeTopics({ ...user }) ? listWriterIssues({ ...user }) : Promise.resolve([]),
     listIssueCalendar({ ...user }),
   ]);
   const now = new Date();
 
   const pendingApprovals = approvals.filter((approval) => approval.status === "pending");
-  const agreementAccepted =
-    current !== null && acceptances.some((row) => row.version === current.version);
 
   return (
     <>
@@ -47,7 +46,7 @@ export default async function WriterDashboard() {
           <Alert tone="warning" title="Yazar sayfalarınız kilitli">
             {user.writerStatus === "suspended"
               ? "Yazarlığınız askıya alınmış. Bir yöneticiye başvurun."
-              : "Güncel çerçeve sözleşmeyi onayladığınızda tüm yazar sayfalarınız açılacak."}{" "}
+              : "İmzalı sözleşmeniz doğrulandığında tüm yazar sayfalarınız açılacak."}{" "}
             <Link href="/writer/agreement" className="underline">
               Sözleşmeye git
             </Link>
@@ -134,16 +133,16 @@ export default async function WriterDashboard() {
               <p className="text-sm text-muted">Henüz yayınlanmış bir çerçeve sözleşme yok.</p>
             ) : agreementAccepted ? (
               <p className="text-sm">
-                Sürüm {current.version} onaylandı.{" "}
+                Sürüm {current.version}: imzalı sözleşmeniz doğrulandı.{" "}
                 <Link href="/writer/agreement" className="text-accent underline">
                   Görüntüle
                 </Link>
               </p>
             ) : (
               <p className="text-sm">
-                Sürüm {current.version} onayınızı bekliyor.{" "}
+                Sürüm {current.version} için imzalı sözleşmeniz bekleniyor.{" "}
                 <Link href="/writer/agreement" className="text-accent underline">
-                  Oku ve onayla
+                  Sözleşmem
                 </Link>
               </p>
             )}

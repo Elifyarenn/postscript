@@ -8,10 +8,10 @@
  * cookie jar so the real session, CSRF and role code runs unchanged.
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
 import {
-  agreementAcceptances,
+  signedContracts,
   articles,
   media,
   posts,
@@ -26,7 +26,6 @@ import { csvCell } from "@/lib/csv";
 import { renderMarkdown } from "@/lib/markdown";
 import { createSession, getAuthContext, revokeSession } from "@/lib/auth/session";
 import { attachMediaToArticle, listMedia, updateMediaLicense } from "@/services/media";
-import { acceptAgreement, getCurrentAgreement, renderAgreementForWriter } from "@/services/agreements";
 import {
   createArticle,
   createArticleAsWriter,
@@ -134,13 +133,14 @@ async function contractScenario() {
   const writer = await createUser({ role: "writer", writerStatus: "active" });
   await acceptCurrentContract(writer);
 
-  const [acceptance] = await db
-    .select({ pdfMediaId: agreementAcceptances.pdfMediaId })
-    .from(agreementAcceptances)
-    .where(and(eq(agreementAcceptances.userId, writer.id), isNotNull(agreementAcceptances.pdfMediaId)));
+  // The signed PDF the writer uploaded (D-275)
+  const [signed] = await db
+    .select({ fileMediaId: signedContracts.fileMediaId })
+    .from(signedContracts)
+    .where(eq(signedContracts.userId, writer.id));
 
   const editor = await withTotp(await createUser({ role: "editor", editorStatus: "active" }));
-  return { admin, writer, editor, contractId: acceptance!.pdfMediaId! };
+  return { admin, writer, editor, contractId: signed!.fileMediaId };
 }
 
 /* ------------------------------------------------------------------ */
@@ -274,18 +274,10 @@ describe("contract PDFs and the media library", () => {
 /* A frozen writer stays frozen                                        */
 /* ------------------------------------------------------------------ */
 
-describe("accepting the contract", () => {
-  async function accept(writer: User) {
-    const current = await getCurrentAgreement();
-    const preview = await renderAgreementForWriter(writer);
-    await acceptAgreement(
-      actorOf(writer),
-      { agreementVersionId: current!.id, renderedHash: preview.hash, acknowledged: true },
-      noMeta,
-    );
-  }
+describe("verifying the signed contract", () => {
+  const accept = acceptCurrentContract;
 
-  it("records a frozen writer's acceptance but does not lift the freeze", async () => {
+  it("records a frozen writer's verification but does not lift the freeze", async () => {
     const admin = await createUser({ role: "admin" });
     await publishContract(actorOf(admin));
     const writer = await createUser({ role: "writer", writerStatus: "suspended" });
@@ -293,11 +285,8 @@ describe("accepting the contract", () => {
     await accept(writer);
 
     expect((await reloadUser(writer.id)).writerStatus).toBe("suspended");
-    const recorded = await db
-      .select()
-      .from(agreementAcceptances)
-      .where(eq(agreementAcceptances.userId, writer.id));
-    expect(recorded).toHaveLength(1);
+    const recorded = await db.select().from(signedContracts).where(eq(signedContracts.userId, writer.id));
+    expect(recorded.map((row) => row.status)).toEqual(["approved"]);
   });
 
   it("still activates a writer who was waiting for the contract", async () => {

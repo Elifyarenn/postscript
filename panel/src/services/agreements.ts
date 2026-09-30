@@ -8,23 +8,20 @@
  * and it is the hash of the *filled* text that the acceptance records.
  */
 import "server-only";
-import { and, desc, eq, isNull, ne, or } from "drizzle-orm";
-import { z } from "zod";
+import { and, desc, eq, isNull, ne } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   agreementAcceptances,
   agreementVersions,
   kvkkVersions,
+  signedContracts,
   users,
   type AgreementVersion,
   type User,
 } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import { canManageAgreements, type Actor } from "@/lib/auth/rbac";
-import { env } from "@/lib/env";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
-import { sendMail } from "@/services/mail-queue";
-import { renderDocumentPdf } from "@/lib/pdf";
 import {
   AgreementRenderError,
   renderAgreement,
@@ -33,8 +30,6 @@ import {
 } from "@/lib/agreement/render";
 import { hashDocument } from "@/lib/agreement/normalise";
 import { readAgreementTemplate } from "@/lib/agreement/template";
-import * as templates from "@emails/templates";
-import { storeGeneratedPdf } from "./media";
 import { getSiteSettings } from "./site-settings";
 import type { RequestMeta } from "./auth";
 
@@ -60,28 +55,31 @@ export async function listAgreementVersions(actor: Actor) {
     .orderBy(desc(agreementVersions.version));
 }
 
-/** Every version this user has ever accepted, newest first (§9.1). */
 /**
- * Whether this account has accepted the version that is current right now
- * (D-238). A later version never inherits an older acceptance: publishing a new
- * version makes this false again until the writer accepts that text too.
+ * Whether this account has a contract for the version that is current right
+ * now: an uploaded signed PDF that an admin verified (D-275). A checkbox
+ * acceptance (D-238) no longer counts; those rows stay as history only. A later
+ * version never inherits an older verification.
  */
 export async function hasAcceptedCurrentAgreement(userId: string): Promise<boolean> {
   const current = await getCurrentAgreement();
   if (!current) return false;
 
   const rows = await db
-    .select({ id: agreementAcceptances.id })
-    .from(agreementAcceptances)
+    .select({ id: signedContracts.id })
+    .from(signedContracts)
     .where(
       and(
-        eq(agreementAcceptances.userId, userId),
-        eq(agreementAcceptances.agreementVersionId, current.id),
+        eq(signedContracts.userId, userId),
+        eq(signedContracts.agreementVersionId, current.id),
+        eq(signedContracts.status, "approved"),
       ),
     )
     .limit(1);
   return rows.length > 0;
 }
+
+/** Every checkbox acceptance this user gave before D-275, newest first (§9.1). */
 
 export async function listAcceptancesForUser(userId: string) {
   return db
@@ -312,130 +310,6 @@ export async function publishAgreementVersion(
   return published;
 }
 
-/* ------------------------------------------------------------------ */
-/* Acceptance (§6.3)                                                   */
-/* ------------------------------------------------------------------ */
-
-export const acceptanceSchema = z.strictObject({
-  agreementVersionId: z.uuid(),
-  /** Hash of the filled text the browser displayed, re-derived server side. */
-  renderedHash: z.string().length(64),
-  acknowledged: z.literal(true, { message: "Onay kutusunu işaretlemeniz gerekiyor." }),
-});
-
-/**
- * Records an acceptance and reactivates the writer, all or nothing.
- *
- * The hash the browser echoes is never trusted: the server renders the contract
- * again and compares. If the two disagree, the writer was looking at something
- * other than what is on file, and the acceptance is refused (§5.2).
- */
-export async function acceptAgreement(
-  actor: Actor,
-  rawInput: unknown,
-  meta: RequestMeta,
-): Promise<void> {
-  const parsed = acceptanceSchema.safeParse(rawInput);
-  if (!parsed.success) {
-    throw badRequest("Onay isteği geçersiz.", z.flattenError(parsed.error).fieldErrors);
-  }
-
-  const rows = await db.select().from(users).where(eq(users.id, actor.id)).limit(1);
-  const writer = rows[0];
-  if (!writer) throw notFound("Kullanıcı bulunamadı.");
-
-  const current = await getCurrentAgreement();
-  if (!current) throw notFound("Yayınlanmış bir çerçeve sözleşme yok.");
-  if (current.id !== parsed.data.agreementVersionId) {
-    throw conflict("Sözleşmenin daha yeni bir sürümü var. Sayfayı yenileyin.");
-  }
-
-  // 1. Re-render and verify the hash against what was on screen
-  const preview = await renderAgreementForWriter(writer);
-  if (preview.hash !== parsed.data.renderedHash) {
-    throw conflict("Gösterilen metin ile kayıtlı metin eşleşmiyor. Sayfayı yenileyin.");
-  }
-
-  const acceptedAt = new Date();
-
-  // 2. Stamp the acceptance into the text: this is the final document
-  const final = await renderAgreementForWriter(writer, { acceptedAt, ip: meta.ip });
-
-  // 4. The readable copy. Generated before the transaction so a slow PDF does
-  // not hold a write lock; the record below is what actually proves anything.
-  const pdf = await renderDocumentPdf({
-    title: "postscript Yazar Sözleşmesi ve Kullanım Ruhsatı Taahhüdü",
-    subtitle: `Sürüm ${current.version} · ${writer.displayName}`,
-    sections: [{ body: stripMarkdown(final.markdown) }],
-    footerNote: `Sürüm ${current.version} — ${preview.hash.slice(0, 16)} — ${acceptedAt.toISOString()}`,
-  });
-
-  const pdfMedia = await storeGeneratedPdf(pdf, {
-    prefix: "contracts",
-    fileName: `sozlesme-v${current.version}-${writer.id}.pdf`,
-    uploadedBy: writer.id,
-  });
-
-  await db.transaction(async (tx) => {
-    // 3. The acceptance record
-    await tx
-      .insert(agreementAcceptances)
-      .values({
-        userId: writer.id,
-        agreementVersionId: current.id,
-        acceptedAt,
-        ip: meta.ip,
-        userAgent: meta.userAgent,
-        bodyHashAtAcceptance: preview.hash,
-        renderedMarkdown: final.markdown,
-        pdfMediaId: pdfMedia.id,
-      })
-      .onConflictDoNothing();
-
-    // 5. Accepting the current contract is what turns a writer active — but
-    // never a frozen one. A freeze is lifted by an admin only; letting the
-    // acceptance lift it made the accept button a way to undo the admin's
-    // decision (D-248). The condition sits in the UPDATE, so a freeze that
-    // lands while this request runs is not overwritten either.
-    await tx
-      .update(users)
-      .set({ writerStatus: "active", updatedAt: acceptedAt })
-      .where(
-        and(
-          eq(users.id, writer.id),
-          eq(users.role, "writer"),
-          or(isNull(users.writerStatus), ne(users.writerStatus, "suspended")),
-        ),
-      );
-  });
-
-  // 6. and 7.
-  await writeAudit({
-    actorId: writer.id,
-    action: "agreement.accepted",
-    entityType: "agreement_versions",
-    entityId: current.id,
-    after: { version: current.version, bodyHashAtAcceptance: preview.hash },
-    ip: meta.ip,
-  });
-
-  const message = templates.agreementAccepted({
-    displayName: writer.displayName,
-    version: current.version,
-  });
-  await sendMail({
-    to: writer.email,
-    ...message,
-    attachments: [
-      {
-        filename: `postscript-sozlesme-v${current.version}.pdf`,
-        content: pdf,
-        contentType: "application/pdf",
-      },
-    ],
-  });
-}
-
 /**
  * Markdown to plain text for the PDF. The evidence is `rendered_markdown`; the
  * PDF only has to be readable, so tables become simple lines.
@@ -474,10 +348,13 @@ export async function acceptanceReport(actor: Actor) {
     .from(users)
     .where(and(eq(users.role, "writer"), isNull(users.deletedAt)));
 
+  // Verified signed contracts only (D-275); checkbox acceptances do not count
   const acceptances = await db
-    .select({ userId: agreementAcceptances.userId, acceptedAt: agreementAcceptances.acceptedAt })
-    .from(agreementAcceptances)
-    .where(eq(agreementAcceptances.agreementVersionId, current.id));
+    .select({ userId: signedContracts.userId, acceptedAt: signedContracts.reviewedAt })
+    .from(signedContracts)
+    .where(
+      and(eq(signedContracts.agreementVersionId, current.id), eq(signedContracts.status, "approved")),
+    );
 
   const acceptedBy = new Map(acceptances.map((row) => [row.userId, row.acceptedAt]));
 

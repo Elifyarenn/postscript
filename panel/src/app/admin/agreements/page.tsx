@@ -1,13 +1,21 @@
 import { guardPanel } from "@/lib/auth/guard";
 import { acceptanceReport, listAgreementVersions } from "@/services/agreements";
+import { listSignedContracts } from "@/services/signed-contracts";
 import { getSiteSettings, PLACEHOLDER_BY_KEY, SETTING_LABELS } from "@/services/site-settings";
 import { readAgreementTemplate, templateHash, TEMPLATE_FILE } from "@/lib/agreement/template";
 import { extractPlaceholders } from "@/lib/agreement/render";
 import { readCsrfToken } from "@/lib/csrf";
 import { ActionButton, PanelForm } from "@/components/form";
-import { Alert, Card, EmptyState, PageHeader, Table, Td, Th } from "@/components/ui";
+import Link from "next/link";
+import { Alert, Card, EmptyState, Field, PageHeader, StatusBadge, Table, Td, Textarea, Th } from "@/components/ui";
+import { SIGNED_CONTRACT_STATUS_LABELS } from "@/components/signed-contract";
 import { formatDate, formatDateTime } from "@/lib/utils";
-import { createVersionFromTemplateAction, publishAgreementAction } from "../actions";
+import {
+  approveSignedContractAction,
+  createVersionFromTemplateAction,
+  publishAgreementAction,
+  rejectSignedContractAction,
+} from "../actions";
 
 export const metadata = { title: "Sözleşme sürümleri" };
 
@@ -38,6 +46,9 @@ export default async function AdminAgreementsPage() {
 
   const versions = await listAgreementVersions(actor);
   const report = await acceptanceReport(actor);
+  const signed = await listSignedContracts(actor);
+  // Waiting ones first; the rest stay listed as the record of what was decided
+  const ordered = [...signed.filter((row) => row.status === "pending"), ...signed.filter((row) => row.status !== "pending")];
   const settings = await getSiteSettings();
 
   const template = readAgreementTemplate();
@@ -62,9 +73,9 @@ export default async function AdminAgreementsPage() {
 
       <div className="space-y-6">
         <Alert tone="warning" title="Yayınlamanın sonuçları">
-          Yeni bir sürüm yayınlandığında önceki onaylar &ldquo;değiştirildi&rdquo; olarak
-          işaretlenir ve bu sürüm güncel sözleşme olur. Yazarlar şu anda sözleşmeyle
-          kilitlenmez; sözleşme ayrıca iletilecek (D-050).
+          Yeni bir sürüm yayınlandığında bu sürüm güncel sözleşme olur. Önceki sürüm için
+          doğrulanmış imzalı sözleşmeler yeni sürümü kapsamaz; üyeler yeni sürümü imzalayıp
+          yükler (D-275).
         </Alert>
 
         <Card>
@@ -188,7 +199,88 @@ export default async function AdminAgreementsPage() {
         </Card>
 
         <Card>
-          <h2 className="mb-4 font-serif text-lg">Onay raporu</h2>
+          <h2 className="mb-1 font-serif text-lg">İmzalı sözleşme doğrulaması</h2>
+          <p className="mb-4 text-sm text-muted">
+            Üyelerin yüklediği imzalı PDF&apos;ler. Dosyayı açıp kontrol edin; doğrulamak ya da nedenini
+            yazarak reddetmek sizin işinizdir. Kendi yüklediğiniz dosyayı diğer yönetici doğrular.
+          </p>
+
+          {ordered.length === 0 ? (
+            <EmptyState>Henüz yüklenmiş imzalı sözleşme yok.</EmptyState>
+          ) : (
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Üye</Th>
+                  <Th>Rol</Th>
+                  <Th>Yükleme</Th>
+                  <Th>Sürüm</Th>
+                  <Th>Durum</Th>
+                  <Th>İşlem</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {ordered.map((row) => (
+                  <tr key={row.id}>
+                    <Td>
+                      <Link href={`/admin/users/${row.memberId}`} className="underline">
+                        {row.memberName}
+                      </Link>
+                    </Td>
+                    <Td>
+                      <StatusBadge status={row.memberRole} />
+                    </Td>
+                    <Td className="text-xs">{formatDateTime(row.uploadedAt)}</Td>
+                    <Td className="text-xs">
+                      v{row.version}
+                      {!row.isCurrentVersion && <span className="text-muted"> (eski)</span>}
+                    </Td>
+                    <Td className="text-xs">
+                      {SIGNED_CONTRACT_STATUS_LABELS[row.status]}
+                      {row.reviewedAt && (
+                        <span className="block text-muted">
+                          {row.reviewerName ?? "—"} · {formatDateTime(row.reviewedAt)}
+                        </span>
+                      )}
+                      {row.rejectionReason && <span className="block">Neden: {row.rejectionReason}</span>}
+                    </Td>
+                    <Td className="space-y-2 text-xs">
+                      <Link href={`/api/media/${row.fileMediaId}`} className="text-accent underline">
+                        PDF&apos;yi aç / indir
+                      </Link>
+                      {row.status === "pending" && row.memberId !== actor.id && (
+                        <div className="space-y-2">
+                          <ActionButton
+                            action={approveSignedContractAction}
+                            csrfToken={csrfToken}
+                            label="Doğrula"
+                            variant="primary"
+                            fields={{ id: row.id }}
+                            confirmMessage="Bu PDF'yi kontrol ettiniz ve imzalı sözleşme olarak doğruluyorsunuz. Devam edilsin mi?"
+                          />
+                          <PanelForm
+                            action={rejectSignedContractAction}
+                            csrfToken={csrfToken}
+                            submitLabel="Reddet"
+                            submitVariant="danger"
+                          >
+                            <input type="hidden" name="id" value={row.id} />
+                            <Field label="Ret nedeni (üye görür)" htmlFor={`reason-${row.id}`}>
+                              <Textarea id={`reason-${row.id}`} name="reason" required minLength={3} maxLength={1000} rows={2} />
+                            </Field>
+                          </PanelForm>
+                        </div>
+                      )}
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
+        </Card>
+
+        <Card>
+          <h2 className="mb-4 font-serif text-lg">Doğrulama raporu (güncel sürüm)</h2>
 
           {report.current === null ? (
             <EmptyState>Yayınlanmış sürüm yok.</EmptyState>
@@ -196,10 +288,10 @@ export default async function AdminAgreementsPage() {
             <div className="grid gap-6 lg:grid-cols-2">
               <div>
                 <h3 className="mb-3 text-sm font-medium">
-                  Onaylayanlar ({report.accepted.length})
+                  Doğrulananlar ({report.accepted.length})
                 </h3>
                 {report.accepted.length === 0 ? (
-                  <p className="text-sm text-muted">Henüz kimse onaylamadı.</p>
+                  <p className="text-sm text-muted">Henüz doğrulanan sözleşme yok.</p>
                 ) : (
                   <ul className="space-y-1.5 text-sm">
                     {report.accepted.map((row) => (
