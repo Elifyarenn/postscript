@@ -370,6 +370,24 @@ export async function prepareContributorDocuments(actor: Actor, meta: RequestMet
   return summary;
 }
 
+/**
+ * Deletes every prepared document so they can be prepared again from the
+ * current templates (D-281). They are drafts: nothing was sent, and a signed
+ * copy lives in `signed_contracts`, which this does not touch.
+ */
+export async function clearContributorDocuments(actor: Actor, meta: RequestMeta): Promise<number> {
+  if (!canManageAgreements(actor)) throw forbidden();
+  const removed = await db.delete(contributorDocuments).returning({ id: contributorDocuments.id });
+  await writeAudit({
+    actorId: actor.id,
+    action: "contributor_documents.cleared",
+    entityType: "contributor_documents",
+    after: { removed: removed.length },
+    ip: meta.ip,
+  });
+  return removed.length;
+}
+
 /* ------------------------------------------------------------------ */
 /* Reading                                                             */
 /* ------------------------------------------------------------------ */

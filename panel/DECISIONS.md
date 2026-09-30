@@ -11440,3 +11440,12 @@ Sürüm yükseltilmedi: ruhsat formu şablon sürümü 1 kalır, çünkü henüz
 imzalamadı; 1. sürüm bu metinle kurulur (ürün sahibi). PDF ile kelimesi
 kelimesine test, bu dört değişiklik dışında metnin teslim edilen PDF ile aynı
 kaldığını denetler.
+
+## D-281 — Hazırlanan katkı sağlayan belgeleri admin tarafından topluca silinebilir
+
+Canlıda belgeler D-280'den önceki taraf metniyle hazırlanmıştı; hazır belge
+yeniden yazılmadığı için (D-276) yenilenemiyordu. `/admin/agreements`'a
+"Hazırlanan belgelerin hepsini sil" (onaylı, yalnızca admin,
+`clearContributorDocuments`) eklendi. Belgeler gönderilmemiş taslaklardır;
+`signed_contracts`, eserler ve onaylar etkilenmez. Silme sayısı denetim kaydına
+yazılır. Ardından "Belgeleri hazırla" güncel şablonlarla yeniden üretir.

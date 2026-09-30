@@ -25,7 +25,7 @@ import {
 import { createVersionFromTemplate, publishAgreementVersion } from "@/services/agreements";
 import { adminDecideApplication } from "@/services/writer-applications";
 import { approveSignedContract, rejectSignedContract, VERIFIED_MESSAGE } from "@/services/signed-contracts";
-import { prepareContributorDocuments } from "@/services/contributor-documents";
+import { clearContributorDocuments, prepareContributorDocuments } from "@/services/contributor-documents";
 import { removeUnlicensedFormerWriterWorks } from "@/services/unlicensed-works";
 import { createAnnouncement, publishAnnouncement } from "@/services/announcements";
 import type { AnnouncementSeverity } from "@/db/schema";
@@ -508,6 +508,20 @@ export async function prepareContributorDocumentsAction(
         `İnceleme gerekiyor: ${summary.needsReview.total} · Önceden hazır: ${summary.alreadyPrepared.general + summary.alreadyPrepared.licence} · ` +
         `Atlanan kayıt: ${skipped}. E-posta gönderilmedi.`,
     };
+  });
+}
+
+/** Deletes the prepared documents so they can be prepared again (D-281). */
+export async function clearContributorDocumentsAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const removed = await clearContributorDocuments({ ...user }, await requestMetadata());
+    revalidatePath("/admin/agreements");
+    return { success: `${removed} belge silindi. "Belgeleri hazırla" ile yeniden hazırlayabilirsiniz.` };
   });
 }
 

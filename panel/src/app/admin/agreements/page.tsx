@@ -16,6 +16,7 @@ import { SIGNED_CONTRACT_STATUS_LABELS } from "@/components/signed-contract";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import {
   approveSignedContractAction,
+  clearContributorDocumentsAction,
   createVersionFromTemplateAction,
   prepareContributorDocumentsAction,
   publishAgreementAction,
@@ -263,7 +264,7 @@ export default async function AdminAgreementsPage() {
             kalır. Tekrar çalıştırmak yalnızca eksikleri ekler ve incelemedekileri yeniden dener; hazır
             belgelere dokunmaz. E-posta gönderilmez.
           </p>
-          <div className="mb-4">
+          <div className="mb-4 flex flex-wrap gap-2">
             <ActionButton
               action={prepareContributorDocumentsAction}
               csrfToken={csrfToken}
@@ -271,6 +272,15 @@ export default async function AdminAgreementsPage() {
               variant="primary"
               confirmMessage="Eksik sözleşme ve ruhsat belgeleri hazırlanacak. E-posta gönderilmez. Devam edilsin mi?"
             />
+            {documents.length > 0 && (
+              <ActionButton
+                action={clearContributorDocumentsAction}
+                csrfToken={csrfToken}
+                label="Hazırlanan belgelerin hepsini sil"
+                variant="danger"
+                confirmMessage={`${documents.length} hazırlanmış belge silinecek (yüklenen imzalı sözleşmelere dokunulmaz). Sonra "Belgeleri hazırla" ile yeniden hazırlayabilirsiniz. Devam edilsin mi?`}
+              />
+            )}
           </div>
 
           {documents.length === 0 ? (

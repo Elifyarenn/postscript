@@ -20,6 +20,7 @@ import { isAppError } from "@/lib/errors";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import { getCurrentAgreement, publishAgreementVersion } from "@/services/agreements";
 import {
+  clearContributorDocuments,
   contributorDocumentPdf,
   listContributorDocuments,
   listOwnContributorDocuments,
@@ -290,6 +291,32 @@ describe("the admin reading one person's document (D-278)", () => {
       expect((await captureError(viewContributorDocument(actor, own.id)))?.status).toBe(403);
     }
     expect((await captureError(viewContributorDocument(actorOf(s.admin), "not-a-uuid")))?.status).toBe(404);
+  });
+});
+
+describe("clearing the prepared documents (D-281)", () => {
+  it("lets the admin delete them all and prepare them again", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const first = await db.select().from(contributorDocuments);
+    const grants = await db.select().from(rightsGrants);
+
+    expect(await clearContributorDocuments(actorOf(s.admin), noMeta)).toBe(first.length);
+    expect(await db.select().from(contributorDocuments)).toHaveLength(0);
+    expect(await db.select().from(rightsGrants)).toEqual(grants);
+
+    const again = await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    expect(again.generalCreated + again.licenceCreated).toBe(first.length);
+  });
+
+  it("is the admin's alone", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const count = (await db.select().from(contributorDocuments)).length;
+    for (const actor of [actorOf(s.complete), actorOf(s.editor)]) {
+      expect((await captureError(clearContributorDocuments(actor, noMeta)))?.status).toBe(403);
+    }
+    expect(await db.select().from(contributorDocuments)).toHaveLength(count);
   });
 });
 
