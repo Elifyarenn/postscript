@@ -18,7 +18,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db/client";
 import {
@@ -58,7 +58,7 @@ import {
 import { conflict, forbidden, notFound } from "@/lib/errors";
 import { renderDocumentPdf } from "@/lib/pdf";
 import { env } from "@/lib/env";
-import { sendMail } from "@/services/mail-queue";
+import { enqueueMails, sendMail, type OutgoingMail } from "@/services/mail-queue";
 import * as templates from "@emails/templates";
 import { buildAgreementContext, getCurrentAgreement, stripMarkdown } from "./agreements";
 import { articleHash, LICENCE_TERMS } from "./rights";
@@ -547,6 +547,79 @@ async function pdfOf(row: ContributorDocument): Promise<{ fileName: string; body
   return { fileName: `${name}.pdf`, body };
 }
 
+type PreparedRow = { document: ContributorDocument; articleTitle: string | null };
+
+function preparedRows(condition: SQL): Promise<PreparedRow[]> {
+  return db
+    .select({ document: contributorDocuments, articleTitle: articles.title })
+    .from(contributorDocuments)
+    .leftJoin(articles, eq(contributorDocuments.articleId, articles.id))
+    .where(condition)
+    .orderBy(contributorDocuments.userId, contributorDocuments.kind, contributorDocuments.createdAt);
+}
+
+/** One person's mail: every prepared document as a PDF attachment. */
+async function documentsMail(person: User, rows: PreparedRow[]): Promise<OutgoingMail> {
+  const attachments = [];
+  for (const { document } of rows) {
+    const pdf = await pdfOf(document);
+    attachments.push({ filename: pdf.fileName, content: pdf.body, contentType: "application/pdf" });
+  }
+  const message = templates.contributorDocumentsSent({
+    displayName: person.displayName,
+    documents: rows.map(({ document, articleTitle }) =>
+      articleTitle ? `${DOCUMENT_KIND_LABELS[document.kind]} — ${articleTitle}` : DOCUMENT_KIND_LABELS[document.kind],
+    ),
+    url: `${env().APP_URL}/account`,
+  });
+  return { to: person.email, ...message, attachments };
+}
+
+/**
+ * Writes every contributor's documents mail to the outbox and stops there
+ * (D-286): nothing is delivered by this call. The admin sends the batch from
+ * /admin/mail with "Kuyruğu şimdi işle"; the daily cron would also pick it up.
+ * The same set of documents is never queued twice for a person, so a second
+ * press adds only people whose documents changed.
+ */
+export async function queueAllContributorDocuments(
+  actor: Actor,
+  meta: RequestMeta,
+): Promise<{ mails: number; documents: number; alreadyQueued: number }> {
+  if (!canManageAgreements(actor)) throw forbidden();
+
+  const rows = await preparedRows(eq(contributorDocuments.status, "prepared"));
+  const byUser = new Map<string, PreparedRow[]>();
+  for (const row of rows) byUser.set(row.document.userId, [...(byUser.get(row.document.userId) ?? []), row]);
+  if (byUser.size === 0) return { mails: 0, documents: 0, alreadyQueued: 0 };
+
+  const people = await db
+    .select()
+    .from(users)
+    .where(and(inArray(users.id, [...byUser.keys()]), isNull(users.deletedAt)));
+
+  const mails: OutgoingMail[] = [];
+  for (const person of people) {
+    const own = byUser.get(person.id)!;
+    const key = hashDocument(own.map(({ document }) => `${document.id}:${document.textHash}`).join("|"));
+    mails.push({ ...(await documentsMail(person, own)), dedupeKey: `contributor_documents:${person.id}:${key}` });
+  }
+
+  // Stored only: enqueueMails does not start a delivery
+  const ids = await enqueueMails(mails);
+  const alreadyQueued = mails.length - ids.length;
+  const documents = people.reduce((sum, person) => sum + byUser.get(person.id)!.length, 0);
+
+  await writeAudit({
+    actorId: actor.id,
+    action: "contributor_documents.queued",
+    entityType: "contributor_documents",
+    after: { mails: ids.length, alreadyQueued, documents },
+    ip: meta.ip,
+  });
+  return { mails: ids.length, documents, alreadyQueued };
+}
+
 /**
  * Mails one contributor their prepared documents as PDF attachments (D-285).
  * Only an admin's explicit action calls this; preparing documents never
@@ -567,28 +640,10 @@ export async function mailContributorDocuments(
     .limit(1);
   if (!person) throw notFound("Kullanıcı bulunamadı.");
 
-  const rows = await db
-    .select({ document: contributorDocuments, articleTitle: articles.title })
-    .from(contributorDocuments)
-    .leftJoin(articles, eq(contributorDocuments.articleId, articles.id))
-    .where(and(eq(contributorDocuments.userId, userId), eq(contributorDocuments.status, "prepared")))
-    .orderBy(contributorDocuments.kind, contributorDocuments.createdAt);
+  const rows = await preparedRows(and(eq(contributorDocuments.userId, userId), eq(contributorDocuments.status, "prepared"))!);
   if (rows.length === 0) throw conflict("Bu kullanıcının hazır belgesi yok; incelemedeki belgeler gönderilmez.");
 
-  const attachments = [];
-  for (const { document } of rows) {
-    const pdf = await pdfOf(document);
-    attachments.push({ filename: pdf.fileName, content: pdf.body, contentType: "application/pdf" });
-  }
-
-  const message = templates.contributorDocumentsSent({
-    displayName: person.displayName,
-    documents: rows.map(({ document, articleTitle }) =>
-      articleTitle ? `${DOCUMENT_KIND_LABELS[document.kind]} — ${articleTitle}` : DOCUMENT_KIND_LABELS[document.kind],
-    ),
-    url: `${env().APP_URL}/account`,
-  });
-  await sendMail({ to: person.email, ...message, attachments });
+  await sendMail(await documentsMail(person, rows));
 
   await writeAudit({
     actorId: actor.id,

@@ -29,6 +29,7 @@ import {
   clearContributorDocuments,
   mailContributorDocuments,
   prepareContributorDocuments,
+  queueAllContributorDocuments,
 } from "@/services/contributor-documents";
 import { removeUnlicensedFormerWriterWorks } from "@/services/unlicensed-works";
 import { createAnnouncement, publishAnnouncement } from "@/services/announcements";
@@ -542,6 +543,26 @@ export async function mailContributorDocumentsAction(
     const result = await mailContributorDocuments({ ...user }, text(formData, "userId"), await requestMetadata());
     revalidatePath("/admin/agreements");
     return { success: `${result.sent} belge PDF olarak e-posta kuyruğuna alındı.` };
+  });
+}
+
+/** Queues every contributor's documents mail without sending; /admin/mail sends the batch (D-286). */
+export async function queueAllContributorDocumentsAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const result = await queueAllContributorDocuments({ ...user }, await requestMetadata());
+    revalidatePath("/admin/agreements");
+    revalidatePath("/admin/mail");
+    return {
+      success:
+        `${result.mails} e-posta kuyruğa alındı (${result.documents} hazır belge)` +
+        (result.alreadyQueued ? ` · ${result.alreadyQueued} kişinin aynı belgeleri zaten kuyrukta` : "") +
+        `. Göndermek için /admin/mail sayfasında "Kuyruğu şimdi işle".`,
+    };
   });
 }
 

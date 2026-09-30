@@ -26,6 +26,7 @@ import {
   listOwnContributorDocuments,
   mailContributorDocuments,
   prepareContributorDocuments,
+  queueAllContributorDocuments,
   viewContributorDocument,
 } from "@/services/contributor-documents";
 import { articleHash } from "@/services/rights";
@@ -354,6 +355,33 @@ describe("mailing a contributor their documents (D-285)", () => {
     // The same PDF the panel gives
     const own = await contributorDocumentPdf(actorOf(s.complete), prepared[0]!.id);
     expect(attachments.some((a) => a.filename === own.fileName)).toBe(true);
+  });
+
+  it("queues everyone's documents in one go without delivering, and never twice (D-286)", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const prepared = (await listContributorDocuments(actorOf(s.admin))).filter((row) => row.status === "prepared");
+    const people = new Set(prepared.map((row) => row.userId));
+
+    const first = await queueAllContributorDocuments(actorOf(s.admin), noMeta);
+    expect(first).toEqual({ mails: people.size, documents: prepared.length, alreadyQueued: 0 });
+
+    const jobs = await db.select().from(mailJobs);
+    expect(jobs).toHaveLength(people.size);
+    // Stored, not sent: the admin sends the batch from /admin/mail
+    expect(mailbox.outbox).toHaveLength(0);
+    expect(jobs.every((job) => job.status === "pending" && job.kind === "contributor_documents")).toBe(true);
+    const own = jobs.find((job) => job.recipient === s.complete.email)!;
+    expect(own.attachments!.length).toBe(prepared.filter((row) => row.userId === s.complete.id).length);
+    // Nobody whose documents are all under review gets a mail
+    expect(jobs.some((job) => job.recipient === s.noBirthDate.email)).toBe(people.has(s.noBirthDate.id));
+
+    const second = await queueAllContributorDocuments(actorOf(s.admin), noMeta);
+    expect(second.mails).toBe(0);
+    expect(second.alreadyQueued).toBe(people.size);
+    expect(await db.select().from(mailJobs)).toHaveLength(people.size);
+
+    expect((await captureError(queueAllContributorDocuments(actorOf(s.editor), noMeta)))?.status).toBe(403);
   });
 
   it("sends nothing for someone whose documents are all under review", async () => {

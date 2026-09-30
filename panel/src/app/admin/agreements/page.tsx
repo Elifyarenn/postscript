@@ -18,6 +18,7 @@ import {
   approveSignedContractAction,
   clearContributorDocumentsAction,
   mailContributorDocumentsAction,
+  queueAllContributorDocumentsAction,
   createVersionFromTemplateAction,
   prepareContributorDocumentsAction,
   publishAgreementAction,
@@ -302,6 +303,14 @@ export default async function AdminAgreementsPage() {
               variant="primary"
               confirmMessage="Eksik sözleşme ve ruhsat belgeleri hazırlanacak. E-posta gönderilmez. Devam edilsin mi?"
             />
+            {preparedByUser.size > 0 && (
+              <ActionButton
+                action={queueAllContributorDocumentsAction}
+                csrfToken={csrfToken}
+                label={`Hazır belgelerin hepsini mail kuyruğuna al (${preparedByUser.size} kişi)`}
+                confirmMessage={`${preparedByUser.size} kişiye hazır belgeleri PDF ekiyle e-posta kuyruğuna yazılacak. Gönderim /admin/mail'de "Kuyruğu şimdi işle" ile yapılır. Devam edilsin mi?`}
+              />
+            )}
             {documents.length > 0 && (
               <ActionButton
                 action={clearContributorDocumentsAction}

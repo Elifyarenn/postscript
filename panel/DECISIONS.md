@@ -11504,3 +11504,16 @@ değişmedi; formdaki adla sitedeki adın ayrışabileceği ürün sahibine bild
 - Şablon `contributorDocumentsSent`; her gönderim `contributor_documents.mailed`
   denetim kaydı (belge kimlikleriyle). KVKK "Sözleşme" satırına e-postayla
   iletim eklendi. Belge metinleri, ruhsat kapsamı ve hazır belgeler değişmedi.
+
+## D-286 — Hazır belgeler topluca mail kuyruğuna alınır; gönderimi admin başlatır
+
+`/admin/agreements`'ta "Hazır belgelerin hepsini mail kuyruğuna al (n kişi)"
+(onaylı, yalnızca admin, `queueAllContributorDocuments`): hazır belgesi olan her
+kişi için D-285'teki PDF ekli ileti `enqueueMails` ile yalnızca `mail_jobs`'a
+yazılır, teslim başlatılmaz. Admin topluca `/admin/mail` → "Kuyruğu şimdi işle"
+ile gönderir. Not: kuyruk ortaktır; başka bir e-postanın ardından çalışan
+teslim (en fazla 10 bekleyen iş) veya günlük cron da bekleyenleri gönderebilir.
+
+Aynı kişiye aynı belge seti (belge kimliği + metin özeti) ikinci kez kuyruğa
+girmez (`dedupe_key`); ikinci basış yalnızca belgeleri değişen kişileri ekler.
+İncelemedeki belgeler ve silinmiş hesaplar kuyruğa girmez.
