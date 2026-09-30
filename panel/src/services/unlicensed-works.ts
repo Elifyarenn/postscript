@@ -1,9 +1,10 @@
 /**
- * Works left behind by people the admin removed from the writer role, for
- * which the author never signed a licence (D-279).
+ * Works left behind by people the admin removed from the writer role (D-279).
  *
- * Without a signed `rights_grants` row the magazine holds no licence for the
- * text, and its author is no longer a writer, so the admin removes it. The
+ * Their author is no longer a writer and signed no licence under the current
+ * system: the old per-work checkbox approvals (`rights_grants`) do not count
+ * as one, as with the contract checkbox (D-275, D-282). The admin removes
+ * them. The
  * removal is the soft delete every list already honours (`deleted_at`):
  * the work leaves the site and the panel, while the row and its
  * `article_versions` history stay, because the content retention question
@@ -13,9 +14,9 @@
  * them: they were never sent, and they describe a licence that will not be.
  */
 import "server-only";
-import { and, eq, inArray, isNull, notExists, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { articles, contributorDocuments, rightsGrants, roleChanges, users } from "@/db/schema";
+import { articles, contributorDocuments, roleChanges, users } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import { canManageAgreements, type Actor } from "@/lib/auth/rbac";
 import { forbidden } from "@/lib/errors";
@@ -31,8 +32,8 @@ export type UnlicensedWork = {
 
 /**
  * The works to remove: not deleted, written by someone who is now a plain
- * user after having been a writer, and with no signed licence. An author the
- * records never show as a writer is not assumed to be a removed one.
+ * user after having been a writer. An author the records never show as a
+ * writer is not assumed to be a removed one.
  */
 export async function listUnlicensedFormerWriterWorks(actor: Actor): Promise<UnlicensedWork[]> {
   if (!canManageAgreements(actor)) throw forbidden();
@@ -51,12 +52,6 @@ export async function listUnlicensedFormerWriterWorks(actor: Actor): Promise<Unl
         isNull(articles.deletedAt),
         eq(users.role, "user"),
         sql`exists (select 1 from ${roleChanges} where ${roleChanges.userId} = ${users.id} and ${roleChanges.oldRole} = 'writer')`,
-        notExists(
-          db
-            .select({ one: sql`1` })
-            .from(rightsGrants)
-            .where(and(eq(rightsGrants.articleId, articles.id), eq(rightsGrants.status, "signed"))),
-        ),
       ),
     )
     .orderBy(users.displayName, articles.title);

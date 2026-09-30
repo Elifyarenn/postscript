@@ -70,10 +70,10 @@ async function scenario() {
 }
 
 describe("unlicensed works of removed writers", () => {
-  it("lists only works of former writers that have no signed licence", async () => {
+  it("lists the works of former writers, an old checkbox approval notwithstanding (D-282)", async () => {
     const s = await scenario();
     const list = await listUnlicensedFormerWriterWorks(actorOf(s.admin));
-    expect(list.map((row) => row.id).sort()).toEqual([s.unlicensedPublished.id, s.unlicensedDraft.id].sort());
+    expect(list.map((row) => row.id).sort()).toEqual([s.unlicensedPublished.id, s.unlicensedDraft.id, s.licensed.id].sort());
   });
 
   it("soft deletes the confirmed ones, keeps their rows, and removes their unsent documents", async () => {
@@ -87,7 +87,7 @@ describe("unlicensed works of removed writers", () => {
       [s.unlicensedPublished.id, s.unlicensedDraft.id, s.licensed.id, s.currentWriters.id],
       noMeta,
     );
-    expect(result.removed).toBe(2);
+    expect(result.removed).toBe(3);
 
     const rows = await db.select().from(articles);
     const of = (id: string) => rows.find((row) => row.id === id)!;
@@ -96,18 +96,18 @@ describe("unlicensed works of removed writers", () => {
     expect(of(s.unlicensedPublished.id).status).toBe("published");
     expect(of(s.unlicensedPublished.id).bodyMarkdown).toBe(BODY);
     expect(of(s.unlicensedDraft.id).deletedAt).not.toBeNull();
+    expect(of(s.licensed.id).deletedAt).not.toBeNull();
     // Not in the list, so not removed even though its id was sent
-    expect(of(s.licensed.id).deletedAt).toBeNull();
     expect(of(s.currentWriters.id).deletedAt).toBeNull();
     expect(of(s.neverWriters.id).deletedAt).toBeNull();
 
     const docsAfter = await db.select().from(contributorDocuments);
     expect(docsAfter.some((row) => row.userId === s.removed.id)).toBe(false);
-    expect(docsAfter.some((row) => row.articleId === s.licensed.id)).toBe(true);
+    expect(docsAfter.some((row) => row.articleId === s.licensed.id)).toBe(false);
     expect(result.documentsRemoved).toBe(docsBefore.length - docsAfter.length);
 
     const audit = await db.select().from(auditLog).where(eq(auditLog.action, "article.removed_unlicensed_former_writer"));
-    expect(audit).toHaveLength(2);
+    expect(audit).toHaveLength(3);
     expect(await listUnlicensedFormerWriterWorks(actorOf(s.admin))).toHaveLength(0);
   });
 

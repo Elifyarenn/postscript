@@ -41,6 +41,12 @@ const KNOWN_PLACEHOLDERS = [
   "yazar.dogum_tarihi",
   "yazar.eposta",
   "yazar.mahlas",
+  // The contributor contract's names for the same person (D-276)
+  "katki.ad_soyad",
+  "katki.rol",
+  "katki.dogum_tarihi",
+  "katki.eposta",
+  "katki.mahlas",
   "kvkk.version",
   "acceptance.accepted_at",
   "acceptance.ip",

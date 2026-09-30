@@ -11449,3 +11449,16 @@ yeniden yazılmadığı için (D-276) yenilenemiyordu. `/admin/agreements`'a
 `clearContributorDocuments`) eklendi. Belgeler gönderilmemiş taslaklardır;
 `signed_contracts`, eserler ve onaylar etkilenmez. Silme sayısı denetim kaydına
 yazılır. Ardından "Belgeleri hazırla" güncel şablonlarla yeniden üretir.
+
+## D-282 — Çıkarılan yazarın eseri eski onay kutusu kaydı olsa da kaldırılır; sayfadaki yer tutucu listesi
+
+D-279'daki "imzalı `rights_grants` yok" koşulu kaldırıldı: eski eser başına onay
+kutusu kayıtları, sözleşme onay kutusu gibi (D-275) güncel sistemde ruhsat
+sayılmaz; yeni sistemde kimse Eser Bazlı Kullanım Ruhsatı Formu imzalamadı.
+Canlıda yazarlıktan çıkarılan iki kişinin eserleri bu koşul yüzünden listeye
+girmemişti. Kapsam artık: yazarı şu an `user` ve `writer`'dan çıkış kaydı olan,
+silinmemiş eser.
+
+`/admin/agreements` sayfasının yer tutucu listesinde D-276'nın `katki.*`
+adları eksikti; sayfa şablonu "sözlük dışı" sayıp "Şablondan sürüm oluştur"u
+gizliyordu. Liste tamamlandı (servis zaten gerçek sözlüğü kullanıyordu).
