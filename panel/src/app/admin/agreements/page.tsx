@@ -1,6 +1,9 @@
 import { guardPanel } from "@/lib/auth/guard";
 import { acceptanceReport, listAgreementVersions } from "@/services/agreements";
 import { listSignedContracts } from "@/services/signed-contracts";
+import { listContributorDocuments } from "@/services/contributor-documents";
+import { DOCUMENT_KIND_LABELS, DOCUMENT_STATUS_LABELS } from "@/lib/contributor-documents";
+import { documentPdfHref } from "@/components/contributor-documents";
 import { getSiteSettings, PLACEHOLDER_BY_KEY, SETTING_LABELS } from "@/services/site-settings";
 import { readAgreementTemplate, templateHash, TEMPLATE_FILE } from "@/lib/agreement/template";
 import { extractPlaceholders } from "@/lib/agreement/render";
@@ -13,6 +16,7 @@ import { formatDate, formatDateTime } from "@/lib/utils";
 import {
   approveSignedContractAction,
   createVersionFromTemplateAction,
+  prepareContributorDocumentsAction,
   publishAgreementAction,
   rejectSignedContractAction,
 } from "../actions";
@@ -47,6 +51,8 @@ export default async function AdminAgreementsPage() {
   const versions = await listAgreementVersions(actor);
   const report = await acceptanceReport(actor);
   const signed = await listSignedContracts(actor);
+  const documents = await listContributorDocuments(actor);
+  const reviewCount = documents.filter((row) => row.status === "needs_review").length;
   // Waiting ones first; the rest stay listed as the record of what was decided
   const ordered = [...signed.filter((row) => row.status === "pending"), ...signed.filter((row) => row.status !== "pending")];
   const settings = await getSiteSettings();
@@ -195,6 +201,88 @@ export default async function AdminAgreementsPage() {
                 ))}
               </tbody>
             </Table>
+          )}
+        </Card>
+
+        <Card>
+          <h2 className="mb-1 font-serif text-lg">Katkı sağlayan belgeleri</h2>
+          <p className="mb-4 text-sm text-muted">
+            Güncel sürümün Genel Katkı Sağlayan Sözleşmesi her katkı sağlayana, Eser Bazlı Kullanım
+            Ruhsatı Formu her esere (eserin yazarının hesabına) hazırlanır. Kayıtlarda olmayan ya da
+            şüpheli bir bilgi tahminle doldurulmaz; belge &ldquo;İnceleme gerekiyor&rdquo; olarak nedeniyle
+            kalır. Tekrar çalıştırmak yalnızca eksikleri ekler ve incelemedekileri yeniden dener; hazır
+            belgelere dokunmaz. E-posta gönderilmez.
+          </p>
+          <div className="mb-4">
+            <ActionButton
+              action={prepareContributorDocumentsAction}
+              csrfToken={csrfToken}
+              label="Belgeleri hazırla (e-posta gönderilmez)"
+              variant="primary"
+              confirmMessage="Eksik sözleşme ve ruhsat belgeleri hazırlanacak. E-posta gönderilmez. Devam edilsin mi?"
+            />
+          </div>
+
+          {documents.length === 0 ? (
+            <EmptyState>Henüz hazırlanmış belge yok.</EmptyState>
+          ) : (
+            <>
+              <p className="mb-2 text-xs text-muted">
+                {documents.length} belge · {reviewCount} inceleme gerekiyor
+              </p>
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>Katkı sağlayan</Th>
+                    <Th>Belge</Th>
+                    <Th>Eser</Th>
+                    <Th>Durum</Th>
+                    <Th>PDF</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {documents.map((row) => (
+                    <tr key={row.id}>
+                      <Td className="text-xs">
+                        <Link href={`/admin/users/${row.userId}`} className="underline">
+                          {row.userName}
+                        </Link>
+                        <span className="block">
+                          <StatusBadge status={row.userRole} />
+                        </span>
+                      </Td>
+                      <Td className="text-xs">
+                        {DOCUMENT_KIND_LABELS[row.kind]}
+                        {row.kind === "general_agreement" && <span className="text-muted"> · v{row.templateVersion}</span>}
+                      </Td>
+                      <Td className="text-xs">
+                        {row.articleTitle ?? "—"}
+                        {row.articleId && <span className="block font-mono text-[10px] text-muted">{row.articleId}</span>}
+                      </Td>
+                      <Td className="text-xs">
+                        {DOCUMENT_STATUS_LABELS[row.status]}
+                        {row.reviewReasons.length > 0 && (
+                          <ul className="mt-1 list-disc pl-4 text-muted">
+                            {row.reviewReasons.map((reason) => (
+                              <li key={reason}>{reason}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </Td>
+                      <Td className="text-xs">
+                        {row.status === "prepared" ? (
+                          <a href={documentPdfHref(row.id)} className="text-accent underline">
+                            İndir
+                          </a>
+                        ) : (
+                          "—"
+                        )}
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </>
           )}
         </Card>
 

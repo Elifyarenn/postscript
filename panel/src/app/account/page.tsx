@@ -23,6 +23,8 @@ import { cooldownInfo, latestApplication } from "@/services/writer-applications"
 import { countRecoveryCodesLeft, generateTotpSecret, otpauthUri } from "@/services/two-factor";
 import QRCode from "qrcode";
 import { cancelDeletionAction, requestDeletionAction } from "./actions";
+import { listOwnContributorDocuments } from "@/services/contributor-documents";
+import { OwnDocumentsCard } from "@/components/contributor-documents";
 
 export const metadata = { title: "Hesabım", robots: NO_INDEX };
 
@@ -58,9 +60,11 @@ export default async function AccountPage({
 
   // The writer application block: prerequisites, cooldown and current status
   const eligibility = checkWriterEligibility(profile);
-  const [cooldown, latest] = await Promise.all([
+  const [cooldown, latest, documents] = await Promise.all([
     cooldownInfo(profile.id),
     latestApplication(profile.id),
+    // Only the account's own contract and licence forms (D-276)
+    listOwnContributorDocuments({ ...context.user }),
   ]);
 
   return (
@@ -143,6 +147,8 @@ export default async function AccountPage({
           pendingUri={pendingUri}
           pendingQrUrl={pendingQrUrl}
         />
+
+        <OwnDocumentsCard items={documents} />
 
         <SessionsCard
           csrfToken={csrfToken}

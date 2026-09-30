@@ -1,0 +1,433 @@
+/**
+ * Documents prepared for the contributors to sign by hand (D-276): the
+ * Genel Katkı Sağlayan Sözleşmesi of the current version for every
+ * contributor, and an Eser Bazlı Kullanım Ruhsatı Formu for every work, on
+ * the account of the work's own author.
+ *
+ * Preparing is all this does. Nothing is sent (no e-mail at this stage), no
+ * work is licensed, and no work, author or status is touched — the records
+ * are only read. A value the records do not hold, or hold doubtfully, is not
+ * filled in: the document is kept as `needs_review` with the reason.
+ *
+ * Running it again adds only what is missing. A prepared document is never
+ * rewritten (someone may already have signed its PDF); a document waiting for
+ * review is tried again, in place, so fixing the data resolves it.
+ */
+import "server-only";
+import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
+import { db } from "@/db/client";
+import {
+  articles,
+  contributorDocuments,
+  rightsGrants,
+  users,
+  type AgreementVersion,
+  type ContributorDocument,
+  type User,
+} from "@/db/schema";
+import { writeAudit } from "@/lib/audit";
+import { canManageAgreements, type Actor } from "@/lib/auth/rbac";
+import { hashDocument } from "@/lib/agreement/normalise";
+import {
+  AgreementRenderError,
+  buildPlaceholders,
+  escapeForTemplate,
+  fillTemplate,
+  formatContractDate,
+  renderAgreement,
+} from "@/lib/agreement/render";
+import {
+  ACCEPTED_WORK_STATUSES,
+  CONTRIBUTOR_AGREEMENT_FILE,
+  contributionRoleLabel,
+  DOCUMENT_KIND_LABELS,
+  LICENCE_FORM_FILE,
+  LICENCE_FORM_TEMPLATE_VERSION,
+  licenceFormValues,
+  reasonForPlaceholder,
+  wordCount,
+  type ContributorDocumentKind,
+} from "@/lib/contributor-documents";
+import { conflict, forbidden, notFound } from "@/lib/errors";
+import { renderDocumentPdf } from "@/lib/pdf";
+import { buildAgreementContext, getCurrentAgreement, stripMarkdown } from "./agreements";
+import { articleHash, LICENCE_TERMS } from "./rights";
+import type { RequestMeta } from "./auth";
+
+function readContract(file: string): string {
+  return readFileSync(path.join(process.cwd(), "contracts", file), "utf8");
+}
+
+/** What a render left unfilled, as reasons a person can act on. */
+function reasonsOf(error: unknown): string[] {
+  if (error instanceof AgreementRenderError) return error.placeholders.map(reasonForPlaceholder);
+  throw error;
+}
+
+export type PreparationSummary = {
+  generalCreated: number;
+  licenceCreated: number;
+  /** needs_review documents made or re-checked in this run, by reason. */
+  needsReview: { total: number; reasons: Record<string, number> };
+  /** needs_review documents that this run could now prepare. */
+  resolved: number;
+  /** Already present and prepared: left exactly as they were. */
+  alreadyPrepared: { general: number; licence: number };
+  /** Records no document could be attached to. */
+  skipped: { reason: string; count: number }[];
+};
+
+type Draft = {
+  status: "prepared" | "needs_review";
+  reasons: string[];
+  markdown: string | null;
+  hash: string | null;
+};
+
+function draft(reasons: string[], rendered: { markdown: string; hash: string } | null): Draft {
+  return reasons.length === 0 && rendered
+    ? { status: "prepared", reasons: [], markdown: rendered.markdown, hash: rendered.hash }
+    : { status: "needs_review", reasons, markdown: null, hash: null };
+}
+
+/** The contract for one contributor, from the current version's own text. */
+async function draftGeneral(
+  version: AgreementVersion,
+  person: User,
+  hasWorks: boolean,
+  versionReason: string | null,
+): Promise<Draft> {
+  const reasons: string[] = [];
+  if (versionReason) reasons.push(versionReason);
+  if (person.isBanned) reasons.push("Hesap yasaklı");
+
+  const context = await buildAgreementContext(version, {
+    ...person,
+    contributionRole: contributionRoleLabel({ role: person.role, isIllustrator: person.isIllustrator, hasWorks }),
+  });
+  let rendered: { markdown: string; hash: string } | null = null;
+  try {
+    rendered = renderAgreement(version.bodyMarkdown, context);
+  } catch (error) {
+    reasons.push(...reasonsOf(error));
+  }
+  return draft(reasons, rendered);
+}
+
+type WorkRow = typeof articles.$inferSelect;
+
+/** The licence form for one work, filled from the work and its author's records. */
+async function draftLicence(
+  version: AgreementVersion,
+  work: WorkRow,
+  author: User,
+  bylineChoice: "real_name" | "pen_name" | null,
+  formId: string,
+  now: Date,
+  versionReason: string | null,
+): Promise<Draft & { contentHash: string | null }> {
+  const reasons: string[] = [];
+  if (versionReason) reasons.push(versionReason);
+  if (work.status === "withdrawn") {
+    reasons.push("Eser geri çekildi");
+  } else if (!ACCEPTED_WORK_STATUSES.includes(work.status)) {
+    reasons.push(`Eser henüz Dergi tarafından kabul edilmedi (durum: ${work.status})`);
+  }
+
+  const body = work.bodyMarkdown ?? "";
+  const words = wordCount(body);
+  if (words === 0) reasons.push("Eser metni boş");
+  const contentHash = body.trim() ? articleHash(body) : null;
+
+  // The same person and publisher values the contract uses, under the form's names
+  const context = await buildAgreementContext(version, { ...author, contributionRole: "Yazar" });
+  const values: Record<string, string | null> = {
+    ...buildPlaceholders(context),
+    "eser.baslik": work.title.trim() ? escapeForTemplate(work.title) : null,
+    "eser.tur": "Yazı (metin)",
+    "eser.teknik_tanim": words > 0 ? `Panel kaydındaki metin, ${words} kelime` : null,
+    "eser.content_hash": contentHash,
+    "eser.id": work.id,
+    "form.id": formId,
+    "form.template_version": LICENCE_FORM_TEMPLATE_VERSION,
+    "form.created_at": formatContractDate(now),
+    ...licenceFormValues({
+      terms: LICENCE_TERMS,
+      bylineChoice,
+      displayName: escapeForTemplate(author.displayName),
+      penName: author.penName ? escapeForTemplate(author.penName) : null,
+    }),
+    // Filled after the fact: the hash covers the text with this field unfilled
+    "form.text_hash": "{{form.text_hash}}",
+  };
+
+  let rendered: { markdown: string; hash: string } | null = null;
+  try {
+    const filled = fillTemplate(readContract(LICENCE_FORM_FILE), values);
+    const hash = hashDocument(filled.markdown);
+    rendered = { markdown: filled.markdown.replace("{{form.text_hash}}", hash), hash };
+  } catch (error) {
+    reasons.push(...reasonsOf(error));
+  }
+  return { ...draft([...new Set(reasons)], rendered), contentHash };
+}
+
+/**
+ * Prepares every missing document. Admin only; sends nothing.
+ */
+export async function prepareContributorDocuments(actor: Actor, meta: RequestMeta): Promise<PreparationSummary> {
+  if (!canManageAgreements(actor)) throw forbidden();
+
+  const version = await getCurrentAgreement();
+  if (!version) throw conflict("Yayınlanmış bir sözleşme sürümü yok; önce bir sürüm yayınlayın.");
+  // The current version is used as it stands; if it is not the contributor
+  // contract's text, the documents wait for review rather than pretend
+  const versionReason =
+    version.bodyHash === hashDocument(readContract(CONTRIBUTOR_AGREEMENT_FILE))
+      ? null
+      : `Güncel sözleşme sürümü (v${version.version}) Genel Katkı Sağlayan Sözleşmesi metni değil`;
+
+  const summary: PreparationSummary = {
+    generalCreated: 0,
+    licenceCreated: 0,
+    needsReview: { total: 0, reasons: {} },
+    resolved: 0,
+    alreadyPrepared: { general: 0, licence: 0 },
+    skipped: [],
+  };
+  const skip = (reason: string) => {
+    const found = summary.skipped.find((entry) => entry.reason === reason);
+    if (found) found.count += 1;
+    else summary.skipped.push({ reason, count: 1 });
+  };
+  const count = (result: Draft) => {
+    if (result.status !== "needs_review") return;
+    summary.needsReview.total += 1;
+    for (const reason of result.reasons) {
+      summary.needsReview.reasons[reason] = (summary.needsReview.reasons[reason] ?? 0) + 1;
+    }
+  };
+  const now = new Date();
+
+  /* ---- Works, and who wrote them ---- */
+  const works = await db.select().from(articles).where(isNull(articles.deletedAt));
+  const authorIds = new Set(works.flatMap((work) => (work.authorId ? [work.authorId] : [])));
+
+  /* ---- Contributors: writers, çizerler, and anyone who wrote a work ---- */
+  const people = await db
+    .select()
+    .from(users)
+    .where(
+      or(
+        eq(users.role, "writer"),
+        eq(users.isIllustrator, true),
+        authorIds.size ? inArray(users.id, [...authorIds]) : sql`false`,
+      ),
+    );
+  const byId = new Map(people.map((person) => [person.id, person]));
+
+  const existing = await db.select().from(contributorDocuments);
+  const generalOf = new Map(
+    existing
+      .filter((row) => row.kind === "general_agreement" && row.agreementVersionId === version.id)
+      .map((row) => [row.userId, row]),
+  );
+  const licenceOf = new Map(
+    existing
+      .filter((row) => row.kind === "work_licence" && row.templateVersion === LICENCE_FORM_TEMPLATE_VERSION)
+      .map((row) => [row.articleId, row]),
+  );
+
+  const save = async (
+    kind: ContributorDocumentKind,
+    current: ContributorDocument | undefined,
+    values: { userId: string; articleId: string | null; id?: string; templateVersion: string; contentHash?: string | null },
+    result: Draft,
+  ): Promise<void> => {
+    count(result);
+    const fields = {
+      status: result.status,
+      reviewReasons: result.reasons,
+      renderedMarkdown: result.markdown,
+      textHash: result.hash,
+      workContentHash: values.contentHash ?? null,
+      updatedAt: now,
+    };
+    if (current) {
+      // Only a document waiting for review is tried again; a prepared one stays
+      await db
+        .update(contributorDocuments)
+        .set(fields)
+        .where(and(eq(contributorDocuments.id, current.id), eq(contributorDocuments.status, "needs_review")));
+      if (result.status === "prepared") summary.resolved += 1;
+      return;
+    }
+    const [row] = await db
+      .insert(contributorDocuments)
+      .values({
+        ...(values.id ? { id: values.id } : {}),
+        kind,
+        userId: values.userId,
+        agreementVersionId: version.id,
+        articleId: values.articleId,
+        templateVersion: values.templateVersion,
+        createdBy: actor.id,
+        ...fields,
+      })
+      .onConflictDoNothing()
+      .returning({ id: contributorDocuments.id });
+    // A parallel run made it first: counted as present, not created
+    if (!row) return;
+    if (kind === "general_agreement") summary.generalCreated += 1;
+    else summary.licenceCreated += 1;
+  };
+
+  for (const person of people) {
+    if (person.deletedAt) {
+      skip("Hesap silinmiş: genel sözleşme hazırlanmadı");
+      continue;
+    }
+    const current = generalOf.get(person.id);
+    if (current?.status === "prepared") {
+      summary.alreadyPrepared.general += 1;
+      continue;
+    }
+    const result = await draftGeneral(version, person, authorIds.has(person.id), versionReason);
+    await save("general_agreement", current, { userId: person.id, articleId: null, templateVersion: String(version.version) }, result);
+  }
+
+  // The author's own signed choice of byline, where the old approval recorded one
+  const signedChoices = await db
+    .select({ articleId: rightsGrants.articleId, bylineChoice: rightsGrants.bylineChoice, signedAt: rightsGrants.signedAt })
+    .from(rightsGrants)
+    .where(eq(rightsGrants.status, "signed"))
+    .orderBy(desc(rightsGrants.signedAt));
+  const bylineOf = new Map<string, "real_name" | "pen_name" | null>();
+  for (const row of signedChoices) if (!bylineOf.has(row.articleId)) bylineOf.set(row.articleId, row.bylineChoice);
+
+  for (const work of works) {
+    const author = work.authorId ? byId.get(work.authorId) : undefined;
+    if (!author) {
+      skip("Eserin sahibi (yazarı) kayıtlı değil: ruhsat hiçbir hesaba bağlanamadı");
+      continue;
+    }
+    if (author.deletedAt) {
+      skip("Eserin sahibinin hesabı silinmiş: ruhsat hazırlanmadı");
+      continue;
+    }
+    const current = licenceOf.get(work.id);
+    if (current?.status === "prepared") {
+      summary.alreadyPrepared.licence += 1;
+      continue;
+    }
+    const formId = current?.id ?? randomUUID();
+    const result = await draftLicence(version, work, author, bylineOf.get(work.id) ?? null, formId, now, versionReason);
+    await save(
+      "work_licence",
+      current,
+      { id: formId, userId: author.id, articleId: work.id, templateVersion: LICENCE_FORM_TEMPLATE_VERSION, contentHash: result.contentHash },
+      result,
+    );
+  }
+
+  await writeAudit({
+    actorId: actor.id,
+    action: "contributor_documents.prepared",
+    entityType: "agreement_versions",
+    entityId: version.id,
+    after: {
+      generalCreated: summary.generalCreated,
+      licenceCreated: summary.licenceCreated,
+      needsReview: summary.needsReview.total,
+      resolved: summary.resolved,
+    },
+    ip: meta.ip,
+  });
+  return summary;
+}
+
+/* ------------------------------------------------------------------ */
+/* Reading                                                             */
+/* ------------------------------------------------------------------ */
+
+export type ContributorDocumentItem = {
+  id: string;
+  kind: ContributorDocumentKind;
+  status: "prepared" | "needs_review";
+  reviewReasons: string[];
+  templateVersion: string;
+  textHash: string | null;
+  createdAt: Date;
+  userId: string;
+  userName: string;
+  userRole: string;
+  articleId: string | null;
+  articleTitle: string | null;
+  articleStatus: string | null;
+};
+
+const owners = alias(users, "owners");
+
+function documentList() {
+  return db
+    .select({
+      id: contributorDocuments.id,
+      kind: contributorDocuments.kind,
+      status: contributorDocuments.status,
+      reviewReasons: contributorDocuments.reviewReasons,
+      templateVersion: contributorDocuments.templateVersion,
+      textHash: contributorDocuments.textHash,
+      createdAt: contributorDocuments.createdAt,
+      userId: owners.id,
+      userName: owners.displayName,
+      userRole: owners.role,
+      articleId: articles.id,
+      articleTitle: articles.title,
+      articleStatus: articles.status,
+    })
+    .from(contributorDocuments)
+    .innerJoin(owners, eq(contributorDocuments.userId, owners.id))
+    .leftJoin(articles, eq(contributorDocuments.articleId, articles.id));
+}
+
+/** The contributor's own documents; nobody else's. */
+export async function listOwnContributorDocuments(actor: Actor): Promise<ContributorDocumentItem[]> {
+  return documentList()
+    .where(eq(contributorDocuments.userId, actor.id))
+    .orderBy(contributorDocuments.kind, contributorDocuments.createdAt);
+}
+
+/** Every document with its account and work, for the admin to check. */
+export async function listContributorDocuments(actor: Actor): Promise<ContributorDocumentItem[]> {
+  if (!canManageAgreements(actor)) throw forbidden();
+  return documentList().orderBy(owners.displayName, contributorDocuments.kind, contributorDocuments.createdAt);
+}
+
+/**
+ * The PDF of one prepared document, for its owner or an admin. Anyone else
+ * gets "not found", the same answer a missing id gives.
+ */
+export async function contributorDocumentPdf(
+  actor: Actor,
+  id: string,
+): Promise<{ fileName: string; body: Buffer }> {
+  // A malformed id is simply not a document, never a database error
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw notFound("Belge bulunamadı.");
+  const [row] = await db.select().from(contributorDocuments).where(eq(contributorDocuments.id, id)).limit(1);
+  if (!row || (row.userId !== actor.id && !canManageAgreements(actor))) throw notFound("Belge bulunamadı.");
+  if (row.status !== "prepared" || !row.renderedMarkdown || !row.textHash) {
+    throw conflict("Bu belge incelemede; PDF'i hazır değil.");
+  }
+
+  const body = await renderDocumentPdf({
+    title: `postscript ${DOCUMENT_KIND_LABELS[row.kind]}`,
+    sections: [{ body: stripMarkdown(row.renderedMarkdown) }],
+    footerNote: `Belge no ${row.id} — metin özeti (SHA-256) ${row.textHash.slice(0, 16)}…`,
+  });
+  const name = row.kind === "general_agreement" ? `genel-katki-saglayan-sozlesmesi-v${row.templateVersion}` : `eser-ruhsati-${row.id.slice(0, 8)}`;
+  return { fileName: `${name}.pdf`, body };
+}

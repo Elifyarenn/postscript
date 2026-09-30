@@ -10,6 +10,8 @@ import {
 } from "@/services/agreements";
 import { listOwnSignedContracts, MAX_SIGNED_CONTRACT_MB, VERIFIED_MESSAGE } from "@/services/signed-contracts";
 import { listUncoveredSubmissions } from "@/services/rights";
+import { listOwnContributorDocuments } from "@/services/contributor-documents";
+import { OwnDocumentsCard } from "@/components/contributor-documents";
 import { AgreementRenderError } from "@/lib/agreement/render";
 import { readCsrfToken } from "@/lib/csrf";
 import { renderMarkdown } from "@/lib/markdown";
@@ -37,11 +39,12 @@ export default async function WriterAgreementPage() {
   const { user } = await guardPanel("writer");
   const csrfToken = (await readCsrfToken()) ?? "";
 
-  const [profileRows, current, uploads, acceptances] = await Promise.all([
+  const [profileRows, current, uploads, acceptances, documents] = await Promise.all([
     db.select().from(users).where(eq(users.id, user.id)).limit(1),
     getCurrentAgreement(),
     listOwnSignedContracts({ ...user }),
     listAcceptancesForUser(user.id),
+    listOwnContributorDocuments({ ...user }),
   ]);
   const profile = profileRows[0]!;
 
@@ -131,6 +134,8 @@ export default async function WriterAgreementPage() {
             />
           </Card>
         )}
+
+        <OwnDocumentsCard items={documents} />
 
         {uploads.length > 0 && (
           <Card>

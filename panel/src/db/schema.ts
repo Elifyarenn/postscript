@@ -823,6 +823,75 @@ export const signedContracts = pgTable(
 export type SignedContract = typeof signedContracts.$inferSelect;
 
 /* ------------------------------------------------------------------ */
+/* contributor_documents                                               */
+/* ------------------------------------------------------------------ */
+
+export const contributorDocumentKindEnum = pgEnum("contributor_document_kind", [
+  "general_agreement",
+  "work_licence",
+]);
+
+export const contributorDocumentStatusEnum = pgEnum("contributor_document_status", [
+  "prepared",
+  "needs_review",
+]);
+
+/**
+ * A document prepared for a contributor to sign by hand (D-276): the
+ * Genel Katkı Sağlayan Sözleşmesi of the current version, once per account,
+ * and the Eser Bazlı Kullanım Ruhsatı Formu, once per work. Filled from the
+ * records only; when a value is missing or doubtful the text is not produced
+ * and `review_reasons` says why.
+ *
+ * Preparing is not signing: nothing here grants, licenses or changes a work.
+ */
+export const contributorDocuments = pgTable(
+  "contributor_documents",
+  {
+    id: id(),
+    kind: contributorDocumentKindEnum("kind").notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    /** The contract version: set on both kinds, the licence rests on it. */
+    agreementVersionId: uuid("agreement_version_id").references(() => agreementVersions.id, {
+      onDelete: "restrict",
+    }),
+    /** The work a licence form is for; never modified by us. */
+    articleId: uuid("article_id").references(() => articles.id, { onDelete: "set null" }),
+    /** The contract version number, or the licence form template version. */
+    templateVersion: text("template_version").notNull(),
+    status: contributorDocumentStatusEnum("status").notNull(),
+    reviewReasons: text("review_reasons")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    /** The filled text; null while it needs review. */
+    renderedMarkdown: text("rendered_markdown"),
+    /** SHA-256 of the filled text. */
+    textHash: text("text_hash"),
+    /** SHA-256 of the work's body the licence names, as it stood when prepared. */
+    workContentHash: text("work_content_hash"),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("contributor_documents_user_idx").on(t.userId),
+    // One contract per account and version, one licence form per work and
+    // form version: preparing again never makes a second copy
+    uniqueIndex("contributor_documents_general_unique")
+      .on(t.userId, t.agreementVersionId)
+      .where(sql`${t.kind} = 'general_agreement'`),
+    uniqueIndex("contributor_documents_licence_unique")
+      .on(t.articleId, t.templateVersion)
+      .where(sql`${t.kind} = 'work_licence'`),
+  ],
+);
+
+export type ContributorDocument = typeof contributorDocuments.$inferSelect;
+
+/* ------------------------------------------------------------------ */
 /* announcements                                                       */
 /* ------------------------------------------------------------------ */
 

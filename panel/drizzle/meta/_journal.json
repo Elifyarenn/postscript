@@ -365,6 +365,13 @@
       "when": 1790781473815,
       "tag": "0052_handy_rocket_racer",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1790798996130,
+      "tag": "0053_high_guardian",
+      "breakpoints": true
     }
   ]
 }

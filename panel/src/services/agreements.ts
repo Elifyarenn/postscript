@@ -30,6 +30,7 @@ import {
 } from "@/lib/agreement/render";
 import { hashDocument } from "@/lib/agreement/normalise";
 import { readAgreementTemplate } from "@/lib/agreement/template";
+import { contributionRoleLabel } from "@/lib/contributor-documents";
 import { getSiteSettings } from "./site-settings";
 import type { RequestMeta } from "./auth";
 
@@ -115,13 +116,20 @@ async function currentKvkkVersion(): Promise<number | null> {
   return rows[0]?.version ?? null;
 }
 
+/** The person a contract is filled for. */
+export type ContractPerson = Pick<User, "displayName" | "birthDate" | "email" | "penName"> &
+  Partial<Pick<User, "role" | "isIllustrator">> & {
+    /** Given by the contributor documents (D-276); otherwise read from the account. */
+    contributionRole?: string | null;
+  };
+
 /**
  * Gathers everything the template needs for one writer. Pure data assembly:
  * the render itself stays deterministic and testable.
  */
 export async function buildAgreementContext(
   version: AgreementVersion,
-  writer: Pick<User, "displayName" | "birthDate" | "email" | "penName">,
+  writer: ContractPerson,
   acceptance: { acceptedAt: Date | null; ip: string | null } | null = null,
 ): Promise<AgreementContext> {
   const publisher = await getSiteSettings();
@@ -145,6 +153,13 @@ export async function buildAgreementContext(
       birthDate: writer.birthDate,
       email: writer.email,
       penName: writer.penName,
+      contributionRole:
+        writer.contributionRole !== undefined
+          ? writer.contributionRole
+          : writer.role
+            ? // Whoever is shown the contract here is contracted as a writer
+              contributionRoleLabel({ role: writer.role, isIllustrator: writer.isIllustrator ?? false, hasWorks: true })
+            : null,
     },
     kvkkVersion: await currentKvkkVersion(),
     acceptance,
@@ -159,7 +174,7 @@ export type AgreementPreview = { markdown: string; hash: string; version: Agreem
  * promotion check relies on (§6.1 rule 6).
  */
 export async function renderAgreementForWriter(
-  writer: Pick<User, "displayName" | "birthDate" | "email" | "penName">,
+  writer: ContractPerson,
   acceptance: { acceptedAt: Date | null; ip: string | null } | null = null,
 ): Promise<AgreementPreview> {
   const version = await getCurrentAgreement();

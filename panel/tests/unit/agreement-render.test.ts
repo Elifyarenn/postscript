@@ -20,6 +20,10 @@ import {
 } from "@/lib/agreement/render";
 import { hashDocument, normaliseForHash } from "@/lib/agreement/normalise";
 
+const CONTRIBUTOR_TEMPLATE = readFileSync(
+  path.join(process.cwd(), "contracts", "genel-katki-saglayan-sozlesmesi.md"),
+  "utf8",
+);
 const TEMPLATE = readFileSync(
   path.join(process.cwd(), "contracts", "yazar-sozlesmesi-ve-ruhsat-taahhudu.md"),
   "utf8",
@@ -81,9 +85,30 @@ describe("the shipped template", () => {
   });
 
   it("uses every placeholder the specification lists", () => {
-    expect(extractPlaceholders(TEMPLATE).sort()).toEqual(
-      Object.keys(buildPlaceholders(context())).sort(),
-    );
+    // The dictionary serves this template and the contributor contract that
+    // replaced it for new versions (D-276); between them every name is used
+    const used = new Set([...extractPlaceholders(TEMPLATE), ...extractPlaceholders(CONTRIBUTOR_TEMPLATE)]);
+    expect([...used].sort()).toEqual(Object.keys(buildPlaceholders(context())).sort());
+  });
+});
+
+describe("the contributor contract template (D-276)", () => {
+  it("uses only placeholders the dictionary knows", () => {
+    expect(unknownPlaceholders(CONTRIBUTOR_TEMPLATE, context())).toEqual([]);
+  });
+
+  it("fills with the contributor's own records", () => {
+    const { markdown } = renderAgreement(CONTRIBUTOR_TEMPLATE, {
+      ...context(),
+      writer: { ...context().writer, contributionRole: "Yazar" },
+    });
+    expect(markdown).not.toMatch(/{{/);
+    expect(markdown).toContain("Rol / katkı türü: Yazar");
+    expect(markdown).toContain("05.05.1995");
+  });
+
+  it("refuses to fill without a contribution role rather than leave it blank", () => {
+    expect(() => renderAgreement(CONTRIBUTOR_TEMPLATE, context())).toThrow(/katki.rol/);
   });
 });
 

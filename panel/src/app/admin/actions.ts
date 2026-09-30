@@ -25,6 +25,7 @@ import {
 import { createVersionFromTemplate, publishAgreementVersion } from "@/services/agreements";
 import { adminDecideApplication } from "@/services/writer-applications";
 import { approveSignedContract, rejectSignedContract, VERIFIED_MESSAGE } from "@/services/signed-contracts";
+import { prepareContributorDocuments } from "@/services/contributor-documents";
 import { createAnnouncement, publishAnnouncement } from "@/services/announcements";
 import type { AnnouncementSeverity } from "@/db/schema";
 import {
@@ -481,6 +482,31 @@ export async function createVersionFromTemplateAction(
 
     revalidatePath("/admin/agreements");
     return { success: `Şablondan ${draft.version}. sürüm taslağı oluşturuldu.` };
+  });
+}
+
+/**
+ * Prepares the contributors' contracts and work licence forms (D-276). Sends
+ * nothing: no e-mail goes out at this stage.
+ */
+export async function prepareContributorDocumentsAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+
+    const summary = await prepareContributorDocuments({ ...user }, await requestMetadata());
+
+    revalidatePath("/admin/agreements");
+    const skipped = summary.skipped.reduce((sum, entry) => sum + entry.count, 0);
+    return {
+      success:
+        `Genel sözleşme: ${summary.generalCreated} yeni · Ruhsat formu: ${summary.licenceCreated} yeni · ` +
+        `İnceleme gerekiyor: ${summary.needsReview.total} · Önceden hazır: ${summary.alreadyPrepared.general + summary.alreadyPrepared.licence} · ` +
+        `Atlanan kayıt: ${skipped}. E-posta gönderilmedi.`,
+    };
   });
 }
 

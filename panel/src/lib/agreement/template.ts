@@ -11,7 +11,12 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { hashDocument } from "./normalise";
 
-export const TEMPLATE_FILE = "yazar-sozlesmesi-ve-ruhsat-taahhudu.md";
+/**
+ * The text new versions are made from: the Genel Katkı Sağlayan Sözleşmesi as
+ * delivered (D-276, source PDF in contracts/kaynak/). The earlier template
+ * stays in the folder; versions already made from it keep their own copy.
+ */
+export const TEMPLATE_FILE = "genel-katki-saglayan-sozlesmesi.md";
 
 /** Only set by tests, which swap the template to exercise the render rules. */
 let override: string | null = null;

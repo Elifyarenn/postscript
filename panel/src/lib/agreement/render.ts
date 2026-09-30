@@ -49,6 +49,11 @@ export type AgreementContext = {
     email: string;
     /** The one value allowed to be absent; renders as an em dash. */
     penName: string | null;
+    /**
+     * "Rol / katkı türü" in the contributor contract (D-276): Yazar, Çizer…
+     * as the account's own records say. Null fails a template that asks.
+     */
+    contributionRole?: string | null;
   };
   kvkkVersion: number | null;
   /** Null before acceptance: the preview shows "(onay bekliyor)". */
@@ -103,7 +108,7 @@ export function escapeForTemplate(value: string): string {
 /* ------------------------------------------------------------------ */
 
 /** Placeholders whose value may legitimately be empty. */
-const OPTIONAL = new Set(["yazar.mahlas"]);
+const OPTIONAL = new Set(["yazar.mahlas", "katki.mahlas"]);
 
 /**
  * Every placeholder the template is allowed to use, and where it comes from
@@ -131,6 +136,13 @@ export function buildPlaceholders(context: AgreementContext): Record<string, str
     "yazar.eposta": context.writer.email ? escape(context.writer.email) : null,
     // The only placeholder allowed to be empty; an em dash stands in
     "yazar.mahlas": context.writer.penName ? escape(context.writer.penName) : ABSENT,
+
+    // The same person under the contributor contract's names (D-276)
+    "katki.ad_soyad": context.writer.displayName ? escape(context.writer.displayName) : null,
+    "katki.rol": context.writer.contributionRole ? escape(context.writer.contributionRole) : null,
+    "katki.dogum_tarihi": formatContractDate(context.writer.birthDate),
+    "katki.eposta": context.writer.email ? escape(context.writer.email) : null,
+    "katki.mahlas": context.writer.penName ? escape(context.writer.penName) : ABSENT,
 
     "kvkk.version": context.kvkkVersion === null ? null : String(context.kvkkVersion),
 
@@ -173,7 +185,19 @@ export function renderAgreement(
   templateMarkdown: string,
   context: AgreementContext,
 ): RenderedAgreement {
-  const values = buildPlaceholders(context);
+  return fillTemplate(templateMarkdown, buildPlaceholders(context), OPTIONAL);
+}
+
+/**
+ * The fill itself, for any template and dictionary: the contract above and
+ * the work licence form (D-276) follow the same rules. Unknown names and
+ * missing required values throw; nothing is left blank.
+ */
+export function fillTemplate(
+  templateMarkdown: string,
+  values: Record<string, string | null>,
+  optional: ReadonlySet<string> = new Set(),
+): RenderedAgreement {
   const used = extractPlaceholders(templateMarkdown);
 
   const unknown = used.filter((name) => !(name in values));
@@ -184,7 +208,7 @@ export function renderAgreement(
     );
   }
 
-  const missing = used.filter((name) => !OPTIONAL.has(name) && !values[name]);
+  const missing = used.filter((name) => !optional.has(name) && !values[name]);
   if (missing.length > 0) {
     throw new AgreementRenderError(
       `Sözleşme ayarları eksik: ${missing.join(", ")}`,

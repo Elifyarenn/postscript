@@ -11281,3 +11281,91 @@ değişmemesi, dosya rotası sahip/admin 200, başkası/editör 403, oturumsuz 4
 `07-writer-application.spec.ts` yeni akışa göre güncellendi, çalıştırılmadı
 (yerel sunucu açılmıyor). Seed demo yazar için örnek PDF yükleyip admin'e
 doğrulatıyor.
+
+---
+
+## D-276 — Katkı sağlayan belgeleri: genel sözleşme ve eser bazlı ruhsat formları hazırlanıyor (e-posta yok)
+
+**İstek (ürün sahibi):** Mevcut sözleşme/ruhsat sistemini kullanarak bütün
+katkı sağlayanlara güncel sürüm Genel Katkı Sağlayan Sözleşmesini, bütün
+eserlere eser sahibinin hesabına bağlı Eser Bazlı Kullanım Ruhsatı Formunu
+hazırlamak; eksik/şüpheli veride tahmin etmeyip `needs_review` bırakmak;
+kullanıcı kendi belgelerini görüp PDF indirebilsin, admin hepsini eşleşmeleriyle
+görsün; tekrar yok. Mail yok, deploy/push yok, hukuki metin değişmez, eserlere
+dokunulmaz. Kaynak: `doc/01-genel-katki-saglayan-sozlesmesi-ISLAK-IMZA-DIJITAL.pdf`,
+`doc/02-eser-bazli-kullanim-ruhsati-formu-DIJITAL-GUNCEL.pdf`.
+
+### Metinler
+
+İki PDF `contracts/kaynak/` altına kopyalandı ve kelimesi kelimesine markdown
+şablona çevrildi: `contracts/genel-katki-saglayan-sozlesmesi.md`,
+`contracts/eser-bazli-kullanim-ruhsati-formu.md`. Birim testi PDF'in metnini
+MuPDF ile okuyup şablonla karşılaştırıyor (yalnızca boşluk, madde işareti ve
+markdown işaretleri yok sayılıyor). Ruhsat formundaki tablolar satır olarak
+yazıldı ("Hak · FSEK · Kapsam · Verildi mi"); sözcükler aynı. İki taraflı imza
+bölümleri (katkı sağlayan + Dergi adına yetkili) olduğu gibi.
+
+`TEMPLATE_FILE` artık `genel-katki-saglayan-sozlesmesi.md`: panelde "Şablondan
+sürüm oluştur" bu metinden sürüm yapar. **Sürüm oluşturulmadı, yayımlanmadı**;
+eski şablon klasörde duruyor, var olan sürümler kendi kopyalarını taşıyor.
+Sözlüğe `katki.*` eklendi (`katki.rol` kayıtlardan: yazar rolü veya eseri olan
+→ "Yazar", çizer işareti → "Çizer"); dolduran çekirdek `fillTemplate` olarak
+ayrıldı, iki belge aynı kuralla doluyor (bilinmeyen/eksik alan boş bırakılmaz).
+
+### Veri
+
+Migration `0053_high_guardian.sql`, yalnızca ekleyici: `contributor_documents`
+(tür, kullanıcı, sözleşme sürümü, eser, şablon sürümü, durum `prepared` /
+`needs_review`, `review_reasons[]`, doldurulmuş metin, metin özeti, eser içerik
+özeti, hazırlayan). Tekrarı veritabanı engeller: hesap+sürüm başına tek genel
+sözleşme, eser+form sürümü başına tek ruhsat formu (kısmi benzersiz indeksler).
+
+### Hazırlama (`prepareContributorDocuments`, `/admin/agreements`)
+
+- **Kim:** yazar rolündekiler, çizer işaretliler ve en az bir eseri olan herkes.
+  Silinmiş hesap atlanır ve sayılır.
+- **Hangi sözleşme:** güncel yayımlanmış sürüm, kendi saklı metniyle. Metni
+  Genel Katkı Sağlayan Sözleşmesi değilse (özet karşılaştırması) belge
+  `needs_review`: "Güncel sözleşme sürümü (vN) Genel Katkı Sağlayan Sözleşmesi
+  metni değil".
+- **Eser:** silinmemiş her yazı; `author_id` sahibi. Başlık, tür ("Yazı (metin)"),
+  teknik tanım (panel kaydındaki metnin kelime sayısı), içerik özeti
+  (`articleHash`, eser onayıyla aynı), panel kaydı kayıttan. Ruhsat kapsamı kodda
+  sabit `LICENCE_TERMS`'ten (basit ruhsat, dört hak, dört mecra, tüm dünya,
+  ticari hariç); yayın adı, eserin imzalı eski onayındaki tercihten.
+- **Tahmin edilmeyenler → `needs_review`:** ruhsat süresi (sistemde hiç yok),
+  işleme hakkının yazılı kapsamı (eski sözleşmenin 4.2'sine bağlıydı, bu forma
+  değil), kayıtlı olmayan yayın adı tercihi, kabul edilmemiş eser (taslak,
+  incelemede…), geri çekilmiş eser, boş metin, eksik doğum tarihi / sistem
+  ayarları, yasaklı hesap. **Bugünkü kodla her ruhsat formu en az ilk iki nedenle
+  incelemede kalır**; bunlar ürün sahibi ve hukuk danışmanının kararı.
+- Tekrar çalıştırma: eksikleri ekler; `needs_review` belgeyi aynı satırda yeniden
+  dener (veri düzelince `prepared` olur); `prepared` belgeye hiç dokunmaz.
+- Eserler, yazarlar, eser onayları, durumlar okunur, yazılmaz (testi var).
+  **E-posta gönderilmez**, kuyruğa da girmez (testi var).
+
+### Erişim
+
+Kullanıcı "Hesabım"da (yazarlar ayrıca "Sözleşmem"de) yalnızca kendi belgelerini
+görür. PDF `GET /api/contributor-documents/:id/pdf` ile, saklı metinden her
+istekte çizilir (depoda dosya yok); sahibi ve admin alır, başka herkes 404,
+oturumsuz 401, `private, no-store`. İncelemedeki belgenin PDF'i yok (409).
+Hazırlama ve tüm liste yalnızca admin.
+
+**KVKK:** Yeni veri kategorisi yok (kayıtlardaki ad, katkı türü, doğum tarihi,
+e-posta, mahlas ve eser bilgileri); hazırlanan belge metni "Sözleşme" satırına
+eklendi.
+
+**Canlı sayılar yok:** hazırlama üretimde, migration 0052–0053 uygulanıp kod
+yayımlandıktan sonra admin düğmesiyle çalışır. Deploy/push istenmediği ve bu
+oturumun üretim veritabanını okuma izni olmadığı için canlıdaki katkı sağlayan ve
+eser sayıları, oluşacak belge ve inceleme sayıları buradan bilinmiyor.
+
+**Doğrulama:** `tests/unit/contributor-documents.test.ts` (9: iki şablonun PDF ile
+kelimesi kelimesine aynılığı, iki imza bölümü, katkı türü, ruhsat değerleri,
+doldurulamayan alanın adıyla hata, kelime sayısı), `tests/integration/contributor-documents.test.ts`
+(10: hesaba ve esere doğru bağlama, silinmiş hesap/eser sahibinin atlanması,
+tam/eksik genel sözleşme, ruhsatta tahmin edilmeyen alanlar, e-posta yok ve
+eser/yazar/onay değişmez, tekrar yok + veri düzelince çözülme, farklı sürüm
+metni, yalnızca admin, kendi belgeleri, PDF sahip/admin/404/409, rota 200/404/401);
+`agreement-render.test.ts` yeni şablona göre genişletildi.
