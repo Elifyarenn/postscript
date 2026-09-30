@@ -11405,3 +11405,24 @@ sayfasına gider (yalnızca admin; `viewContributorDocument`, başkasına 403):
 
 Hazırlamanın değer üretimi (`generalValues`, `licenceValues`) önizlemeyle ortak;
 iki ayrı doldurma mantığı yok. Migration, hukuki metin, e-posta değişmedi.
+
+## D-279 — Yazarlıktan çıkarılanların ruhsatsız eserleri kaldırılır (yumuşak silme)
+
+Ürün sahibi: yazar rolünden çıkarılan kişilerin, imzalı ruhsat onayı olmayan
+eserleri silinsin. `/admin/agreements`'ta "Yazarlıktan çıkarılanların ruhsatsız
+eserleri" listesi ve onaylı "kaldır" düğmesi (yalnızca admin,
+`src/services/unlicensed-works.ts`).
+
+- **Kapsam:** silinmemiş eser; yazarının şu anki rolü `user` ve `role_changes`'ta
+  `writer`'dan çıkış kaydı var; eser için `status = signed` bir `rights_grants`
+  yok. Kayıtlarda hiç yazar görünmeyen kişi "çıkarılmış yazar" sayılmaz.
+- **Yalnızca gösterilen:** düğme listedeki kimlikleri gönderir; servis listeyi
+  yeniden hesaplar ve kesişimi kaldırır. Listeye uymayan kimlik yok sayılır.
+- **Yumuşak silme:** `articles.deleted_at` yazılır; durum, metin ve
+  `article_versions` olduğu gibi kalır (5187 saklama sorusu açık, CLAUDE.md).
+  Eser sitede 404 olur, panel listelerinden çıkar. Satır silme kodu yok.
+- **Belgeler:** bu eserlere hazırlanmış gönderilmemiş ruhsat formları ve başka
+  eseri kalmayan (çizer de olmayan) kişinin genel sözleşmesi silinir (D-276
+  taslakları; imzalanmamış, gönderilmemiş).
+- Her eser için `article.removed_unlicensed_former_writer` denetim kaydı.
+  KVKK: yeni veri yok.

@@ -2,6 +2,7 @@ import { guardPanel } from "@/lib/auth/guard";
 import { acceptanceReport, listAgreementVersions } from "@/services/agreements";
 import { listSignedContracts } from "@/services/signed-contracts";
 import { listContributorDocuments } from "@/services/contributor-documents";
+import { listUnlicensedFormerWriterWorks } from "@/services/unlicensed-works";
 import { DOCUMENT_KIND_LABELS, DOCUMENT_STATUS_LABELS } from "@/lib/contributor-documents";
 import { documentPdfHref } from "@/components/contributor-documents";
 import { getSiteSettings, PLACEHOLDER_BY_KEY, SETTING_LABELS } from "@/services/site-settings";
@@ -19,6 +20,7 @@ import {
   prepareContributorDocumentsAction,
   publishAgreementAction,
   rejectSignedContractAction,
+  removeUnlicensedFormerWriterWorksAction,
 } from "../actions";
 
 export const metadata = { title: "Sözleşme sürümleri" };
@@ -52,6 +54,7 @@ export default async function AdminAgreementsPage() {
   const report = await acceptanceReport(actor);
   const signed = await listSignedContracts(actor);
   const documents = await listContributorDocuments(actor);
+  const unlicensed = await listUnlicensedFormerWriterWorks(actor);
   const reviewCount = documents.filter((row) => row.status === "needs_review").length;
   // Waiting ones first; the rest stay listed as the record of what was decided
   const ordered = [...signed.filter((row) => row.status === "pending"), ...signed.filter((row) => row.status !== "pending")];
@@ -203,6 +206,53 @@ export default async function AdminAgreementsPage() {
             </Table>
           )}
         </Card>
+
+        {unlicensed.length > 0 && (
+          <Card>
+            <h2 className="mb-1 font-serif text-lg">
+              Yazarlıktan çıkarılanların ruhsatsız eserleri ({unlicensed.length})
+            </h2>
+            <p className="mb-4 text-sm text-muted">
+              Yazarı artık yazar rolünde olmayan ve imzalı ruhsat onayı hiç olmayan eserler. Kaldırılan
+              eser sitede ve panelde görünmez olur; kaydı ve sürüm geçmişi saklanır. Bu eserler için
+              hazırlanmış, gönderilmemiş belgeler de silinir. Yalnızca aşağıda listelenenler kaldırılır.
+            </p>
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Yazar</Th>
+                  <Th>Eser</Th>
+                  <Th>Durum</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {unlicensed.map((work) => (
+                  <tr key={work.id}>
+                    <Td className="text-xs">
+                      <Link href={`/admin/users/${work.authorId}`} className="underline">
+                        {work.authorName}
+                      </Link>
+                    </Td>
+                    <Td className="text-xs">{work.title}</Td>
+                    <Td className="text-xs">
+                      <StatusBadge status={work.status} />
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+            <div className="mt-4">
+              <ActionButton
+                action={removeUnlicensedFormerWriterWorksAction}
+                csrfToken={csrfToken}
+                label={`Bu ${unlicensed.length} eseri kaldır`}
+                variant="danger"
+                fields={{ ids: unlicensed.map((work) => work.id).join(",") }}
+                confirmMessage={`${unlicensed.length} eser siteden ve panelden kaldırılacak (yayımlanmış olanlar dahil). Kayıtları ve sürüm geçmişi saklanır. Devam edilsin mi?`}
+              />
+            </div>
+          </Card>
+        )}
 
         <Card>
           <h2 className="mb-1 font-serif text-lg">Katkı sağlayan belgeleri</h2>

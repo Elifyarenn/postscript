@@ -26,6 +26,7 @@ import { createVersionFromTemplate, publishAgreementVersion } from "@/services/a
 import { adminDecideApplication } from "@/services/writer-applications";
 import { approveSignedContract, rejectSignedContract, VERIFIED_MESSAGE } from "@/services/signed-contracts";
 import { prepareContributorDocuments } from "@/services/contributor-documents";
+import { removeUnlicensedFormerWriterWorks } from "@/services/unlicensed-works";
 import { createAnnouncement, publishAnnouncement } from "@/services/announcements";
 import type { AnnouncementSeverity } from "@/db/schema";
 import {
@@ -506,6 +507,31 @@ export async function prepareContributorDocumentsAction(
         `Genel sözleşme: ${summary.generalCreated} yeni · Ruhsat formu: ${summary.licenceCreated} yeni · ` +
         `İnceleme gerekiyor: ${summary.needsReview.total} · Önceden hazır: ${summary.alreadyPrepared.general + summary.alreadyPrepared.licence} · ` +
         `Atlanan kayıt: ${skipped}. E-posta gönderilmedi.`,
+    };
+  });
+}
+
+/**
+ * Removes the unlicensed works of removed writers (D-279), only those the
+ * admin was shown; the service works the list out again before removing.
+ */
+export async function removeUnlicensedFormerWriterWorksAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const ids = String(formData.get("ids") ?? "")
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean);
+
+    const result = await removeUnlicensedFormerWriterWorks({ ...user }, ids, await requestMetadata());
+
+    revalidatePath("/admin/agreements");
+    return {
+      success: `${result.removed} eser kaldırıldı (kayıt ve sürüm geçmişi saklandı) · ${result.documentsRemoved} gönderilmemiş belge silindi.`,
     };
   });
 }
