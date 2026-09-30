@@ -252,8 +252,11 @@ export default async function AdminAgreementsPage() {
                         </span>
                       </Td>
                       <Td className="text-xs">
-                        {DOCUMENT_KIND_LABELS[row.kind]}
+                        <Link href={`/admin/agreements/documents/${row.id}`} className="text-accent underline">
+                          {DOCUMENT_KIND_LABELS[row.kind]}
+                        </Link>
                         {row.kind === "general_agreement" && <span className="text-muted"> · v{row.templateVersion}</span>}
+                        <span className="block text-muted">Metni görmek için tıklayın</span>
                       </Td>
                       <Td className="text-xs">
                         {row.articleTitle ?? "—"}

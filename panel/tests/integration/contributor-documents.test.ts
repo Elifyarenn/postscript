@@ -24,6 +24,7 @@ import {
   listContributorDocuments,
   listOwnContributorDocuments,
   prepareContributorDocuments,
+  viewContributorDocument,
 } from "@/services/contributor-documents";
 import { articleHash } from "@/services/rights";
 import { ADAPTATION_SCOPE_TEXT, LICENCE_DURATION_TEXT } from "@/lib/contributor-documents";
@@ -242,6 +243,53 @@ describe("preparing", () => {
       expect((await captureError(listContributorDocuments(actor)))?.status).toBe(403);
     }
     expect(await db.select().from(contributorDocuments)).toHaveLength(0);
+  });
+});
+
+describe("the admin reading one person's document (D-278)", () => {
+  it("shows a prepared document exactly as stored", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const [licence] = await db
+      .select()
+      .from(contributorDocuments)
+      .where(eq(contributorDocuments.articleId, s.published.id));
+
+    const view = await viewContributorDocument(actorOf(s.admin), licence!.id);
+    expect(view.isPreview).toBe(false);
+    expect(view.markdown).toBe(licence!.renderedMarkdown);
+    expect(view.item.userName).toBe("Tam Kayıt");
+    expect(view.item.articleTitle).toBe("Yayımlanmış Yazı");
+  });
+
+  it("previews a document under review with its gaps marked, and saves nothing", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const before = await db.select().from(contributorDocuments);
+    const contract = before.find((row) => row.kind === "general_agreement" && row.userId === s.noBirthDate.id)!;
+    const licence = before.find((row) => row.articleId === s.accepted.id)!;
+
+    const general = await viewContributorDocument(actorOf(s.admin), contract.id);
+    expect(general.isPreview).toBe(true);
+    expect(general.markdown).toContain("**[EKSİK: Doğum tarihi kayıtlı değil]**");
+    expect(general.markdown).not.toMatch(/\{\{/);
+
+    const form = await viewContributorDocument(actorOf(s.admin), licence.id);
+    expect(form.markdown).toContain("**[EKSİK: Bu eser için yayın adı tercihi (gerçek ad / mahlas) kayıtlı değil]**");
+    expect(form.markdown).toContain("Kabul Edilmiş Yazı");
+    expect(form.markdown).not.toMatch(/\{\{/);
+
+    expect(await db.select().from(contributorDocuments)).toEqual(before);
+  });
+
+  it("is the admin's alone", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const own = (await listOwnContributorDocuments(actorOf(s.complete)))[0]!;
+    for (const actor of [actorOf(s.complete), actorOf(s.editor)]) {
+      expect((await captureError(viewContributorDocument(actor, own.id)))?.status).toBe(403);
+    }
+    expect((await captureError(viewContributorDocument(actorOf(s.admin), "not-a-uuid")))?.status).toBe(404);
   });
 });
 

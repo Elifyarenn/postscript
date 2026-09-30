@@ -21,6 +21,7 @@ import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db/client";
 import {
+  agreementVersions,
   articles,
   contributorDocuments,
   rightsGrants,
@@ -38,7 +39,8 @@ import {
   escapeForTemplate,
   fillTemplate,
   formatContractDate,
-  renderAgreement,
+  OPTIONAL,
+  previewTemplate,
 } from "@/lib/agreement/render";
 import {
   ACCEPTED_WORK_STATUSES,
@@ -105,17 +107,22 @@ async function draftGeneral(
   if (versionReason) reasons.push(versionReason);
   if (person.isBanned) reasons.push("Hesap yasaklı");
 
-  const context = await buildAgreementContext(version, {
-    ...person,
-    contributionRole: contributionRoleLabel({ role: person.role, isIllustrator: person.isIllustrator, hasWorks }),
-  });
   let rendered: { markdown: string; hash: string } | null = null;
   try {
-    rendered = renderAgreement(version.bodyMarkdown, context);
+    rendered = fillTemplate(version.bodyMarkdown, await generalValues(version, person, hasWorks), OPTIONAL);
   } catch (error) {
     reasons.push(...reasonsOf(error));
   }
   return draft(reasons, rendered);
+}
+
+/** The contract's values for one person; the draft and the preview share them. */
+async function generalValues(version: AgreementVersion, person: User, hasWorks: boolean) {
+  const context = await buildAgreementContext(version, {
+    ...person,
+    contributionRole: contributionRoleLabel({ role: person.role, isIllustrator: person.isIllustrator, hasWorks }),
+  });
+  return buildPlaceholders(context);
 }
 
 type WorkRow = typeof articles.$inferSelect;
@@ -138,9 +145,31 @@ async function draftLicence(
     reasons.push(`Eser henüz Dergi tarafından kabul edilmedi (durum: ${work.status})`);
   }
 
+  const { values, words, contentHash } = await licenceValues(version, work, author, bylineChoice, formId, now);
+  if (words === 0) reasons.push("Eser metni boş");
+
+  let rendered: { markdown: string; hash: string } | null = null;
+  try {
+    const filled = fillTemplate(readContract(LICENCE_FORM_FILE), values);
+    const hash = hashDocument(filled.markdown);
+    rendered = { markdown: filled.markdown.replace("{{form.text_hash}}", hash), hash };
+  } catch (error) {
+    reasons.push(...reasonsOf(error));
+  }
+  return { ...draft([...new Set(reasons)], rendered), contentHash };
+}
+
+/** The form's values for one work; the draft and the preview share them. */
+async function licenceValues(
+  version: AgreementVersion,
+  work: WorkRow,
+  author: User,
+  bylineChoice: "real_name" | "pen_name" | null,
+  formId: string,
+  now: Date,
+) {
   const body = work.bodyMarkdown ?? "";
   const words = wordCount(body);
-  if (words === 0) reasons.push("Eser metni boş");
   const contentHash = body.trim() ? articleHash(body) : null;
 
   // The same person and publisher values the contract uses, under the form's names
@@ -164,16 +193,7 @@ async function draftLicence(
     // Filled after the fact: the hash covers the text with this field unfilled
     "form.text_hash": "{{form.text_hash}}",
   };
-
-  let rendered: { markdown: string; hash: string } | null = null;
-  try {
-    const filled = fillTemplate(readContract(LICENCE_FORM_FILE), values);
-    const hash = hashDocument(filled.markdown);
-    rendered = { markdown: filled.markdown.replace("{{form.text_hash}}", hash), hash };
-  } catch (error) {
-    reasons.push(...reasonsOf(error));
-  }
-  return { ...draft([...new Set(reasons)], rendered), contentHash };
+  return { values, words, contentHash };
 }
 
 /**
@@ -407,6 +427,74 @@ export async function listContributorDocuments(actor: Actor): Promise<Contributo
   return documentList().orderBy(owners.displayName, contributorDocuments.kind, contributorDocuments.createdAt);
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export type ContributorDocumentView = {
+  item: ContributorDocumentItem;
+  ownerEmail: string;
+  /** The text as prepared, or for a document under review a marked preview. */
+  markdown: string | null;
+  /** True when `markdown` is a preview with its gaps marked, not the document. */
+  isPreview: boolean;
+  /** Why no text could be shown at all (the work or the version is gone). */
+  unavailable: string | null;
+};
+
+/**
+ * One document, for the admin to read (D-278). A prepared one is shown exactly
+ * as stored. One under review has no text yet, so it is drawn from today's
+ * records with every missing value marked in place of a guess; that preview is
+ * never saved and has no PDF.
+ */
+export async function viewContributorDocument(actor: Actor, id: string): Promise<ContributorDocumentView> {
+  if (!canManageAgreements(actor)) throw forbidden();
+  if (!UUID.test(id)) throw notFound("Belge bulunamadı.");
+
+  const [item] = await documentList().where(eq(contributorDocuments.id, id)).limit(1);
+  const [row] = await db.select().from(contributorDocuments).where(eq(contributorDocuments.id, id)).limit(1);
+  if (!item || !row) throw notFound("Belge bulunamadı.");
+  const [owner] = await db.select().from(users).where(eq(users.id, row.userId)).limit(1);
+  const base = { item, ownerEmail: owner!.email };
+
+  if (row.status === "prepared" && row.renderedMarkdown) {
+    return { ...base, markdown: row.renderedMarkdown, isPreview: false, unavailable: null };
+  }
+
+  const [version] = row.agreementVersionId
+    ? await db.select().from(agreementVersions).where(eq(agreementVersions.id, row.agreementVersionId)).limit(1)
+    : [];
+  if (!version) return { ...base, markdown: null, isPreview: true, unavailable: "Belgenin sözleşme sürümü bulunamadı." };
+
+  const gap = (name: string) => `**[EKSİK: ${reasonForPlaceholder(name)}]**`;
+
+  if (row.kind === "general_agreement") {
+    const [authored] = await db
+      .select({ id: articles.id })
+      .from(articles)
+      .where(and(eq(articles.authorId, owner!.id), isNull(articles.deletedAt)))
+      .limit(1);
+    const values = await generalValues(version, owner!, Boolean(authored));
+    return { ...base, markdown: previewTemplate(version.bodyMarkdown, values, OPTIONAL, gap).markdown, isPreview: true, unavailable: null };
+  }
+
+  const [work] = row.articleId ? await db.select().from(articles).where(eq(articles.id, row.articleId)).limit(1) : [];
+  if (!work) return { ...base, markdown: null, isPreview: true, unavailable: "Belgenin eseri artık kayıtlı değil." };
+  const [grant] = await db
+    .select({ bylineChoice: rightsGrants.bylineChoice })
+    .from(rightsGrants)
+    .where(and(eq(rightsGrants.articleId, work.id), eq(rightsGrants.status, "signed")))
+    .orderBy(desc(rightsGrants.signedAt))
+    .limit(1);
+  const { values } = await licenceValues(version, work, owner!, grant?.bylineChoice ?? null, row.id, row.updatedAt);
+  values["form.text_hash"] = "(belge hazır olunca hesaplanır)";
+  return {
+    ...base,
+    markdown: previewTemplate(readContract(LICENCE_FORM_FILE), values, new Set(), gap).markdown,
+    isPreview: true,
+    unavailable: null,
+  };
+}
+
 /**
  * The PDF of one prepared document, for its owner or an admin. Anyone else
  * gets "not found", the same answer a missing id gives.
@@ -416,7 +504,7 @@ export async function contributorDocumentPdf(
   id: string,
 ): Promise<{ fileName: string; body: Buffer }> {
   // A malformed id is simply not a document, never a database error
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw notFound("Belge bulunamadı.");
+  if (!UUID.test(id)) throw notFound("Belge bulunamadı.");
   const [row] = await db.select().from(contributorDocuments).where(eq(contributorDocuments.id, id)).limit(1);
   if (!row || (row.userId !== actor.id && !canManageAgreements(actor))) throw notFound("Belge bulunamadı.");
   if (row.status !== "prepared" || !row.renderedMarkdown || !row.textHash) {

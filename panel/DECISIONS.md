@@ -11390,3 +11390,18 @@ D-276'nın `needs_review` nedenlerinden üçü yönetimin verdiği metinlerle ç
 Şablon metni, ruhsat kapsamı (`LICENCE_TERMS`), imza yapısı, migration ve e-posta
 değişmedi. Önceden `needs_review` kalan belgeler "Belgeleri hazırla" yeniden
 çalıştırılınca aynı satırda yeniden denenir.
+
+## D-278 — Admin, kişiye özel hazırlanan belgenin metnini panelde okur
+
+`/admin/agreements` listesindeki her belge adı `/admin/agreements/documents/:id`
+sayfasına gider (yalnızca admin; `viewContributorDocument`, başkasına 403):
+
+- **Hazır belge:** kaydedilmiş metin olduğu gibi gösterilir (PDF'le aynı metin),
+  kişi, e-posta, eser, sürüm ve metin özetiyle.
+- **İnceleme bekleyen belge:** kaydedilmiş metni yok (D-276). Metin bugünkü
+  kayıtlardan, hazırlamayla aynı değerlerle çizilir; eksik her bilgi yerinde
+  `[EKSİK: neden]` olarak işaretlenir. Önizleme kaydedilmez, PDF'i yoktur, imzaya
+  gönderilecek bir belge değildir; gerçek hazırlama yine boşluk bırakmaz.
+
+Hazırlamanın değer üretimi (`generalValues`, `licenceValues`) önizlemeyle ortak;
+iki ayrı doldurma mantığı yok. Migration, hukuki metin, e-posta değişmedi.

@@ -108,7 +108,7 @@ export function escapeForTemplate(value: string): string {
 /* ------------------------------------------------------------------ */
 
 /** Placeholders whose value may legitimately be empty. */
-const OPTIONAL = new Set(["yazar.mahlas", "katki.mahlas"]);
+export const OPTIONAL = new Set(["yazar.mahlas", "katki.mahlas"]);
 
 /**
  * Every placeholder the template is allowed to use, and where it comes from
@@ -186,6 +186,28 @@ export function renderAgreement(
   context: AgreementContext,
 ): RenderedAgreement {
   return fillTemplate(templateMarkdown, buildPlaceholders(context), OPTIONAL);
+}
+
+/**
+ * A preview for the admin (D-278): the same fill, but a value that is missing
+ * is shown as a marked gap instead of failing. Never a document to sign — the
+ * real render above still refuses to leave a hole.
+ */
+export function previewTemplate(
+  templateMarkdown: string,
+  values: Record<string, string | null>,
+  optional: ReadonlySet<string> = new Set(),
+  gap: (name: string) => string = (name) => `[EKSİK: ${name}]`,
+): { markdown: string; missing: string[] } {
+  const missing: string[] = [];
+  const markdown = templateMarkdown.replace(/\{\{([^}]*)\}\}/g, (_match, rawName: string) => {
+    const name = rawName.trim();
+    const value = values[name];
+    if (value || (optional.has(name) && name in values)) return value ?? "";
+    if (!missing.includes(name)) missing.push(name);
+    return gap(name);
+  });
+  return { markdown, missing };
 }
 
 /**
