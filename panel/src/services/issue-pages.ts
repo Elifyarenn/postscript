@@ -752,6 +752,18 @@ export async function reorderIssuePages(
 /* Page pictures                                                       */
 /* ------------------------------------------------------------------ */
 
+/**
+ * A caller that names its own key (the design import, D-274) keeps it under
+ * the page machinery's prefix, so a key can never point at another file.
+ */
+function pageStorageKey(input: { fileName: string; storageKey?: string }): string {
+  if (input.storageKey === undefined) return buildStorageKey("issue-pages", input.fileName);
+  if (!/^issue-pages\/[a-z0-9/._-]+$/.test(input.storageKey) || input.storageKey.includes("..")) {
+    throw badRequest("Geçersiz depolama anahtarı.");
+  }
+  return input.storageKey;
+}
+
 /** What the panel takes as a designed page. GIF is not among them. */
 const PAGE_IMAGE_MIMES = ["image/png", "image/jpeg", "image/webp"];
 
@@ -786,7 +798,7 @@ export type UploadedPage = { id: string; position: number; width: number | null;
 export async function addPageImage(
   actor: Actor,
   issueId: string,
-  input: { buffer: Buffer; fileName: string; declaredMime: string; label?: string | null },
+  input: { buffer: Buffer; fileName: string; declaredMime: string; label?: string | null; storageKey?: string },
   meta: RequestMeta,
 ): Promise<UploadedPage> {
   assertLayoutRight(actor);
@@ -795,7 +807,7 @@ export async function addPageImage(
   const detected = assertPageImage(input.buffer, input.declaredMime);
   const size = imageSize(input.buffer, detected.mime);
 
-  const storageKey = buildStorageKey("issue-pages", input.fileName);
+  const storageKey = pageStorageKey(input);
   await getStorage().put({
     bucket: "media",
     key: storageKey,
@@ -855,7 +867,7 @@ export async function addPageImage(
 export async function replacePageImage(
   actor: Actor,
   pageId: string,
-  input: { buffer: Buffer; fileName: string; declaredMime: string },
+  input: { buffer: Buffer; fileName: string; declaredMime: string; storageKey?: string },
   meta: RequestMeta,
 ): Promise<{ aspectChanged: boolean }> {
   assertLayoutRight(actor);
@@ -868,7 +880,7 @@ export async function replacePageImage(
   const before =
     page.imageWidth && page.imageHeight ? { width: page.imageWidth, height: page.imageHeight } : null;
 
-  const storageKey = buildStorageKey("issue-pages", input.fileName);
+  const storageKey = pageStorageKey(input);
   await getStorage().put({ bucket: "media", key: storageKey, body: input.buffer, mime: detected.mime });
 
   const [row] = await db

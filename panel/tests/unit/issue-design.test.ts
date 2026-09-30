@@ -1,0 +1,146 @@
+/**
+ * The designed pages kept in code (D-274): the manifest's rules, and the real
+ * manifest against the real pictures that ship with the deployment.
+ */
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { describe, expect, it } from "vitest";
+import { DESIGNS, designFor } from "@/lib/issue-design";
+import {
+  designKeyOf,
+  designLabel,
+  designManifestSchema,
+  designStorageKey,
+  manifestProblems,
+  renderListSchema,
+  type DesignManifest,
+} from "@/lib/issue-design/manifest";
+import { imageSize } from "@/lib/image-size";
+import { MAX_PAGE_IMAGE_BYTES } from "@/lib/page-image";
+
+function page(key: string, extra: Partial<DesignManifest["pages"][number]> = {}): DesignManifest["pages"][number] {
+  return {
+    key,
+    source: "a.ai",
+    sourcePage: 1,
+    printedNumber: null,
+    role: "page",
+    title: key,
+    contents: null,
+    alt: "Sayfa",
+    transcript: null,
+    areas: [],
+    ...extra,
+  };
+}
+
+function manifest(pages: DesignManifest["pages"]): DesignManifest {
+  return { issueNumber: 1, folder: "test", renderWidth: 2480, trim: { x: 0, y: 0 }, pages, excluded: [] };
+}
+
+describe("labels and keys", () => {
+  it("reads the key back from the label it writes", () => {
+    expect(designKeyOf(designLabel("bilim-acilis", "Bilim & Teknoloji açılışı"))).toBe("bilim-acilis");
+  });
+
+  it("does not take a hand-written label for a design page", () => {
+    expect(designKeyOf("Geçici tasarım · Kapak")).toBeNull();
+    expect(designKeyOf("Deneme sayfası 3")).toBeNull();
+    expect(designKeyOf(null)).toBeNull();
+  });
+
+  it("derives the storage key from the content, so the same picture lands on the same object", () => {
+    const sha = "a".repeat(64);
+    expect(designStorageKey("sayi-01", "on-kapak", sha)).toBe("issue-pages/design/sayi-01/on-kapak-aaaaaaaaaaaaaaaa.webp");
+    expect(designStorageKey("sayi-01", "on-kapak", "b".repeat(64))).not.toBe(designStorageKey("sayi-01", "on-kapak", sha));
+  });
+});
+
+describe("what a manifest may not say", () => {
+  it("refuses a path instead of a file name", () => {
+    const parsed = designManifestSchema.safeParse(manifest([page("a", { source: "C:/Users/x/a.ai" })]));
+    expect(parsed.success).toBe(false);
+  });
+
+  it("refuses an area that leaves the page and a link that is not http", () => {
+    const outside = { kind: "info" as const, name: "x", rect: [0.9, 0.1, 0.2, 0.1] as [number, number, number, number], title: "t", body: "b" };
+    expect(designManifestSchema.safeParse(manifest([page("a", { areas: [outside] })])).success).toBe(false);
+    const script = { kind: "link" as const, name: "x", rect: [0, 0, 0.1, 0.1] as [number, number, number, number], url: "javascript:alert(1)" };
+    expect(designManifestSchema.safeParse(manifest([page("a", { areas: [script] })])).success).toBe(false);
+  });
+
+  it("finds a repeated key, a repeated source page and a jump to nowhere", () => {
+    const jump = { kind: "page" as const, name: "Git", rect: [0, 0, 0.1, 0.1] as [number, number, number, number], target: "yok" };
+    const problems = manifestProblems(
+      manifest([page("a", { areas: [jump] }), page("a", { sourcePage: 2 }), page("b")]),
+    );
+    expect(problems.join("\n")).toMatch(/iki kez kullanılmış/);
+    expect(problems.join("\n")).toMatch(/1\. sayfası iki kez/);
+    expect(problems.join("\n")).toMatch(/olmayan bir sayfaya/);
+  });
+
+  it("asks for a redraw when the picture came from another source page", () => {
+    const records = [
+      { key: "a", source: "a.ai", sourcePage: 2, sourceSha256: "0".repeat(64), file: "a.webp", width: 1, height: 1, bytes: 1, sha256: "0".repeat(64), quality: 90 },
+    ];
+    expect(manifestProblems(manifest([page("a")]), records).join("")).toMatch(/yeniden üretin/);
+    expect(manifestProblems(manifest([page("a"), page("b", { sourcePage: 3 })]), records).join("")).toMatch(/üretilmemiş/);
+  });
+});
+
+describe("issue 01 as shipped", () => {
+  const issue = designFor(1)!;
+  const folder = path.join(process.cwd(), "assets", "issue-design", issue.folder);
+  const renders = renderListSchema.parse(JSON.parse(readFileSync(path.join(folder, "renders.json"), "utf8")));
+
+  it("is registered once and has no problems", () => {
+    expect(DESIGNS.filter((entry) => entry.issueNumber === 1)).toHaveLength(1);
+    expect(manifestProblems(issue, renders)).toEqual([]);
+  });
+
+  it("starts with the front cover and ends with the back cover", () => {
+    expect(issue.pages[0]!.role).toBe("cover");
+    expect(issue.pages.at(-1)!.role).toBe("back_cover");
+  });
+
+  it("keeps the science section in printed order 04 → 05 → 06", () => {
+    const science = issue.pages.filter((entry) => entry.source === "POSTSCRIPT bilim.ai").map((entry) => entry.printedNumber);
+    expect(science).toEqual([4, 5, 6]);
+  });
+
+  it("never lists an excluded page as a page", () => {
+    for (const gap of issue.excluded) {
+      for (const number of gap.pages) {
+        expect(issue.pages.some((entry) => entry.source === gap.source && entry.sourcePage === number)).toBe(false);
+      }
+    }
+  });
+
+  it("accounts for every page of the twelve delivered files", () => {
+    const used = issue.pages.length;
+    const left = issue.excluded.reduce((sum, gap) => sum + gap.pages.length, 0);
+    expect(used + left).toBe(72);
+  });
+
+  it("ships every picture, the same bytes renders.json names, one shape, under the upload limit", () => {
+    const shapes = new Set<string>();
+    for (const record of renders) {
+      const file = path.join(folder, record.file);
+      expect(existsSync(file)).toBe(true);
+      const bytes = readFileSync(file);
+      expect(createHash("sha256").update(bytes).digest("hex")).toBe(record.sha256);
+      expect(bytes.length).toBeLessThanOrEqual(MAX_PAGE_IMAGE_BYTES);
+      const size = imageSize(bytes, "image/webp");
+      expect(size).toEqual({ width: record.width, height: record.height });
+      shapes.add(`${record.width}x${record.height}`);
+    }
+    // One shape, so a spread lines up and nothing jumps between pages
+    expect(shapes.size).toBe(1);
+  });
+
+  it("writes no path of the machine it was drawn on", () => {
+    const text = readFileSync(path.join(folder, "renders.json"), "utf8");
+    expect(text).not.toMatch(/[A-Za-z]:[\\/]|\/Users\/|\\\\/);
+  });
+});

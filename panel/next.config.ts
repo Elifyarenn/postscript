@@ -84,7 +84,8 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/**": ["./data/**", "./assets/fonts/**", "./drizzle/**"],
     // The preview's faces and stock photos (D-247): only the page that draws them
-    "/editor/issues/**": ["./assets/issue-preview/**"],
+    // and the designers' pages kept in code (D-274), which the import reads
+    "/editor/issues/**": ["./assets/issue-preview/**", "./assets/issue-design/**"],
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

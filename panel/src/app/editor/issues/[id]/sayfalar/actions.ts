@@ -20,6 +20,7 @@ import {
   updatePageMeta,
 } from "@/services/issue-pages";
 import { buildIssuePreview } from "@/services/issue-preview";
+import { importIssueDesign, restoreIssueDesignSnapshot } from "@/services/issue-design";
 
 /** A form field that is empty means "nothing", not an empty string. */
 function optional(formData: FormData, name: string): string | null {
@@ -196,6 +197,39 @@ export async function buildIssuePreviewAction(_state: ActionState, formData: For
     const titles = result.articles.map((article) => `“${article.title}”`).join(", ");
     return {
       success: `Önizleme hazır: ${result.added} sayfa eklendi, ${result.replaced} güncellendi, ${result.unchanged} aynı kaldı. Kullanılan taslaklar: ${titles}.`,
+    };
+  });
+}
+
+/** Imports the designers' pages kept in code into the admin-only issue (D-274). */
+export async function importIssueDesignAction(_state: ActionState, formData: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const issueId = text(formData, "issueId");
+
+    const result = await importIssueDesign({ ...user }, issueId, await requestMetadata());
+    refresh(issueId);
+    const retired = result.retired
+      ? ` Önceki ${result.retired} sayfa yedeklenip çıkarıldı; aşağıdan geri alınabilir.`
+      : "";
+    return {
+      success: `Tasarım sayfaları hazır: ${result.pages} sayfa (${result.added} eklendi, ${result.replaced} güncellendi, ${result.unchanged} aynı kaldı${result.dropped ? `, ${result.dropped} manifestten çıktığı için kaldırıldı` : ""}).${retired}`,
+    };
+  });
+}
+
+/** Puts back the pages the last design import took out (D-274). */
+export async function restoreIssueDesignAction(_state: ActionState, formData: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const issueId = text(formData, "issueId");
+
+    const result = await restoreIssueDesignSnapshot({ ...user }, issueId, await requestMetadata());
+    refresh(issueId);
+    return {
+      success: `${result.restored} önceki sayfa geri yüklendi, ${result.removed} tasarım sayfası çıkarıldı. Tasarımı yeniden almak için aktarımı tekrar çalıştırın.`,
     };
   });
 }

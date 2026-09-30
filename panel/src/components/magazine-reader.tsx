@@ -356,7 +356,7 @@ export function MagazineReader({
           <span className="reader-name">{theme ?? issueTitle}</span>
           {adminOnly ? (
             <span className="reader-flag">
-              Geçici tasarım — yayımlanmadı
+              Örnek sayı — yayımlanmadı
               <span className="reader-flag-more"> · yalnızca yöneticiler</span>
             </span>
           ) : (

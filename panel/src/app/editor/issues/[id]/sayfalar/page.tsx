@@ -8,6 +8,9 @@ import { templateOf } from "@/lib/issue-templates";
 import type { ReaderPage } from "@/lib/issue-reader";
 import { findIssue } from "@/services/issues";
 import { listIssuePages } from "@/services/issue-pages";
+import { pendingSnapshot } from "@/services/issue-design";
+import { designFor } from "@/lib/issue-design";
+import { designKeyOf } from "@/lib/issue-design/manifest";
 import { listArticles } from "@/services/articles";
 import { listMedia } from "@/services/media";
 import { listAllWriterAreasWithQuota } from "@/services/writer-areas";
@@ -16,12 +19,14 @@ import { IssuePageEditor, type EditablePage } from "./page-editor";
 import { IssuePageList, type ListedPage } from "./page-list";
 import { PageUploader } from "./page-uploader";
 import { PreviewBuilder } from "./preview-builder";
+import { DesignImport } from "./design-import";
 import { addIssuePageAction, updateIssuePageAction } from "./actions";
 
 export const metadata = { title: "Sayı sayfaları" };
 
-// Drawing the seven preview pages takes a few seconds each on the server (D-247)
-export const maxDuration = 120;
+// Drawing the seven preview pages takes a few seconds each on the server
+// (D-247); the design import stores and reads back every page (D-274)
+export const maxDuration = 300;
 
 /**
  * Preparing an issue (D-234, reshaped by D-240).
@@ -44,13 +49,17 @@ export default async function IssuePagesPage({ params }: { params: Promise<{ id:
     throw error;
   });
 
-  const [pages, csrfToken, media, articleList, areas] = await Promise.all([
+  const design = issue.adminOnly ? designFor(issue.number) : null;
+  const [pages, csrfToken, media, articleList, areas, pending] = await Promise.all([
     listIssuePages(actor, issue.id),
     readCsrfToken(),
     listMedia(actor, 200),
     listArticles(actor, { limit: 200 }),
     listAllWriterAreasWithQuota(),
+    design ? pendingSnapshot(issue.id) : null,
   ]);
+  // Once the real designs are in, the stand-in preview would only push them back
+  const hasDesignPages = pages.some((page) => designKeyOf(page.label) !== null);
 
   const listed: ListedPage[] = pages.map((page) => ({
     id: page.id,
@@ -179,7 +188,19 @@ export default async function IssuePagesPage({ params }: { params: Promise<{ id:
         <span>{pages.length} sayfa</span>
       </div>
 
-      {issue.adminOnly && (
+      {design && (
+        <Card className="mb-4">
+          <h2 className="mb-3 font-serif text-lg">Tasarım sayfaları (koddan)</h2>
+          <DesignImport
+            issueId={issue.id}
+            csrfToken={csrfToken ?? ""}
+            pageCount={design.pages.length}
+            pending={pending ? { count: pending.count, at: pending.at.toISOString() } : null}
+          />
+        </Card>
+      )}
+
+      {issue.adminOnly && !hasDesignPages && (
         <Card className="mb-4">
           <h2 className="mb-3 font-serif text-lg">Geçici önizleme</h2>
           <PreviewBuilder issueId={issue.id} csrfToken={csrfToken ?? ""} />

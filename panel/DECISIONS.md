@@ -11058,3 +11058,133 @@ e-posta (sayı etiketi, not, bağlantı), yeniden gönderim e-posta üretmez,
 kabul ikinci e-posta; ret notuyla gider, başka yazara gitmez; notsuz ret
 (400) ve geç kalan sekme (409) e-posta göndermez. `mail-templates` üç örnekle
 (kabul, değişiklik, ret) HTML ve kaçışlamayı sınar. Migration yok.
+
+---
+
+## D-274 — Sayı 01'in tasarım sayfaları koddan: Illustrator dosyalarından örnek sayıya
+
+**İstek (ürün sahibi):** Tuanna'nın gönderdiği 12 `.ai` dosyası, yükleme
+paneliyle uğraşmadan, kod üzerinden örnek sayıya (yalnızca iki admin) bağlansın;
+sıra, kaynak ve etkileşimler tek bir düzenlenebilir dosyadan yönetilsin; tekrar
+çalıştırma kopya biriktirmesin; eski önizleme geri alınabilir kalsın; sayı
+yayımlanmasın.
+
+### Dosyalarda ne var
+
+12 dosya × 6 sayfa = 72 sayfa. Her sayfa küçük önizlemeyle ve piksel
+karşılaştırmasıyla incelendi (`scratchpad`, depoya girmedi):
+
+- **Kullanılan 15 sayfa:** ön ve arka kapak (`POSTSCRIPT 01.ai` 2 ve 1), Bilim
+  & Teknoloji açılışı (04) ile "Bir hap ne zaman fazla?" yazısının iki sayfası
+  (05, 06), diğer on dosyanın her birinden bölüm açılışı (5. sayfa).
+- **Dışarıda bırakılan 57 sayfa:** `01.ai`'nin 4 tamamen beyaz sayfası; Bilim
+  dosyasının 3 boş şablonu (07/08/09); diğer on dosyanın her birinde 5 sayfa.
+  Bu 50 sayfa, üzerlerinde "BİLİM & TEKNOLOJİ" yazsa da, benzer göründükleri
+  için değil, Bilim dosyasındaki boş şablonla **0,5 ölçekte piksel piksel aynı**
+  oldukları ölçülerek elendi. Liste manifestin `excluded` alanında.
+
+### Sıra — ne kesin, ne değil
+
+- Bilim bölümünde basılı numara: 04 → 05 → 06. Dosyanın kendi sırası 06, boş
+  şablonlar, 04, 05'ti; basılı numara kazandı.
+- Bütün bölüm açılışlarında basılı numara **04** (tek şablondan çoğaltılmışlar)
+  ve içindekiler sayfası teslim edilmedi: **bölümler arası sıra belli değil.**
+  Önizleme sırası olarak derginin alan listesi (`DEFAULT_WRITER_AREAS`)
+  kullanıldı; dosya adlarından editoryal sıra çıkarılmadı. Manifestte
+  değiştirilebilir.
+- İki kapak `01.ai`'de sarmal kapak düzeninde (arka solda, ön sağda); ön kapak
+  başta, arka kapak sonda.
+
+### Dönüşüm
+
+`pnpm render-issue-design -- --source <klasör>`: `.ai`'nin içindeki PDF uyumlu
+kopya MuPDF (WASM) ile 2480 px genişlikte çizilir, `sharp` ile WebP (q92)
+yapılır. Kaynak dosyalar yalnızca okunur. Çıktı `assets/issue-design/sayi-01/`,
+kaynak kaydı `renders.json` (dosya adı, sayfa, kaynak ve çıktı sha256'sı —
+bilgisayar yolu yok, testi var). İkisi de `devDependencies`: `sharp` zaten
+Next'in kurduğu sürüm (0.35.4), ikinci bir görsel kütüphanesi değil; PDF
+çizebilen bir araç projede yoktu (`pdf-lib` çizmez).
+
+**Görsel kontroller:** Türkçe karakterler (İ, Ş, Ğ, Ç, â) ve küçük punto
+metin %100 kırpıntılarda net; renkler dosyanın içindeki Illustrator
+küçük resmiyle aynı tonda. MuPDF'in iki uyarısı incelendi: arka kapaktaki
+cmap'siz yazı tipi doğru çiziliyor; Pop Culture'daki kesik sıkıştırılmış akış
+lambanın sarı ışık görseline ait ve görsel tam açılıyor. **Kenar kılları:**
+altı açılışta koyu zemin kutusu çalışma yüzeyinin kenarına 2–11 px ulaşmıyor
+(beyaz şerit; ön kapakta siyah çizgi). Çift sayfada cilt payında beyaz çizgi
+olarak görünürdü. Her sayfadan eşit 12 px (yan) / 17 px (üst-alt) kesildi
+(`trim`, oran korunuyor, içerik kesilmiyor); kesimden sonra her kenar içerisiyle
+aynı ölçüldü. Son boyut 2456×3474, 15 sayfa toplam 6,3 MB, en büyüğü 0,96 MB.
+
+**Tasarımda görülen, dokunulmayan:** kapakta "OBSESSSION" (üç S); Fashion
+açılışında "LIFESTYLE" yazısının bir kısmı elbisenin arkasında kalıyor.
+
+### Aktarım
+
+`importIssueDesign` (`src/services/issue-design.ts`), panelde yalnızca
+`admin_only` sayıda görünen "Tasarım sayfalarını içe aktar / güncelle"
+düğmesiyle **üretimde** çalışır; betik değil, çünkü yerel `.env` ile üretime
+karşı çalışan betik kaydı üretime, dosyayı diske yazar (D-247, D-257).
+Görseller dağıtımla gelir (`outputFileTracingIncludes`, yalnızca
+`/editor/issues/**`). Sıradan sayfa yolundan geçer (`addPageImage`,
+`replacePageImage`, `updatePageMeta`, `saveHotspots`, `reorderIssuePages`);
+bu iki fonksiyon artık isteğe bağlı bir depolama anahtarı alıyor, yalnızca
+`issue-pages/` altında.
+
+1. Her görsel **içerikten türeyen** anahtara yazılır
+   (`issue-pages/design/sayi-01/<anahtar>-<sha16>.webp`) ve geri okunup sha256
+   karşılaştırılır. Aynı görsel aynı nesnedir: tekrar çalıştırma yükleme
+   yapmaz, satır eklemez. Değişen görsel yeni anahtar alır, eskisi bırakılır.
+2. Etiket (`Tasarım · <anahtar> · <başlık>`), alternatif metin, ekran okuyucu
+   metni, içindekiler başlığı, kapak/arka kapak türü ve alanlar manifestten.
+3. **Ancak bundan sonra** sayının diğer sayfaları (geçici önizleme, deneme ve
+   şablon sayfaları) tam kayıtlarıyla bir JSON yedeğe yazılır
+   (`issue-pages/snapshots/<sayı>/<id>.json`, özel bucket), geri okunur, sonra
+   çıkarılır; görselleri silinmez. `audit_log`'a yedeğin kimliği yazılır
+   (`storageKey` alanı denetim kaydında gizlendiği için anahtar değil kimlik).
+4. Sayfalar manifestin sırasını alır. Manifestten çıkan tasarım sayfası
+   sayıdan da çıkar.
+
+**Geri alma:** "Önceki sayfalara geri dön" (`restoreIssueDesignSnapshot`) eski
+sayfaları **kendi kimlikleriyle**, görselleri ve alanlarıyla geri koyar,
+tasarım sayfalarını çıkarır; tasarım koddan yeniden aktarılabilir. Tasarım
+sayfaları varken D-247'nin "Geçici önizlemeyi kur" düğmesi gösterilmez.
+
+Neden yeni kolon (`retired_at`) değil: üretim migration'ı gerektirirdi; ortak
+ağaçta başka oturumların yazılmamış migration'ları varken (D-268 beklemede)
+defteri karıştırma riski, yedek+geri yükleme ile aynı sonuca şema değişikliği
+olmadan varmaktan büyüktü. Migration yok.
+
+### Etkileşimler
+
+Hiçbiri eklenmedi. Kapaktaki iki başlık ("Takıntının Trajedisi", "Takıntılı
+Bilim İnsanları") teslim edilen sayfalarda yok; açılışlarda bağlantı ya da
+test işareti yok. Eski deneme alanları ve örnek test yeni sayfalara
+taşınmadı (test sayıda duruyor ama hiçbir alan açmadığı için okura gitmiyor,
+D-240). Manifest dört türü de destekliyor; hedef sayfa **anahtarla**, test
+**başlığıyla** bulunur, bulunamazsa aktarım hiçbir şey yazmadan reddeder.
+
+### Erişim
+
+D-240'ın kapısı değişmedi: okuyucu, sayfa görselleri ve testler `admin_only`
+sayı için yalnızca admin; editör, yazar, üye ve oturumsuz için 404 (testi var).
+Aktarım ve geri alma admin ister, `admin_only` olmayan sayıyı reddeder. Sayının
+durumuna dokunulmaz (testi var). Okuyucu çubuğundaki ibare "Geçici tasarım" →
+"Örnek sayı — yayımlanmadı · yalnızca yöneticiler".
+
+**KVKK:** Yeni kişisel veri, amaç, aktarım veya saklama süresi yok; sayfalar
+derginin kendi eseri. Aydınlatma metni değişmedi (D-084 gereği bakıldı).
+
+**Doğrulama:** 14 birim testi (etiket↔anahtar, içerikten anahtar, yol/taşan
+alan/`javascript:` reddi, tekrar eden anahtar ve kaynak, hedefsiz geçiş,
+yeniden üretim uyarısı; gönderilen manifest: sorunsuz, kapak başta arka kapak
+sonda, bilim 04→05→06, 72 sayfanın hepsi hesapta, her görsel kayıttaki
+baytlar, tek boyut, 4 MB altı, yol yok) ve 11 entegrasyon testi (editör 403,
+başka sayı 400, bozuk görselde hiçbir şey yazılmaz, olmayan test reddi; ilk
+aktarım sırası, türleri, içindekileri, eski sayfaların yedeklenip görsellerinin
+kalması; rol bazında 404 ve yayımlanmama; alanlar; üç kez çalıştırmada satır ve
+dosya sayısının sabit kalması; değişen görselin yenisiyle değişip eskisinin
+bırakılması; yeni sıra ve manifestten çıkan sayfa; geri alma: kimlikler,
+görsel, alan, çift geri alma reddi, sonra yeniden aktarım). Kapı: typecheck,
+lint, 1092 test, build (15 görsel ve `renders.json` sayfa fonksiyonuna
+paketlendi, `mupdf` paketlenmedi).

@@ -23,6 +23,7 @@
     "purge-unverified": "tsx --tsconfig scripts/tsconfig.json scripts/purge-unverified.ts",
     "seed-issue-pages": "tsx --tsconfig scripts/tsconfig.json scripts/seed-issue-pages.ts",
     "sample-issue-pages": "tsx --tsconfig scripts/tsconfig.json scripts/sample-issue-pages.ts",
+    "render-issue-design": "tsx --tsconfig scripts/tsconfig.json scripts/render-issue-design.ts",
     "redraw-team-avatars": "tsx --tsconfig scripts/tsconfig.json scripts/redraw-team-avatars.ts",
     "prune-community": "tsx --tsconfig scripts/tsconfig.json scripts/prune-community.ts",
     "housekeeping": "tsx --tsconfig scripts/tsconfig.json scripts/housekeeping.ts"
@@ -70,7 +71,9 @@
     "esbuild": "^0.28.2",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.4",
+    "mupdf": "^1.28.1",
     "postcss": "^8.5.28",
+    "sharp": "0.35.4",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.13",
     "typescript": "^6.0.3",
