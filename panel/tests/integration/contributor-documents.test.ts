@@ -152,7 +152,7 @@ describe("preparing", () => {
     expect(of(s.noBirthDate).renderedMarkdown).toBeNull();
   });
 
-  it("fills the fixed period and adaptation limit, and does not guess a byline or an unaccepted work", async () => {
+  it("fills the fixed period, the adaptation limit and the byline, but not an unaccepted work", async () => {
     const s = await scenario();
     const summary = await prepareContributorDocuments(actorOf(s.admin), noMeta);
     const rows = await db.select().from(contributorDocuments).where(eq(contributorDocuments.kind, "work_licence"));
@@ -170,15 +170,15 @@ describe("preparing", () => {
     expect(ready.renderedMarkdown).toContain("Mahlasıyla (Mahlas)");
     expect(ready.renderedMarkdown).not.toMatch(/\{\{/);
 
-    // The others have no choice on record, and none is guessed
+    // No choice on record: the author's name is used, never left as a gap (D-284)
+    for (const row of rows) {
+      expect(row.reviewReasons).not.toContain("Bu eser için yayın adı tercihi (gerçek ad / mahlas) kayıtlı değil");
+    }
     expect(of(s.accepted.id).status).toBe("needs_review");
-    expect(of(s.accepted.id).reviewReasons).toContain("Bu eser için yayın adı tercihi (gerçek ad / mahlas) kayıtlı değil");
-    expect(of(s.accepted.id).reviewReasons).toContain("Doğum tarihi kayıtlı değil");
-    expect(of(s.draft.id).reviewReasons).toContain("Bu eser için yayın adı tercihi (gerçek ad / mahlas) kayıtlı değil");
-    expect(of(s.draft.id).reviewReasons).toContain("Eser henüz Dergi tarafından kabul edilmedi (durum: draft)");
+    expect(of(s.accepted.id).reviewReasons).toEqual(["Doğum tarihi kayıtlı değil"]);
+    expect(of(s.draft.id).reviewReasons).toEqual(["Eser henüz Dergi tarafından kabul edilmedi (durum: draft)"]);
 
     expect(summary.needsReview.total).toBe(3);
-    expect(summary.needsReview.reasons["Bu eser için yayın adı tercihi (gerçek ad / mahlas) kayıtlı değil"]).toBe(2);
   });
 
   it("sends nothing and changes no work, author or approval", async () => {
@@ -211,7 +211,8 @@ describe("preparing", () => {
 
     await db.update(users).set({ birthDate: "1990-01-01" }).where(eq(users.id, s.noBirthDate.id));
     const fixed = await prepareContributorDocuments(actorOf(s.admin), noMeta);
-    expect(fixed.resolved).toBe(1);
+    // The contract and the licence form of the accepted work, both waiting on the birth date
+    expect(fixed.resolved).toBe(2);
     const rows = await db.select().from(contributorDocuments);
     expect(rows).toHaveLength(first.length);
     const contract = rows.find((row) => row.kind === "general_agreement" && row.userId === s.noBirthDate.id)!;
@@ -276,7 +277,8 @@ describe("the admin reading one person's document (D-278)", () => {
     expect(general.markdown).not.toMatch(/\{\{/);
 
     const form = await viewContributorDocument(actorOf(s.admin), licence.id);
-    expect(form.markdown).toContain("**[EKSİK: Bu eser için yayın adı tercihi (gerçek ad / mahlas) kayıtlı değil]**");
+    expect(form.markdown).toContain("**[EKSİK: Doğum tarihi kayıtlı değil]**");
+    expect(form.markdown).toContain("Gerçek adıyla (");
     expect(form.markdown).toContain("Kabul Edilmiş Yazı");
     expect(form.markdown).not.toMatch(/\{\{/);
 

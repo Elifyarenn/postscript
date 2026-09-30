@@ -103,7 +103,8 @@ export const ADAPTATION_SCOPE_TEXT =
  * The form's `form.*` values. The ones the records cannot supply come back
  * null, and the render then names them as the reason for review. The period
  * and the adaptation limit are the magazine's fixed texts (D-277); the byline
- * is known only when the author chose it for this work, and is never guessed.
+ * is the author's own choice for the work, or their name when there is none
+ * (D-284).
  */
 export function licenceFormValues(input: {
   terms: LicenceTerms;
@@ -112,11 +113,12 @@ export function licenceFormValues(input: {
   penName: string | null;
 }): Record<string, string | null> {
   const { terms } = input;
+  // Without a usable choice the form names the author by name (D-284)
   const byline =
-    input.bylineChoice === "real_name"
-      ? `Gerçek adıyla (${input.displayName})`
-      : input.bylineChoice === "pen_name" && input.penName
-        ? `Mahlasıyla (${input.penName})`
+    input.bylineChoice === "pen_name" && input.penName
+      ? `Mahlasıyla (${input.penName})`
+      : input.displayName.trim()
+        ? `Gerçek adıyla (${input.displayName})`
         : null;
 
   return {

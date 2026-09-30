@@ -129,17 +129,17 @@ describe("licenceFormValues", () => {
     expect(licenceFormValues({ terms: { ...terms, rightAdaptation: false }, bylineChoice: null, displayName: "Ad Soyad", penName: null })["form.adaptation_scope"]).toBe("—");
   });
 
-  it("leaves an unchosen byline unfilled", () => {
-    const values = licenceFormValues({ terms, bylineChoice: null, displayName: "Ad Soyad", penName: null });
-    expect(values["form.byline_label"]).toBeNull();
+  it("names the author by name when no byline was chosen (D-284)", () => {
+    const values = licenceFormValues({ terms, bylineChoice: null, displayName: "Ad Soyad", penName: "Mahlas" });
+    expect(values["form.byline_label"]).toBe("Gerçek adıyla (Ad Soyad)");
     expect(
       licenceFormValues({ terms, bylineChoice: "real_name", displayName: "Ad Soyad", penName: "Mahlas" })["form.byline_label"],
     ).toBe("Gerçek adıyla (Ad Soyad)");
   });
 
-  it("does not print a pen name that does not exist", () => {
+  it("does not print a pen name that does not exist; the name stands in", () => {
     const values = licenceFormValues({ terms, bylineChoice: "pen_name", displayName: "Ad Soyad", penName: null });
-    expect(values["form.byline_label"]).toBeNull();
+    expect(values["form.byline_label"]).toBe("Gerçek adıyla (Ad Soyad)");
   });
 });
 

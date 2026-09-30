@@ -11480,3 +11480,12 @@ değişir; sürüm numarası, yayın tarihi ve güncel olması aynı kalır.
   beri zaten geçerli sayılmıyordu.
 - Sürüm ilkesine ("metin değişikliği yeni sürüm") bilinçli bir istisna; ürün
   sahibinin kararı, imza olmadığı için kimsenin imzaladığı metin değişmiyor.
+
+## D-284 — Yayın adı tercihi yoksa ruhsat formu kişinin adıyla doldurulur
+
+Ürün sahibi: tercih olmayan eserde formda boşluk bırakılmasın. Eser için imzalı
+bir tercih yoksa ya da "mahlas" seçilmiş ama hesapta mahlas yoksa
+`form.byline_label` "Gerçek adıyla (Ad Soyad)" olur; belge bu yüzden incelemeye
+düşmez. Mahlasıyla yayın yalnızca yazarın o eser için mahlası seçtiği ve mahlası
+kayıtlı olduğu durumda yazılır. Sitede gösterilen yazar adı (`publicByline`)
+değişmedi; formdaki adla sitedeki adın ayrışabileceği ürün sahibine bildirildi.
