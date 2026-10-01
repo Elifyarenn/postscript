@@ -161,8 +161,8 @@ function segmentCondition(segment: UserSegment): SQL | undefined {
     // everyone marked — a writer who also draws included
     case "illustrators":
       return eq(users.isIllustrator, true);
-    case "assistants":
-      return eq(users.isAssistant, true);
+    case "authorized":
+      return eq(users.isAuthorized, true);
     // A çizer with no role is still staff, not a reader: they have their own
     // list and are kept out of this one (D-244)
     case "readers":
@@ -293,8 +293,7 @@ export async function listUsers(
       createdAt: users.createdAt,
       isMainEditor: users.isMainEditor,
       isIllustrator: users.isIllustrator,
-      isLegalAdvisor: users.isLegalAdvisor,
-      isAssistant: users.isAssistant,
+      isAuthorized: users.isAuthorized,
       totpEnabledAt: users.totpEnabledAt,
       kvkkConsentAt: users.kvkkConsentAt,
       kvkkConsentVersion: users.kvkkConsentVersion,
@@ -588,77 +587,36 @@ export async function setIllustrator(
 }
 
 /**
- * The legal adviser mark (D-238). Same shape as the illustrator mark: it is not
- * a role, so `role` and every panel permission stay untouched. It records the
- * duty; nothing else.
+ * The "Yetkili" mark (D-295), which replaced the legal adviser and assistant
+ * marks. Same shape as the illustrator mark: it is not a role, so `role` and
+ * every panel permission stay untouched. It records the duty and shows a badge.
  */
-export async function setLegalAdvisor(
+export async function setAuthorized(
   actor: Actor,
   targetUserId: string,
-  isLegalAdvisor: boolean,
+  isAuthorized: boolean,
   meta: RequestMeta,
 ): Promise<User> {
-  if (!canManageUsers(actor)) throw forbidden("Hukuk danışmanı işareti yalnızca admin yetkisidir.");
+  if (!canManageUsers(actor)) throw forbidden("Yetkili işareti yalnızca admin yetkisidir.");
 
   const target = await findUserById(targetUserId);
-  if (target.isLegalAdvisor === isLegalAdvisor) {
-    throw conflict(
-      isLegalAdvisor
-        ? "Kullanıcı zaten hukuk danışmanı."
-        : "Kullanıcı zaten hukuk danışmanı değil.",
-    );
+  if (target.isAuthorized === isAuthorized) {
+    throw conflict(isAuthorized ? "Kullanıcı zaten yetkili." : "Kullanıcı zaten yetkili değil.");
   }
 
   const [updated] = await db
     .update(users)
-    .set({ isLegalAdvisor, updatedAt: new Date() })
+    .set({ isAuthorized, updatedAt: new Date() })
     .where(eq(users.id, target.id))
     .returning();
 
   await writeAudit({
     actorId: actor.id,
-    action: "user.legal_advisor_changed",
+    action: "user.authorized_changed",
     entityType: "users",
     entityId: target.id,
-    before: { isLegalAdvisor: target.isLegalAdvisor },
-    after: { isLegalAdvisor },
-    ip: meta.ip,
-  });
-
-  return updated!;
-}
-
-/**
- * The assistant mark (D-239). The third member of the same family as the
- * illustrator and legal adviser marks: not a role, so `role` and every panel
- * permission stay untouched. It records the duty and shows a badge.
- */
-export async function setAssistant(
-  actor: Actor,
-  targetUserId: string,
-  isAssistant: boolean,
-  meta: RequestMeta,
-): Promise<User> {
-  if (!canManageUsers(actor)) throw forbidden("Asistan işareti yalnızca admin yetkisidir.");
-
-  const target = await findUserById(targetUserId);
-  if (target.isAssistant === isAssistant) {
-    throw conflict(isAssistant ? "Kullanıcı zaten asistan." : "Kullanıcı zaten asistan değil.");
-  }
-
-  const [updated] = await db
-    .update(users)
-    .set({ isAssistant, updatedAt: new Date() })
-    .where(eq(users.id, target.id))
-    .returning();
-
-  await writeAudit({
-    actorId: actor.id,
-    action: "user.assistant_changed",
-    entityType: "users",
-    entityId: target.id,
-    before: { isAssistant: target.isAssistant },
-    after: { isAssistant },
+    before: { isAuthorized: target.isAuthorized },
+    after: { isAuthorized },
     ip: meta.ip,
   });
 

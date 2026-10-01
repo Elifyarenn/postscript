@@ -11631,3 +11631,19 @@ işin içeriği zaten silindiği için "içerik silindi" yazar. Migration yok.
   `suggestCommunitiesAction`); oturum ve görünürlük kuralları serviste.
   Migration yok. KVKK: yeni veri kategorisi yok (gönderi metni ve bildirim
   zaten metinde).
+
+## D-295 — Hukuk danışmanı ve asistan işaretleri kalktı; yerine "Yetkili" işareti
+
+Ürün sahibi: hukuk danışmanı (D-238) ve asistan (D-239) görev işaretleri
+kaldırılsın, "Yetkili" etiketi gelsin; yeni etiket boş başlasın (eski işaretli
+hesaplara otomatik verilmez).
+
+- `users.is_authorized` (migration 0056, yalnızca ekleme). Çizer gibi rol
+  değildir; panel ve içerik yetkisi vermez. Admin kullanıcı sayfasında
+  "Yetkili" kartı (`setAuthorized`, `user.authorized_changed` denetim kaydı),
+  "Yetkililer" listesi (`/admin/users/yetkililer`, eski Asistanlar listesinin
+  yerinde), tabloda "Yetkili" sütunu, ekip iletişim ve avatar kurucusu
+  (`canCreateTeamAvatar`) yetkiliyi ekipten sayar; rozet "Yetkili".
+- Eski `is_legal_advisor` ve `is_assistant` sütunları veri kaybı olmasın diye
+  silinmedi ama hiçbir kod onları okumaz: eski işaretli hesap artık ekipten
+  sayılmaz ve rozet taşımaz. KVKK metni buna göre güncellendi.

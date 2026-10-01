@@ -386,6 +386,13 @@
       "when": 1790853863746,
       "tag": "0055_smart_puppet_master",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1790858969118,
+      "tag": "0056_special_wolfpack",
+      "breakpoints": true
     }
   ]
 }

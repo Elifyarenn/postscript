@@ -18,8 +18,7 @@ import {
   setBirthDateAsAdmin,
   setEditorStatus,
   setIllustrator,
-  setAssistant,
-  setLegalAdvisor,
+  setAuthorized,
   setWriterStatus,
 } from "@/services/users";
 import { createVersionFromTemplate, publishAgreementVersion, replaceVersionTextWithTemplate } from "@/services/agreements";
@@ -180,7 +179,7 @@ export async function setIllustratorAction(
   });
 }
 
-export async function setLegalAdvisorAction(
+export async function setAuthorizedAction(
   _state: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -190,28 +189,11 @@ export async function setLegalAdvisorAction(
     const meta = await requestMetadata();
 
     const targetId = text(formData, "userId");
-    await setLegalAdvisor({ ...user }, targetId, text(formData, "legalAdvisor") === "evet", meta);
+    await setAuthorized({ ...user }, targetId, text(formData, "authorized") === "evet", meta);
 
     revalidatePath(`/admin/users/${targetId}`);
-    return { success: "Hukuk danışmanı işareti güncellendi." };
-  });
-}
-
-export async function setAssistantAction(
-  _state: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  return runAction(async () => {
-    await assertCsrfFromForm(formData);
-    const { user } = await requireRole("admin");
-    const meta = await requestMetadata();
-
-    const targetId = text(formData, "userId");
-    await setAssistant({ ...user }, targetId, text(formData, "assistant") === "evet", meta);
-
-    revalidatePath(`/admin/users/${targetId}`);
-    revalidatePath("/admin/users/assistants");
-    return { success: "Asistan işareti güncellendi." };
+    revalidatePath("/admin/users/yetkililer");
+    return { success: "Yetkili işareti güncellendi." };
   });
 }
 

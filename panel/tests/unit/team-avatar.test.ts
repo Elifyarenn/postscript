@@ -475,9 +475,8 @@ describe("team avatar permissions", () => {
 
   it("opens the builder to every duty mark, not just the illustrator one", () => {
     // A reader carrying any single mark gets in; no mark stays out
-    expect(canCreateTeamAvatar(actor(), { isLegalAdvisor: true })).toBe(true);
-    expect(canCreateTeamAvatar(actor(), { isAssistant: true })).toBe(true);
-    expect(canCreateTeamAvatar(actor(), { isIllustrator: false, isAssistant: false })).toBe(false);
+    expect(canCreateTeamAvatar(actor(), { isAuthorized: true })).toBe(true);
+    expect(canCreateTeamAvatar(actor(), { isIllustrator: false, isAuthorized: false })).toBe(false);
     expect(canCreateTeamAvatar(actor())).toBe(false);
   });
 
@@ -489,8 +488,8 @@ describe("team avatar permissions", () => {
   });
 
   it("closes it to a banned or unverified marked account too", () => {
-    expect(canCreateTeamAvatar(actor({ isBanned: true }), { isLegalAdvisor: true })).toBe(false);
-    expect(canCreateTeamAvatar(actor({ emailVerifiedAt: null }), { isAssistant: true })).toBe(
+    expect(canCreateTeamAvatar(actor({ isBanned: true }), { isAuthorized: true })).toBe(false);
+    expect(canCreateTeamAvatar(actor({ emailVerifiedAt: null }), { isAuthorized: true })).toBe(
       false,
     );
   });

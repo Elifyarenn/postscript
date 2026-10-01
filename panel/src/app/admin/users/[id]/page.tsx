@@ -42,8 +42,7 @@ import {
   setEditorStatusAction,
   setHybridWriterRoleAction,
   setIllustratorAction,
-  setAssistantAction,
-  setLegalAdvisorAction,
+  setAuthorizedAction,
   setWriterAreasAction,
   setWriterStatusAction,
 } from "../../actions";
@@ -289,66 +288,23 @@ export default async function AdminUserDetailPage({
         </Card>
 
         <Card>
-          <h2 className="mb-1 font-serif text-lg">Hukuk danışmanı</h2>
+          <h2 className="mb-1 font-serif text-lg">Yetkili</h2>
           <p className="mb-4 text-sm text-muted">
-            Derginin hukuk danışmanını işaretler. Çizer işareti gibi ayrı bir rol
-            değildir: hesabın rolü değişmez, hiçbir panele giriş vermez ve içerik
-            üzerinde yetki tanımaz. Tek etkisi, işaretli hesabın bu etiketi
-            taşımasıdır. Kayıtlı her üye gibi topluluğu da kullanabilir; bunun için işaret gerekmez.
+            Dergi adına yetkili hesabı işaretler. Çizer işareti gibi ayrı bir rol değildir:
+            hesabın rolü değişmez, hiçbir panele giriş vermez ve içerik üzerinde yetki
+            tanımaz. İşaretli hesap Yetkililer listesinde ve ekipte görünür.
           </p>
           <PanelForm
-            action={setLegalAdvisorAction}
+            action={setAuthorizedAction}
             csrfToken={csrfToken}
-            submitLabel={
-              target.isLegalAdvisor
-                ? "Hukuk danışmanı işaretini kaldır"
-                : "Hukuk danışmanı olarak işaretle"
-            }
+            submitLabel={target.isAuthorized ? "Yetkili işaretini kaldır" : "Yetkili olarak işaretle"}
             submitVariant="secondary"
           >
             <>
               <input type="hidden" name="userId" value={target.id} />
-              <input
-                type="hidden"
-                name="legalAdvisor"
-                value={target.isLegalAdvisor ? "hayir" : "evet"}
-              />
+              <input type="hidden" name="authorized" value={target.isAuthorized ? "hayir" : "evet"} />
               <p className="text-sm">
-                Şu an:{" "}
-                {target.isLegalAdvisor
-                  ? "Hukuk danışmanı olarak işaretli."
-                  : "Hukuk danışmanı değil."}
-              </p>
-            </>
-          </PanelForm>
-        </Card>
-
-        <Card>
-          <h2 className="mb-1 font-serif text-lg">Asistan</h2>
-          <p className="mb-4 text-sm text-muted">
-            Dergiye yardım eden hesabı işaretler. Çizer ve hukuk danışmanı işaretleri
-            gibi ayrı bir rol değildir: hesabın rolü değişmez, hiçbir panele giriş
-            vermez ve içerik üzerinde yetki tanımaz. İşaretli hesap Asistanlar
-            listesinde görünür. Kayıtlı her
-            üye gibi topluluğu da kullanabilir; bunun için işaret gerekmez.
-          </p>
-          <PanelForm
-            action={setAssistantAction}
-            csrfToken={csrfToken}
-            submitLabel={
-              target.isAssistant ? "Asistan işaretini kaldır" : "Asistan olarak işaretle"
-            }
-            submitVariant="secondary"
-          >
-            <>
-              <input type="hidden" name="userId" value={target.id} />
-              <input
-                type="hidden"
-                name="assistant"
-                value={target.isAssistant ? "hayir" : "evet"}
-              />
-              <p className="text-sm">
-                Şu an: {target.isAssistant ? "Asistan olarak işaretli." : "Asistan değil."}
+                Şu an: {target.isAuthorized ? "Yetkili olarak işaretli." : "Yetkili değil."}
               </p>
             </>
           </PanelForm>

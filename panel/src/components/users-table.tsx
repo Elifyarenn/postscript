@@ -34,8 +34,7 @@ type ColumnId =
   | "kvkk"
   | "application"
   | "illustrator"
-  | "legalAdvisor"
-  | "assistant";
+  | "authorized";
 
 type Column = { label: string; className?: string; cell: (row: UserListRow) => ReactNode };
 
@@ -173,15 +172,10 @@ const COLUMNS: Record<ColumnId, Column> = {
     className: "text-xs whitespace-nowrap",
     cell: (row) => (row.isIllustrator ? <StatusBadge status="illustrator" /> : "—"),
   },
-  legalAdvisor: {
-    label: "Hukuk danışmanı",
+  authorized: {
+    label: "Yetkili",
     className: "text-xs whitespace-nowrap",
-    cell: (row) => (row.isLegalAdvisor ? <StatusBadge status="legal_advisor" /> : "—"),
-  },
-  assistant: {
-    label: "Asistan",
-    className: "text-xs whitespace-nowrap",
-    cell: (row) => (row.isAssistant ? <StatusBadge status="assistant" /> : "—"),
+    cell: (row) => (row.isAuthorized ? <StatusBadge status="authorized" /> : "—"),
   },
   application: {
     label: "Yazar başvurusu",
@@ -198,8 +192,7 @@ const SEGMENT_COLUMNS: Record<UserSegment, { available: ColumnId[]; defaults: Co
       "email",
       "role",
       "illustrator",
-      "legalAdvisor",
-      "assistant",
+      "authorized",
       "status",
       "areas",
       "birthDate",
@@ -220,7 +213,7 @@ const SEGMENT_COLUMNS: Record<UserSegment, { available: ColumnId[]; defaults: Co
     available: ["name", "email", "role", "status", "areas", "createdAt"],
     defaults: ["name", "email", "role", "createdAt"],
   },
-  assistants: {
+  authorized: {
     available: ["name", "email", "role", "status", "createdAt"],
     defaults: ["name", "email", "role", "createdAt"],
   },
@@ -233,7 +226,7 @@ const SEGMENT_COLUMNS: Record<UserSegment, { available: ColumnId[]; defaults: Co
       "birthDate",
       "kvkk",
       "application",
-      "legalAdvisor",
+      "authorized",
       "status",
       "createdAt",
     ],

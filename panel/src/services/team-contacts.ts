@@ -27,8 +27,7 @@ export type TeamContact = {
   writerStatus: string | null;
   isMainEditor: boolean;
   isIllustrator: boolean;
-  isLegalAdvisor: boolean;
-  isAssistant: boolean;
+  isAuthorized: boolean;
   phone: string | null;
 };
 
@@ -43,8 +42,7 @@ export async function listTeamContacts(
   const team = or(
     inArray(users.role, ["writer", "editor", "admin"]),
     eq(users.isIllustrator, true),
-    eq(users.isLegalAdvisor, true),
-    eq(users.isAssistant, true),
+    eq(users.isAuthorized, true),
   );
   const conditions: (SQL | undefined)[] = [isNull(users.deletedAt), eq(users.isBanned, false), team];
 
@@ -65,8 +63,7 @@ export async function listTeamContacts(
       writerStatus: users.writerStatus,
       isMainEditor: users.isMainEditor,
       isIllustrator: users.isIllustrator,
-      isLegalAdvisor: users.isLegalAdvisor,
-      isAssistant: users.isAssistant,
+      isAuthorized: users.isAuthorized,
       phone: users.phone,
     })
     .from(users)

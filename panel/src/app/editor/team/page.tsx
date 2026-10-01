@@ -14,8 +14,7 @@ function badgesFor(contact: TeamContact): string[] {
     contact.role === "editor" && contact.writerStatus !== null ? "editor_writer" : contact.role,
   ].filter((badge) => badge !== "user");
   if (contact.isIllustrator) badges.push("illustrator");
-  if (contact.isLegalAdvisor) badges.push("legal_advisor");
-  if (contact.isAssistant) badges.push("assistant");
+  if (contact.isAuthorized) badges.push("authorized");
   return badges;
 }
 

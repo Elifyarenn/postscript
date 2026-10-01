@@ -352,8 +352,8 @@ export function canPerformTransition(
  */
 export type DutyMarks = {
   isIllustrator?: boolean;
-  isLegalAdvisor?: boolean;
-  isAssistant?: boolean;
+  /** The "Yetkili" mark (D-295); it replaced the legal adviser and assistant marks. */
+  isAuthorized?: boolean;
 };
 
 /**
@@ -362,7 +362,7 @@ export type DutyMarks = {
  * page, so the builder stays closed to them.
  */
 export function canCreateTeamAvatar(actor: Actor, marks: DutyMarks = {}): boolean {
-  const marked = marks.isIllustrator === true || marks.isLegalAdvisor === true || marks.isAssistant === true;
+  const marked = marks.isIllustrator === true || marks.isAuthorized === true;
   return isOperational(actor) && (hasRole(actor.role, "writer") || marked);
 }
 

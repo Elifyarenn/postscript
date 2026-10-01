@@ -42,16 +42,14 @@ async function dutyMarks(userId: string): Promise<Required<DutyMarks>> {
   const rows = await db
     .select({
       isIllustrator: users.isIllustrator,
-      isLegalAdvisor: users.isLegalAdvisor,
-      isAssistant: users.isAssistant,
+      isAuthorized: users.isAuthorized,
     })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
   return {
     isIllustrator: rows[0]?.isIllustrator ?? false,
-    isLegalAdvisor: rows[0]?.isLegalAdvisor ?? false,
-    isAssistant: rows[0]?.isAssistant ?? false,
+    isAuthorized: rows[0]?.isAuthorized ?? false,
   };
 }
 
@@ -197,8 +195,7 @@ export async function listTeamMembersMissing(actor: Actor): Promise<MissingTeamM
         or(
           inArray(users.role, ["writer", "editor", "admin"]),
           eq(users.isIllustrator, true),
-          eq(users.isLegalAdvisor, true),
-          eq(users.isAssistant, true),
+          eq(users.isAuthorized, true),
         ),
         ne(users.role, "admin"),
         isNull(users.deletedAt),

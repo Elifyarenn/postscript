@@ -10,7 +10,7 @@ export const USER_SEGMENTS = [
   "writers",
   "editors",
   "illustrators",
-  "assistants",
+  "authorized",
   "readers",
 ] as const;
 
@@ -48,12 +48,13 @@ export const USER_SEGMENT_META: Record<
     description: "Dergiye görsel üreten hesaplar. Hem yazan hem çizen hesaplar da burada.",
     countNoun: "çizer",
   },
-  assistants: {
-    href: "/admin/users/assistants",
-    navLabel: "Asistanlar",
-    title: "Asistanlar",
-    description: "Dergiye yardım eden hesaplar. İşaret bir rol değildir; panele giriş vermez.",
-    countNoun: "asistan",
+  // Replaced the legal adviser and assistant marks (D-295)
+  authorized: {
+    href: "/admin/users/yetkililer",
+    navLabel: "Yetkililer",
+    title: "Yetkililer",
+    description: "Dergi adına yetkili hesaplar. İşaret bir rol değildir; panele giriş vermez.",
+    countNoun: "yetkili",
   },
   readers: {
     href: "/admin/users/readers",
@@ -83,10 +84,8 @@ export type UserListRow = {
   isMainEditor: boolean;
   /** Whether the account also draws for the magazine (D-151). */
   isIllustrator: boolean;
-  /** Whether the account is the magazine's legal adviser (D-238). */
-  isLegalAdvisor: boolean;
-  /** Whether the account is marked as an assistant (D-239). */
-  isAssistant: boolean;
+  /** Whether the account is marked "Yetkili" (D-295). */
+  isAuthorized: boolean;
   /** Only whether 2FA is on; the secret never leaves the service. */
   totpEnabled: boolean;
   kvkkConsentAt: Date | null;

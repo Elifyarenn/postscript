@@ -329,17 +329,19 @@ export const users = pgTable(
      */
     isIllustrator: boolean("is_illustrator").notNull().default(false),
     /**
-     * Marks the magazine's legal adviser (D-238). Same idea as the illustrator
-     * mark: not a role, grants no panel and no authority over content. It only
-     * names the duty and opens the team avatar builder.
+     * The legal adviser (D-238) and assistant (D-239) marks, retired in
+     * D-295: nothing reads them any more. The columns stay so no data is
+     * dropped; the "Yetkili" mark below replaced both and started empty.
      */
     isLegalAdvisor: boolean("is_legal_advisor").notNull().default(false),
-    /**
-     * Marks an assistant working for the magazine (D-239). Same family as the
-     * illustrator and legal adviser marks: not a role, no panel, no authority
-     * over content — it names the duty and opens the team avatar builder.
-     */
     isAssistant: boolean("is_assistant").notNull().default(false),
+    /**
+     * Marks an authorised person of the magazine ("Yetkili", D-295). Same
+     * family as the illustrator mark: not a role, no panel, no authority over
+     * content — it names the duty, lists them with the team and opens the
+     * team avatar builder.
+     */
+    isAuthorized: boolean("is_authorized").notNull().default(false),
     writerStatus: writerStatusEnum("writer_status"),
     /** Belongs to editors only; admins and writers leave it null (D-039). */
     editorStatus: editorStatusEnum("editor_status"),
