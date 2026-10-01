@@ -16,7 +16,8 @@ import { cn, formatDateTime } from "@/lib/utils";
 import { ActionButton, PanelForm } from "./form";
 import { ProfileEditor } from "./profile-editor";
 import { Sparkle } from "./site-ui";
-import { Field, StatusBadge, Textarea } from "./ui";
+import { StatusBadge } from "./ui";
+import { PostComposerField } from "./post-composer-field";
 import {
   blockAction,
   bookmarkPostAction,
@@ -32,7 +33,8 @@ import {
   unlikePostAction,
   unrepostAction,
 } from "@/app/social/actions";
-import { MAX_POST_LENGTH, type PostView } from "@/services/posts";
+import type { PostView } from "@/services/posts";
+import { MAX_POST_LENGTH, segmentPostBody } from "@/lib/post-text";
 import type { MemberListItem, ProfileView } from "@/services/social";
 
 const AVATAR_SIZES = {
@@ -277,14 +279,14 @@ export function ProfileTabs({
 export function PostComposer({
   csrfToken,
   replyToId,
-  communityId,
+  community,
 }: {
   csrfToken: string;
   replyToId?: string;
-  /** Shares the post in this community (D-093). */
-  communityId?: string;
+  /** Shared from inside this community: it is chosen already (D-093, D-294). */
+  community?: { id: string; slug: string };
 }) {
-  const id = replyToId ? `reply-${replyToId}` : communityId ? `community-${communityId}` : "new-post";
+  const id = replyToId ? `reply-${replyToId}` : community ? `community-${community.id}` : "new-post";
   return (
     <PanelForm
       action={createPostAction}
@@ -292,22 +294,31 @@ export function PostComposer({
       submitLabel={replyToId ? "Yanıtla" : "Paylaş"}
     >
       {replyToId && <input type="hidden" name="replyToId" value={replyToId} />}
-      {communityId && <input type="hidden" name="communityId" value={communityId} />}
-      <Field
+      <PostComposerField
+        id={id}
         label={replyToId ? "Yanıtınız" : "Ne düşünüyorsunuz?"}
-        htmlFor={id}
         hint={`En çok ${MAX_POST_LENGTH} karakter. Tüm üyelere görünür; topluluk kuralları geçerlidir.`}
-      >
-        <Textarea
-          id={id}
-          name="body"
-          required
-          maxLength={MAX_POST_LENGTH}
-          rows={3}
-          className="min-h-20 font-sans"
-        />
-      </Field>
+        initialCommunity={community ?? null}
+        allowCommunity={!replyToId}
+      />
     </PanelForm>
+  );
+}
+
+/** The post's text with each "@handle" linked to that profile (D-294); still never HTML. */
+function PostBody({ body }: { body: string }) {
+  return (
+    <p className="post-body">
+      {segmentPostBody(body).map((segment, index) =>
+        segment.type === "mention" ? (
+          <Link key={index} href={`/social/u/${segment.username}`} className="text-accent hover:underline">
+            {segment.value}
+          </Link>
+        ) : (
+          segment.value
+        ),
+      )}
+    </p>
   );
 }
 
@@ -351,15 +362,17 @@ export function PostCard({
             >
               · {formatRelativeTime(post.createdAt)}
             </Link>
-            {post.community && (
-              <Link
-                href={`/social/communities/${post.community.slug}`}
-                className="text-xs text-accent hover:underline"
-              >
-                {post.community.name}
-              </Link>
-            )}
           </p>
+          {/* The community it was shared in, under the name, as "ps/slug" (D-294) */}
+          {post.community && (
+            <Link
+              href={`/social/communities/${post.community.slug}`}
+              className="block text-xs text-accent hover:underline"
+              title={post.community.name}
+            >
+              ps/{post.community.slug}
+            </Link>
+          )}
 
           {post.replyTo && (
             <p className="text-xs text-muted">
@@ -375,7 +388,7 @@ export function PostCard({
           )}
 
           {/* Plain text on purpose: a post is never rendered as HTML or Markdown */}
-          <p className="post-body">{post.body}</p>
+          <PostBody body={post.body} />
 
           <div className="post-actions">
             <Link

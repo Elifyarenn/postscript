@@ -6,7 +6,7 @@
  * who belongs to a community is not listed anywhere, only how many do.
  */
 import "server-only";
-import { and, asc, count, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, isNull, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
 import { communities, communityMemberships } from "@/db/schema";
@@ -125,6 +125,34 @@ export async function leaveCommunity(actor: Actor, slug: string): Promise<void> 
   await db
     .delete(communityMemberships)
     .where(and(eq(communityMemberships.communityId, rows[0].id), eq(communityMemberships.userId, actor.id)));
+}
+
+export type CommunityChoice = { id: string; slug: string; name: string };
+
+/**
+ * The communities the composer offers after "ps/" (D-294): only the open
+ * ones the member belongs to, which are exactly the ones `createPost` would
+ * accept. The typed part matches the slug or the name.
+ */
+export async function suggestPostCommunities(actor: Actor, rawQuery: string, limit = 8): Promise<CommunityChoice[]> {
+  assertMayPost(actor);
+  const query = rawQuery.trim().toLowerCase().slice(0, 60);
+  const pattern = `%${query.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
+  return db
+    .select({ id: communities.id, slug: communities.slug, name: communities.name })
+    .from(communities)
+    .innerJoin(
+      communityMemberships,
+      and(eq(communityMemberships.communityId, communities.id), eq(communityMemberships.userId, actor.id)),
+    )
+    .where(
+      and(
+        isNull(communities.archivedAt),
+        query ? or(ilike(communities.slug, pattern), ilike(communities.name, pattern)) : undefined,
+      ),
+    )
+    .orderBy(asc(communities.name))
+    .limit(limit);
 }
 
 /** The gate `createPost` runs before a post lands in a community. */

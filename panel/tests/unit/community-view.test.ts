@@ -13,6 +13,7 @@ describe("notification tabs (D-113, D-116)", () => {
     expect(notificationTab("social.like")).toBe("begeni");
     expect(notificationTab("social.repost")).toBe("begeni");
     expect(notificationTab("social.reply")).toBe("yorum");
+    expect(notificationTab("social.mention")).toBe("bahsetme");
   });
 
   it("leaves the magazine's own notices to the all tab", () => {

@@ -19,7 +19,7 @@ export function parseNotificationTab(value: string | undefined): NotificationTab
 
 /**
  * The tab a stored kind belongs to, or null when it is only shown under
- * "Tümü". Mentions have no source yet, so that tab stays empty (D-116); the
+ * "Tümü". Mentions come from "@handle" in a post since D-294; the
  * magazine's own notices — the editorial workflow, the privacy notice,
  * moderation — are not a member's doing and have no tab of their own in the
  * design.
@@ -28,6 +28,7 @@ export function notificationTab(kind: string): Exclude<NotificationTabKey, "tumu
   if (kind === "social.follow") return "takip";
   if (kind === "social.like" || kind === "social.repost") return "begeni";
   if (kind === "social.reply") return "yorum";
+  if (kind === "social.mention") return "bahsetme";
   return null;
 }
 

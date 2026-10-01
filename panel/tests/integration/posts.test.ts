@@ -471,3 +471,81 @@ describe("the community panel's counts (D-180)", () => {
     expect((await captureError(countRecentPostActivity(actorOf(lunae), 7))).status).toBe(403);
   });
 });
+
+describe("mentions, communities and the 250 limit (D-294)", () => {
+  async function fashion() {
+    const { createCommunity, joinCommunity } = await import("@/services/communities");
+    const admin = await member("kurucu_ps", { role: "admin" });
+    const created = await createCommunity(actorOf(admin), { name: "Fashion" }, noMeta);
+    return { created, joinCommunity };
+  }
+
+  it("takes 250 characters and not one more", async () => {
+    const lunae = await member("lunae");
+    await post(lunae, "a".repeat(250));
+    expect((await captureError(post(lunae, "a".repeat(251)))).status).toBe(400);
+  });
+
+  it("notifies each member a post names, once, and nobody it should not", async () => {
+    const lunae = await member("lunae");
+    const velvet = await member("velvet");
+    const ada = await member("ada_k");
+    const blocked = await member("kapali");
+    await blockMember(actorOf(blocked), "lunae");
+
+    const { id } = await post(lunae, "@velvet @Ada_K @velvet @kapali @lunae @yokboyle merhaba");
+    const mentions = await db.select().from(notifications).where(eq(notifications.kind, "social.mention"));
+    expect(mentions.map((row) => row.userId).sort()).toEqual([velvet.id, ada.id].sort());
+    expect(mentions[0]!.title).toBe("@lunae bir gönderide sizden bahsetti.");
+    expect(mentions[0]!.href).toBe(`/social/posts/${id}`);
+  });
+
+  it("does not notify the replied-to author twice for a reply that names them", async () => {
+    const lunae = await member("lunae");
+    const velvet = await member("velvet");
+    const { id } = await post(velvet, "ilk gönderi");
+    await post(lunae, "@velvet katılıyorum", id);
+    const toVelvet = await db.select().from(notifications).where(eq(notifications.userId, velvet.id));
+    expect(toVelvet.map((row) => row.kind)).toEqual(["social.reply"]);
+  });
+
+  it("offers after ps/ only the open communities the member belongs to", async () => {
+    const { created, joinCommunity } = await fashion();
+    const { suggestPostCommunities } = await import("@/services/communities");
+    const lunae = await member("lunae");
+    expect(await suggestPostCommunities(actorOf(lunae), "fa")).toEqual([]);
+
+    await joinCommunity(actorOf(lunae), created.slug);
+    expect(await suggestPostCommunities(actorOf(lunae), "fa")).toEqual([{ id: created.id, slug: "fashion", name: "Fashion" }]);
+    expect(await suggestPostCommunities(actorOf(lunae), "")).toHaveLength(1);
+    expect(await suggestPostCommunities(actorOf(lunae), "zzz")).toEqual([]);
+  });
+
+  it("is one post in the feed and on the community page, with one set of likes and replies", async () => {
+    const { created, joinCommunity } = await fashion();
+    const { listCommunityPosts } = await import("@/services/posts");
+    const lunae = await member("lunae");
+    const velvet = await member("velvet");
+    await joinCommunity(actorOf(lunae), created.slug);
+    await followMember(actorOf(velvet), "lunae");
+
+    const { id } = await createPost(actorOf(lunae), { body: "yeni sezon", communityId: created.id }, noMeta);
+    await likePost(actorOf(velvet), id);
+    await post(velvet, "güzel", id);
+
+    const inFeed = (await listHomeFeed(actorOf(velvet))).find((row) => row.id === id)!;
+    const inCommunity = (await listCommunityPosts(actorOf(velvet), created.id)).find((row) => row.id === id)!;
+    expect(inFeed.community).toEqual({ slug: "fashion", name: "Fashion" });
+    expect(inCommunity.id).toBe(inFeed.id);
+    expect([inFeed.likeCount, inCommunity.likeCount]).toEqual([1, 1]);
+    expect([inFeed.replyCount, inCommunity.replyCount]).toEqual([1, 1]);
+    expect(await db.select().from(posts).where(eq(posts.body, "yeni sezon"))).toHaveLength(1);
+  });
+
+  it("keeps a non-member out of a community's posts as before", async () => {
+    const { created } = await fashion();
+    const outsider = await member("disarda");
+    const error = await captureError(createPost(actorOf(outsider), { body: "merhaba", communityId: created.id }, noMeta));
+    expect(error.status).toBe(403);
+  });
+});

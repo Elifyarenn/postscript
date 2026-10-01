@@ -11601,3 +11601,33 @@ durum, ekler (ad ve boyut), alıcının göreceği HTML (izinsiz `sandbox` ifram
 düz metin. Bakmak hiçbir şey göndermez. `sensitive` işler (giriş, doğrulama,
 şifre bağlantısı) önizlenmez: bağlantı okuyan herkes için çalışırdı. Gönderilmiş
 işin içeriği zaten silindiği için "içerik silindi" yazar. Migration yok.
+
+## D-294 — Gönderi: 250 karakter, canlı sayaç, @ bahsetme, ps/ topluluk seçimi
+
+- **Sınır:** `MAX_POST_LENGTH` 1000 → 250 (`src/lib/post-text.ts`, istemci ve
+  sunucu aynı sabiti okur; yanıtlar da gönderidir). Mevcut uzun gönderilere
+  dokunulmaz; sınır yalnızca yeni gönderide uygulanır. Kutuda canlı sayaç
+  (`n/250`, son 20 karakterde kırmızı).
+- **@ bahsetme:** kutuda "@" + en az 2 harf (D-186 arama kuralı) üye önerir
+  (`searchMembers`: engelli, yasaklı, silinmiş, kendisi önerilmez). Gönderi
+  kaydedilince metindeki `@handle`'lar (`extractMentions`, gönderi başına en çok
+  10) çözülür; var olan, yasaklı/silinmiş olmayan, yazar olmayan ve iki yönde
+  engel bulunmayan her üyeye bir kez `social.mention` bildirimi ("Bahsetmeler"
+  sekmesi). Yanıtlanan yazar zaten `social.reply` aldığı için ikinci kez
+  bildirilmez. Kartta `@handle` profil bağlantısıdır; metin yine HTML değil
+  (`segmentPostBody`, React öğeleri). Ek tablo yok: bahsetme metinden okunur.
+- **ps/ topluluk:** kutuda "ps/" kişinin üyesi olduğu açık toplulukları önerir
+  (`suggestPostCommunities`) — `createPost`'un zaten kabul ettiği küme; sunucu
+  yine `assertCanPostInCommunity` ile denetler. Seçilen topluluk metinde
+  kalmaz, kutunun üstünde "ps/slug ×" olarak durur ve `communityId` ile gider.
+  Topluluk sayfasından paylaşırken o topluluk seçili gelir (kaldırılabilir).
+  Yanıtta topluluk seçimi yok.
+- **Kart:** topluluk, kullanıcı adının altında `ps/slug` bağlantısı
+  (`/social/communities/slug`); ad `title` olarak durur.
+- **Tek kayıt:** gönderi zaten tek satır (`posts.community_id`); akış (yazar ve
+  takip edilenler) ve topluluk sayfası aynı satırı listeler, beğeni ve
+  yanıtlar gönderi kimliğine bağlı olduğundan ortaktır (testi var).
+- Öneriler iki salt-okuma server action'ı (`suggestMentionsAction`,
+  `suggestCommunitiesAction`); oturum ve görünürlük kuralları serviste.
+  Migration yok. KVKK: yeni veri kategorisi yok (gönderi metni ve bildirim
+  zaten metinde).

@@ -16,6 +16,7 @@ import {
   bookmarkArticle,
   followMember,
   removeBookmark,
+  searchMembers,
   setInterests,
   setUsername,
   unblockMember,
@@ -41,7 +42,7 @@ import {
   setReadReceipts,
 } from "@/services/direct-messages";
 import { sendAnonMessage } from "@/services/anon-box";
-import { joinCommunity, leaveCommunity } from "@/services/communities";
+import { joinCommunity, leaveCommunity, suggestPostCommunities, type CommunityChoice } from "@/services/communities";
 import { updateProfile, type PictureChange } from "@/services/profile-edit";
 
 /* ------------------------------------------------------------------ */
@@ -189,6 +190,31 @@ export async function setReadReceiptsAction(
 /* ------------------------------------------------------------------ */
 /* Posts (D-090)                                                       */
 /* ------------------------------------------------------------------ */
+
+/**
+ * Suggestions for the composer (D-294): members after "@", the member's own
+ * open communities after "ps/". Reads only; the services decide who may see
+ * what, exactly as their pages do. A failure is an empty list, never an error
+ * in the middle of typing.
+ */
+export async function suggestMentionsAction(query: string): Promise<{ username: string; avatarUrl: string | null }[]> {
+  try {
+    const { user } = await requireAuth();
+    const found = await searchMembers({ ...user }, String(query).slice(0, 40), 6);
+    return found.map((member) => ({ username: member.username, avatarUrl: member.avatarUrl }));
+  } catch {
+    return [];
+  }
+}
+
+export async function suggestCommunitiesAction(query: string): Promise<CommunityChoice[]> {
+  try {
+    const { user } = await requireAuth();
+    return await suggestPostCommunities({ ...user }, String(query).slice(0, 60));
+  } catch {
+    return [];
+  }
+}
 
 export async function createPostAction(
   _state: ActionState,

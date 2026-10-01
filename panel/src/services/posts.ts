@@ -43,6 +43,7 @@ import { writeAudit } from "@/lib/audit";
 import { canModerateCommunity, type Actor } from "@/lib/auth/rbac";
 import { badRequest, forbidden, notFound, rateLimited } from "@/lib/errors";
 import { maskBannedWords } from "@/lib/moderation";
+import { extractMentions, MAX_POST_LENGTH } from "@/lib/post-text";
 import { mergeTimeline, rankExplorePosts, rankSuggestions } from "@/lib/ranking";
 import { recordTraffic, trafficCutoff } from "@/lib/traffic";
 import { activeBannedWords, assertMayPost } from "./community";
@@ -57,7 +58,8 @@ import {
 } from "./social";
 import type { RequestMeta } from "./auth";
 
-export const MAX_POST_LENGTH = 1000;
+// 250 characters since D-294; the composer counts against the same number
+export { MAX_POST_LENGTH } from "@/lib/post-text";
 
 /** A burst guard, not a quota: nobody types five posts a minute by hand. */
 export const POSTS_PER_MINUTE = 5;
@@ -343,8 +345,50 @@ export async function createPost(
       );
     }
 
+    // Everyone the post names, once each (D-294); the replied-to author already heard of it
+    for (const userId of await mentionedMembers(me.id, body, parent?.authorId ?? null, tx)) {
+      await notify(
+        {
+          userId,
+          kind: "social.mention",
+          title: `@${me.username} bir gönderide sizden bahsetti.`,
+          href: `/social/posts/${row!.id}`,
+        },
+        tx,
+      );
+    }
+
     return { id: row!.id };
   });
+}
+
+/**
+ * The members a post's "@handles" reach (D-294): existing, not banned or
+ * deleted, not the author, and with no block either way. A handle that names
+ * nobody is just text. The masked text is read, so a mention cannot smuggle a
+ * banned word back in as a handle.
+ */
+async function mentionedMembers(
+  authorId: string,
+  body: string,
+  alreadyNotified: string | null,
+  executor: Parameters<typeof isBlockedEitherWay>[2] = db,
+): Promise<string[]> {
+  const handles = extractMentions(body);
+  if (handles.length === 0) return [];
+  const rows = await executor
+    .select({ id: users.id })
+    .from(users)
+    .where(
+      and(inArray(users.username, handles), isNull(users.deletedAt), eq(users.isBanned, false), ne(users.id, authorId)),
+    );
+  const reached: string[] = [];
+  for (const row of rows) {
+    if (row.id === alreadyNotified) continue;
+    if (await isBlockedEitherWay(authorId, row.id, executor)) continue;
+    reached.push(row.id);
+  }
+  return reached;
 }
 
 /** The author takes their own post down; it is kept a year, then pruned. */

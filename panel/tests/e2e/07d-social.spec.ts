@@ -58,7 +58,7 @@ test("two members meet in the community area", async ({ page }) => {
   await page.getByRole("button", { name: "Paylaş" }).click();
   const inClub = page.getByRole("article").filter({ hasText: communityPost });
   await expect(inClub).toBeVisible();
-  await expect(inClub.getByRole("link", { name: "Edebiyat Kulübü" })).toBeVisible();
+  await expect(inClub.getByRole("link", { name: "ps/edebiyat-kulubu" })).toBeVisible();
 
   await logout(page);
 

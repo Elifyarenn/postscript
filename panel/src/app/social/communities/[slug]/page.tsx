@@ -57,7 +57,7 @@ export default async function CommunityPage({ params }: { params: Promise<{ slug
           </Alert>
         ) : community.isMember ? (
           <Card>
-            <PostComposer csrfToken={csrfToken} communityId={community.id} />
+            <PostComposer csrfToken={csrfToken} community={{ id: community.id, slug: community.slug }} />
           </Card>
         ) : (
           <Alert tone="info">Bu toplulukta paylaşmak için önce katılın.</Alert>
