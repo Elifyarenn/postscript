@@ -48,7 +48,7 @@ export default async function IssueQuizzesPage({ params }: { params: Promise<{ i
     <>
       <PageHeader
         title={`Sayı ${issue.number} · testler`}
-        description="Doğru cevaplı bilgi testi veya puan aralıklı eğlence testi hazırlayın; sayfalara etkileşim alanından bağlayın."
+        description="Doğru cevaplı bilgi testi, puan aralıklı eğlence testi veya en çok seçilen sonucu gösteren kişilik testi hazırlayın; sayfalara etkileşim alanından bağlayın."
         actions={
           <Link
             href={`/editor/issues/${issue.id}/sayfalar`}

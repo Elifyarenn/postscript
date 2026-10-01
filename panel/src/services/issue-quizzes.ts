@@ -95,8 +95,8 @@ export async function createQuiz(
       title: parsed.data.title,
       intro: parsed.data.intro ?? null,
       questions: parsed.data.questions,
-      // A knowledge quiz has no bands; keeping them would only confuse a later read
-      outcomes: parsed.data.kind === "scored" ? parsed.data.outcomes : [],
+      // A knowledge quiz has no results; keeping them would only confuse a later read
+      outcomes: parsed.data.kind === "knowledge" ? [] : parsed.data.outcomes,
     })
     .returning({ id: issueQuizzes.id });
 
@@ -128,7 +128,7 @@ export async function updateQuiz(
       title: parsed.data.title,
       intro: parsed.data.intro ?? null,
       questions: parsed.data.questions,
-      outcomes: parsed.data.kind === "scored" ? parsed.data.outcomes : [],
+      outcomes: parsed.data.kind === "knowledge" ? [] : parsed.data.outcomes,
       updatedAt: new Date(),
     })
     .where(eq(issueQuizzes.id, quizId))

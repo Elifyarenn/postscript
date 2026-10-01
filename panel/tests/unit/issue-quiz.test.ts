@@ -12,6 +12,7 @@ import {
   type QuizOutcome,
   type QuizQuestion,
 } from "@/lib/issue-quiz";
+import { OBSESSION_QUIZ } from "@/lib/issue-design/issue-01-quizzes";
 
 const knowledge: QuizQuestion[] = [
   {
@@ -171,5 +172,67 @@ describe("what the reader is handed", () => {
     const parsed = parseQuestions([knowledge[0], { id: "broken" }, "nonsense"]);
     expect(parsed).toHaveLength(1);
     expect(parsed[0]!.id).toBe("q1");
+  });
+});
+
+describe("a persona quiz (D-297)", () => {
+  const body = { kind: OBSESSION_QUIZ.kind, questions: OBSESSION_QUIZ.questions, outcomes: OBSESSION_QUIZ.outcomes };
+  const pick = (...personas: string[]) =>
+    Object.fromEntries(personas.map((persona, index) => [`s${index + 1}`, `s${index + 1}-${persona}`]));
+
+  it("ships finished: five questions, four options each, four results", () => {
+    expect(quizProblems(body)).toEqual([]);
+    expect(body.questions.map((question) => question.options.length)).toEqual([4, 4, 4, 4, 4]);
+    expect(body.outcomes.map((outcome) => outcome.id)).toEqual(["monica", "joe", "nina", "beth"]);
+  });
+
+  it("names the result chosen most often", () => {
+    const result = gradeQuiz(body, pick("beth", "nina", "beth", "joe", "beth"));
+    if (result.kind !== "persona") throw new Error("wrong kind");
+    expect(result.outcome?.title).toBe("Beth’in hiper-odağı");
+    expect(result.answered).toBe(5);
+  });
+
+  it("draws one of the leaders when they are level, and never anyone else", () => {
+    const tied = pick("monica", "joe", "monica", "joe", "nina");
+    const first = gradeQuiz(body, tied, () => 0);
+    const last = gradeQuiz(body, tied, () => 0.999);
+    if (first.kind !== "persona" || last.kind !== "persona") throw new Error("wrong kind");
+    expect(first.outcome?.title).toContain("Monica");
+    expect(last.outcome?.title).toContain("Joe");
+
+    const seen = new Set<string>();
+    for (let i = 0; i < 60; i += 1) {
+      const result = gradeQuiz(body, tied);
+      if (result.kind === "persona" && result.outcome) seen.add(result.outcome.title.slice(0, 3));
+    }
+    expect([...seen].every((name) => name === "Mon" || name === "Joe")).toBe(true);
+  });
+
+  it("gives no result when nothing was answered", () => {
+    const result = gradeQuiz(body, {});
+    if (result.kind !== "persona") throw new Error("wrong kind");
+    expect(result.outcome).toBeNull();
+    expect(result.answered).toBe(0);
+  });
+
+  it("keeps who each option belongs to away from the reader", () => {
+    const flat = JSON.stringify(stripAnswers({ id: "x", ...OBSESSION_QUIZ, intro: null }));
+    expect(flat).not.toContain("outcomeId");
+    expect(flat).not.toMatch(/Monica|Joe|Nina|Beth/);
+  });
+
+  it("is not ready with an unbound option, an unreachable result or a single result", () => {
+    const loose = body.questions.map((question, index) =>
+      index === 0
+        ? { ...question, options: question.options.map((option) => ({ id: option.id, text: option.text })) }
+        : question,
+    );
+    expect(quizProblems({ ...body, questions: loose })).toContain("1. soru: sonuca bağlanmamış seçenek var.");
+
+    const extra = [...body.outcomes, { id: "kimse", title: "Kimse", body: null, min: 0, max: 0 }];
+    expect(quizProblems({ ...body, outcomes: extra })).toContain('"Kimse": hiçbir seçenek bu sonuca çıkmıyor.');
+
+    expect(quizProblems({ ...body, outcomes: body.outcomes.slice(0, 1) })).toContain("En az iki sonuç tanımlanmalı.");
   });
 });

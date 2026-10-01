@@ -180,7 +180,7 @@ export const hotspotKindEnum = pgEnum("hotspot_kind", ["link", "page", "info", "
  * The two kinds of quiz (D-240): one with a right answer per question, one
  * that adds points up and names an outcome for the band the total falls in.
  */
-export const quizKindEnum = pgEnum("quiz_kind", ["knowledge", "scored"]);
+export const quizKindEnum = pgEnum("quiz_kind", ["knowledge", "scored", "persona"]);
 
 /** The twelve signs, for the team form (D-226); labels live in `src/lib/zodiac.ts`. */
 export const zodiacEnum = pgEnum("zodiac", [
@@ -1129,7 +1129,7 @@ export const issueQuizzes = pgTable(
     intro: text("intro"),
     /** `[{ id, text, explanation, options: [{ id, text, correct, points }] }]` */
     questions: jsonb("questions").notNull().default(sql`'[]'::jsonb`),
-    /** Scored quizzes only: `[{ id, title, body, min, max }]`. */
+    /** Scored and persona quizzes: `[{ id, title, body, min, max }]`; a persona result ignores the band. */
     outcomes: jsonb("outcomes").notNull().default(sql`'[]'::jsonb`),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

@@ -11668,3 +11668,32 @@ anda e-posta gitmesini istedi.
 - İzin verildiği anda `issueSubmissionGranted` e-postası `sendMail` ile gider
   (kuyruk + yeniden deneme). İzin geri alınınca başlatılmış yazılar yerinde kalır.
 - KVKK: "Sayıya özel yazı gönderme izni" veri kalemi ve saklama süresi eklendi.
+
+## D-297 — Kişilik testi: en çok seçilen sonuç; Sayı 1'in testi koddan gelir
+
+Sayı 1'in eğlence testi ("Hangi kurgusal karakterin takıntısına sahipsin?") her
+şıkkı bir karaktere bağlıyor ve en çok seçilen karakteri sonuç veriyor. D-240'ın
+iki türü (doğru cevaplı, puan aralıklı) bunu hesaplayamıyordu: puan toplamı
+karışık cevaplarda aradaki bir karaktere düşer.
+
+- Üçüncü tür `persona` (`quiz_kind` enum'una ekleme, migration 0058): seçenek
+  `outcomeId` ile bir sonuca bağlanır, sonuçların puan aralığı kullanılmaz.
+  `gradeQuiz` en çok seçilen sonucu verir; **eşitlikte öndekilerden biri rastgele
+  seçilir** (ürün sahibinin "şimdilik" kararı), bu yüzden aynı cevaplar yeniden
+  çözüldüğünde başka sonuç çıkabilir. Hiç cevap yoksa sonuç yoktur.
+- Hazır sayılma kuralı: her seçenek var olan bir sonuca bağlı, en az iki sonuç,
+  hiçbir seçeneğin çıkmadığı sonuç yok. `outcomeId` de cevap anahtarıdır;
+  `stripAnswers` okura göndermez. Deneme yine hiçbir yere yazılmaz (KVKK
+  değişikliği yok).
+- Panel test editöründe tür "Kişilik testi": seçenek başına sonuç seçimi,
+  aralıksız sonuç listesi.
+- Tasarım manifesti artık test de taşır (`quizzes`): içe aktarma testi başlığıyla
+  bulur, yoksa oluşturur, varsa **koddaki metinle yeniden yazar** (sayfalardaki
+  kuralın aynısı; panelde yapılan değişiklik bir sonraki aktarımda kalmaz).
+  Sayı 1'in testi `src/lib/issue-design/issue-01-quizzes.ts`'te; teslim edilen
+  belgedeki metin ekranda okunması için cümle düzenine çevrildi, şıkların
+  yanındaki karakter adları cevap anahtarı olduğu için gösterilmez,
+  "mükemmelliyetçilik" yazımı düzeltildi.
+- Test için ayrı bir sayfa tasarlanmadı; "Eğlence & Dedikodu" açılış sayfasındaki
+  "Have Fun" tabelası testi açan işaretli alan oldu. Tasarım sayfası gelince alan
+  oraya taşınır.

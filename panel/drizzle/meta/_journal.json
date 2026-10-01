@@ -400,6 +400,13 @@
       "when": 1790861066940,
       "tag": "0057_third_beyonder",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1790865269605,
+      "tag": "0058_daffy_terror",
+      "breakpoints": true
     }
   ]
 }

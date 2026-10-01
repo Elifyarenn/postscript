@@ -11,6 +11,7 @@
  * tested and the same checks run in the script and in the service.
  */
 import { z } from "zod";
+import { quizInputSchema, quizProblems } from "../issue-quiz";
 
 /** A page key is part of a file name and of the page's label: keep it plain. */
 export const DESIGN_KEY = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -51,7 +52,7 @@ export const designAreaSchema = z.discriminatedUnion("kind", [
     title: z.string().trim().min(1).max(200),
     body: z.string().trim().min(1).max(4000),
   }),
-  /** Opens a quiz that already exists in the issue, found by its exact title. */
+  /** Opens a quiz of the issue, found by its exact title: one of `quizzes` below, or one written in the panel. */
   z.strictObject({ kind: z.literal("quiz"), ...areaBase, quizTitle: z.string().trim().min(1).max(200) }),
 ]);
 
@@ -86,6 +87,11 @@ export const designManifestSchema = z.strictObject({
    */
   trim: z.strictObject({ x: z.number().int().min(0).max(60), y: z.number().int().min(0).max(80) }),
   pages: z.array(designPageSchema).min(1),
+  /**
+   * Quizzes the import writes into the issue (D-297), found again by title: a
+   * rerun rewrites them from here, so a change made in the panel does not last.
+   */
+  quizzes: z.array(quizInputSchema).max(10).optional(),
   /** Pages of the delivered files that are left out, and why. Documentation only. */
   excluded: z.array(
     z.strictObject({ source: z.string(), pages: z.array(z.number().int().min(1)), reason: z.string() }),
@@ -158,6 +164,14 @@ export function manifestProblems(manifest: DesignManifest, renders?: RenderRecor
         problems.push(`"${page.key}" sayfasındaki "${area.name}" alanı kendi sayfasına gidiyor.`);
       }
     }
+  }
+
+  const titles = new Set<string>();
+  for (const quiz of manifest.quizzes ?? []) {
+    if (titles.has(quiz.title)) problems.push(`"${quiz.title}" testi iki kez tanımlanmış.`);
+    titles.add(quiz.title);
+    // An unfinished quiz would be imported and then refuse to open for a reader
+    for (const problem of quizProblems(quiz)) problems.push(`"${quiz.title}" testi: ${problem}`);
   }
 
   if (renders) {

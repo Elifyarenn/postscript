@@ -14,6 +14,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
 import { auditLog, issuePageHotspots, issuePages, issueQuizzes, issues, media } from "@/db/schema";
 import { isAppError } from "@/lib/errors";
+import { OBSESSION_QUIZ } from "@/lib/issue-design/issue-01-quizzes";
 import { designKeyOf, type DesignManifest, type RenderRecord } from "@/lib/issue-design/manifest";
 import { getStorage, MemoryStorageAdapter } from "@/lib/storage";
 import { addPageImage, readIssuePages, readPageMedia, saveHotspots } from "@/services/issue-pages";
@@ -219,6 +220,36 @@ describe("the first import", () => {
     expect(areas.map((area) => area.kind)).toEqual(["page", "quiz"]);
     expect(areas[0]!.targetPageId).toBe(pages[1]!.id);
     expect(areas[1]!.quizId).toBe(quiz!.id);
+  });
+});
+
+describe("a quiz the manifest carries (D-297)", () => {
+  it("is written into the issue, bound to its area, and rewritten rather than doubled by a rerun", async () => {
+    const issue = await makeIssue();
+    const admin = actorOf(await createUser({ role: "admin" }));
+    const manifest: DesignManifest = {
+      ...testManifest(undefined, [
+        { kind: "quiz", name: "Testi çöz", rect: [0.1, 0.5, 0.3, 0.1], showMarker: true, quizTitle: OBSESSION_QUIZ.title },
+      ]),
+      quizzes: [OBSESSION_QUIZ],
+    };
+    await importIssueDesign(admin, issue.id, noMeta, await depsFor(manifest));
+
+    const [quiz] = await db.select().from(issueQuizzes);
+    expect(quiz!.kind).toBe("persona");
+    const pages = await db.select().from(issuePages).orderBy(issuePages.position);
+    const [area] = await db.select().from(issuePageHotspots).where(eq(issuePageHotspots.pageId, pages[0]!.id));
+    expect(area!.quizId).toBe(quiz!.id);
+
+    // Changed in the panel, then imported again: the code's text comes back, in the same row
+    await db.update(issueQuizzes).set({ intro: "Panelde eklendi" }).where(eq(issueQuizzes.id, quiz!.id));
+    await importIssueDesign(admin, issue.id, noMeta, await depsFor(manifest));
+    const after = await db.select().from(issueQuizzes);
+    expect(after).toHaveLength(1);
+    expect(after[0]!.id).toBe(quiz!.id);
+    expect(after[0]!.intro).toBeNull();
+    const [again] = await db.select().from(issuePageHotspots).where(eq(issuePageHotspots.pageId, pages[0]!.id));
+    expect(again!.quizId).toBe(quiz!.id);
   });
 });
 

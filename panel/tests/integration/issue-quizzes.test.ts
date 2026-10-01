@@ -7,6 +7,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { db, type Database } from "@/db/client";
 import { issues } from "@/db/schema";
 import { isAppError } from "@/lib/errors";
+import { OBSESSION_QUIZ } from "@/lib/issue-design/issue-01-quizzes";
 import { answerQuiz, createQuiz, listQuizzes, removeQuiz, updateQuiz } from "@/services/issue-quizzes";
 import { addPageImage, listIssuePages, readIssuePages, saveHotspots } from "@/services/issue-pages";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
@@ -223,6 +224,31 @@ describe("answering a quiz", () => {
     if (result.kind !== "scored") throw new Error("wrong kind");
     expect(result.score).toBe(3);
     expect(result.outcome?.title).toBe("Tutkulu");
+  });
+
+  it("names the result a persona quiz was answered towards, and keeps its key home (D-297)", async () => {
+    const admin = await createUser({ role: "admin" });
+    const issue = await makeIssue("published", 6);
+    const id = await createQuiz(actorOf(admin), issue.id, OBSESSION_QUIZ, noMeta);
+    await bindQuizToPage(actorOf(admin), issue.id, id);
+
+    const [stored] = await listQuizzes(actorOf(admin), issue.id);
+    expect(stored!.kind).toBe("persona");
+    expect(stored!.problems).toEqual([]);
+    expect(stored!.outcomes).toHaveLength(4);
+
+    const reader = await createUser({ role: "user" });
+    const answers = { s1: "s1-nina", s2: "s2-nina", s3: "s3-joe", s4: "s4-nina", s5: "s5-beth" };
+    const result = await answerQuiz(actorOf(reader), id, answers);
+    if (result.kind !== "persona") throw new Error("wrong kind");
+    expect(result.outcome?.title).toBe("Nina’nın mükemmeliyetçilik takıntısı");
+    expect(result.outcome?.body).toContain("Nina Sayers");
+
+    const pages = await readIssuePages(actorOf(reader), issue.number);
+    const sent = JSON.stringify(pages.quizzes);
+    expect(pages.quizzes).toHaveLength(1);
+    expect(sent).not.toContain("outcomeId");
+    expect(sent).not.toContain("Nina");
   });
 
   it("refuses to mark a quiz that cannot produce an honest result", async () => {

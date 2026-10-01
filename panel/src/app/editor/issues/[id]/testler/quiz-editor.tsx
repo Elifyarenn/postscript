@@ -3,9 +3,10 @@
 /**
  * Writing a quiz in the panel (D-240).
  *
- * Both kinds are the same form with a different middle: a knowledge quiz
+ * Every kind is the same form with a different middle: a knowledge quiz
  * marks one option right per question, a scored quiz gives every option a
- * number and names a result for each band of totals.
+ * number and names a result for each band of totals, a persona quiz ties
+ * every option to one of its results (D-297).
  *
  * The whole quiz travels as one JSON field, so it is saved in one write and
  * can never end up half written. What is wrong with it is listed as it is
@@ -30,6 +31,14 @@ import { createQuizAction, updateQuizAction } from "./actions";
 
 let counter = 0;
 const newId = () => `q${Date.now().toString(36)}${(counter += 1).toString(36)}`;
+
+/** An empty option carrying what its kind of quiz marks it with. */
+function blankOption(kind: QuizKind, first = false): QuizQuestion["options"][number] {
+  const base = { id: newId(), text: "" };
+  if (kind === "knowledge") return { ...base, correct: first };
+  if (kind === "scored") return { ...base, points: 0 };
+  return base;
+}
 
 export type EditableQuiz = {
   id: string | null;
@@ -78,10 +87,7 @@ export function QuizEditor({
         id: newId(),
         text: "",
         explanation: "",
-        options: [
-          { id: newId(), text: "", ...(kind === "knowledge" ? { correct: true } : { points: 0 }) },
-          { id: newId(), text: "", ...(kind === "knowledge" ? { correct: false } : { points: 0 }) },
-        ],
+        options: [blankOption(kind, true), blankOption(kind)],
       },
     ]);
   };
@@ -108,7 +114,7 @@ export function QuizEditor({
         explanation: question.explanation?.trim() ? question.explanation : null,
         options: question.options.filter((option) => option.text.trim() !== ""),
       })),
-    outcomes: kind === "scored" ? outcomes.filter((outcome) => outcome.title.trim() !== "") : [],
+    outcomes: kind === "knowledge" ? [] : outcomes.filter((outcome) => outcome.title.trim() !== ""),
   };
 
   return (
@@ -223,6 +229,30 @@ export function QuizEditor({
                       />
                       Doğru
                     </label>
+                  ) : kind === "persona" ? (
+                    <label className="flex items-center gap-1.5 text-xs">
+                      Sonuç
+                      <Select
+                        className="w-44"
+                        value={option.outcomeId ?? ""}
+                        onChange={(event) =>
+                          patchQuestion(question.id, {
+                            options: question.options.map((entry) =>
+                              entry.id === option.id
+                                ? { ...entry, outcomeId: event.target.value || undefined }
+                                : entry,
+                            ),
+                          })
+                        }
+                      >
+                        <option value="">Seçin</option>
+                        {outcomes.map((outcome) => (
+                          <option key={outcome.id} value={outcome.id}>
+                            {outcome.title || "(adsız sonuç)"}
+                          </option>
+                        ))}
+                      </Select>
+                    </label>
                   ) : (
                     <label className="flex items-center gap-1.5 text-xs">
                       Puan
@@ -281,14 +311,7 @@ export function QuizEditor({
                 className="px-2.5 py-1 text-xs"
                 onClick={() =>
                   patchQuestion(question.id, {
-                    options: [
-                      ...question.options,
-                      {
-                        id: newId(),
-                        text: "",
-                        ...(kind === "knowledge" ? { correct: false } : { points: 0 }),
-                      },
-                    ],
+                    options: [...question.options, blankOption(kind)],
                   })
                 }
               >
@@ -315,14 +338,16 @@ export function QuizEditor({
       </div>
 
       {/* ------------------------------------------------------------ */}
-      {/* Outcome bands                                                 */}
+      {/* Outcomes: bands of a scored quiz, results of a persona quiz    */}
       {/* ------------------------------------------------------------ */}
-      {kind === "scored" && (
+      {kind !== "knowledge" && (
         <div className="space-y-3 rounded-md border border-line p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-medium">Sonuç aralıkları</h3>
+            <h3 className="text-sm font-medium">{kind === "scored" ? "Sonuç aralıkları" : "Sonuçlar"}</h3>
             <span className="text-xs text-muted">
-              Ulaşılabilir puan: {range.min} – {range.max}
+              {kind === "scored"
+                ? `Ulaşılabilir puan: ${range.min} – ${range.max}`
+                : "En çok seçilen sonuç gösterilir; eşitlikte biri rastgele seçilir."}
             </span>
           </div>
 
@@ -342,46 +367,50 @@ export function QuizEditor({
                     )
                   }
                 />
-                <label className="flex items-center gap-1 text-xs">
-                  En az
-                  <Input
-                    type="number"
-                    className="w-20"
-                    value={outcome.min}
-                    onChange={(event) =>
-                      setOutcomes((current) =>
-                        current.map((entry) =>
-                          entry.id === outcome.id
-                            ? { ...entry, min: Number(event.target.value) || 0 }
-                            : entry,
-                        ),
-                      )
-                    }
-                  />
-                </label>
-                <label className="flex items-center gap-1 text-xs">
-                  En çok
-                  <Input
-                    type="number"
-                    className="w-20"
-                    value={outcome.max}
-                    onChange={(event) =>
-                      setOutcomes((current) =>
-                        current.map((entry) =>
-                          entry.id === outcome.id
-                            ? { ...entry, max: Number(event.target.value) || 0 }
-                            : entry,
-                        ),
-                      )
-                    }
-                  />
-                </label>
+                {kind === "scored" && (
+                  <>
+                    <label className="flex items-center gap-1 text-xs">
+                      En az
+                      <Input
+                        type="number"
+                        className="w-20"
+                        value={outcome.min}
+                        onChange={(event) =>
+                          setOutcomes((current) =>
+                            current.map((entry) =>
+                              entry.id === outcome.id
+                                ? { ...entry, min: Number(event.target.value) || 0 }
+                                : entry,
+                            ),
+                          )
+                        }
+                      />
+                    </label>
+                    <label className="flex items-center gap-1 text-xs">
+                      En çok
+                      <Input
+                        type="number"
+                        className="w-20"
+                        value={outcome.max}
+                        onChange={(event) =>
+                          setOutcomes((current) =>
+                            current.map((entry) =>
+                              entry.id === outcome.id
+                                ? { ...entry, max: Number(event.target.value) || 0 }
+                                : entry,
+                            ),
+                          )
+                        }
+                      />
+                    </label>
+                  </>
+                )}
                 <Button
                   type="button"
                   variant="ghost"
                   className="px-2 py-1 text-xs"
                   onClick={() => setOutcomes((current) => current.filter((entry) => entry.id !== outcome.id))}
-                  aria-label="Aralığı sil"
+                  aria-label={kind === "scored" ? "Aralığı sil" : "Sonucu sil"}
                 >
                   <Trash2 className="size-3.5" aria-hidden />
                 </Button>
@@ -419,7 +448,7 @@ export function QuizEditor({
               ])
             }
           >
-            <Plus className="mr-1 inline size-3.5" aria-hidden /> Aralık ekle
+            <Plus className="mr-1 inline size-3.5" aria-hidden /> {kind === "scored" ? "Aralık ekle" : "Sonuç ekle"}
           </Button>
         </div>
       )}

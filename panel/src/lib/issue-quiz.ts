@@ -1,22 +1,25 @@
 /**
  * Quizzes an issue carries (D-240).
  *
- * Two kinds, one shape. A knowledge quiz marks one option per question right;
- * a scored quiz gives every option a number, adds them up and names the band
- * the total falls in. Both are stored as one JSON body per quiz.
+ * Three kinds, one shape. A knowledge quiz marks one option per question
+ * right; a scored quiz gives every option a number, adds them up and names the
+ * band the total falls in; a persona quiz (D-297) ties every option to a
+ * result and names the result chosen most often. All are stored as one JSON
+ * body per quiz.
  *
  * Grading happens on the server. The reader's copy of a quiz has the answer
- * key removed — `correct` and `points` never leave this machine — so the
+ * key removed — `correct`, `points` and `outcomeId` never leave this machine — so the
  * result cannot be read out of the page before it is earned.
  */
 import { z } from "zod";
 
-export const QUIZ_KINDS = ["knowledge", "scored"] as const;
+export const QUIZ_KINDS = ["knowledge", "scored", "persona"] as const;
 export type QuizKind = (typeof QUIZ_KINDS)[number];
 
 export const QUIZ_KIND_LABELS: Record<QuizKind, string> = {
   knowledge: "Bilgi testi (doğru cevaplı)",
   scored: "Eğlence testi (puan aralıklı)",
+  persona: "Kişilik testi (en çok seçilen sonuç)",
 };
 
 const shortId = z.string().trim().min(1).max(40);
@@ -28,6 +31,8 @@ export const quizOptionSchema = z.strictObject({
   correct: z.boolean().optional(),
   /** Scored quizzes: what choosing this option is worth. */
   points: z.number().int().min(-100).max(100).optional(),
+  /** Persona quizzes: the result this option counts towards. */
+  outcomeId: shortId.optional(),
 });
 
 export const quizQuestionSchema = z.strictObject({
@@ -42,8 +47,9 @@ export const quizOutcomeSchema = z.strictObject({
   id: shortId,
   title: z.string().trim().min(1).max(200),
   body: z.string().trim().max(1500).optional().nullable(),
-  min: z.number().int().min(-1000).max(1000),
-  max: z.number().int().min(-1000).max(1000),
+  // The band of a scored quiz; a persona result has none
+  min: z.number().int().min(-1000).max(1000).default(0),
+  max: z.number().int().min(-1000).max(1000).default(0),
 });
 
 export type QuizOption = z.infer<typeof quizOptionSchema>;
@@ -116,8 +122,24 @@ export function quizProblems(quiz: QuizBody): string[] {
       const right = question.options.filter((option) => option.correct === true).length;
       if (right === 0) problems.push(`${at}: doğru cevap işaretlenmemiş.`);
       if (right > 1) problems.push(`${at}: birden fazla doğru cevap işaretli.`);
-    } else if (question.options.every((option) => (option.points ?? 0) === 0)) {
-      problems.push(`${at}: hiçbir seçeneğe puan verilmemiş.`);
+    } else if (quiz.kind === "scored") {
+      if (question.options.every((option) => (option.points ?? 0) === 0)) {
+        problems.push(`${at}: hiçbir seçeneğe puan verilmemiş.`);
+      }
+    } else {
+      const known = new Set(quiz.outcomes.map((outcome) => outcome.id));
+      if (question.options.some((option) => !option.outcomeId || !known.has(option.outcomeId))) {
+        problems.push(`${at}: sonuca bağlanmamış seçenek var.`);
+      }
+    }
+  }
+
+  if (quiz.kind === "persona") {
+    if (quiz.outcomes.length < 2) problems.push("En az iki sonuç tanımlanmalı.");
+    const used = new Set(quiz.questions.flatMap((question) => question.options.map((option) => option.outcomeId)));
+    for (const outcome of quiz.outcomes) {
+      // A result nobody can get is a mistake in the key, not a rare ending
+      if (!used.has(outcome.id)) problems.push(`"${outcome.title}": hiçbir seçenek bu sonuca çıkmıyor.`);
     }
   }
 
@@ -220,7 +242,14 @@ export type ScoredResult = {
   outcome: { title: string; body: string | null } | null;
 };
 
-export type QuizResult = KnowledgeResult | ScoredResult;
+export type PersonaResult = {
+  kind: "persona";
+  total: number;
+  answered: number;
+  outcome: { title: string; body: string | null } | null;
+};
+
+export type QuizResult = KnowledgeResult | ScoredResult | PersonaResult;
 
 /** What a reader sends back: one chosen option per question, at most. */
 export const quizAnswerSchema = z.record(z.string().max(40), z.string().max(40));
@@ -229,10 +258,16 @@ export const quizAnswerSchema = z.record(z.string().max(40), z.string().max(40))
  * The result. An unanswered question is simply wrong (or worth nothing); the
  * reader is never blocked from finishing, and nothing about the attempt is
  * written down anywhere.
+ *
+ * A persona quiz names the result chosen most often. When two or more share
+ * the lead one of them is drawn at random (D-297), so the same answers may
+ * give a different result on another try; `random` is a parameter only so a
+ * test can decide the draw.
  */
 export function gradeQuiz(
   quiz: QuizBody,
   answers: Record<string, string>,
+  random: () => number = Math.random,
 ): QuizResult {
   if (quiz.kind === "knowledge") {
     const marked = quiz.questions.map((question) => {
@@ -251,6 +286,26 @@ export function gradeQuiz(
       correctCount: marked.filter((entry) => entry.isCorrect).length,
       total: quiz.questions.length,
       answers: marked,
+    };
+  }
+
+  if (quiz.kind === "persona") {
+    const counts = new Map<string, number>();
+    let answered = 0;
+    for (const question of quiz.questions) {
+      const chosen = question.options.find((option) => option.id === answers[question.id]);
+      if (!chosen) continue;
+      answered += 1;
+      if (chosen.outcomeId) counts.set(chosen.outcomeId, (counts.get(chosen.outcomeId) ?? 0) + 1);
+    }
+    const most = Math.max(0, ...counts.values());
+    const leaders = quiz.outcomes.filter((outcome) => most > 0 && counts.get(outcome.id) === most);
+    const outcome = leaders[Math.min(leaders.length - 1, Math.floor(random() * leaders.length))] ?? null;
+    return {
+      kind: "persona",
+      total: quiz.questions.length,
+      answered,
+      outcome: outcome ? { title: outcome.title, body: outcome.body ?? null } : null,
     };
   }
 

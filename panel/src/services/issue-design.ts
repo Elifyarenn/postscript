@@ -22,6 +22,7 @@ import {
 } from "@/lib/issue-design/manifest";
 import { getStorage } from "@/lib/storage";
 import type { RequestMeta } from "./auth";
+import { createQuiz, updateQuiz } from "./issue-quizzes";
 import {
   addPageImage,
   replacePageImage,
@@ -48,7 +49,8 @@ import {
  * Order of work, so a failure never leaves the admins without a preview:
  *
  *  1. every picture is stored and read back; only a byte-for-byte match counts
- *  2. titles, contents entries and areas are set
+ *  2. the manifest's quizzes are written (D-297), then titles, contents
+ *     entries and areas are set
  *  3. only then are the issue's other pages (the temporary preview, the test
  *     and template pages) saved to a snapshot and taken out; the snapshot is
  *     written and read back first, and their pictures are left in place, so
@@ -229,14 +231,19 @@ export async function importIssueDesign(
   const wantedQuizzes = [
     ...new Set(manifest.pages.flatMap((page) => page.areas.flatMap((area) => (area.kind === "quiz" ? [area.quizTitle] : [])))),
   ];
+  const ownQuizzes = manifest.quizzes ?? [];
+  const quizTitles = [...new Set([...wantedQuizzes, ...ownQuizzes.map((quiz) => quiz.title)])];
   const quizIds = new Map<string, string>();
-  if (wantedQuizzes.length) {
+  if (quizTitles.length) {
     const rows = await db
       .select({ id: issueQuizzes.id, title: issueQuizzes.title })
       .from(issueQuizzes)
-      .where(and(eq(issueQuizzes.issueId, issue.id), inArray(issueQuizzes.title, wantedQuizzes)));
+      .where(and(eq(issueQuizzes.issueId, issue.id), inArray(issueQuizzes.title, quizTitles)));
     for (const row of rows) quizIds.set(row.title, row.id);
-    const missing = wantedQuizzes.filter((title) => !quizIds.has(title));
+    // A quiz the manifest carries itself is written below; any other must be there already
+    const missing = wantedQuizzes.filter(
+      (title) => !quizIds.has(title) && !ownQuizzes.some((quiz) => quiz.title === title),
+    );
     if (missing.length) throw badRequest(`Manifestteki test bu sayıda yok: ${missing.map((t) => `“${t}”`).join(", ")}.`);
   }
 
@@ -286,7 +293,13 @@ export async function importIssueDesign(
     }
   }
 
-  /* ---- 2. What each page is, and its areas ---- */
+  /* ---- 2. The manifest's quizzes, then what each page is, and its areas ---- */
+  for (const quiz of ownQuizzes) {
+    const existing = quizIds.get(quiz.title);
+    if (existing) await updateQuiz(actor, existing, quiz, meta);
+    else quizIds.set(quiz.title, await createQuiz(actor, issue.id, quiz, meta));
+  }
+
   for (const page of manifest.pages) {
     const pageId = pageIds.get(page.key)!;
     await updatePageMeta(

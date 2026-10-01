@@ -33,6 +33,12 @@ type Result =
       total: number;
       answered: number;
       outcome: { title: string; body: string | null } | null;
+    }
+  | {
+      kind: "persona";
+      total: number;
+      answered: number;
+      outcome: { title: string; body: string | null } | null;
     };
 
 export function IssueQuizPlayer({ quiz, onClose }: { quiz: ReaderQuiz; onClose: () => void }) {
@@ -165,6 +171,14 @@ export function IssueQuizPlayer({ quiz, onClose }: { quiz: ReaderQuiz; onClose: 
                     );
                   })}
                 </ol>
+              </>
+            ) : result.kind === "persona" ? (
+              <>
+                <p className="quiz-score">{result.outcome?.title ?? "Hiç soru cevaplanmadı"}</p>
+                {result.outcome?.body && <p className="quiz-outcome">{result.outcome.body}</p>}
+                <p className="quiz-note">
+                  {result.answered} / {result.total} soru cevaplandı
+                </p>
               </>
             ) : (
               <>
