@@ -11585,3 +11585,9 @@ hatırlatma maili kuyruğa al": `contributorUploadReminder` şablonu `enqueueMai
 ile yalnızca kuyruğa yazılır, gönderim `/admin/mail` → "Kuyruğu şimdi işle"
 (D-286 ile aynı). Otomatik hatırlatma yok. Kişi başına günde bir hatırlatma
 (`dedupe_key` = kişi + gün); her basış denetim kaydına yazılır. Migration yok.
+
+## D-292 — 1. sayının geri sayımı 5 Ekim 17.00'ye alındı
+
+Ürün sahibi: geri sayım 5 Ekim 2026 17.00 (Türkiye saati). `ISSUE_EXTRAS[1].release.at`
+`2026-10-05T17:00:00+03:00` oldu (D-192'deki 1 Ekim yerine). Sayılar sayfası ve
+ana sayfadaki "… yayında" yazısı aynı değerden okur.
