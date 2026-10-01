@@ -379,6 +379,13 @@
       "when": 1790852348300,
       "tag": "0054_tricky_iron_lad",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1790853863746,
+      "tag": "0055_smart_puppet_master",
+      "breakpoints": true
     }
   ]
 }

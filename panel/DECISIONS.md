@@ -11559,3 +11559,18 @@ her yükleme hazırlanmış bir belgeye bağlanır.
   yerine geçmez, yazarı aktif etmez, başvuruyu tamamlamaz.
 - İmzalı kopyası yüklenmiş belge "Hazırlanan belgelerin hepsini sil" ve eser
   kaldırma ile silinmez (FK restrict + `withoutSignedCopy`).
+
+## D-290 — Doğrulanan imzalı belgeler tek yerde; Dergi imzası ve iki tarafça imzalı son hâl
+
+- `/admin/agreements/imza` ("İmzalanacak sözleşmeler", admin menüsünde): doğrulanmış
+  bütün imzalı yüklemeler (genel sözleşme ve ruhsat formları), Dergi imzası
+  bekleyenler önce. Her satırdan katkı sağlayanın PDF'i tek tek indirilir;
+  `GET /api/admin/signed-contracts/zip` imza bekleyenleri (`?which=all` hepsini)
+  tek ZIP olarak verir (mevcut `lib/zip`, yeni kütüphane yok; yalnızca admin).
+- Her satırda iki tarafça imzalı PDF yükleme: `signed_contracts.countersigned_media_id`,
+  `countersigned_at`, `countersigned_by` (migration 0055, yalnızca ekleme).
+  Yalnızca doğrulanmış yüklemeye; PDF kontrolleri üyenin yüklemesiyle aynı.
+  Yeniden yükleme değiştirir; önceki dosya depoda kalır, kimliği denetim
+  kaydında (`signed_contract.countersigned`). Üyenin kendi yüklemesi değişmez.
+- Katkı sağlayan son hâli "Belgelerim"de ve yükleme geçmişinde görür ve indirir;
+  `/api/media` sahibine bu dosyayı da verir. KVKK "Sözleşme" satırı güncellendi.

@@ -82,6 +82,14 @@ export function OwnDocumentsCard({
                         <Link href={`/api/media/${latest.fileMediaId}`} className="text-accent underline">
                           yüklenen PDF
                         </Link>
+                        {latest.countersignedMediaId && (
+                          <>
+                            {" · "}
+                            <Link href={`/api/media/${latest.countersignedMediaId}`} className="text-accent underline">
+                              iki tarafça imzalı son hâli
+                            </Link>
+                          </>
+                        )}
                         {latest.status === "rejected" && latest.rejectionReason && (
                           <span className="block text-danger">Neden: {latest.rejectionReason}</span>
                         )}

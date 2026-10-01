@@ -817,6 +817,14 @@ export const signedContracts = pgTable(
     reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }),
     /** Required when rejected; shown to the member. */
     rejectionReason: text("rejection_reason"),
+    /**
+     * The copy signed by both sides (D-290): after verification the magazine
+     * signs the member's signed PDF and uploads the result. The member's own
+     * upload above is kept as it was.
+     */
+    countersignedMediaId: uuid("countersigned_media_id").references(() => media.id, { onDelete: "restrict" }),
+    countersignedAt: timestamp("countersigned_at", { withTimezone: true }),
+    countersignedBy: uuid("countersigned_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

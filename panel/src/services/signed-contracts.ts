@@ -23,12 +23,15 @@ import {
   agreementVersions,
   articles,
   contributorDocuments,
+  media,
   signedContracts,
   users,
   writerApplications,
   type SignedContract,
 } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
+import { getStorage } from "@/lib/storage";
+import { uniqueEntryNames, type ZipEntry } from "@/lib/zip";
 import { canAccessIllustratorPanel, canAccessWriterPanel, canManageAgreements, type Actor } from "@/lib/auth/rbac";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { getCurrentAgreement } from "./agreements";
@@ -82,6 +85,8 @@ export type OwnSignedContract = {
   /** True when it is the contract rather than a work's licence form. */
   isContract: boolean;
   articleTitle: string | null;
+  /** The copy signed by both sides, once the magazine has uploaded it (D-290). */
+  countersignedMediaId: string | null;
 };
 
 const signedDocuments = alias(contributorDocuments, "signed_documents");
@@ -101,6 +106,7 @@ export async function listOwnSignedContracts(actor: Actor): Promise<OwnSignedCon
       contributorDocumentId: signedContracts.contributorDocumentId,
       documentKind: signedDocuments.kind,
       articleTitle: signedWorks.title,
+      countersignedMediaId: signedContracts.countersignedMediaId,
     })
     .from(signedContracts)
     .innerJoin(agreementVersions, eq(signedContracts.agreementVersionId, agreementVersions.id))
@@ -127,15 +133,7 @@ export async function uploadSignedContract(
   // Owning a prepared document is itself the right to send its signed copy
   if (!document && !(await mayUpload(actor))) throw forbidden("İmzalı sözleşme yükleme yetkiniz yok.");
 
-  if (!/\.pdf$/i.test(input.fileName.trim())) {
-    throw badRequest("Yalnızca PDF dosyası yükleyebilirsiniz (.pdf).");
-  }
-  if (input.declaredMime !== "application/pdf" || detectFileType(input.buffer)?.mime !== "application/pdf") {
-    throw badRequest("Dosya içeriği PDF değil. Yalnızca PDF dosyası yükleyebilirsiniz.");
-  }
-  if (input.buffer.length > MAX_SIGNED_CONTRACT_BYTES) {
-    throw badRequest(`Dosya çok büyük. Sınır: ${MAX_SIGNED_CONTRACT_MB} MB.`);
-  }
+  assertPdf(input);
 
   const user = await findUserById(actor.id);
   if (!user.emailVerifiedAt) {
@@ -188,6 +186,19 @@ export async function uploadSignedContract(
     ip: meta.ip,
   });
   return row;
+}
+
+/** The name, the declared type and the bytes must all say PDF, within the size limit. */
+function assertPdf(input: { buffer: Buffer; fileName: string; declaredMime: string }): void {
+  if (!/\.pdf$/i.test(input.fileName.trim())) {
+    throw badRequest("Yalnızca PDF dosyası yükleyebilirsiniz (.pdf).");
+  }
+  if (input.declaredMime !== "application/pdf" || detectFileType(input.buffer)?.mime !== "application/pdf") {
+    throw badRequest("Dosya içeriği PDF değil. Yalnızca PDF dosyası yükleyebilirsiniz.");
+  }
+  if (input.buffer.length > MAX_SIGNED_CONTRACT_BYTES) {
+    throw badRequest(`Dosya çok büyük. Sınır: ${MAX_SIGNED_CONTRACT_MB} MB.`);
+  }
 }
 
 /** A prepared document of the actor's own; anyone else's is "not found". */
@@ -361,6 +372,136 @@ export async function rejectSignedContract(
     entityType: "signed_contracts",
     entityId: row.id,
     after: { userId: row.userId },
+    ip: meta.ip,
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* The magazine's signature (D-290)                                    */
+/* ------------------------------------------------------------------ */
+
+export type CountersignItem = {
+  id: string;
+  memberId: string;
+  memberName: string;
+  isContract: boolean;
+  articleTitle: string | null;
+  version: number;
+  fileMediaId: string;
+  reviewedAt: Date | null;
+  countersignedMediaId: string | null;
+  countersignedAt: Date | null;
+  countersignerName: string | null;
+};
+
+const countersigners = alias(users, "countersigners");
+
+/**
+ * Every verified upload in one place, for the magazine to sign: those still
+ * waiting for its signature first, then the finished ones.
+ */
+export async function listForCountersign(actor: Actor): Promise<CountersignItem[]> {
+  if (!canManageAgreements(actor)) throw forbidden();
+  const rows = await db
+    .select({
+      id: signedContracts.id,
+      memberId: users.id,
+      memberName: users.displayName,
+      version: agreementVersions.version,
+      fileMediaId: signedContracts.fileMediaId,
+      reviewedAt: signedContracts.reviewedAt,
+      countersignedMediaId: signedContracts.countersignedMediaId,
+      countersignedAt: signedContracts.countersignedAt,
+      countersignerName: countersigners.displayName,
+      documentKind: signedDocuments.kind,
+      articleTitle: signedWorks.title,
+    })
+    .from(signedContracts)
+    .innerJoin(users, eq(signedContracts.userId, users.id))
+    .innerJoin(agreementVersions, eq(signedContracts.agreementVersionId, agreementVersions.id))
+    .leftJoin(countersigners, eq(signedContracts.countersignedBy, countersigners.id))
+    .leftJoin(signedDocuments, eq(signedContracts.contributorDocumentId, signedDocuments.id))
+    .leftJoin(signedWorks, eq(signedDocuments.articleId, signedWorks.id))
+    .where(eq(signedContracts.status, "approved"))
+    .orderBy(users.displayName, signedContracts.reviewedAt);
+  const items = rows.map(({ documentKind, ...row }) => ({ ...row, isContract: documentKind !== "work_licence" }));
+  return [...items.filter((row) => !row.countersignedMediaId), ...items.filter((row) => row.countersignedMediaId)];
+}
+
+/** A file name a person can read in the ZIP: who, and which document. */
+export function countersignFileName(item: Pick<CountersignItem, "memberName" | "isContract" | "articleTitle" | "version">): string {
+  const what = item.isContract ? `genel-sozlesme-v${item.version}` : `ruhsat-${item.articleTitle ?? "eser"}`;
+  const safe = `${item.memberName} - ${what}`
+    .normalize("NFC")
+    .replace(/[\/:*?"<>|\u0000-\u001f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120);
+  return `${safe}.pdf`;
+}
+
+/**
+ * The member-signed PDFs as ZIP entries, loaded one at a time: those still
+ * waiting for the magazine's signature, or every verified one.
+ */
+export async function countersignZipEntries(
+  actor: Actor,
+  which: "waiting" | "all",
+): Promise<{ count: number; entries: AsyncIterable<ZipEntry> }> {
+  const items = (await listForCountersign(actor)).filter((row) => which === "all" || !row.countersignedMediaId);
+  const names = uniqueEntryNames(items.map(countersignFileName));
+  async function* entries(): AsyncGenerator<ZipEntry> {
+    for (const [index, item] of items.entries()) {
+      const [file] = await db.select().from(media).where(eq(media.id, item.fileMediaId)).limit(1);
+      if (!file) continue;
+      const body = await getStorage().get({ bucket: "media", key: file.storageKey });
+      yield { name: names[index]!, data: new Uint8Array(body), modified: item.reviewedAt ?? undefined };
+    }
+  }
+  return { count: items.length, entries: entries() };
+}
+
+/**
+ * The copy signed by both sides, uploaded by an admin for a verified upload.
+ * Uploading again replaces it; the earlier file stays in storage and its id in
+ * the audit log.
+ */
+export async function uploadCountersigned(
+  actor: Actor,
+  id: string,
+  input: { buffer: Buffer; fileName: string; declaredMime: string },
+  meta: RequestMeta,
+): Promise<void> {
+  if (!canManageAgreements(actor)) throw forbidden();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw notFound("Sözleşme kaydı bulunamadı.");
+  const [row] = await db.select().from(signedContracts).where(eq(signedContracts.id, id)).limit(1);
+  if (!row) throw notFound("Sözleşme kaydı bulunamadı.");
+  if (row.status !== "approved") throw conflict("Yalnızca doğrulanmış bir sözleşmenin karşı imzalı hâli yüklenebilir.");
+  assertPdf(input);
+
+  // Private, under `contracts/`: the member and the admins read it
+  const file = await storeGeneratedPdf(input.buffer, {
+    prefix: "contracts/countersigned",
+    fileName: `iki-tarafli-imzali-${row.id.slice(0, 8)}.pdf`,
+    uploadedBy: actor.id,
+  });
+  const now = new Date();
+  await db
+    .update(signedContracts)
+    .set({ countersignedMediaId: file.id, countersignedAt: now, countersignedBy: actor.id, updatedAt: now })
+    .where(eq(signedContracts.id, row.id));
+
+  await writeAudit({
+    actorId: actor.id,
+    action: "signed_contract.countersigned",
+    entityType: "signed_contracts",
+    entityId: row.id,
+    before: { countersignedMediaId: row.countersignedMediaId },
+    after: {
+      countersignedMediaId: file.id,
+      sha256: createHash("sha256").update(input.buffer).digest("hex"),
+      userId: row.userId,
+    },
     ip: meta.ip,
   });
 }

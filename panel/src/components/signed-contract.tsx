@@ -52,6 +52,11 @@ export function SignedContractHistory({ rows }: { rows: OwnSignedContract[] }) {
               <Link href={`/api/media/${row.fileMediaId}`} className="text-accent underline">
                 PDF
               </Link>
+              {row.countersignedMediaId && (
+                <Link href={`/api/media/${row.countersignedMediaId}`} className="ml-2 text-accent underline">
+                  İki tarafça imzalı
+                </Link>
+              )}
             </Td>
           </tr>
         ))}
@@ -65,6 +70,7 @@ export function SignedContractUploadForm({
   csrfToken,
   maxMb,
   documentId,
+  fieldName = "documentId",
   label = "İmzalı sözleşme",
 }: {
   action: ServerAction;
@@ -72,12 +78,14 @@ export function SignedContractUploadForm({
   maxMb: number;
   /** The prepared document this file signs (D-289); one form per document. */
   documentId?: string;
+  /** The hidden field's name; the admin's countersigned upload sends the upload's `id` (D-290). */
+  fieldName?: string;
   label?: string;
 }) {
   const inputId = documentId ? `signed-file-${documentId}` : "signed-contract-file";
   return (
     <PanelForm action={action} csrfToken={csrfToken} submitLabel="İmzalı PDF'i yükle">
-      {documentId && <input type="hidden" name="documentId" value={documentId} />}
+      {documentId && <input type="hidden" name={fieldName} value={documentId} />}
       <Field label={`${label} (yalnızca PDF, en fazla ${maxMb} MB)`} htmlFor={inputId}>
         <Input id={inputId} name="file" type="file" required accept=".pdf,application/pdf" />
       </Field>

@@ -24,7 +24,12 @@ import {
 } from "@/services/users";
 import { createVersionFromTemplate, publishAgreementVersion, replaceVersionTextWithTemplate } from "@/services/agreements";
 import { adminDecideApplication } from "@/services/writer-applications";
-import { approveSignedContract, rejectSignedContract, VERIFIED_MESSAGE } from "@/services/signed-contracts";
+import {
+  approveSignedContract,
+  rejectSignedContract,
+  uploadCountersigned,
+  VERIFIED_MESSAGE,
+} from "@/services/signed-contracts";
 import {
   clearContributorDocuments,
   mailContributorDocuments,
@@ -602,6 +607,29 @@ export async function removeUnlicensedFormerWriterWorksAction(
     return {
       success: `${result.removed} eser kaldırıldı (kayıt ve sürüm geçmişi saklandı) · ${result.documentsRemoved} gönderilmemiş belge silindi.`,
     };
+  });
+}
+
+/** The copy signed by both sides, uploaded by the magazine for a verified upload (D-290). */
+export async function uploadCountersignedAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const file = formData.get("file");
+    if (!(file instanceof File) || file.size === 0) throw badRequest("Dosya seçilmedi.");
+
+    await uploadCountersigned(
+      { ...user },
+      text(formData, "id"),
+      { buffer: Buffer.from(await file.arrayBuffer()), fileName: file.name, declaredMime: file.type },
+      await requestMetadata(),
+    );
+
+    revalidatePath("/admin/agreements/imza");
+    return { success: "İki tarafça imzalı PDF kaydedildi; katkı sağlayan kendi panelinden indirebilir." };
   });
 }
 

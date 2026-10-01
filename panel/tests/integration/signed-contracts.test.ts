@@ -369,3 +369,68 @@ describe("one signed copy per document sent (D-289)", () => {
     expect(left.map((row) => row.id)).toEqual([documents[0]!.id]);
   });
 });
+
+describe("the magazine's signature (D-290)", () => {
+  async function verified() {
+    const { admin, writer } = await setup();
+    const { id } = await uploadSignedContract(actorOf(writer), pdf, noMeta);
+    await approveSignedContract(actorOf(admin), id, noMeta);
+    return { admin, writer, id };
+  }
+
+  it("gathers the verified uploads in one list and one ZIP, waiting ones first", async () => {
+    const { admin, writer, id } = await verified();
+    // A pending one is not there yet
+    const other = await createUser({ role: "writer", writerStatus: "active" });
+    await uploadSignedContract(actorOf(other), pdf, noMeta);
+
+    const { listForCountersign, countersignZipEntries } = await import("@/services/signed-contracts");
+    const list = await listForCountersign(actorOf(admin));
+    expect(list.map((row) => row.id)).toEqual([id]);
+    expect(list[0]!.memberName).toBe(writer.displayName);
+    expect(list[0]!.countersignedMediaId).toBeNull();
+
+    const { count, entries } = await countersignZipEntries(actorOf(admin), "waiting");
+    expect(count).toBe(1);
+    const files = [];
+    for await (const entry of entries) files.push(entry);
+    expect(files[0]!.name).toMatch(/genel-sozlesme-v\d+\.pdf$/);
+    expect(Buffer.from(files[0]!.data).subarray(0, 5).toString("ascii")).toBe("%PDF-");
+  });
+
+  it("takes the copy signed by both sides, which the member can read", async () => {
+    const { admin, writer, id } = await verified();
+    const { uploadCountersigned, listForCountersign, countersignZipEntries } = await import("@/services/signed-contracts");
+    await uploadCountersigned(actorOf(admin), id, pdf, noMeta);
+
+    const [row] = await db.select().from(signedContracts).where(eq(signedContracts.id, id));
+    expect(row!.countersignedMediaId).not.toBeNull();
+    expect(row!.countersignedBy).toBe(admin.id);
+    expect((await listForCountersign(actorOf(admin)))[0]!.countersignedMediaId).toBe(row!.countersignedMediaId);
+    expect((await countersignZipEntries(actorOf(admin), "waiting")).count).toBe(0);
+    expect((await countersignZipEntries(actorOf(admin), "all")).count).toBe(1);
+
+    const own = await listOwnSignedContracts(actorOf(writer));
+    expect(own[0]!.countersignedMediaId).toBe(row!.countersignedMediaId);
+
+    jar.cookies.clear();
+    await createSession({ userId: writer.id, ip: noMeta.ip, userAgent: noMeta.userAgent });
+    const response = await getMediaRoute(new Request(`http://localhost/api/media/${row!.countersignedMediaId}`), {
+      params: Promise.resolve({ id: row!.countersignedMediaId! }),
+    });
+    expect(response.status).toBe(200);
+  });
+
+  it("refuses an upload that is not verified, a file that is not a PDF, and anyone but an admin", async () => {
+    const { admin, writer, id } = await verified();
+    const { uploadCountersigned } = await import("@/services/signed-contracts");
+    const other = await createUser({ role: "writer", writerStatus: "active" });
+    const pending = await uploadSignedContract(actorOf(other), pdf, noMeta);
+
+    expect((await captureError(uploadCountersigned(actorOf(admin), pending.id, pdf, noMeta)))?.status).toBe(409);
+    expect((await captureError(uploadCountersigned(actorOf(admin), id, { ...pdf, fileName: "x.png" }, noMeta)))?.status).toBe(400);
+    expect((await captureError(uploadCountersigned(actorOf(writer), id, pdf, noMeta)))?.status).toBe(403);
+    const [row] = await db.select().from(signedContracts).where(eq(signedContracts.id, id));
+    expect(row!.countersignedMediaId).toBeNull();
+  });
+});

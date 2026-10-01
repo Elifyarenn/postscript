@@ -13,7 +13,7 @@
  * which is at least as restrictive because nothing leaves the server that works
  * without a session.
  */
-import { and, eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db/client";
 import { agreementAcceptances, media, rightsGrants, signedContracts, writerApplications } from "@/db/schema";
@@ -104,10 +104,16 @@ async function ownsContract(userId: string, mediaId: string): Promise<boolean> {
     .limit(1);
   if (acceptance.length > 0) return true;
 
+  // The member's own upload, and the copy the magazine signed back (D-290)
   const signed = await db
     .select({ id: signedContracts.id })
     .from(signedContracts)
-    .where(and(eq(signedContracts.fileMediaId, mediaId), eq(signedContracts.userId, userId)))
+    .where(
+      and(
+        or(eq(signedContracts.fileMediaId, mediaId), eq(signedContracts.countersignedMediaId, mediaId)),
+        eq(signedContracts.userId, userId),
+      ),
+    )
     .limit(1);
   if (signed.length > 0) return true;
 
