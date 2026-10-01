@@ -29,7 +29,7 @@ export default async function WriterNewArticlePage({
   const [categories, entries, openIssues] = await Promise.all([
     selectableWriterCategories(actor),
     canProposeTopics(actor) ? listWriterIssues(actor) : Promise.resolve([]),
-    listIssuesWithoutWindows(),
+    listIssuesWithoutWindows(user.id),
   ]);
 
   // Accepted topics that have no article yet

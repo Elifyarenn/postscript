@@ -73,3 +73,8 @@ MAIL_SAMPLES.contributorUploadReminder = [
   },
 ];
 ADDED_AFTER_LAYOUT.add("contributorUploadReminder");
+
+MAIL_SAMPLES.issueSubmissionGranted = [
+  { displayName: "Ada <b>Yazar</b>", issueLabel: "Sayı 1 · Obsession", url: "https://example.com/writer/articles/new" },
+];
+ADDED_AFTER_LAYOUT.add("issueSubmissionGranted");

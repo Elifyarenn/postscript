@@ -1010,6 +1010,29 @@ export const issues = pgTable(
 );
 
 /**
+ * A writer's own door into an issue that is otherwise closed to new articles
+ * (D-296): the admins' working issue, or an issue past planning. Given and
+ * taken back by an admin, one row per writer and issue. It opens starting an
+ * article there; every other rule of handing one in stays as it is.
+ */
+export const issueSubmissionGrants = pgTable(
+  "issue_submission_grants",
+  {
+    id: id(),
+    issueId: uuid("issue_id")
+      .notNull()
+      .references(() => issues.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    grantedBy: uuid("granted_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex("issue_submission_grants_pair_unique").on(t.issueId, t.userId)],
+);
+
+/**
  * The pages an issue is laid out from (D-234).
  *
  * A page is a layout plus the words and pictures that layout asks for, not a

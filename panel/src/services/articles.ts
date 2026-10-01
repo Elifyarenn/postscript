@@ -42,6 +42,7 @@ import { hasAcceptedCurrentAgreement } from "./agreements";
 import { getEditorAssignment, selectableWriterCategories } from "./editor-categories";
 import { acceptedTopicForNewArticle, assertArticleDeliveryAllowed } from "./topics";
 import { usesIssueWindows } from "@/lib/issue-periods";
+import { hasIssueGrant } from "./issue-grants";
 import {
   declineWork,
   findLiveApproval,
@@ -341,10 +342,13 @@ async function writerTargetIssue(
   const rows = await db
     .select()
     .from(issues)
-    .where(and(eq(issues.id, input.issueId), isNull(issues.deletedAt), eq(issues.adminOnly, false)))
+    .where(and(eq(issues.id, input.issueId), isNull(issues.deletedAt)))
     .limit(1);
   const issue = rows[0];
-  if (!issue) throw badRequest("Sayı bulunamadı.", { issueId: ["Sayı bulunamadı."] });
+  // The admins' working issue is not there for a writer, unless it was opened to them (D-296)
+  if (!issue || (issue.adminOnly && !(await hasIssueGrant(actor.id, issue.id)))) {
+    throw badRequest("Sayı bulunamadı.", { issueId: ["Sayı bulunamadı."] });
+  }
   if (usesIssueWindows(issue)) {
     throw conflict("Bu sayıda yazı, kabul edilmiş bir konudan başlatılır.");
   }

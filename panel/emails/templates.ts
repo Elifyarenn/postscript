@@ -690,3 +690,31 @@ export function contributorUploadReminder(input: {
     ],
   });
 }
+
+/**
+ * An admin opened an issue to this writer alone (D-296): the issue is closed
+ * to new articles for everyone else.
+ */
+export function issueSubmissionGranted(input: {
+  displayName: string;
+  issueLabel: string;
+  url: string;
+}): Template {
+  return renderMail({
+    kind: "issue_submission_granted",
+    subject: `postscript · ${input.issueLabel} için yazı göndermeniz açıldı`,
+    heading: "Yazı göndermeniz açıldı",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "paragraph",
+        text: `${input.issueLabel} için yazı göndermeniz yönetim tarafından açıldı. Yeni yazınızı bu sayıyı seçerek başlatabilirsiniz.`,
+      },
+      { type: "action", lead: "Yazınızı başlatacağınız sayfa:", url: input.url, label: "Yeni yazı" },
+      {
+        type: "paragraph",
+        text: "Yazıyı incelemeye gönderebilmeniz için imzalı sözleşmenizin doğrulanmış olması gerekir.",
+      },
+    ],
+  });
+}

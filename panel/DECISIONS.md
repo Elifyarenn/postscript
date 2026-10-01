@@ -11647,3 +11647,24 @@ hesaplara otomatik verilmez).
 - Eski `is_legal_advisor` ve `is_assistant` sütunları veri kaybı olmasın diye
   silinmedi ama hiçbir kod onları okumaz: eski işaretli hesap artık ekipten
   sayılmaz ve rozet taşımaz. KVKK metni buna göre güncellendi.
+
+## D-296 — Yeni yazıya kapalı sayı tek bir yazara açılabilir; açıldığında e-posta
+
+Canlıda Sayı 1 "yalnızca iki admin" çalışma sayısı (D-240) olduğu için hiçbir
+yazar ona yeni yazı başlatamıyordu; ürün sahibi tek bir yazara açılmasını ve o
+anda e-posta gitmesini istedi.
+
+- `issue_submission_grants` (migration 0057, yalnızca ekleme): sayı + yazar,
+  çift başına tek satır. Admin kullanıcı sayfasında "Sayıya yazı gönderme izni"
+  kartı: sayı seç → "İzin ver ve e-posta gönder"; izinler listelenir, geri
+  alınabilir (`src/services/issue-grants.ts`, yalnızca admin, denetim kaydı).
+- İzin yalnızca aktif bir yazara ve **dönemi olmayan** sayıya verilir; dönemli
+  sayıda konu ve yazı kabul dönemleri (D-261) geçerlidir, ikinci bir kural
+  açılmaz.
+- Etkisi yalnızca yazıyı başlatmaktır: `listIssuesWithoutWindows(writerId)`
+  izinli sayıyı "Yeni yazı"da gösterir, `writerTargetIssue` adminOnly sayıyı
+  izinli yazara kabul eder. Sözleşme doğrulaması (D-275), alan kısıtı ve inceleme
+  zinciri aynen geçerlidir; sayının sayfaları yine yalnızca adminlere açıktır.
+- İzin verildiği anda `issueSubmissionGranted` e-postası `sendMail` ile gider
+  (kuyruk + yeniden deneme). İzin geri alınınca başlatılmış yazılar yerinde kalır.
+- KVKK: "Sayıya özel yazı gönderme izni" veri kalemi ve saklama süresi eklendi.

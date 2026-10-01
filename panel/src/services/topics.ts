@@ -48,6 +48,7 @@ import {
 import { sendMail } from "@/services/mail-queue";
 import * as templates from "@emails/templates";
 import { getEditorAssignment, selectableWriterCategories } from "./editor-categories";
+import { grantedIssueIds } from "./issue-grants";
 import type { RequestMeta } from "./auth";
 
 /* ------------------------------------------------------------------ */
@@ -522,18 +523,23 @@ export async function acceptedTopicForNewArticle(actor: Actor, proposalId: strin
   return proposal;
 }
 
-/** Issues writers may still start an article in without a topic: those without windows. */
-export async function listIssuesWithoutWindows(): Promise<Issue[]> {
+/**
+ * Issues a writer may still start an article in without a topic: those
+ * without windows that are open to everyone, and any without windows an admin
+ * opened to this writer alone (D-296).
+ */
+export async function listIssuesWithoutWindows(writerId?: string): Promise<Issue[]> {
+  const granted = writerId ? await grantedIssueIds(writerId) : [];
+  const openToAll = and(eq(issues.adminOnly, false), inArray(issues.status, ["planning", "in_production"]));
   return db
     .select()
     .from(issues)
     .where(
       and(
         isNull(issues.deletedAt),
-        eq(issues.adminOnly, false),
         isNull(issues.topicOpensAt),
         isNull(issues.submissionOpensAt),
-        inArray(issues.status, ["planning", "in_production"]),
+        granted.length > 0 ? or(openToAll, inArray(issues.id, granted)) : openToAll,
       ),
     )
     .orderBy(desc(issues.number));

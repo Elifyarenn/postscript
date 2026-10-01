@@ -23,6 +23,7 @@ import {
 } from "@/services/users";
 import { createVersionFromTemplate, publishAgreementVersion, replaceVersionTextWithTemplate } from "@/services/agreements";
 import { adminDecideApplication } from "@/services/writer-applications";
+import { grantIssueSubmission, revokeIssueSubmission } from "@/services/issue-grants";
 import {
   approveSignedContract,
   rejectSignedContract,
@@ -194,6 +195,34 @@ export async function setAuthorizedAction(
     revalidatePath(`/admin/users/${targetId}`);
     revalidatePath("/admin/users/yetkililer");
     return { success: "Yetkili işareti güncellendi." };
+  });
+}
+
+/** Opens an issue to one writer and mails them at once (D-296). */
+export async function grantIssueSubmissionAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const userId = text(formData, "userId");
+    await grantIssueSubmission({ ...user }, { issueId: text(formData, "issueId"), userId }, await requestMetadata());
+    revalidatePath(`/admin/users/${userId}`);
+    return { success: "Yazı gönderme izni verildi; yazara e-posta gönderildi." };
+  });
+}
+
+export async function revokeIssueSubmissionAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    await revokeIssueSubmission({ ...user }, text(formData, "grantId"), await requestMetadata());
+    revalidatePath(`/admin/users/${text(formData, "userId")}`);
+    return { success: "Yazı gönderme izni geri alındı." };
   });
 }
 

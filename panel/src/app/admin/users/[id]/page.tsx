@@ -12,6 +12,7 @@ import { whatsappHref } from "@/lib/whatsapp";
 import { profileHref } from "@/lib/profile-link";
 import { renderAgreementForWriter } from "@/services/agreements";
 import { listAllWriterAreasWithQuota } from "@/services/writer-areas";
+import { listGrantableIssues, listIssueGrantsForUser } from "@/services/issue-grants";
 import { listEditorAreasWithHolders, listEditorCategories } from "@/services/editor-categories";
 import { AgreementRenderError } from "@/lib/agreement/render";
 import { readCsrfToken } from "@/lib/csrf";
@@ -33,6 +34,8 @@ import {
 import { formatDate, formatDateTime } from "@/lib/utils";
 import {
   changeRoleAction,
+  grantIssueSubmissionAction,
+  revokeIssueSubmissionAction,
   deleteUserAction,
   promoteToWriterAction,
   revokeUserSessionsAction,
@@ -88,6 +91,12 @@ export default async function AdminUserDetailPage({
   const hybrid = target.role === "editor" && target.writerStatus !== null;
 
   const overview = await getUserOverview({ ...user }, id);
+  // A writer can be let into an issue that is closed to new articles (D-296)
+  const writes = target.writerStatus !== null && target.role !== "user";
+  const [issueGrants, grantableIssues] = writes
+    ? await Promise.all([listIssueGrantsForUser({ ...user }, id), listGrantableIssues({ ...user })])
+    : [[], []];
+  const openIssues = grantableIssues.filter((issue) => !issueGrants.some((grant) => grant.issueId === issue.id));
   const age = target.birthDate ? calculateAge(target.birthDate) : null;
 
   // The info card shows what this kind of account actually carries (D-087):
@@ -309,6 +318,64 @@ export default async function AdminUserDetailPage({
             </>
           </PanelForm>
         </Card>
+
+        {writes && (
+          <Card>
+            <h2 className="mb-1 font-serif text-lg">Sayıya yazı gönderme izni</h2>
+            <p className="mb-4 text-sm text-muted">
+              Yeni yazıya kapalı bir sayıyı (yalnızca adminlere açık çalışma sayısı ya da planlaması
+              bitmiş sayı) yalnızca bu yazara açar. İzin verildiği anda yazara e-posta gider. Dönemi
+              olan sayılarda izin verilmez; orada konu ve yazı kabul dönemleri geçerlidir. Sözleşme,
+              alan ve inceleme kuralları değişmez.
+            </p>
+            {issueGrants.length > 0 && (
+              <ul className="mb-4 space-y-2 text-sm">
+                {issueGrants.map((grant) => (
+                  <li key={grant.id} className="flex flex-wrap items-center gap-3">
+                    <span>
+                      Sayı {grant.issueNumber} · {grant.issueTitle}
+                      <span className="text-muted"> · {formatDateTime(grant.createdAt)}</span>
+                    </span>
+                    <ActionButton
+                      action={revokeIssueSubmissionAction}
+                      csrfToken={csrfToken}
+                      label="İzni geri al"
+                      variant="ghost"
+                      fields={{ grantId: grant.id, userId: target.id }}
+                      confirmMessage="Bu sayı için yazı gönderme izni geri alınsın mı? Başlatılmış yazılar yerinde kalır."
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+            {openIssues.length === 0 ? (
+              <p className="text-sm text-muted">İzin verilebilecek başka sayı yok.</p>
+            ) : (
+              <PanelForm
+                action={grantIssueSubmissionAction}
+                csrfToken={csrfToken}
+                submitLabel="İzin ver ve e-posta gönder"
+                submitVariant="secondary"
+              >
+                <>
+                  <input type="hidden" name="userId" value={target.id} />
+                  <Field label="Sayı" htmlFor="grant-issue">
+                    <Select id="grant-issue" name="issueId" required defaultValue="">
+                      <option value="" disabled>
+                        Seçin…
+                      </option>
+                      {openIssues.map((issue) => (
+                        <option key={issue.id} value={issue.id}>
+                          Sayı {issue.number} · {issue.title || "(başlıksız)"}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                </>
+              </PanelForm>
+            )}
+          </Card>
+        )}
 
         {target.role === "writer" && (
           <Card>
