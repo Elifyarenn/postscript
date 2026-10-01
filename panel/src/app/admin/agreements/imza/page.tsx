@@ -3,9 +3,11 @@ import { guardPanel } from "@/lib/auth/guard";
 import { readCsrfToken } from "@/lib/csrf";
 import { formatDateTime } from "@/lib/utils";
 import { listForCountersign, MAX_SIGNED_CONTRACT_MB } from "@/services/signed-contracts";
+import { listAwaitingUploads } from "@/services/contributor-documents";
 import { Card, EmptyState, PageHeader, Table, Td, Th } from "@/components/ui";
+import { ActionButton } from "@/components/form";
 import { SignedContractUploadForm } from "@/components/signed-contract";
-import { uploadCountersignedAction } from "../../actions";
+import { queueUploadRemindersAction, uploadCountersignedAction } from "../../actions";
 
 export const metadata = { title: "İmzalanacak sözleşmeler" };
 
@@ -21,7 +23,7 @@ export const dynamic = "force-dynamic";
 export default async function CountersignPage() {
   const { user } = await guardPanel("admin");
   const csrfToken = (await readCsrfToken()) ?? "";
-  const items = await listForCountersign({ ...user });
+  const [items, awaiting] = await Promise.all([listForCountersign({ ...user }), listAwaitingUploads({ ...user })]);
   const waiting = items.filter((row) => !row.countersignedMediaId).length;
 
   return (
@@ -36,7 +38,76 @@ export default async function CountersignPage() {
         }
       />
 
+      <div className="space-y-6">
       <Card>
+        <h2 className="mb-1 font-serif text-lg">Belge yüklemesi bekleyenler ({awaiting.length})</h2>
+        <p className="mb-4 text-sm text-muted">
+          Hazır belgesi olup imzalı kopyasını henüz yüklemeyen (ya da yüklediği reddedilen) kişiler. Hatırlatma
+          düğmeleri maili yalnızca kuyruğa alır; göndermek için{" "}
+          <Link href="/admin/mail" className="text-accent underline">
+            E-posta kuyruğu
+          </Link>{" "}
+          sayfasında &ldquo;Kuyruğu şimdi işle&rdquo;. Bir kişiye günde bir hatırlatma kuyruğa girer.
+        </p>
+        {awaiting.length === 0 ? (
+          <EmptyState>Yüklemesi beklenen belge yok.</EmptyState>
+        ) : (
+          <>
+            <div className="mb-3">
+              <ActionButton
+                action={queueUploadRemindersAction}
+                csrfToken={csrfToken}
+                label={`Hepsine hatırlatma maili kuyruğa al (${awaiting.length} kişi)`}
+                fields={{ userId: "all" }}
+                confirmMessage={`${awaiting.length} kişiye imzalı belge hatırlatması kuyruğa alınacak. Devam edilsin mi?`}
+              />
+            </div>
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Katkı sağlayan</Th>
+                  <Th>Yüklenmesi beklenen belgeler</Th>
+                  <Th>Son hatırlatma</Th>
+                  <Th>Hatırlat</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {awaiting.map((entry) => (
+                  <tr key={entry.userId}>
+                    <Td className="text-xs">
+                      <Link href={`/admin/users/${entry.userId}`} className="underline">
+                        {entry.userName}
+                      </Link>
+                    </Td>
+                    <Td className="text-xs">
+                      <ul className="list-disc pl-4">
+                        {entry.documents.map((document) => (
+                          <li key={document.id}>
+                            {document.label}
+                            {document.rejected && <span className="text-danger"> (reddedildi, yeniden bekleniyor)</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    </Td>
+                    <Td className="text-xs">{entry.lastReminderAt ? formatDateTime(entry.lastReminderAt) : "—"}</Td>
+                    <Td className="text-xs">
+                      <ActionButton
+                        action={queueUploadRemindersAction}
+                        csrfToken={csrfToken}
+                        label="Hatırlatma maili"
+                        fields={{ userId: entry.userId }}
+                      />
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </>
+        )}
+      </Card>
+
+      <Card>
+        <h2 className="mb-3 font-serif text-lg">Doğrulanan imzalı belgeler</h2>
         <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
           <span>
             {items.length} doğrulanmış belge · <strong>{waiting}</strong> Dergi imzası bekliyor
@@ -107,6 +178,7 @@ export default async function CountersignPage() {
           </Table>
         )}
       </Card>
+      </div>
     </>
   );
 }

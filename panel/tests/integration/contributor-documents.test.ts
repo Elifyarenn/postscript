@@ -459,3 +459,50 @@ describe("reading and downloading", () => {
     expect((await fetchAs(null)).status).toBe(401);
   });
 });
+
+describe("waiting for signed copies (D-291)", () => {
+  it("lists who still owes a signed copy, and queues reminders without sending them", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const { listAwaitingUploads, queueUploadReminders } = await import("@/services/contributor-documents");
+    const { uploadSignedContract } = await import("@/services/signed-contracts");
+    const { setStorageAdapter, MemoryStorageAdapter } = await import("@/lib/storage");
+    const { tinyPdf } = await import("../helpers/factories");
+    setStorageAdapter(new MemoryStorageAdapter());
+
+    const own = (await listOwnContributorDocuments(actorOf(s.complete))).filter((row) => row.status === "prepared");
+    let waiting = await listAwaitingUploads(actorOf(s.admin));
+    expect(waiting.find((entry) => entry.userId === s.complete.id)!.documents).toHaveLength(own.length);
+    // Someone with nothing prepared owes nothing
+    expect(waiting.some((entry) => entry.userId === s.noBirthDate.id)).toBe(
+      (await listOwnContributorDocuments(actorOf(s.noBirthDate))).some((row) => row.status === "prepared"),
+    );
+
+    // A copy under review is no longer awaited
+    await uploadSignedContract(
+      actorOf(s.complete),
+      { buffer: tinyPdf(), fileName: "imzali.pdf", declaredMime: "application/pdf", documentId: own[0]!.id },
+      noMeta,
+    );
+    waiting = await listAwaitingUploads(actorOf(s.admin));
+    expect(waiting.find((entry) => entry.userId === s.complete.id)!.documents.map((d) => d.id)).not.toContain(own[0]!.id);
+
+    const first = await queueUploadReminders(actorOf(s.admin), [s.complete.id], noMeta);
+    expect(first).toEqual({ queued: 1, alreadyToday: 0 });
+    const jobs = await db.select().from(mailJobs);
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]!.kind).toBe("contributor_upload_reminder");
+    expect(jobs[0]!.status).toBe("pending");
+    expect(mailbox.outbox).toHaveLength(0);
+
+    // Once a day per person
+    expect(await queueUploadReminders(actorOf(s.admin), "all", noMeta)).toEqual({
+      queued: waiting.length - 1,
+      alreadyToday: 1,
+    });
+    expect((await listAwaitingUploads(actorOf(s.admin))).find((entry) => entry.userId === s.complete.id)!.lastReminderAt).not.toBeNull();
+
+    expect((await captureError(queueUploadReminders(actorOf(s.editor), "all", noMeta)))?.status).toBe(403);
+    expect((await captureError(listAwaitingUploads(actorOf(s.complete))))?.status).toBe(403);
+  });
+});

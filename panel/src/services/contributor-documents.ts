@@ -25,6 +25,7 @@ import {
   agreementVersions,
   articles,
   contributorDocuments,
+  mailJobs,
   rightsGrants,
   signedContracts,
   users,
@@ -657,4 +658,120 @@ export async function mailContributorDocuments(
     ip: meta.ip,
   });
   return { sent: rows.length };
+}
+
+/* ------------------------------------------------------------------ */
+/* Waiting for signed copies (D-291)                                   */
+/* ------------------------------------------------------------------ */
+
+export type AwaitingUpload = {
+  userId: string;
+  userName: string;
+  /** The prepared documents with no signed copy under review or verified. */
+  documents: { id: string; label: string; rejected: boolean }[];
+  /** When a reminder was last queued for this person, if ever. */
+  lastReminderAt: Date | null;
+};
+
+const REMINDER_KIND = "contributor_upload_reminder";
+
+function documentLabel(kind: ContributorDocumentKind, articleTitle: string | null): string {
+  return articleTitle ? `${DOCUMENT_KIND_LABELS[kind]} — ${articleTitle}` : DOCUMENT_KIND_LABELS[kind];
+}
+
+/**
+ * Everyone who was sent a prepared document and has not uploaded its signed
+ * copy, or whose upload was rejected. A copy under review or verified counts
+ * as uploaded.
+ */
+export async function listAwaitingUploads(actor: Actor): Promise<AwaitingUpload[]> {
+  if (!canManageAgreements(actor)) throw forbidden();
+
+  const rows = await db
+    .select({
+      id: contributorDocuments.id,
+      kind: contributorDocuments.kind,
+      userId: users.id,
+      userName: users.displayName,
+      email: users.email,
+      articleTitle: articles.title,
+    })
+    .from(contributorDocuments)
+    .innerJoin(users, eq(contributorDocuments.userId, users.id))
+    .leftJoin(articles, eq(contributorDocuments.articleId, articles.id))
+    .where(and(eq(contributorDocuments.status, "prepared"), isNull(users.deletedAt)))
+    .orderBy(users.displayName, contributorDocuments.kind, contributorDocuments.createdAt);
+  if (rows.length === 0) return [];
+
+  const uploads = await db
+    .select({ documentId: signedContracts.contributorDocumentId, status: signedContracts.status })
+    .from(signedContracts)
+    .where(inArray(signedContracts.contributorDocumentId, rows.map((row) => row.id)))
+    .orderBy(desc(signedContracts.uploadedAt));
+  // Newest first, so the first status seen per document is its latest
+  const latest = new Map<string, string>();
+  for (const upload of uploads) if (upload.documentId && !latest.has(upload.documentId)) latest.set(upload.documentId, upload.status);
+
+  const byUser = new Map<string, AwaitingUpload & { email: string }>();
+  for (const row of rows) {
+    const status = latest.get(row.id);
+    if (status === "pending" || status === "approved") continue;
+    const entry = byUser.get(row.userId) ?? { userId: row.userId, userName: row.userName, email: row.email, documents: [], lastReminderAt: null };
+    entry.documents.push({ id: row.id, label: documentLabel(row.kind, row.articleTitle), rejected: status === "rejected" });
+    byUser.set(row.userId, entry);
+  }
+  if (byUser.size === 0) return [];
+
+  const reminders = await db
+    .select({ recipient: mailJobs.recipient, at: sql<Date>`max(${mailJobs.createdAt})` })
+    .from(mailJobs)
+    .where(and(eq(mailJobs.kind, REMINDER_KIND), inArray(mailJobs.recipient, [...byUser.values()].map((entry) => entry.email))))
+    .groupBy(mailJobs.recipient);
+  const lastByEmail = new Map(reminders.map((row) => [row.recipient, row.at ? new Date(row.at) : null]));
+
+  return [...byUser.values()].map(({ email, ...entry }) => ({ ...entry, lastReminderAt: lastByEmail.get(email) ?? null }));
+}
+
+/**
+ * Queues a reminder to each chosen person (or everyone waiting) and stops
+ * there (D-291): the admin sends the batch from /admin/mail. One reminder per
+ * person per day; a second press the same day adds nothing.
+ */
+export async function queueUploadReminders(
+  actor: Actor,
+  userIds: readonly string[] | "all",
+  meta: RequestMeta,
+): Promise<{ queued: number; alreadyToday: number }> {
+  if (!canManageAgreements(actor)) throw forbidden();
+  const waiting = (await listAwaitingUploads(actor)).filter((entry) => userIds === "all" || userIds.includes(entry.userId));
+  if (waiting.length === 0) return { queued: 0, alreadyToday: 0 };
+
+  const people = await db
+    .select({ id: users.id, email: users.email, displayName: users.displayName })
+    .from(users)
+    .where(inArray(users.id, waiting.map((entry) => entry.userId)));
+  const emailOf = new Map(people.map((person) => [person.id, person]));
+  const day = new Date().toISOString().slice(0, 10);
+
+  const mails: OutgoingMail[] = waiting.flatMap((entry) => {
+    const person = emailOf.get(entry.userId);
+    if (!person) return [];
+    const message = templates.contributorUploadReminder({
+      displayName: person.displayName,
+      documents: entry.documents.map((document) => document.label),
+      url: `${env().APP_URL}/account`,
+    });
+    return [{ to: person.email, ...message, dedupeKey: `${REMINDER_KIND}:${person.id}:${day}` }];
+  });
+
+  // Stored only: enqueueMails does not start a delivery
+  const ids = await enqueueMails(mails);
+  await writeAudit({
+    actorId: actor.id,
+    action: "contributor_documents.reminders_queued",
+    entityType: "users",
+    after: { queued: ids.length, alreadyToday: mails.length - ids.length, userIds: waiting.map((entry) => entry.userId) },
+    ip: meta.ip,
+  });
+  return { queued: ids.length, alreadyToday: mails.length - ids.length };
 }

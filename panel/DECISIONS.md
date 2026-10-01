@@ -11574,3 +11574,14 @@ her yükleme hazırlanmış bir belgeye bağlanır.
   kaydında (`signed_contract.countersigned`). Üyenin kendi yüklemesi değişmez.
 - Katkı sağlayan son hâli "Belgelerim"de ve yükleme geçmişinde görür ve indirir;
   `/api/media` sahibine bu dosyayı da verir. KVKK "Sözleşme" satırı güncellendi.
+
+## D-291 — Belge yüklemesi bekleyenler ve elle kuyruğa alınan hatırlatma
+
+`/admin/agreements/imza` en üstte "Belge yüklemesi bekleyenler": hazır belgesi
+olup imzalı kopyası incelemede ya da doğrulanmış olmayan (hiç yüklenmemiş veya
+son yüklemesi reddedilmiş) kişiler, eksik belgeleriyle ve son hatırlatma
+zamanıyla (`listAwaitingUploads`). Satırda "Hatırlatma maili", üstte "Hepsine
+hatırlatma maili kuyruğa al": `contributorUploadReminder` şablonu `enqueueMails`
+ile yalnızca kuyruğa yazılır, gönderim `/admin/mail` → "Kuyruğu şimdi işle"
+(D-286 ile aynı). Otomatik hatırlatma yok. Kişi başına günde bir hatırlatma
+(`dedupe_key` = kişi + gün); her basış denetim kaydına yazılır. Migration yok.

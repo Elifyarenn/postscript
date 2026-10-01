@@ -658,3 +658,35 @@ export function contributorDocumentsSent(input: {
     ],
   });
 }
+
+/**
+ * A reminder that signed copies are still missing, sent only when an admin
+ * asks (D-291). It names the documents, not their contents.
+ */
+export function contributorUploadReminder(input: {
+  displayName: string;
+  documents: string[];
+  url: string;
+}): Template {
+  return renderMail({
+    kind: "contributor_upload_reminder",
+    subject: "postscript · İmzalı belgelerinizi yüklemeyi unutmayın",
+    heading: "İmzalı belgeleriniz bekleniyor",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "paragraph",
+        text:
+          "Size gönderilen şu belgelerin imzalı hâli henüz panele yüklenmedi:\n" +
+          input.documents.map((name) => `- ${name}`).join("\n"),
+      },
+      {
+        type: "paragraph",
+        text:
+          "Her belgeyi yazdırıp el yazısıyla imzalayın, taratın ve PDF olarak kendi satırından yükleyin. " +
+          "Yönetim kontrol edip doğrular.",
+      },
+      { type: "action", lead: "Belgelerinizi yükleyeceğiniz sayfa:", url: input.url, label: "Belgelerimi aç" },
+    ],
+  });
+}

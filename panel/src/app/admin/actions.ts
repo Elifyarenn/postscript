@@ -35,6 +35,7 @@ import {
   mailContributorDocuments,
   prepareContributorDocuments,
   queueAllContributorDocuments,
+  queueUploadReminders,
 } from "@/services/contributor-documents";
 import { removeUnlicensedFormerWriterWorks } from "@/services/unlicensed-works";
 import { createAnnouncement, publishAnnouncement } from "@/services/announcements";
@@ -606,6 +607,26 @@ export async function removeUnlicensedFormerWriterWorksAction(
     revalidatePath("/admin/agreements");
     return {
       success: `${result.removed} eser kaldırıldı (kayıt ve sürüm geçmişi saklandı) · ${result.documentsRemoved} gönderilmemiş belge silindi.`,
+    };
+  });
+}
+
+/** Queues upload reminders, to one person or everyone waiting; /admin/mail sends them (D-291). */
+export async function queueUploadRemindersAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const target = text(formData, "userId");
+    const result = await queueUploadReminders({ ...user }, target === "all" ? "all" : [target], await requestMetadata());
+    revalidatePath("/admin/agreements/imza");
+    return {
+      success:
+        `${result.queued} hatırlatma maili kuyruğa alındı` +
+        (result.alreadyToday ? ` · ${result.alreadyToday} kişiye bugün zaten hatırlatma kuyruğa alınmış` : "") +
+        `. Göndermek için /admin/mail sayfasında "Kuyruğu şimdi işle".`,
     };
   });
 }

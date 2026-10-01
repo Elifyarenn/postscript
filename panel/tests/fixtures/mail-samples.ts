@@ -64,3 +64,12 @@ MAIL_SAMPLES.contributorDocumentsSent = [
   },
 ];
 ADDED_AFTER_LAYOUT.add("contributorDocumentsSent");
+
+MAIL_SAMPLES.contributorUploadReminder = [
+  {
+    displayName: "Ada <b>Yazar</b>",
+    documents: ["Genel Katkı Sağlayan Sözleşmesi", "Eser Bazlı Kullanım Ruhsatı Formu — Kış & <Sessizlik>"],
+    url: "https://example.com/account",
+  },
+];
+ADDED_AFTER_LAYOUT.add("contributorUploadReminder");
