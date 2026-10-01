@@ -11591,3 +11591,13 @@ ile yalnızca kuyruğa yazılır, gönderim `/admin/mail` → "Kuyruğu şimdi i
 Ürün sahibi: geri sayım 5 Ekim 2026 17.00 (Türkiye saati). `ISSUE_EXTRAS[1].release.at`
 `2026-10-05T17:00:00+03:00` oldu (D-192'deki 1 Ekim yerine). Sayılar sayfası ve
 ana sayfadaki "… yayında" yazısı aynı değerden okur.
+
+## D-293 — E-posta kuyruğunda gönderilmeyi bekleyen taslaklar ve önizleme
+
+`/admin/mail`'de "Gönderilmeyi bekleyen taslaklar": `pending` işler şablon türüne
+göre sayısı ve en eskisiyle (`pendingMailDrafts`). Listede her işin yanında
+"Önizle" → `/admin/mail/:id` (`previewMailJob`, yalnızca admin): alıcı, konu,
+durum, ekler (ad ve boyut), alıcının göreceği HTML (izinsiz `sandbox` iframe) ve
+düz metin. Bakmak hiçbir şey göndermez. `sensitive` işler (giriş, doğrulama,
+şifre bağlantısı) önizlenmez: bağlantı okuyan herkes için çalışırdı. Gönderilmiş
+işin içeriği zaten silindiği için "içerik silindi" yazar. Migration yok.

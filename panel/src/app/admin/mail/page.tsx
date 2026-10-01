@@ -4,7 +4,12 @@ import { readCsrfToken } from "@/lib/csrf";
 import { PanelForm } from "@/components/form";
 import { Card, EmptyState, PageHeader, Table, Td, Th } from "@/components/ui";
 import { cn, formatDateTime } from "@/lib/utils";
-import { mailQueueOverview, MAIL_JOB_RETENTION_DAYS, type MailQueueFilter } from "@/services/mail-queue";
+import {
+  mailQueueOverview,
+  MAIL_JOB_RETENTION_DAYS,
+  pendingMailDrafts,
+  type MailQueueFilter,
+} from "@/services/mail-queue";
 import type { MailJobStatus } from "@/db/schema";
 import * as templates from "@emails/templates";
 import { processMailQueueAction, retryMailJobAction } from "./actions";
@@ -45,7 +50,10 @@ export default async function AdminMailPage({
   const filter: MailQueueFilter =
     requested === "sent" || requested === "all" ? requested : "attention";
 
-  const { totals, jobs } = await mailQueueOverview({ ...user }, filter);
+  const [{ totals, jobs }, drafts] = await Promise.all([
+    mailQueueOverview({ ...user }, filter),
+    pendingMailDrafts({ ...user }),
+  ]);
 
   // A sample drawn with the real layout, so the design can be checked without sending anything
   const sample = templates.verifyEmail({
@@ -85,6 +93,26 @@ export default async function AdminMailPage({
               <></>
             </PanelForm>
           </div>
+        </Card>
+
+        <Card>
+          <h2 className="mb-1 font-serif text-lg">Gönderilmeyi bekleyen taslaklar</h2>
+          <p className="mb-3 text-sm text-muted">
+            Kuyruğa alınmış, henüz gönderilmemiş e-postalar. Aşağıdaki listede her birinin yanındaki
+            &ldquo;Önizle&rdquo; ile alıcının göreceği hâlini ve eklerini görebilirsiniz.
+          </p>
+          {drafts.length === 0 ? (
+            <EmptyState>Gönderilmeyi bekleyen e-posta yok.</EmptyState>
+          ) : (
+            <ul className="space-y-1 text-sm">
+              {drafts.map((draft) => (
+                <li key={draft.kind}>
+                  <strong>{draft.total}</strong> · <span className="font-mono text-xs">{draft.kind}</span>
+                  <span className="text-muted"> · en eskisi {formatDateTime(draft.oldest)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
 
         <Card>
@@ -128,6 +156,9 @@ export default async function AdminMailPage({
                       <div className="break-all">{job.recipient}</div>
                       <div className="text-muted">{job.subject}</div>
                       <div className="font-mono text-[11px] text-muted">{job.kind}</div>
+                      <Link href={`/admin/mail/${job.id}`} className="text-accent underline">
+                        Önizle
+                      </Link>
                     </Td>
                     <Td>
                       <span

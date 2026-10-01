@@ -484,3 +484,68 @@ export async function processMailQueueAsAdmin(actor: Actor): Promise<ProcessResu
   if (!canManageMailQueue(actor)) throw forbidden();
   return processMailQueue({ budgetMs: 240_000, limit: 500 });
 }
+
+/* ------------------------------------------------------------------ */
+/* Drafts: what is waiting to go (D-293)                               */
+/* ------------------------------------------------------------------ */
+
+/** The messages still waiting to be sent, counted by template. */
+export async function pendingMailDrafts(actor: Actor): Promise<{ kind: string; total: number; oldest: Date }[]> {
+  if (!canManageMailQueue(actor)) throw forbidden();
+  const rows = await db
+    .select({ kind: mailJobs.kind, total: count(), oldest: sql<Date>`min(${mailJobs.createdAt})` })
+    .from(mailJobs)
+    .where(eq(mailJobs.status, "pending"))
+    .groupBy(mailJobs.kind)
+    .orderBy(asc(mailJobs.kind));
+  return rows.map((row) => ({ kind: row.kind, total: Number(row.total), oldest: new Date(row.oldest) }));
+}
+
+export type MailJobPreview = {
+  id: string;
+  kind: string;
+  recipient: string;
+  subject: string;
+  status: MailJobStatus;
+  createdAt: Date;
+  /** Null when the body was dropped after sending, or is kept from view. */
+  html: string | null;
+  text: string | null;
+  /** Why the body is not shown, when it is not. */
+  hidden: string | null;
+  attachments: { filename: string; contentType: string; bytes: number }[];
+};
+
+/**
+ * One message as it will be sent, for the admin to read before sending
+ * (D-293). A message carrying a sign-in, verification or reset link is not
+ * shown: its link would work for whoever reads it.
+ */
+export async function previewMailJob(actor: Actor, jobId: string): Promise<MailJobPreview> {
+  if (!canManageMailQueue(actor)) throw forbidden();
+  if (!z.uuid().safeParse(jobId).success) throw notFound("E-posta kaydı bulunamadı.");
+  const [job] = await db.select().from(mailJobs).where(eq(mailJobs.id, jobId)).limit(1);
+  if (!job) throw notFound("E-posta kaydı bulunamadı.");
+
+  const hidden = job.sensitive
+    ? "Bu ileti giriş, doğrulama ya da şifre bağlantısı taşıdığı için içeriği gösterilmez."
+    : job.textBody === null
+      ? "Gönderildiği için içeriği silindi."
+      : null;
+  return {
+    id: job.id,
+    kind: job.kind,
+    recipient: job.recipient,
+    subject: job.subject,
+    status: job.status,
+    createdAt: job.createdAt,
+    html: hidden ? null : job.htmlBody,
+    text: hidden ? null : job.textBody,
+    hidden,
+    attachments: (job.attachments ?? []).map((a) => ({
+      filename: a.filename,
+      contentType: a.contentType ?? "application/octet-stream",
+      bytes: Math.floor((a.contentBase64.length * 3) / 4),
+    })),
+  };
+}

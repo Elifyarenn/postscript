@@ -438,3 +438,50 @@ describe("retention", () => {
     expect(await jobsFor("bekleyen@example.com")).toHaveLength(1);
   });
 });
+
+describe("drafts waiting to be sent (D-293)", () => {
+  it("counts the waiting messages by template and shows each as it will be sent, attachments by name", async () => {
+    const admin = actorOf(await createUser({ role: "admin" }));
+    const { pendingMailDrafts, previewMailJob } = await import("@/services/mail-queue");
+    const [id] = await enqueueMails([
+      {
+        to: "yazar@example.com",
+        ...templates.contributorDocumentsSent({ displayName: "Ada", documents: ["Genel Katkı Sağlayan Sözleşmesi"], url: "https://example.com/account" }),
+        attachments: [{ filename: "sozlesme.pdf", content: Buffer.from("%PDF-1.4 x"), contentType: "application/pdf" }],
+      },
+    ]);
+    await enqueueMails([
+      { to: "gizli@example.com", ...templates.resetPassword({ displayName: "Ada", url: "https://example.com/reset-password?token=y" }), sensitive: true },
+    ]);
+
+    const drafts = await pendingMailDrafts(admin);
+    expect(drafts.map((row) => [row.kind, row.total])).toEqual([
+      ["contributor_documents", 1],
+      ["reset_password", 1],
+    ]);
+
+    const preview = await previewMailJob(admin, id!);
+    expect(preview.recipient).toBe("yazar@example.com");
+    expect(preview.html).toContain("Belgeleriniz ektedir");
+    expect(preview.text).toContain("Genel Katkı Sağlayan Sözleşmesi");
+    expect(preview.attachments).toEqual([{ filename: "sozlesme.pdf", contentType: "application/pdf", bytes: expect.any(Number) }]);
+    // Nothing was sent by looking
+    expect((await db.select().from(mailJobs).where(eq(mailJobs.id, id!)))[0]!.status).toBe("pending");
+  });
+
+  it("keeps a sign-in or reset link out of view, and the page closed to all but admins", async () => {
+    const admin = actorOf(await createUser({ role: "admin" }));
+    const { previewMailJob } = await import("@/services/mail-queue");
+    const [id] = await enqueueMails([
+      { to: "gizli@example.com", ...templates.resetPassword({ displayName: "Ada", url: "https://example.com/reset-password?token=y" }), sensitive: true },
+    ]);
+    const preview = await previewMailJob(admin, id!);
+    expect(preview.html).toBeNull();
+    expect(preview.text).toBeNull();
+    expect(preview.hidden).toMatch(/gösterilmez/);
+
+    const editor = actorOf(await createUser({ role: "editor", editorStatus: "active" }));
+    expect((await captureError(previewMailJob(editor, id!))).status).toBe(403);
+    expect((await captureError(previewMailJob(admin, "not-a-uuid"))).status).toBe(404);
+  });
+});
