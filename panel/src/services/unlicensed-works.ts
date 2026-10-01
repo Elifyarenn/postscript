@@ -21,6 +21,7 @@ import { writeAudit } from "@/lib/audit";
 import { canManageAgreements, type Actor } from "@/lib/auth/rbac";
 import { forbidden } from "@/lib/errors";
 import type { RequestMeta } from "./auth";
+import { withoutSignedCopy } from "./contributor-documents";
 
 export type UnlicensedWork = {
   id: string;
@@ -83,7 +84,9 @@ export async function removeUnlicensedFormerWriterWorks(
 
     const licences = await tx
       .delete(contributorDocuments)
-      .where(and(eq(contributorDocuments.kind, "work_licence"), inArray(contributorDocuments.articleId, ids)))
+      .where(
+        and(eq(contributorDocuments.kind, "work_licence"), inArray(contributorDocuments.articleId, ids), withoutSignedCopy),
+      )
       .returning({ id: contributorDocuments.id });
 
     // A removed writer who has no work left and draws nothing is no longer a
@@ -101,7 +104,9 @@ export async function removeUnlicensedFormerWriterWorks(
     const contracts = gone.length
       ? await tx
           .delete(contributorDocuments)
-          .where(and(eq(contributorDocuments.kind, "general_agreement"), inArray(contributorDocuments.userId, gone)))
+          .where(
+            and(eq(contributorDocuments.kind, "general_agreement"), inArray(contributorDocuments.userId, gone), withoutSignedCopy),
+          )
           .returning({ id: contributorDocuments.id })
       : [];
 

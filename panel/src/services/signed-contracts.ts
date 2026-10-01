@@ -21,13 +21,15 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   agreementVersions,
+  articles,
+  contributorDocuments,
   signedContracts,
   users,
   writerApplications,
   type SignedContract,
 } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
-import { canAccessWriterPanel, canManageAgreements, type Actor } from "@/lib/auth/rbac";
+import { canAccessIllustratorPanel, canAccessWriterPanel, canManageAgreements, type Actor } from "@/lib/auth/rbac";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { getCurrentAgreement } from "./agreements";
 import { detectFileType, storeGeneratedPdf } from "./media";
@@ -62,6 +64,8 @@ async function applicationAwaitingContract(userId: string) {
  */
 async function mayUpload(actor: Actor): Promise<boolean> {
   if (canAccessWriterPanel(actor)) return true;
+  // A çizer signs the same contributor contract (D-288)
+  if (canAccessIllustratorPanel(actor, (await findUserById(actor.id)).isIllustrator)) return true;
   return actor.role === "user" && (await applicationAwaitingContract(actor.id)) !== null;
 }
 
@@ -73,11 +77,19 @@ export type OwnSignedContract = {
   uploadedAt: Date;
   reviewedAt: Date | null;
   rejectionReason: string | null;
+  /** The prepared document it signs (D-289); null for the contract uploaded on its own. */
+  contributorDocumentId: string | null;
+  /** True when it is the contract rather than a work's licence form. */
+  isContract: boolean;
+  articleTitle: string | null;
 };
+
+const signedDocuments = alias(contributorDocuments, "signed_documents");
+const signedWorks = alias(articles, "signed_works");
 
 /** The member's own uploads, newest first. Nobody else's. */
 export async function listOwnSignedContracts(actor: Actor): Promise<OwnSignedContract[]> {
-  return db
+  const rows = await db
     .select({
       id: signedContracts.id,
       status: signedContracts.status,
@@ -86,23 +98,34 @@ export async function listOwnSignedContracts(actor: Actor): Promise<OwnSignedCon
       uploadedAt: signedContracts.uploadedAt,
       reviewedAt: signedContracts.reviewedAt,
       rejectionReason: signedContracts.rejectionReason,
+      contributorDocumentId: signedContracts.contributorDocumentId,
+      documentKind: signedDocuments.kind,
+      articleTitle: signedWorks.title,
     })
     .from(signedContracts)
     .innerJoin(agreementVersions, eq(signedContracts.agreementVersionId, agreementVersions.id))
+    .leftJoin(signedDocuments, eq(signedContracts.contributorDocumentId, signedDocuments.id))
+    .leftJoin(signedWorks, eq(signedDocuments.articleId, signedWorks.id))
     .where(eq(signedContracts.userId, actor.id))
     .orderBy(desc(signedContracts.uploadedAt));
+  return rows.map(({ documentKind, ...row }) => ({ ...row, isContract: documentKind !== "work_licence" }));
 }
 
 /**
- * Checks the file and records it as `pending` for the current version.
- * The name, the declared type and the bytes must all say PDF.
+ * Checks the file and records it as `pending`. With a document id it is the
+ * signed copy of that prepared document (D-289): one upload right per
+ * document the member was sent, so a contract and two licence forms are
+ * three files. Without one it is the contract for the current version, as
+ * before. The name, the declared type and the bytes must all say PDF.
  */
 export async function uploadSignedContract(
   actor: Actor,
-  input: { buffer: Buffer; fileName: string; declaredMime: string },
+  input: { buffer: Buffer; fileName: string; declaredMime: string; documentId?: string | null },
   meta: RequestMeta,
 ): Promise<{ id: string }> {
-  if (!(await mayUpload(actor))) throw forbidden("İmzalı sözleşme yükleme yetkiniz yok.");
+  const document = input.documentId ? await ownPreparedDocument(actor, input.documentId) : null;
+  // Owning a prepared document is itself the right to send its signed copy
+  if (!document && !(await mayUpload(actor))) throw forbidden("İmzalı sözleşme yükleme yetkiniz yok.");
 
   if (!/\.pdf$/i.test(input.fileName.trim())) {
     throw badRequest("Yalnızca PDF dosyası yükleyebilirsiniz (.pdf).");
@@ -123,17 +146,21 @@ export async function uploadSignedContract(
   if (!current) throw conflict("Yayınlanmış bir sözleşme sürümü yok.");
 
   const own = await listOwnSignedContracts(actor);
-  if (own.some((row) => row.status === "pending")) {
-    throw conflict("Yüklediğiniz sözleşme inceleniyor. Sonuçlanmadan yenisini yükleyemezsiniz.");
+  // The same document, or for an upload without one the contract alone
+  const same = own.filter((row) =>
+    document ? row.contributorDocumentId === document.id : row.contributorDocumentId === null,
+  );
+  if (same.some((row) => row.status === "pending")) {
+    throw conflict("Bu belge için yüklediğiniz dosya inceleniyor. Sonuçlanmadan yenisini yükleyemezsiniz.");
   }
-  if (own.some((row) => row.status === "approved" && row.version === current.version)) {
-    throw conflict("Bu sürüm için imzalı sözleşmeniz zaten doğrulandı.");
+  if (document ? same.some((row) => row.status === "approved") : own.some((row) => row.isContract && row.status === "approved" && row.version === current.version)) {
+    throw conflict(document ? "Bu belgenin imzalı kopyası zaten doğrulandı." : "Bu sürüm için imzalı sözleşmeniz zaten doğrulandı.");
   }
 
   // Private, under `contracts/`: served only to the member and to an admin
   const file = await storeGeneratedPdf(input.buffer, {
     prefix: "contracts/signed",
-    fileName: `imzali-sozlesme-v${current.version}.pdf`,
+    fileName: document?.kind === "work_licence" ? `imzali-ruhsat-${document.id.slice(0, 8)}.pdf` : `imzali-sozlesme-v${current.version}.pdf`,
     uploadedBy: actor.id,
   });
 
@@ -141,7 +168,8 @@ export async function uploadSignedContract(
     .insert(signedContracts)
     .values({
       userId: actor.id,
-      agreementVersionId: current.id,
+      agreementVersionId: document?.agreementVersionId ?? current.id,
+      contributorDocumentId: document?.id ?? null,
       fileMediaId: file.id,
       fileSha256: createHash("sha256").update(input.buffer).digest("hex"),
       status: "pending",
@@ -149,16 +177,25 @@ export async function uploadSignedContract(
     .onConflictDoNothing()
     .returning({ id: signedContracts.id });
   // A second tab raced this one to the single pending slot
-  if (!row) throw conflict("Yüklediğiniz sözleşme inceleniyor. Sonuçlanmadan yenisini yükleyemezsiniz.");
+  if (!row) throw conflict("Bu belge için yüklediğiniz dosya inceleniyor. Sonuçlanmadan yenisini yükleyemezsiniz.");
 
   await writeAudit({
     actorId: actor.id,
     action: "signed_contract.uploaded",
     entityType: "signed_contracts",
     entityId: row.id,
-    after: { version: current.version, size: input.buffer.length },
+    after: { version: current.version, size: input.buffer.length, contributorDocumentId: document?.id ?? null },
     ip: meta.ip,
   });
+  return row;
+}
+
+/** A prepared document of the actor's own; anyone else's is "not found". */
+async function ownPreparedDocument(actor: Actor, id: string) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw notFound("Belge bulunamadı.");
+  const [row] = await db.select().from(contributorDocuments).where(eq(contributorDocuments.id, id)).limit(1);
+  if (!row || row.userId !== actor.id) throw notFound("Belge bulunamadı.");
+  if (row.status !== "prepared") throw conflict("Bu belge henüz hazır değil; imzalı kopyası yüklenemez.");
   return row;
 }
 
@@ -175,14 +212,16 @@ export type SignedContractListItem = {
   memberName: string;
   memberRole: string;
   reviewerName: string | null;
+  isContract: boolean;
+  articleTitle: string | null;
 };
 
 const reviewers = alias(users, "reviewers");
 
-/** Every upload for the admin, newest first. */
+/** Every upload for the admin, newest first, with the document it signs. */
 export async function listSignedContracts(actor: Actor): Promise<SignedContractListItem[]> {
   if (!canManageAgreements(actor)) throw forbidden();
-  return db
+  const rows = await db
     .select({
       id: signedContracts.id,
       status: signedContracts.status,
@@ -196,12 +235,28 @@ export async function listSignedContracts(actor: Actor): Promise<SignedContractL
       memberName: users.displayName,
       memberRole: users.role,
       reviewerName: reviewers.displayName,
+      documentKind: signedDocuments.kind,
+      articleTitle: signedWorks.title,
     })
     .from(signedContracts)
     .innerJoin(users, eq(signedContracts.userId, users.id))
     .innerJoin(agreementVersions, eq(signedContracts.agreementVersionId, agreementVersions.id))
     .leftJoin(reviewers, eq(signedContracts.reviewedBy, reviewers.id))
+    .leftJoin(signedDocuments, eq(signedContracts.contributorDocumentId, signedDocuments.id))
+    .leftJoin(signedWorks, eq(signedDocuments.articleId, signedWorks.id))
     .orderBy(desc(signedContracts.uploadedAt));
+  return rows.map(({ documentKind, ...row }) => ({ ...row, isContract: documentKind !== "work_licence" }));
+}
+
+/** Whether a signed upload is the contract (with or without a document) rather than a licence form. */
+async function isContractUpload(row: SignedContract): Promise<boolean> {
+  if (!row.contributorDocumentId) return true;
+  const [document] = await db
+    .select({ kind: contributorDocuments.kind })
+    .from(contributorDocuments)
+    .where(eq(contributorDocuments.id, row.contributorDocumentId))
+    .limit(1);
+  return document?.kind !== "work_licence";
 }
 
 async function pendingForReview(actor: Actor, id: string): Promise<SignedContract> {
@@ -230,7 +285,9 @@ export async function approveSignedContract(actor: Actor, id: string, meta: Requ
   }
 
   const member = await findUserById(row.userId);
-  const application = member.role === "user" ? await applicationAwaitingContract(member.id) : null;
+  // A licence form's signed copy is recorded only; the contract is what activates (D-289)
+  const contract = await isContractUpload(row);
+  const application = contract && member.role === "user" ? await applicationAwaitingContract(member.id) : null;
   if (application) {
     // The promotion prerequisites, checked again at the moment of promotion
     const eligibility = checkWriterEligibility(member);
@@ -257,7 +314,7 @@ export async function approveSignedContract(actor: Actor, id: string, meta: Requ
         at: reviewedAt,
         ip: meta.ip,
       });
-    } else if (member.role === "writer" && member.writerStatus !== "suspended") {
+    } else if (contract && member.role === "writer" && member.writerStatus !== "suspended") {
       await tx
         .update(users)
         .set({ writerStatus: "active", updatedAt: reviewedAt })

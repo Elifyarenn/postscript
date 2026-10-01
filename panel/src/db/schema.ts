@@ -803,6 +803,14 @@ export const signedContracts = pgTable(
       .references(() => media.id, { onDelete: "restrict" }),
     /** SHA-256 of the uploaded bytes, so the verified file can be told apart from any other. */
     fileSha256: text("file_sha256").notNull(),
+    /**
+     * The prepared document this is the signed copy of (D-289): the contract
+     * or one work's licence form. Null for an upload made before documents
+     * existed, which is the contract.
+     */
+    contributorDocumentId: uuid("contributor_document_id").references(() => contributorDocuments.id, {
+      onDelete: "restrict",
+    }),
     status: signedContractStatusEnum("status").notNull().default("pending"),
     uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
@@ -815,8 +823,14 @@ export const signedContracts = pgTable(
   (t) => [
     index("signed_contracts_user_idx").on(t.userId, t.uploadedAt),
     index("signed_contracts_status_idx").on(t.status),
-    // One upload waiting at a time: a second one would race the first's review
-    uniqueIndex("signed_contracts_one_pending").on(t.userId).where(sql`${t.status} = 'pending'`),
+    // One upload waiting at a time, per document (D-289); a second one would
+    // race the first's review. Uploads without a document keep one per member.
+    uniqueIndex("signed_contracts_one_pending")
+      .on(t.userId)
+      .where(sql`${t.status} = 'pending' and ${t.contributorDocumentId} is null`),
+    uniqueIndex("signed_contracts_one_pending_per_document")
+      .on(t.contributorDocumentId)
+      .where(sql`${t.status} = 'pending' and ${t.contributorDocumentId} is not null`),
   ],
 );
 

@@ -8,6 +8,7 @@ import {
   canAccessAdminPanel,
   canAccessEditorPanel,
   canAccessRestrictedWriterPages,
+  canAccessIllustratorPanel,
   canAccessWriterPanel,
   canFinalizePublication,
   canManageUsers,
@@ -73,6 +74,15 @@ describe("role ordering", () => {
 });
 
 describe("panel access", () => {
+  it("opens the illustrator panel to a çizer of any role, and to nobody else (D-288)", () => {
+    expect(canAccessIllustratorPanel(actor(), true)).toBe(true);
+    expect(canAccessIllustratorPanel(actor({ role: "writer" }), true)).toBe(true);
+    expect(canAccessIllustratorPanel(actor(), false)).toBe(false);
+    expect(canAccessIllustratorPanel(actor({ role: "admin" }), false)).toBe(false);
+    expect(canAccessIllustratorPanel(actor({ isBanned: true }), true)).toBe(false);
+    expect(canAccessIllustratorPanel(actor({ emailVerifiedAt: null }), true)).toBe(false);
+  });
+
   it("keeps a plain user out of every panel", () => {
     const plain = actor();
     expect(canAccessWriterPanel(plain)).toBe(false);

@@ -48,11 +48,16 @@ export default async function WriterAgreementPage() {
   ]);
   const profile = profileRows[0]!;
 
+  // The contract's own state; a licence form's upload is shown with its document (D-289)
+  const contractUploads = uploads.filter((row) => row.isContract);
   const verified = current
-    ? (uploads.find((row) => row.status === "approved" && row.version === current.version) ?? null)
+    ? (contractUploads.find((row) => row.status === "approved" && row.version === current.version) ?? null)
     : null;
-  const pending = uploads.find((row) => row.status === "pending") ?? null;
-  const latest = uploads[0] ?? null;
+  const pending = contractUploads.find((row) => row.status === "pending") ?? null;
+  const latest = contractUploads[0] ?? null;
+  // With a prepared contract document, its signed copy is uploaded on that document's row
+  const contractDocument = documents.some((row) => row.kind === "general_agreement" && row.status === "prepared");
+  const upload = { action: uploadSignedContractAction, csrfToken, maxMb: MAX_SIGNED_CONTRACT_MB };
 
   // The text to sign, shown until a signed copy of it is verified
   let rendered: string | null = null;
@@ -127,15 +132,22 @@ export default async function WriterAgreementPage() {
                 </div>
               )
             )}
-            <SignedContractUploadForm
-              action={uploadSignedContractAction}
-              csrfToken={csrfToken}
-              maxMb={MAX_SIGNED_CONTRACT_MB}
-            />
+            {contractDocument ? (
+              <p className="text-sm text-muted">
+                İmzalı sözleşmeyi aşağıdaki &ldquo;Belgelerim&rdquo; bölümünde, Genel Katkı Sağlayan Sözleşmesi
+                satırından yükleyin.
+              </p>
+            ) : (
+              <SignedContractUploadForm
+                action={uploadSignedContractAction}
+                csrfToken={csrfToken}
+                maxMb={MAX_SIGNED_CONTRACT_MB}
+              />
+            )}
           </Card>
         )}
 
-        <OwnDocumentsCard items={documents} />
+        <OwnDocumentsCard items={documents} uploads={uploads} upload={upload} />
 
         {uploads.length > 0 && (
           <Card>

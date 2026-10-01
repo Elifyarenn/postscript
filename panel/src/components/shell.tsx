@@ -151,6 +151,19 @@ export function writerNav(locked: boolean): NavGroup[] {
   ];
 }
 
+/** The illustrator panel: the contract and the documents only (D-288). */
+export function illustratorNav(): NavGroup[] {
+  return [
+    {
+      label: "Çizer",
+      items: [
+        { href: "/cizer", label: "Sözleşmem ve belgelerim" },
+        { href: "/account", label: "Hesabım" },
+      ],
+    },
+  ];
+}
+
 /**
  * The frame every panel page sits in: the responsive sidebar, a header naming
  * the signed-in user and their role, and the content column. The sidebar is

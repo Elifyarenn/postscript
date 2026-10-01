@@ -416,7 +416,7 @@ export default async function AdminAgreementsPage() {
                   <Th>Üye</Th>
                   <Th>Rol</Th>
                   <Th>Yükleme</Th>
-                  <Th>Sürüm</Th>
+                  <Th>Belge</Th>
                   <Th>Durum</Th>
                   <Th>İşlem</Th>
                 </tr>
@@ -434,8 +434,8 @@ export default async function AdminAgreementsPage() {
                     </Td>
                     <Td className="text-xs">{formatDateTime(row.uploadedAt)}</Td>
                     <Td className="text-xs">
-                      v{row.version}
-                      {!row.isCurrentVersion && <span className="text-muted"> (eski)</span>}
+                      {row.isContract ? `Genel sözleşme · v${row.version}` : `Ruhsat formu · ${row.articleTitle ?? "—"}`}
+                      {!row.isCurrentVersion && <span className="text-muted"> (eski sürüm)</span>}
                     </Td>
                     <Td className="text-xs">
                       {SIGNED_CONTRACT_STATUS_LABELS[row.status]}

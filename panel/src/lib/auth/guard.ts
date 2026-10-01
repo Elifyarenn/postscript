@@ -13,6 +13,7 @@ import { getAuthContext, type AuthContext } from "./session";
 import {
   canAccessAdminPanel,
   canAccessEditorPanel,
+  canAccessIllustratorPanel,
   canAccessWriterPanel,
   canPreviewManorGame,
 } from "./rbac";
@@ -93,6 +94,20 @@ export async function guardPanel(minimum: Role): Promise<AuthContext> {
     if (!context.user.totpEnabled) redirect("/account?twoFactor=1");
   }
 
+  return context;
+}
+
+/**
+ * The illustrator panel (D-288). The çizer mark is read from the account on
+ * every request, so removing it closes the panel at once.
+ */
+export async function guardIllustratorPanel(): Promise<AuthContext> {
+  const context = await requireSession();
+  const { db } = await import("@/db/client");
+  const { users } = await import("@/db/schema");
+  const { eq } = await import("drizzle-orm");
+  const [row] = await db.select({ isIllustrator: users.isIllustrator }).from(users).where(eq(users.id, context.user.id)).limit(1);
+  if (!canAccessIllustratorPanel(context.user, row?.isIllustrator === true)) forbidden();
   return context;
 }
 

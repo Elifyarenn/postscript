@@ -1,0 +1,5 @@
+DROP INDEX "signed_contracts_one_pending";--> statement-breakpoint
+ALTER TABLE "signed_contracts" ADD COLUMN "contributor_document_id" uuid;--> statement-breakpoint
+ALTER TABLE "signed_contracts" ADD CONSTRAINT "signed_contracts_contributor_document_id_contributor_documents_id_fk" FOREIGN KEY ("contributor_document_id") REFERENCES "public"."contributor_documents"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "signed_contracts_one_pending_per_document" ON "signed_contracts" USING btree ("contributor_document_id") WHERE "signed_contracts"."status" = 'pending' and "signed_contracts"."contributor_document_id" is not null;--> statement-breakpoint
+CREATE UNIQUE INDEX "signed_contracts_one_pending" ON "signed_contracts" USING btree ("user_id") WHERE "signed_contracts"."status" = 'pending' and "signed_contracts"."contributor_document_id" is null;

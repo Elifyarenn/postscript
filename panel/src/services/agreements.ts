@@ -8,11 +8,12 @@
  * and it is the hash of the *filled* text that the acceptance records.
  */
 import "server-only";
-import { and, desc, eq, isNull, ne } from "drizzle-orm";
+import { and, desc, eq, isNull, ne, or } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   agreementAcceptances,
   agreementVersions,
+  contributorDocuments,
   kvkkVersions,
   signedContracts,
   users,
@@ -66,14 +67,17 @@ export async function hasAcceptedCurrentAgreement(userId: string): Promise<boole
   const current = await getCurrentAgreement();
   if (!current) return false;
 
+  // A verified licence form is not the contract (D-289)
   const rows = await db
     .select({ id: signedContracts.id })
     .from(signedContracts)
+    .leftJoin(contributorDocuments, eq(signedContracts.contributorDocumentId, contributorDocuments.id))
     .where(
       and(
         eq(signedContracts.userId, userId),
         eq(signedContracts.agreementVersionId, current.id),
         eq(signedContracts.status, "approved"),
+        or(isNull(signedContracts.contributorDocumentId), eq(contributorDocuments.kind, "general_agreement")),
       ),
     )
     .limit(1);

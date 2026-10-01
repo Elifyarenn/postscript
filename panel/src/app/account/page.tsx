@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { NO_INDEX } from "@/lib/seo";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
@@ -24,6 +25,8 @@ import { countRecoveryCodesLeft, generateTotpSecret, otpauthUri } from "@/servic
 import QRCode from "qrcode";
 import { cancelDeletionAction, requestDeletionAction } from "./actions";
 import { listOwnContributorDocuments } from "@/services/contributor-documents";
+import { listOwnSignedContracts, MAX_SIGNED_CONTRACT_MB } from "@/services/signed-contracts";
+import { uploadSignedContractAction } from "../writer/actions";
 import { OwnDocumentsCard } from "@/components/contributor-documents";
 
 export const metadata = { title: "Hesabım", robots: NO_INDEX };
@@ -60,11 +63,12 @@ export default async function AccountPage({
 
   // The writer application block: prerequisites, cooldown and current status
   const eligibility = checkWriterEligibility(profile);
-  const [cooldown, latest, documents] = await Promise.all([
+  const [cooldown, latest, documents, signedUploads] = await Promise.all([
     cooldownInfo(profile.id),
     latestApplication(profile.id),
-    // Only the account's own contract and licence forms (D-276)
+    // Only the account's own contract and licence forms (D-276), and their signed copies (D-289)
     listOwnContributorDocuments({ ...context.user }),
+    listOwnSignedContracts({ ...context.user }),
   ]);
 
   return (
@@ -148,7 +152,24 @@ export default async function AccountPage({
           pendingQrUrl={pendingQrUrl}
         />
 
-        <OwnDocumentsCard items={documents} />
+        {profile.isIllustrator && (
+          <Card>
+            <h2 className="mb-1 font-serif text-lg">Çizer paneli</h2>
+            <p className="mb-3 text-sm text-muted">
+              İmzaladığınız Genel Katkı Sağlayan Sözleşmesi&apos;ni PDF olarak yükleyin, doğrulama durumunu ve
+              belgelerinizi görün.
+            </p>
+            <Link href="/cizer" className="text-sm text-accent underline">
+              Çizer paneline git
+            </Link>
+          </Card>
+        )}
+
+        <OwnDocumentsCard
+          items={documents}
+          uploads={signedUploads}
+          upload={{ action: uploadSignedContractAction, csrfToken, maxMb: MAX_SIGNED_CONTRACT_MB }}
+        />
 
         <SessionsCard
           csrfToken={csrfToken}

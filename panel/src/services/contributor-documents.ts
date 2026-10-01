@@ -26,6 +26,7 @@ import {
   articles,
   contributorDocuments,
   rightsGrants,
+  signedContracts,
   users,
   type AgreementVersion,
   type ContributorDocument,
@@ -374,9 +375,16 @@ export async function prepareContributorDocuments(actor: Actor, meta: RequestMet
  * current templates (D-281). They are drafts: nothing was sent, and a signed
  * copy lives in `signed_contracts`, which this does not touch.
  */
+/** No signed copy was uploaded for the document; only such a document may be deleted. */
+export const withoutSignedCopy = sql`not exists (select 1 from ${signedContracts} where ${signedContracts.contributorDocumentId} = ${contributorDocuments.id})`;
+
 export async function clearContributorDocuments(actor: Actor, meta: RequestMeta): Promise<number> {
   if (!canManageAgreements(actor)) throw forbidden();
-  const removed = await db.delete(contributorDocuments).returning({ id: contributorDocuments.id });
+  // A document someone has uploaded a signed copy of stays (D-289)
+  const removed = await db
+    .delete(contributorDocuments)
+    .where(withoutSignedCopy)
+    .returning({ id: contributorDocuments.id });
   await writeAudit({
     actorId: actor.id,
     action: "contributor_documents.cleared",

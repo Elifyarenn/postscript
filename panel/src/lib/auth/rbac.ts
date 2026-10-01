@@ -39,6 +39,15 @@ export function canAccessWriterPanel(actor: Actor): boolean {
 }
 
 /**
+ * The illustrator panel (D-288): the çizer mark (D-151) opens the contract
+ * page and the documents, nothing else. The mark is not on the session, so
+ * the caller reads it from the account.
+ */
+export function canAccessIllustratorPanel(actor: Actor, isIllustrator: boolean): boolean {
+  return isOperational(actor) && isIllustrator;
+}
+
+/**
  * A writer whose status is not `active` may only see announcements and the
  * agreement page (§3 rule 5). Everything else in /writer is closed.
  */

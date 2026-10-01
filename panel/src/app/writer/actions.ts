@@ -67,14 +67,18 @@ export async function uploadSignedContractAction(
     const file = formData.get("file");
     if (!(file instanceof File) || file.size === 0) throw badRequest("Dosya seçilmedi.");
 
+    // Which prepared document this is the signed copy of, if any (D-289)
+    const documentId = String(formData.get("documentId") ?? "").trim() || null;
     await uploadSignedContract(
       { ...user },
-      { buffer: Buffer.from(await file.arrayBuffer()), fileName: file.name, declaredMime: file.type },
+      { buffer: Buffer.from(await file.arrayBuffer()), fileName: file.name, declaredMime: file.type, documentId },
       await requestMetadata(),
     );
 
     revalidatePath("/writer", "layout");
     revalidatePath("/writer-application/contract");
+    revalidatePath("/cizer");
+    revalidatePath("/account");
     return { success: "Sözleşmeniz yüklendi. Yönetici doğruladığında burada göreceksiniz." };
   });
 }

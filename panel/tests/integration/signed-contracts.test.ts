@@ -132,6 +132,19 @@ describe("what may be uploaded", () => {
     const error = await captureError(uploadSignedContract(actorOf(member), pdf, noMeta));
     expect(error?.status).toBe(403);
   });
+
+  it("takes a çizer's upload, which an admin verifies like any other (D-288)", async () => {
+    const { admin } = await setup();
+    const illustrator = await createUser({ role: "user", isIllustrator: true });
+    const { id } = await uploadSignedContract(actorOf(illustrator), pdf, noMeta);
+
+    await approveSignedContract(actorOf(admin), id, noMeta);
+    const [row] = await db.select().from(signedContracts).where(eq(signedContracts.id, id));
+    expect(row!.status).toBe("approved");
+    expect(await hasAcceptedCurrentAgreement(illustrator.id)).toBe(true);
+    // Verifying the contract does not make a çizer a writer
+    expect((await reloadUser(illustrator.id)).role).toBe("user");
+  });
 });
 
 describe("the signed contract verification", () => {
@@ -278,5 +291,81 @@ describe("GET /api/media/:id for a signed contract", () => {
     expect(await fetchAs(await createUser({ role: "writer" }), fileId)).toBe(403);
     expect(await fetchAs(await createUser({ role: "editor" }), fileId)).toBe(403);
     expect(await fetchAs(null, fileId)).toBe(401);
+  });
+});
+
+describe("one signed copy per document sent (D-289)", () => {
+  async function withDocuments() {
+    const { admin, otherAdmin } = await setup();
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    const { articles } = await import("@/db/schema");
+    const { testIssueId } = await import("../helpers/factories");
+    for (const title of ["Birinci Yazı", "İkinci Yazı"]) {
+      await db.insert(articles).values({
+        issueId: await testIssueId(),
+        title,
+        slug: title.toLowerCase().replace(/\W+/g, "-"),
+        status: "published",
+        authorId: writer.id,
+        bodyMarkdown: "Yazarın metni.",
+      });
+    }
+    const { prepareContributorDocuments, listOwnContributorDocuments, clearContributorDocuments } = await import(
+      "@/services/contributor-documents"
+    );
+    await prepareContributorDocuments(actorOf(admin), noMeta);
+    const documents = (await listOwnContributorDocuments(actorOf(writer))).filter((row) => row.status === "prepared");
+    return { admin, otherAdmin, writer, documents, clearContributorDocuments };
+  }
+
+  it("takes as many uploads as documents, one waiting per document", async () => {
+    const { writer, documents } = await withDocuments();
+    expect(documents).toHaveLength(3);
+
+    for (const document of documents) {
+      await uploadSignedContract(actorOf(writer), { ...pdf, documentId: document.id }, noMeta);
+    }
+    const rows = await db.select().from(signedContracts);
+    expect(rows).toHaveLength(3);
+    expect(new Set(rows.map((row) => row.contributorDocumentId))).toEqual(new Set(documents.map((row) => row.id)));
+
+    // A second file for a document still under review waits its turn
+    const again = await captureError(uploadSignedContract(actorOf(writer), { ...pdf, documentId: documents[0]!.id }, noMeta));
+    expect(again?.status).toBe(409);
+  });
+
+  it("refuses a document that is not the member's own", async () => {
+    const { documents } = await withDocuments();
+    const stranger = await createUser({ role: "writer", writerStatus: "active" });
+    const error = await captureError(uploadSignedContract(actorOf(stranger), { ...pdf, documentId: documents[0]!.id }, noMeta));
+    expect(error?.status).toBe(404);
+  });
+
+  it("counts only the contract's verification as having a contract", async () => {
+    const { admin, writer, documents } = await withDocuments();
+    const form = documents.find((row) => row.kind === "work_licence")!;
+    const contract = documents.find((row) => row.kind === "general_agreement")!;
+
+    const formUpload = await uploadSignedContract(actorOf(writer), { ...pdf, documentId: form.id }, noMeta);
+    await approveSignedContract(actorOf(admin), formUpload.id, noMeta);
+    expect(await hasAcceptedCurrentAgreement(writer.id)).toBe(false);
+
+    const contractUpload = await uploadSignedContract(actorOf(writer), { ...pdf, documentId: contract.id }, noMeta);
+    await approveSignedContract(actorOf(admin), contractUpload.id, noMeta);
+    expect(await hasAcceptedCurrentAgreement(writer.id)).toBe(true);
+
+    // Verified: no new file for it
+    const more = await captureError(uploadSignedContract(actorOf(writer), { ...pdf, documentId: form.id }, noMeta));
+    expect(more?.status).toBe(409);
+  });
+
+  it("keeps a document whose signed copy was uploaded when the documents are cleared", async () => {
+    const { admin, writer, documents, clearContributorDocuments } = await withDocuments();
+    await uploadSignedContract(actorOf(writer), { ...pdf, documentId: documents[0]!.id }, noMeta);
+    const { contributorDocuments } = await import("@/db/schema");
+    const all = await db.select().from(contributorDocuments);
+    expect(await clearContributorDocuments(actorOf(admin), noMeta)).toBe(all.length - 1);
+    const left = await db.select().from(contributorDocuments);
+    expect(left.map((row) => row.id)).toEqual([documents[0]!.id]);
   });
 });

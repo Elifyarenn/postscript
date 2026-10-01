@@ -11527,3 +11527,35 @@ Yalnızca metni boş olan eser incelemede kalır: formdaki kelime sayısı ve me
 özeti boş metinden doldurulamaz. Canlıda bu koşul yüzünden bekleyen 18 form
 (13 `pending_admin_approval`, 5 `in_review`) "Belgeleri hazırla" ile yeniden
 denendiğinde hazır olur.
+
+## D-288 — Çizer paneli: sözleşme ve belgeler
+
+Yazar olmayan çizerin (D-151 işareti) paneli yoktu, ama aynı Genel Katkı Sağlayan
+Sözleşmesi'ni imzalıyor. `/cizer`: yalnızca "Sözleşmem ve belgelerim" (doğrulama
+durumu, imzalı PDF yükleme, sözleşme metni, Belgelerim) ve "Hesabım".
+`canAccessIllustratorPanel` (rbac): e-postası doğrulanmış, yasaklı olmayan ve
+çizer işaretli hesap; işaret oturumda olmadığı için her istekte hesaptan okunur
+(`guardIllustratorPanel`), işaret kaldırılınca panel hemen kapanır. Çizer imzalı
+sözleşme yükleyebilir; doğrulama onu yazar yapmaz. "Hesabım"da çizerlere panele
+bağlantı.
+
+## D-289 — Her gönderilen belge için ayrı imzalı dosya yükleme hakkı
+
+Ürün sahibi: yalnızca bir dosya yüklenebiliyordu; genel sözleşme + iki ruhsat
+formu alan kişi üç dosya yüklemeli. `signed_contracts.contributor_document_id`
+(migration 0054, yalnızca ekleme + kısmi indeks yeniden kurulumu, veri kaybı yok):
+her yükleme hazırlanmış bir belgeye bağlanır.
+
+- Hak sayısı = kişiye hazırlanan (hazır) belge sayısı. Belgenin sahibi olmak
+  yükleme yetkisidir; başkasının belgesi 404, hazır olmayan belge 409.
+- Belge başına aynı anda tek bekleyen yükleme (`signed_contracts_one_pending_per_document`);
+  doğrulanmış belgeye yeni dosya yok. Belgesiz eski yükleme yolu (başvuru
+  sahibinin sözleşmesi) kişi başına tek bekleyenle aynen sürer.
+- "Belgelerim"de her belgenin satırında imzalı kopya durumu ve yükleme formu
+  (Hesabım, Sözleşmem, çizer paneli). Admin doğrulama tablosu hangi belge
+  olduğunu gösterir.
+- `hasAcceptedCurrentAgreement` yalnızca sözleşmenin (belgesiz ya da genel
+  sözleşme belgesi) doğrulamasını sayar; doğrulanmış ruhsat formu sözleşme
+  yerine geçmez, yazarı aktif etmez, başvuruyu tamamlamaz.
+- İmzalı kopyası yüklenmiş belge "Hazırlanan belgelerin hepsini sil" ve eser
+  kaldırma ile silinmez (FK restrict + `withoutSignedCopy`).

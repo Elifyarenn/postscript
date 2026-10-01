@@ -29,7 +29,7 @@ export function SignedContractHistory({ rows }: { rows: OwnSignedContract[] }) {
       <thead>
         <tr>
           <Th>Yükleme</Th>
-          <Th>Sürüm</Th>
+          <Th>Belge</Th>
           <Th>Durum</Th>
           <Th>Dosya</Th>
         </tr>
@@ -38,7 +38,9 @@ export function SignedContractHistory({ rows }: { rows: OwnSignedContract[] }) {
         {rows.map((row) => (
           <tr key={row.id}>
             <Td className="text-xs">{formatDateTime(row.uploadedAt)}</Td>
-            <Td>v{row.version}</Td>
+            <Td className="text-xs">
+              {row.isContract ? `Genel Katkı Sağlayan Sözleşmesi · v${row.version}` : `Ruhsat formu · ${row.articleTitle ?? "—"}`}
+            </Td>
             <Td className="text-xs">
               <span className={STATUS_CLASS[row.status]}>{SIGNED_CONTRACT_STATUS_LABELS[row.status]}</span>
               {row.reviewedAt && <span className="text-muted"> · {formatDateTime(row.reviewedAt)}</span>}
@@ -62,15 +64,22 @@ export function SignedContractUploadForm({
   action,
   csrfToken,
   maxMb,
+  documentId,
+  label = "İmzalı sözleşme",
 }: {
   action: ServerAction;
   csrfToken: string;
   maxMb: number;
+  /** The prepared document this file signs (D-289); one form per document. */
+  documentId?: string;
+  label?: string;
 }) {
+  const inputId = documentId ? `signed-file-${documentId}` : "signed-contract-file";
   return (
-    <PanelForm action={action} csrfToken={csrfToken} submitLabel="İmzalı sözleşmeyi yükle">
-      <Field label={`İmzalı sözleşme (yalnızca PDF, en fazla ${maxMb} MB)`} htmlFor="signed-contract-file">
-        <Input id="signed-contract-file" name="file" type="file" required accept=".pdf,application/pdf" />
+    <PanelForm action={action} csrfToken={csrfToken} submitLabel="İmzalı PDF'i yükle">
+      {documentId && <input type="hidden" name="documentId" value={documentId} />}
+      <Field label={`${label} (yalnızca PDF, en fazla ${maxMb} MB)`} htmlFor={inputId}>
+        <Input id={inputId} name="file" type="file" required accept=".pdf,application/pdf" />
       </Field>
     </PanelForm>
   );
