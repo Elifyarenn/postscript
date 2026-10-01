@@ -734,24 +734,24 @@ export async function listAwaitingUploads(actor: Actor): Promise<AwaitingUpload[
 
 /**
  * Queues a reminder to each chosen person (or everyone waiting) and stops
- * there (D-291): the admin sends the batch from /admin/mail. One reminder per
- * person per day; a second press the same day adds nothing.
+ * there (D-291): the admin sends the batch from /admin/mail. Every press queues
+ * a reminder (D-298); how often is the admin's call, and the table shows when
+ * the last one was queued.
  */
 export async function queueUploadReminders(
   actor: Actor,
   userIds: readonly string[] | "all",
   meta: RequestMeta,
-): Promise<{ queued: number; alreadyToday: number }> {
+): Promise<{ queued: number }> {
   if (!canManageAgreements(actor)) throw forbidden();
   const waiting = (await listAwaitingUploads(actor)).filter((entry) => userIds === "all" || userIds.includes(entry.userId));
-  if (waiting.length === 0) return { queued: 0, alreadyToday: 0 };
+  if (waiting.length === 0) return { queued: 0 };
 
   const people = await db
     .select({ id: users.id, email: users.email, displayName: users.displayName })
     .from(users)
     .where(inArray(users.id, waiting.map((entry) => entry.userId)));
   const emailOf = new Map(people.map((person) => [person.id, person]));
-  const day = new Date().toISOString().slice(0, 10);
 
   const mails: OutgoingMail[] = waiting.flatMap((entry) => {
     const person = emailOf.get(entry.userId);
@@ -761,7 +761,7 @@ export async function queueUploadReminders(
       documents: entry.documents.map((document) => document.label),
       url: `${env().APP_URL}/account`,
     });
-    return [{ to: person.email, ...message, dedupeKey: `${REMINDER_KIND}:${person.id}:${day}` }];
+    return [{ to: person.email, ...message }];
   });
 
   // Stored only: enqueueMails does not start a delivery
@@ -770,8 +770,8 @@ export async function queueUploadReminders(
     actorId: actor.id,
     action: "contributor_documents.reminders_queued",
     entityType: "users",
-    after: { queued: ids.length, alreadyToday: mails.length - ids.length, userIds: waiting.map((entry) => entry.userId) },
+    after: { queued: ids.length, userIds: waiting.map((entry) => entry.userId) },
     ip: meta.ip,
   });
-  return { queued: ids.length, alreadyToday: mails.length - ids.length };
+  return { queued: ids.length };
 }

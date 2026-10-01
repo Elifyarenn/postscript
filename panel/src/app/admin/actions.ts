@@ -634,10 +634,7 @@ export async function queueUploadRemindersAction(
     const result = await queueUploadReminders({ ...user }, target === "all" ? "all" : [target], await requestMetadata());
     revalidatePath("/admin/agreements/imza");
     return {
-      success:
-        `${result.queued} hatırlatma maili kuyruğa alındı` +
-        (result.alreadyToday ? ` · ${result.alreadyToday} kişiye bugün zaten hatırlatma kuyruğa alınmış` : "") +
-        `. Göndermek için /admin/mail sayfasında "Kuyruğu şimdi işle".`,
+      success: `${result.queued} hatırlatma maili kuyruğa alındı. Göndermek için /admin/mail sayfasında "Kuyruğu şimdi işle".`,
     };
   });
 }

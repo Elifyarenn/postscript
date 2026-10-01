@@ -488,18 +488,16 @@ describe("waiting for signed copies (D-291)", () => {
     expect(waiting.find((entry) => entry.userId === s.complete.id)!.documents.map((d) => d.id)).not.toContain(own[0]!.id);
 
     const first = await queueUploadReminders(actorOf(s.admin), [s.complete.id], noMeta);
-    expect(first).toEqual({ queued: 1, alreadyToday: 0 });
+    expect(first).toEqual({ queued: 1 });
     const jobs = await db.select().from(mailJobs);
     expect(jobs).toHaveLength(1);
     expect(jobs[0]!.kind).toBe("contributor_upload_reminder");
     expect(jobs[0]!.status).toBe("pending");
     expect(mailbox.outbox).toHaveLength(0);
 
-    // Once a day per person
-    expect(await queueUploadReminders(actorOf(s.admin), "all", noMeta)).toEqual({
-      queued: waiting.length - 1,
-      alreadyToday: 1,
-    });
+    // Pressing again the same day queues again, for the same person too (D-298)
+    expect(await queueUploadReminders(actorOf(s.admin), "all", noMeta)).toEqual({ queued: waiting.length });
+    expect(await db.select().from(mailJobs)).toHaveLength(1 + waiting.length);
     expect((await listAwaitingUploads(actorOf(s.admin))).find((entry) => entry.userId === s.complete.id)!.lastReminderAt).not.toBeNull();
 
     expect((await captureError(queueUploadReminders(actorOf(s.editor), "all", noMeta)))?.status).toBe(403);

@@ -11697,3 +11697,13 @@ karışık cevaplarda aradaki bir karaktere düşer.
 - Test için ayrı bir sayfa tasarlanmadı; "Eğlence & Dedikodu" açılış sayfasındaki
   "Have Fun" tabelası testi açan işaretli alan oldu. Tasarım sayfası gelince alan
   oraya taşınır.
+
+## D-298 — Hatırlatma maili her basışta kuyruğa girer
+
+D-291 bir kişiye günde bir hatırlatmaya izin veriyordu (`dedupe_key` = kişi +
+gün); ürün sahibi aynı gün ikinci hatırlatmayı kuyruğa alamayınca kuralın
+kaldırılmasını istedi. `queueUploadReminders` artık `dedupe_key` yazmaz: her
+basış, bekleyen her kişi için yeni bir hatırlatma kuyruğa alır. Sıklık adminin
+kararıdır; tablo son hatırlatmanın ne zaman kuyruğa alındığını göstermeye devam
+eder ve her basış denetim kaydına yazılır. Gönderim yine yalnızca /admin/mail
+üzerinden admin eliyle. Migration yok.

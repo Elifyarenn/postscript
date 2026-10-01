@@ -47,7 +47,7 @@ export default async function CountersignPage() {
           <Link href="/admin/mail" className="text-accent underline">
             E-posta kuyruğu
           </Link>{" "}
-          sayfasında &ldquo;Kuyruğu şimdi işle&rdquo;. Bir kişiye günde bir hatırlatma kuyruğa girer.
+          sayfasında &ldquo;Kuyruğu şimdi işle&rdquo;. Her basış yeni bir hatırlatma kuyruğa alır.
         </p>
         {awaiting.length === 0 ? (
           <EmptyState>Yüklemesi beklenen belge yok.</EmptyState>
