@@ -6,7 +6,8 @@
 import Link from "next/link";
 import type { ServerAction } from "@/components/form";
 import { PanelForm } from "@/components/form";
-import { Field, Input, Table, Td, Th } from "@/components/ui";
+import { PdfFileInput } from "@/components/pdf-file-input";
+import { Field, Table, Td, Th } from "@/components/ui";
 import { formatDateTime } from "@/lib/utils";
 import type { OwnSignedContract } from "@/services/signed-contracts";
 
@@ -87,7 +88,7 @@ export function SignedContractUploadForm({
     <PanelForm action={action} csrfToken={csrfToken} submitLabel="İmzalı PDF'i yükle">
       {documentId && <input type="hidden" name={fieldName} value={documentId} />}
       <Field label={`${label} (yalnızca PDF, en fazla ${maxMb} MB)`} htmlFor={inputId}>
-        <Input id={inputId} name="file" type="file" required accept=".pdf,application/pdf" />
+        <PdfFileInput id={inputId} maxMb={maxMb} />
       </Field>
     </PanelForm>
   );

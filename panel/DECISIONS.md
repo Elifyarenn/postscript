@@ -11751,3 +11751,21 @@ kaydına bağlanabiliyordu (D-276) ve testin sahibi diye bir alan yoktu.
 - KVKK metnine test sahipliği eklendi. Testin ayrı bir yayın izni kaydı
   (`work_permissions`, D-268) yoktur; ıslak imzalı ruhsat formu bu işlevi görür —
   yeterliliği hukukçu görüşüne bağlı.
+
+## D-301 — Büyük imzalı PDF tarayıcıda reddedilir, hata sayfası yerine neden söylenir
+
+Bazı yazarlar imzalı sözleşme yüklerken sitenin genel "Bir şeyler ters gitti"
+sayfasını gördü. Sunucu kayıtlarında (erişilebilen son bir saat) ne 5xx ne
+başarısız bir yükleme isteği var; yükleme server action'la yapılıyor ve Vercel
+bir fonksiyona giden isteği yaklaşık 4,5 MB'ta kesiyor (D-161). Sınırı aşan dosya
+action'a hiç ulaşmadığı için servisin "Dosya çok büyük. Sınır: 4 MB." yanıtı
+üyeye gitmiyor, tarayıcı beklenmeyen yanıtı hata sınırına düşürüyor. Telefonla
+taranmış imzalı PDF'ler çoğu zaman bu boyutu aşar. Neden kayıtla doğrulanamadı;
+belirti ve mekanizma buna uyuyor.
+
+- İmzalı PDF alanı (`PdfFileInput`) dosya seçildiği anda boyuta bakar: sınırı
+  aşıyorsa boyutunu, sınırı ve nasıl küçültüleceğini yazar, form gönderilmez.
+  Aynı alan adminin karşı imzalı yüklemesinde de kullanılır.
+- Sınır (4 MB) değişmedi: barındırmanın tavanı aşılamaz. Daha büyük dosya
+  gerekiyorsa çözüm tarayıcıdan depolamaya doğrudan yüklemedir (imzalı URL, R2
+  CORS ve CSP `connect-src` değişikliği); ürün sahibinin kararı bekleniyor.
