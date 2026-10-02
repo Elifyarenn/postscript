@@ -13,7 +13,7 @@ import { requestMetadata, requireRole } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
 import { runAction, text, type ActionState } from "@/lib/action";
 import { badRequest } from "@/lib/errors";
-import { createQuiz, removeQuiz, updateQuiz } from "@/services/issue-quizzes";
+import { createQuiz, removeQuiz, setQuizAuthor, updateQuiz } from "@/services/issue-quizzes";
 
 function quizInput(formData: FormData): unknown {
   const raw = formData.get("quiz");
@@ -50,6 +50,20 @@ export async function updateQuizAction(_state: ActionState, formData: FormData):
     await updateQuiz({ ...user }, text(formData, "quizId"), quizInput(formData), await requestMetadata());
     refresh(text(formData, "issueId"));
     return { success: "Test kaydedildi." };
+  });
+}
+
+/** Names who wrote the quiz, so its licence form can be prepared on their account (D-300). */
+export async function setQuizAuthorAction(_state: ActionState, formData: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const email = formData.get("authorEmail");
+
+    await setQuizAuthor({ ...user }, text(formData, "quizId"), typeof email === "string" ? email : "", await requestMetadata());
+    refresh(text(formData, "issueId"));
+    revalidatePath("/admin/agreements");
+    return { success: "Eser sahibi kaydedildi. Ruhsat formu için Sözleşmeler sayfasında “Belgeleri hazırla”." };
   });
 }
 

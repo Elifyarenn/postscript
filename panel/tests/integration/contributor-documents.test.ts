@@ -530,3 +530,70 @@ describe("waiting for signed copies (D-291)", () => {
     expect(await listed()).toBe(true);
   });
 });
+
+describe("a quiz as a work (D-300)", () => {
+  async function quizScenario() {
+    const s = await scenario();
+    const { issues } = await import("@/db/schema");
+    const { createQuiz, setQuizAuthor, listQuizzes } = await import("@/services/issue-quizzes");
+    const { OBSESSION_QUIZ } = await import("@/lib/issue-design/issue-01-quizzes");
+    const [issue] = await db.insert(issues).values({ number: 41, title: "Obsession", status: "planning", adminOnly: true }).returning();
+    const quizId = await createQuiz(actorOf(s.admin), issue!.id, OBSESSION_QUIZ, noMeta);
+    return { ...s, issue: issue!, quizId, setQuizAuthor, listQuizzes, title: OBSESSION_QUIZ.title };
+  }
+
+  it("has no licence form until the admin names who wrote it", async () => {
+    const s = await quizScenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    expect((await db.select().from(contributorDocuments)).some((row) => row.quizId !== null)).toBe(false);
+
+    // Only an admin names the author, and only an account that exists
+    expect((await captureError(s.setQuizAuthor(actorOf(s.editor), s.quizId, s.reader.email, noMeta)))?.status).toBe(403);
+    expect((await captureError(s.setQuizAuthor(actorOf(s.admin), s.quizId, "yok@example.com", noMeta)))?.status).toBe(404);
+  });
+
+  it("gets its form on the author's account, with the contract they did not have yet", async () => {
+    const s = await quizScenario();
+    // Someone who wrote no article and holds no role: the quiz alone makes them a contributor
+    await s.setQuizAuthor(actorOf(s.admin), s.quizId, ` ${s.reader.email.toUpperCase()} `, noMeta);
+    expect((await s.listQuizzes(actorOf(s.admin), s.issue.id))[0]!.author?.id).toBe(s.reader.id);
+
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const own = await listOwnContributorDocuments(actorOf(s.reader));
+    expect(own.map((row) => row.kind).sort()).toEqual(["general_agreement", "work_licence"]);
+    const licence = own.find((row) => row.kind === "work_licence")!;
+    expect(licence.status).toBe("prepared");
+    expect(licence.articleTitle).toBe(s.title);
+
+    const [row] = await db.select().from(contributorDocuments).where(eq(contributorDocuments.id, licence.id));
+    expect(row!.quizId).toBe(s.quizId);
+    expect(row!.articleId).toBeNull();
+    expect(row!.renderedMarkdown).toContain(s.title);
+    expect(row!.renderedMarkdown).toContain("Test (soru, seçenek ve sonuç metinleri)");
+    expect(row!.renderedMarkdown).toContain("Panel kaydındaki test: 5 soru, 4 sonuç metni");
+    expect(row!.renderedMarkdown).toContain(s.quizId);
+    expect(row!.workContentHash).toMatch(/^[0-9a-f]{64}$/);
+    // The articles' forms are what they were
+    expect((await db.select().from(contributorDocuments)).filter((doc) => doc.articleId !== null)).toHaveLength(3);
+
+    // Preparing again makes no second form
+    const again = await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    expect(again.licenceCreated).toBe(0);
+    expect((await db.select().from(contributorDocuments)).filter((doc) => doc.quizId === s.quizId)).toHaveLength(1);
+
+    // It travels with the bulk mail, named by the quiz, and its PDF opens for the author
+    await queueAllContributorDocuments(actorOf(s.admin), noMeta);
+    const [job] = (await db.select().from(mailJobs)).filter((entry) => entry.recipient === s.reader.email);
+    expect(job!.textBody).toContain(s.title);
+    expect((await contributorDocumentPdf(actorOf(s.reader), licence.id)).body.subarray(0, 4).toString()).toBe("%PDF");
+  });
+
+  it("names the quiz where signed copies are awaited", async () => {
+    const s = await quizScenario();
+    await s.setQuizAuthor(actorOf(s.admin), s.quizId, s.complete.email, noMeta);
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const { listAwaitingUploads } = await import("@/services/contributor-documents");
+    const entry = (await listAwaitingUploads(actorOf(s.admin))).find((row) => row.userId === s.complete.id)!;
+    expect(entry.documents.some((document) => document.label.endsWith(s.title))).toBe(true);
+  });
+});

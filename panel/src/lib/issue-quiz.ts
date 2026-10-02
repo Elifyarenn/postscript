@@ -87,6 +87,26 @@ export function parseOutcomes(raw: unknown): QuizOutcome[] {
   });
 }
 
+/**
+ * The quiz as one plain text, in reading order: what its author wrote and what
+ * a licence form for it names and hashes (D-300). The answer key is not part of
+ * it; a changed word changes the hash, a changed score does not.
+ */
+export function quizWorkText(quiz: {
+  title: string;
+  intro: string | null;
+  questions: QuizQuestion[];
+  outcomes: QuizOutcome[];
+}): string {
+  const parts = [quiz.title, quiz.intro ?? ""];
+  for (const question of quiz.questions) {
+    parts.push([question.text, ...question.options.map((option) => `- ${option.text}`)].join("\n"));
+    if (question.explanation) parts.push(question.explanation);
+  }
+  for (const outcome of quiz.outcomes) parts.push([outcome.title, outcome.body ?? ""].join("\n\n").trim());
+  return parts.filter((part) => part.trim() !== "").join("\n\n");
+}
+
 /* ------------------------------------------------------------------ */
 /* Is it finished?                                                     */
 /* ------------------------------------------------------------------ */

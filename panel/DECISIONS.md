@@ -11724,3 +11724,30 @@ istenmemesini istedi. Kişiye özel yeni bir işaret açılmadı: yazar durumu z
   Belgelerin hazırlanması da sürer: belge kaydı talep değildir.
 - Belgeleri, yüklemeleri ve eserleri olduğu gibi kalır; durum yeniden "Aktif"
   yapılınca kişi listeye ve toplu gönderime geri döner. Migration yok.
+
+## D-300 — Sayının testi de eserdir: yazarı belirtilir, ruhsat formu hazırlanır
+
+Sayı 1'in testini bir katkı sağlayan yazdı; ürün sahibi bu test için de Eser
+Bazlı Kullanım Ruhsatı Formu istedi. Ruhsat formu o güne dek yalnızca `articles`
+kaydına bağlanabiliyordu (D-276) ve testin sahibi diye bir alan yoktu.
+
+- `issue_quizzes.author_id` ve `contributor_documents.quiz_id` (migration 0059,
+  yalnızca ekleme; test başına ve form sürümü başına tek ruhsat için kısmi
+  benzersiz dizin). Mevcut belgelere, eserlere ve form metnine dokunulmadı.
+- Sahibi admin belirler: sayının "Testler" ekranında test başına "Eser sahibi
+  (hesabının e-postası)" alanı (`setQuizAuthor`, yalnızca admin, denetim kaydı).
+  E-posta koda yazılmaz; tasarım aktarımı (D-297) testi yeniden yazarken sahibine
+  dokunmaz.
+- "Belgeleri hazırla" sahibi belirtilmiş testi eser sayar: sahibine (rolü ne
+  olursa olsun) genel sözleşme ve test için ruhsat formu hazırlar. Formda eser
+  türü "Test (soru, seçenek ve sonuç metinleri)", teknik tanım soru/sonuç/kelime
+  sayısı, içerik özeti testin okunan metninin SHA-256'sıdır (`quizWorkText`;
+  cevap anahtarı metne dahil değildir). Yayın adı tercihi olmadığı için ad
+  kullanılır (D-284). Sahibi belirtilmemiş teste form hazırlanmaz.
+- Listeler, e-posta, PDF, imzalı kopya yükleme, doğrulama ve karşı imza akışı
+  aynıdır; eser başlığı sütununda testin başlığı görünür.
+- Hazırlanmış form yeniden yazılmaz: sahibi sonradan değiştirilirse eski form
+  durur, admin gerekirse belgeleri silip yeniden hazırlar (D-281).
+- KVKK metnine test sahipliği eklendi. Testin ayrı bir yayın izni kaydı
+  (`work_permissions`, D-268) yoktur; ıslak imzalı ruhsat formu bu işlevi görür —
+  yeterliliği hukukçu görüşüne bağlı.

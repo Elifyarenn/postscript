@@ -883,6 +883,8 @@ export const contributorDocuments = pgTable(
     }),
     /** The work a licence form is for; never modified by us. */
     articleId: uuid("article_id").references(() => articles.id, { onDelete: "set null" }),
+    /** Or the quiz it is for, when the work is an issue's quiz (D-300). */
+    quizId: uuid("quiz_id").references((): AnyPgColumn => issueQuizzes.id, { onDelete: "set null" }),
     /** The contract version number, or the licence form template version. */
     templateVersion: text("template_version").notNull(),
     status: contributorDocumentStatusEnum("status").notNull(),
@@ -910,6 +912,9 @@ export const contributorDocuments = pgTable(
     uniqueIndex("contributor_documents_licence_unique")
       .on(t.articleId, t.templateVersion)
       .where(sql`${t.kind} = 'work_licence'`),
+    uniqueIndex("contributor_documents_quiz_licence_unique")
+      .on(t.quizId, t.templateVersion)
+      .where(sql`${t.kind} = 'work_licence' and ${t.quizId} is not null`),
   ],
 );
 
@@ -1131,6 +1136,8 @@ export const issueQuizzes = pgTable(
     questions: jsonb("questions").notNull().default(sql`'[]'::jsonb`),
     /** Scored and persona quizzes: `[{ id, title, body, min, max }]`; a persona result ignores the band. */
     outcomes: jsonb("outcomes").notNull().default(sql`'[]'::jsonb`),
+    /** Who wrote the quiz, when a contributor did: its licence form is prepared on this account (D-300). */
+    authorId: uuid("author_id").references(() => users.id, { onDelete: "set null" }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },

@@ -7,10 +7,10 @@ import { isAppError } from "@/lib/errors";
 import { QUIZ_KIND_LABELS } from "@/lib/issue-quiz";
 import { findIssue } from "@/services/issues";
 import { listQuizzes } from "@/services/issue-quizzes";
-import { ActionButton } from "@/components/form";
-import { Card, EmptyState, PageHeader } from "@/components/ui";
+import { ActionButton, PanelForm } from "@/components/form";
+import { Card, EmptyState, Field, Input, PageHeader } from "@/components/ui";
 import { QuizEditor, type EditableQuiz } from "./quiz-editor";
-import { removeQuizAction } from "./actions";
+import { removeQuizAction, setQuizAuthorAction } from "./actions";
 
 export const metadata = { title: "Sayı testleri" };
 
@@ -89,6 +89,35 @@ export default async function IssueQuizzesPage({ params }: { params: Promise<{ i
                     confirmMessage={`"${quiz.title}" kaldırılsın mı? Bu teste bağlı alanların hedefi boşalır.`}
                   />
                 </div>
+              </div>
+
+              <div className="mb-3 max-w-md">
+                <PanelForm
+                  action={setQuizAuthorAction}
+                  csrfToken={csrfToken ?? ""}
+                  submitLabel="Eser sahibini kaydet"
+                  submitVariant="secondary"
+                >
+                  <input type="hidden" name="quizId" value={quiz.id} />
+                  <input type="hidden" name="issueId" value={issue.id} />
+                  <Field
+                    label="Eser sahibi (hesabının e-postası)"
+                    htmlFor={`author-${quiz.id}`}
+                    hint={
+                      quiz.author
+                        ? `${quiz.author.displayName} · ruhsat formu bu hesaba hazırlanır. Boş bırakıp kaydederseniz kaldırılır.`
+                        : "Testi bir katkı sağlayan yazdıysa girin: ruhsat formu onun hesabına hazırlanır."
+                    }
+                  >
+                    <Input
+                      id={`author-${quiz.id}`}
+                      name="authorEmail"
+                      type="email"
+                      defaultValue={quiz.author?.email ?? ""}
+                      maxLength={254}
+                    />
+                  </Field>
+                </PanelForm>
               </div>
 
               <details>

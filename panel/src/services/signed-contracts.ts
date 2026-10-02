@@ -17,12 +17,13 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { alias } from "drizzle-orm/pg-core";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   agreementVersions,
   articles,
   contributorDocuments,
+  issueQuizzes,
   media,
   signedContracts,
   users,
@@ -91,6 +92,9 @@ export type OwnSignedContract = {
 
 const signedDocuments = alias(contributorDocuments, "signed_documents");
 const signedWorks = alias(articles, "signed_works");
+const signedQuizzes = alias(issueQuizzes, "signed_quizzes");
+/** The licensed work's title: an article's, or a quiz's (D-300). */
+const signedWorkTitle = sql<string | null>`coalesce(${signedWorks.title}, ${signedQuizzes.title})`;
 
 /** The member's own uploads, newest first. Nobody else's. */
 export async function listOwnSignedContracts(actor: Actor): Promise<OwnSignedContract[]> {
@@ -105,13 +109,14 @@ export async function listOwnSignedContracts(actor: Actor): Promise<OwnSignedCon
       rejectionReason: signedContracts.rejectionReason,
       contributorDocumentId: signedContracts.contributorDocumentId,
       documentKind: signedDocuments.kind,
-      articleTitle: signedWorks.title,
+      articleTitle: signedWorkTitle,
       countersignedMediaId: signedContracts.countersignedMediaId,
     })
     .from(signedContracts)
     .innerJoin(agreementVersions, eq(signedContracts.agreementVersionId, agreementVersions.id))
     .leftJoin(signedDocuments, eq(signedContracts.contributorDocumentId, signedDocuments.id))
     .leftJoin(signedWorks, eq(signedDocuments.articleId, signedWorks.id))
+    .leftJoin(signedQuizzes, eq(signedDocuments.quizId, signedQuizzes.id))
     .where(eq(signedContracts.userId, actor.id))
     .orderBy(desc(signedContracts.uploadedAt));
   return rows.map(({ documentKind, ...row }) => ({ ...row, isContract: documentKind !== "work_licence" }));
@@ -247,7 +252,7 @@ export async function listSignedContracts(actor: Actor): Promise<SignedContractL
       memberRole: users.role,
       reviewerName: reviewers.displayName,
       documentKind: signedDocuments.kind,
-      articleTitle: signedWorks.title,
+      articleTitle: signedWorkTitle,
     })
     .from(signedContracts)
     .innerJoin(users, eq(signedContracts.userId, users.id))
@@ -255,6 +260,7 @@ export async function listSignedContracts(actor: Actor): Promise<SignedContractL
     .leftJoin(reviewers, eq(signedContracts.reviewedBy, reviewers.id))
     .leftJoin(signedDocuments, eq(signedContracts.contributorDocumentId, signedDocuments.id))
     .leftJoin(signedWorks, eq(signedDocuments.articleId, signedWorks.id))
+    .leftJoin(signedQuizzes, eq(signedDocuments.quizId, signedQuizzes.id))
     .orderBy(desc(signedContracts.uploadedAt));
   return rows.map(({ documentKind, ...row }) => ({ ...row, isContract: documentKind !== "work_licence" }));
 }
@@ -414,7 +420,7 @@ export async function listForCountersign(actor: Actor): Promise<CountersignItem[
       countersignedAt: signedContracts.countersignedAt,
       countersignerName: countersigners.displayName,
       documentKind: signedDocuments.kind,
-      articleTitle: signedWorks.title,
+      articleTitle: signedWorkTitle,
     })
     .from(signedContracts)
     .innerJoin(users, eq(signedContracts.userId, users.id))
@@ -422,6 +428,7 @@ export async function listForCountersign(actor: Actor): Promise<CountersignItem[
     .leftJoin(countersigners, eq(signedContracts.countersignedBy, countersigners.id))
     .leftJoin(signedDocuments, eq(signedContracts.contributorDocumentId, signedDocuments.id))
     .leftJoin(signedWorks, eq(signedDocuments.articleId, signedWorks.id))
+    .leftJoin(signedQuizzes, eq(signedDocuments.quizId, signedQuizzes.id))
     .where(eq(signedContracts.status, "approved"))
     .orderBy(users.displayName, signedContracts.reviewedAt);
   const items = rows.map(({ documentKind, ...row }) => ({ ...row, isContract: documentKind !== "work_licence" }));

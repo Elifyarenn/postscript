@@ -1,8 +1,8 @@
 import "server-only";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { issueQuizzes, issues, type Issue } from "@/db/schema";
+import { issueQuizzes, issues, users, type Issue } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import { canAccessAdminPanel, type Actor } from "@/lib/auth/rbac";
 import { badRequest, forbidden, notFound } from "@/lib/errors";
@@ -38,9 +38,11 @@ export type QuizSummary = {
   outcomes: QuizOutcome[];
   /** Empty when a reader may be shown it; otherwise what is missing. */
   problems: string[];
+  /** The contributor who wrote it, when the admin has named one (D-300). */
+  author: { id: string; displayName: string; email: string } | null;
 };
 
-function toSummary(row: typeof issueQuizzes.$inferSelect): QuizSummary {
+function toSummary(row: typeof issueQuizzes.$inferSelect, author: QuizSummary["author"] = null): QuizSummary {
   const questions = parseQuestions(row.questions);
   const outcomes = parseOutcomes(row.outcomes);
   return {
@@ -51,6 +53,7 @@ function toSummary(row: typeof issueQuizzes.$inferSelect): QuizSummary {
     questions,
     outcomes,
     problems: quizProblems({ kind: row.kind, questions, outcomes }),
+    author,
   };
 }
 
@@ -68,11 +71,52 @@ async function issueById(issueId: string): Promise<Issue> {
 export async function listQuizzes(actor: Actor, issueId: string): Promise<QuizSummary[]> {
   assertQuizRight(actor);
   const rows = await db
-    .select()
+    .select({ quiz: issueQuizzes, author: { id: users.id, displayName: users.displayName, email: users.email } })
     .from(issueQuizzes)
+    .leftJoin(users, eq(issueQuizzes.authorId, users.id))
     .where(eq(issueQuizzes.issueId, issueId))
     .orderBy(asc(issueQuizzes.createdAt));
-  return rows.map(toSummary);
+  return rows.map((row) => toSummary(row.quiz, row.author));
+}
+
+/**
+ * Names the contributor who wrote a quiz, by their account's e-mail, or clears
+ * it with an empty one (D-300). This is what makes the quiz a work: the next
+ * "Belgeleri hazırla" prepares its licence form on that account. A form already
+ * prepared for an earlier author is not touched here.
+ */
+export async function setQuizAuthor(
+  actor: Actor,
+  quizId: string,
+  email: string,
+  meta: RequestMeta,
+): Promise<void> {
+  assertQuizRight(actor);
+  const [quiz] = await db.select().from(issueQuizzes).where(eq(issueQuizzes.id, quizId)).limit(1);
+  if (!quiz) throw notFound("Test bulunamadı.");
+
+  const wanted = email.trim().toLowerCase();
+  let authorId: string | null = null;
+  if (wanted !== "") {
+    const [person] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(sql`lower(${users.email}) = ${wanted}`, isNull(users.deletedAt)))
+      .limit(1);
+    if (!person) throw notFound("Bu e-posta adresiyle kayıtlı bir hesap yok.");
+    authorId = person.id;
+  }
+
+  await db.update(issueQuizzes).set({ authorId, updatedAt: new Date() }).where(eq(issueQuizzes.id, quizId));
+  await writeAudit({
+    actorId: actor.id,
+    action: "issue_quiz.author_set",
+    entityType: "issue_quizzes",
+    entityId: quizId,
+    before: { authorId: quiz.authorId },
+    after: { authorId },
+    ip: meta.ip,
+  });
 }
 
 export async function createQuiz(

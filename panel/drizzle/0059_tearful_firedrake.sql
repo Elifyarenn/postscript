@@ -1,0 +1,5 @@
+ALTER TABLE "contributor_documents" ADD COLUMN "quiz_id" uuid;--> statement-breakpoint
+ALTER TABLE "issue_quizzes" ADD COLUMN "author_id" uuid;--> statement-breakpoint
+ALTER TABLE "contributor_documents" ADD CONSTRAINT "contributor_documents_quiz_id_issue_quizzes_id_fk" FOREIGN KEY ("quiz_id") REFERENCES "public"."issue_quizzes"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "issue_quizzes" ADD CONSTRAINT "issue_quizzes_author_id_users_id_fk" FOREIGN KEY ("author_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "contributor_documents_quiz_licence_unique" ON "contributor_documents" USING btree ("quiz_id","template_version") WHERE "contributor_documents"."kind" = 'work_licence' and "contributor_documents"."quiz_id" is not null;

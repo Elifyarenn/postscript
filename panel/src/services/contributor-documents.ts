@@ -2,7 +2,8 @@
  * Documents prepared for the contributors to sign by hand (D-276): the
  * Genel Katkı Sağlayan Sözleşmesi of the current version for every
  * contributor, and an Eser Bazlı Kullanım Ruhsatı Formu for every work, on
- * the account of the work's own author.
+ * the account of the work's own author. A work is an article, or an issue's
+ * quiz whose author the admin has named (D-300).
  *
  * Preparing is all this does. Nothing is sent (mail goes out only when an
  * admin asks for it per person, `mailContributorDocuments`, D-285), no
@@ -25,6 +26,8 @@ import {
   agreementVersions,
   articles,
   contributorDocuments,
+  issueQuizzes,
+  issues,
   mailJobs,
   rightsGrants,
   signedContracts,
@@ -57,6 +60,7 @@ import {
   type ContributorDocumentKind,
 } from "@/lib/contributor-documents";
 import { conflict, forbidden, notFound } from "@/lib/errors";
+import { parseOutcomes, parseQuestions, quizWorkText } from "@/lib/issue-quiz";
 import { renderDocumentPdf } from "@/lib/pdf";
 import { env } from "@/lib/env";
 import { enqueueMails, sendMail, type OutgoingMail } from "@/services/mail-queue";
@@ -130,12 +134,56 @@ async function generalValues(version: AgreementVersion, person: User, hasWorks: 
   return buildPlaceholders(context);
 }
 
-type WorkRow = typeof articles.$inferSelect;
+/** What a licence form names: the same few facts, whatever kind of work it is. */
+type LicensedWork = {
+  id: string;
+  title: string;
+  /** The text the form's hash and word count are taken from. */
+  body: string;
+  typeLabel: string;
+  describe: (words: number) => string;
+};
+
+function articleWork(row: typeof articles.$inferSelect): LicensedWork {
+  return {
+    id: row.id,
+    title: row.title,
+    body: row.bodyMarkdown ?? "",
+    typeLabel: "Yazı (metin)",
+    describe: (words) => `Panel kaydındaki metin, ${words} kelime`,
+  };
+}
+
+function quizWork(row: typeof issueQuizzes.$inferSelect): LicensedWork {
+  const questions = parseQuestions(row.questions);
+  const outcomes = parseOutcomes(row.outcomes);
+  return {
+    id: row.id,
+    title: row.title,
+    body: questions.length ? quizWorkText({ title: row.title, intro: row.intro, questions, outcomes }) : "",
+    typeLabel: "Test (soru, seçenek ve sonuç metinleri)",
+    describe: (words) =>
+      `Panel kaydındaki test: ${questions.length} soru${outcomes.length ? `, ${outcomes.length} sonuç metni` : ""}, ${words} kelime`,
+  };
+}
+
+/** The work a licence document is for, as it stands now; null when it is gone. */
+async function workOf(row: ContributorDocument): Promise<LicensedWork | null> {
+  if (row.quizId) {
+    const [quiz] = await db.select().from(issueQuizzes).where(eq(issueQuizzes.id, row.quizId)).limit(1);
+    return quiz ? quizWork(quiz) : null;
+  }
+  const [article] = row.articleId ? await db.select().from(articles).where(eq(articles.id, row.articleId)).limit(1) : [];
+  return article ? articleWork(article) : null;
+}
+
+/** The title a list shows for a document's work, article or quiz. */
+const workTitle = sql<string | null>`coalesce(${articles.title}, ${issueQuizzes.title})`;
 
 /** The licence form for one work, filled from the work and its author's records. */
 async function draftLicence(
   version: AgreementVersion,
-  work: WorkRow,
+  work: LicensedWork,
   author: User,
   bylineChoice: "real_name" | "pen_name" | null,
   formId: string,
@@ -163,13 +211,13 @@ async function draftLicence(
 /** The form's values for one work; the draft and the preview share them. */
 async function licenceValues(
   version: AgreementVersion,
-  work: WorkRow,
+  work: LicensedWork,
   author: User,
   bylineChoice: "real_name" | "pen_name" | null,
   formId: string,
   now: Date,
 ) {
-  const body = work.bodyMarkdown ?? "";
+  const body = work.body;
   const words = wordCount(body);
   const contentHash = body.trim() ? articleHash(body) : null;
 
@@ -178,8 +226,8 @@ async function licenceValues(
   const values: Record<string, string | null> = {
     ...buildPlaceholders(context),
     "eser.baslik": work.title.trim() ? escapeForTemplate(work.title) : null,
-    "eser.tur": "Yazı (metin)",
-    "eser.teknik_tanim": words > 0 ? `Panel kaydındaki metin, ${words} kelime` : null,
+    "eser.tur": work.typeLabel,
+    "eser.teknik_tanim": words > 0 ? work.describe(words) : null,
     "eser.content_hash": contentHash,
     "eser.id": work.id,
     "form.id": formId,
@@ -236,7 +284,18 @@ export async function prepareContributorDocuments(actor: Actor, meta: RequestMet
 
   /* ---- Works, and who wrote them ---- */
   const works = await db.select().from(articles).where(isNull(articles.deletedAt));
-  const authorIds = new Set(works.flatMap((work) => (work.authorId ? [work.authorId] : [])));
+  // Quizzes count as works once the admin has said who wrote them (D-300)
+  const quizzes = (
+    await db
+      .select({ quiz: issueQuizzes })
+      .from(issueQuizzes)
+      .innerJoin(issues, eq(issueQuizzes.issueId, issues.id))
+      .where(isNull(issues.deletedAt))
+  ).flatMap(({ quiz }) => (quiz.authorId ? [quiz] : []));
+  const authorIds = new Set([
+    ...works.flatMap((work) => (work.authorId ? [work.authorId] : [])),
+    ...quizzes.map((quiz) => quiz.authorId!),
+  ]);
 
   /* ---- Contributors: writers, çizerler, and anyone who wrote a work ---- */
   const people = await db
@@ -262,11 +321,23 @@ export async function prepareContributorDocuments(actor: Actor, meta: RequestMet
       .filter((row) => row.kind === "work_licence" && row.templateVersion === LICENCE_FORM_TEMPLATE_VERSION)
       .map((row) => [row.articleId, row]),
   );
+  const quizLicenceOf = new Map(
+    existing
+      .filter((row) => row.kind === "work_licence" && row.quizId && row.templateVersion === LICENCE_FORM_TEMPLATE_VERSION)
+      .map((row) => [row.quizId, row]),
+  );
 
   const save = async (
     kind: ContributorDocumentKind,
     current: ContributorDocument | undefined,
-    values: { userId: string; articleId: string | null; id?: string; templateVersion: string; contentHash?: string | null },
+    values: {
+      userId: string;
+      articleId: string | null;
+      quizId?: string | null;
+      id?: string;
+      templateVersion: string;
+      contentHash?: string | null;
+    },
     result: Draft,
   ): Promise<void> => {
     count(result);
@@ -295,6 +366,7 @@ export async function prepareContributorDocuments(actor: Actor, meta: RequestMet
         userId: values.userId,
         agreementVersionId: version.id,
         articleId: values.articleId,
+        quizId: values.quizId ?? null,
         templateVersion: values.templateVersion,
         createdBy: actor.id,
         ...fields,
@@ -346,11 +418,33 @@ export async function prepareContributorDocuments(actor: Actor, meta: RequestMet
       continue;
     }
     const formId = current?.id ?? randomUUID();
-    const result = await draftLicence(version, work, author, bylineOf.get(work.id) ?? null, formId, now, versionReason);
+    const result = await draftLicence(version, articleWork(work), author, bylineOf.get(work.id) ?? null, formId, now, versionReason);
     await save(
       "work_licence",
       current,
       { id: formId, userId: author.id, articleId: work.id, templateVersion: LICENCE_FORM_TEMPLATE_VERSION, contentHash: result.contentHash },
+      result,
+    );
+  }
+
+  for (const quiz of quizzes) {
+    const author = byId.get(quiz.authorId!);
+    if (!author || author.deletedAt) {
+      skip("Testin sahibinin hesabı silinmiş: ruhsat hazırlanmadı");
+      continue;
+    }
+    const current = quizLicenceOf.get(quiz.id);
+    if (current?.status === "prepared") {
+      summary.alreadyPrepared.licence += 1;
+      continue;
+    }
+    const formId = current?.id ?? randomUUID();
+    // A quiz carries no byline choice: the form names its author (D-284)
+    const result = await draftLicence(version, quizWork(quiz), author, null, formId, now, versionReason);
+    await save(
+      "work_licence",
+      current,
+      { id: formId, userId: author.id, articleId: null, quizId: quiz.id, templateVersion: LICENCE_FORM_TEMPLATE_VERSION, contentHash: result.contentHash },
       result,
     );
   }
@@ -432,12 +526,14 @@ function documentList() {
       userName: owners.displayName,
       userRole: owners.role,
       articleId: articles.id,
-      articleTitle: articles.title,
+      // A quiz's licence shows the quiz's title in the same column (D-300)
+      articleTitle: workTitle,
       articleStatus: articles.status,
     })
     .from(contributorDocuments)
     .innerJoin(owners, eq(contributorDocuments.userId, owners.id))
-    .leftJoin(articles, eq(contributorDocuments.articleId, articles.id));
+    .leftJoin(articles, eq(contributorDocuments.articleId, articles.id))
+    .leftJoin(issueQuizzes, eq(contributorDocuments.quizId, issueQuizzes.id));
 }
 
 /** The contributor's own documents; nobody else's. */
@@ -499,16 +595,21 @@ export async function viewContributorDocument(actor: Actor, id: string): Promise
       .from(articles)
       .where(and(eq(articles.authorId, owner!.id), isNull(articles.deletedAt)))
       .limit(1);
-    const values = await generalValues(version, owner!, Boolean(authored));
+    const [quizzed] = await db
+      .select({ id: issueQuizzes.id })
+      .from(issueQuizzes)
+      .where(eq(issueQuizzes.authorId, owner!.id))
+      .limit(1);
+    const values = await generalValues(version, owner!, Boolean(authored ?? quizzed));
     return { ...base, markdown: previewTemplate(version.bodyMarkdown, values, OPTIONAL, gap).markdown, isPreview: true, unavailable: null };
   }
 
-  const [work] = row.articleId ? await db.select().from(articles).where(eq(articles.id, row.articleId)).limit(1) : [];
+  const work = await workOf(row);
   if (!work) return { ...base, markdown: null, isPreview: true, unavailable: "Belgenin eseri artık kayıtlı değil." };
   const [grant] = await db
     .select({ bylineChoice: rightsGrants.bylineChoice })
     .from(rightsGrants)
-    .where(and(eq(rightsGrants.articleId, work.id), eq(rightsGrants.status, "signed")))
+    .where(and(eq(rightsGrants.articleId, row.articleId ?? row.id), eq(rightsGrants.status, "signed")))
     .orderBy(desc(rightsGrants.signedAt))
     .limit(1);
   const { values } = await licenceValues(version, work, owner!, grant?.bylineChoice ?? null, row.id, row.updatedAt);
@@ -555,9 +656,10 @@ type PreparedRow = { document: ContributorDocument; articleTitle: string | null 
 
 function preparedRows(condition: SQL): Promise<PreparedRow[]> {
   return db
-    .select({ document: contributorDocuments, articleTitle: articles.title })
+    .select({ document: contributorDocuments, articleTitle: workTitle })
     .from(contributorDocuments)
     .leftJoin(articles, eq(contributorDocuments.articleId, articles.id))
+    .leftJoin(issueQuizzes, eq(contributorDocuments.quizId, issueQuizzes.id))
     .where(condition)
     .orderBy(contributorDocuments.userId, contributorDocuments.kind, contributorDocuments.createdAt);
 }
@@ -702,11 +804,12 @@ export async function listAwaitingUploads(actor: Actor): Promise<AwaitingUpload[
       userId: users.id,
       userName: users.displayName,
       email: users.email,
-      articleTitle: articles.title,
+      articleTitle: workTitle,
     })
     .from(contributorDocuments)
     .innerJoin(users, eq(contributorDocuments.userId, users.id))
     .leftJoin(articles, eq(contributorDocuments.articleId, articles.id))
+    .leftJoin(issueQuizzes, eq(contributorDocuments.quizId, issueQuizzes.id))
     .where(
       and(
         eq(contributorDocuments.status, "prepared"),
