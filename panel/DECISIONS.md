@@ -11720,6 +11720,9 @@ istenmemesini istedi. Kişiye özel yeni bir işaret açılmadı: yazar durumu z
   "hepsine").
 - `queueAllContributorDocuments` (belgeleri topluca kuyruğa alma) dondurulmuş
   yazarı atlar.
+- Sözleşmeler sayfasındaki "Doğrulama raporu"nun "Bekleyenler" listesi ve yönetici
+  ana sayfasındaki aynı rapordan okunan sayı da dondurulmuş yazarı saymaz
+  (`acceptanceReport`; ilk yayında atlanmıştı, ürün sahibi canlıda fark etti).
 - Kişi satırındaki tekil "mail gönder" düğmesi adminin açık kararıdır, engellenmez.
   Belgelerin hazırlanması da sürer: belge kaydı talep değildir.
 - Belgeleri, yüklemeleri ve eserleri olduğu gibi kalır; durum yeniden "Aktif"

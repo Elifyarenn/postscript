@@ -444,6 +444,7 @@ export async function acceptanceReport(actor: Actor) {
     accepted: writers
       .filter((writer) => acceptedBy.has(writer.id))
       .map((writer) => ({ ...writer, acceptedAt: acceptedBy.get(writer.id)! })),
-    pending: writers.filter((writer) => !acceptedBy.has(writer.id)),
+    // Nothing is awaited from a frozen writer (D-299)
+    pending: writers.filter((writer) => !acceptedBy.has(writer.id) && writer.writerStatus !== "suspended"),
   };
 }

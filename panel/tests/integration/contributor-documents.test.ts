@@ -517,6 +517,11 @@ describe("waiting for signed copies (D-291)", () => {
     expect(await queueUploadReminders(actorOf(s.admin), [s.complete.id], noMeta)).toEqual({ queued: 0 });
     await queueUploadReminders(actorOf(s.admin), "all", noMeta);
     expect((await db.select().from(mailJobs)).some((job) => job.recipient === s.complete.email)).toBe(false);
+    // The verification report (and the dashboard count read from it) stops waiting for them too
+    const { acceptanceReport } = await import("@/services/agreements");
+    const pending = (await acceptanceReport(actorOf(s.admin))).pending.map((row) => row.id);
+    expect(pending).not.toContain(s.complete.id);
+    expect(pending).toContain(s.noBirthDate.id);
     // The bulk documents mail passes them by as well
     const { queueAllContributorDocuments } = await import("@/services/contributor-documents");
     await queueAllContributorDocuments(actorOf(s.admin), noMeta);
