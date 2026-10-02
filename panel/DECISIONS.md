@@ -11707,3 +11707,20 @@ basış, bekleyen her kişi için yeni bir hatırlatma kuyruğa alır. Sıklık 
 kararıdır; tablo son hatırlatmanın ne zaman kuyruğa alındığını göstermeye devam
 eder ve her basış denetim kaydına yazılır. Gönderim yine yalnızca /admin/mail
 üzerinden admin eliyle. Migration yok.
+
+## D-299 — Dondurulan yazardan sözleşme istenmez
+
+Ürün sahibi bir süre yazarlık yapamayacak bir yazarın sözleşme beklenenler
+listesinden çıkmasını, genel olarak da yazarlığı dondurulmuş olanlardan sözleşme
+istenmemesini istedi. Kişiye özel yeni bir işaret açılmadı: yazar durumu zaten
+"Donduruldu" (`writer_status = suspended`) olabiliyor ve anlamı tam olarak bu.
+
+- `listAwaitingUploads` dondurulmuş yazarı listelemez; `queueUploadReminders`
+  aynı listeyi kullandığı için ona hatırlatma da kuyruğa girmez (tek tek ya da
+  "hepsine").
+- `queueAllContributorDocuments` (belgeleri topluca kuyruğa alma) dondurulmuş
+  yazarı atlar.
+- Kişi satırındaki tekil "mail gönder" düğmesi adminin açık kararıdır, engellenmez.
+  Belgelerin hazırlanması da sürer: belge kaydı talep değildir.
+- Belgeleri, yüklemeleri ve eserleri olduğu gibi kalır; durum yeniden "Aktif"
+  yapılınca kişi listeye ve toplu gönderime geri döner. Migration yok.

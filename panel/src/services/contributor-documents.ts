@@ -18,7 +18,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { and, desc, eq, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, ne, or, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db/client";
 import {
@@ -562,6 +562,13 @@ function preparedRows(condition: SQL): Promise<PreparedRow[]> {
     .orderBy(contributorDocuments.userId, contributorDocuments.kind, contributorDocuments.createdAt);
 }
 
+/**
+ * Nothing is asked of a writer the admin has frozen (D-299): no bulk documents
+ * mail, no place in the awaiting list, no reminder. Their documents stay as
+ * they are, and they are asked again once set active.
+ */
+const notFrozen = () => or(isNull(users.writerStatus), ne(users.writerStatus, "suspended"));
+
 /** One person's mail: every prepared document as a PDF attachment. */
 async function documentsMail(person: User, rows: PreparedRow[]): Promise<OutgoingMail> {
   const attachments = [];
@@ -600,7 +607,7 @@ export async function queueAllContributorDocuments(
   const people = await db
     .select()
     .from(users)
-    .where(and(inArray(users.id, [...byUser.keys()]), isNull(users.deletedAt)));
+    .where(and(inArray(users.id, [...byUser.keys()]), isNull(users.deletedAt), notFrozen()));
 
   const mails: OutgoingMail[] = [];
   for (const person of people) {
@@ -683,6 +690,7 @@ function documentLabel(kind: ContributorDocumentKind, articleTitle: string | nul
  * Everyone who was sent a prepared document and has not uploaded its signed
  * copy, or whose upload was rejected. A copy under review or verified counts
  * as uploaded.
+ * A frozen writer is left out (D-299).
  */
 export async function listAwaitingUploads(actor: Actor): Promise<AwaitingUpload[]> {
   if (!canManageAgreements(actor)) throw forbidden();
@@ -699,7 +707,13 @@ export async function listAwaitingUploads(actor: Actor): Promise<AwaitingUpload[
     .from(contributorDocuments)
     .innerJoin(users, eq(contributorDocuments.userId, users.id))
     .leftJoin(articles, eq(contributorDocuments.articleId, articles.id))
-    .where(and(eq(contributorDocuments.status, "prepared"), isNull(users.deletedAt)))
+    .where(
+      and(
+        eq(contributorDocuments.status, "prepared"),
+        isNull(users.deletedAt),
+        notFrozen(),
+      ),
+    )
     .orderBy(users.displayName, contributorDocuments.kind, contributorDocuments.createdAt);
   if (rows.length === 0) return [];
 

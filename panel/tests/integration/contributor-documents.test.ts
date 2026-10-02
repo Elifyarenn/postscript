@@ -503,4 +503,30 @@ describe("waiting for signed copies (D-291)", () => {
     expect((await captureError(queueUploadReminders(actorOf(s.editor), "all", noMeta)))?.status).toBe(403);
     expect((await captureError(listAwaitingUploads(actorOf(s.complete))))?.status).toBe(403);
   });
+
+  it("awaits nothing from a frozen writer, and reminds them of nothing, until they are active again (D-299)", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const { listAwaitingUploads, queueUploadReminders } = await import("@/services/contributor-documents");
+    const { setWriterStatus } = await import("@/services/users");
+    const listed = async () => (await listAwaitingUploads(actorOf(s.admin))).some((entry) => entry.userId === s.complete.id);
+    expect(await listed()).toBe(true);
+
+    await setWriterStatus(actorOf(s.admin), s.complete.id, "suspended", noMeta);
+    expect(await listed()).toBe(false);
+    expect(await queueUploadReminders(actorOf(s.admin), [s.complete.id], noMeta)).toEqual({ queued: 0 });
+    await queueUploadReminders(actorOf(s.admin), "all", noMeta);
+    expect((await db.select().from(mailJobs)).some((job) => job.recipient === s.complete.email)).toBe(false);
+    // The bulk documents mail passes them by as well
+    const { queueAllContributorDocuments } = await import("@/services/contributor-documents");
+    await queueAllContributorDocuments(actorOf(s.admin), noMeta);
+    const queued = await db.select().from(mailJobs);
+    expect(queued.some((job) => job.kind !== "contributor_upload_reminder")).toBe(true);
+    expect(queued.some((job) => job.recipient === s.complete.email)).toBe(false);
+    // The documents themselves are untouched
+    expect((await listOwnContributorDocuments(actorOf(s.complete))).some((row) => row.status === "prepared")).toBe(true);
+
+    await setWriterStatus(actorOf(s.admin), s.complete.id, "active", noMeta);
+    expect(await listed()).toBe(true);
+  });
 });
