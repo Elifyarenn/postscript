@@ -2,7 +2,7 @@
 import { NO_INDEX } from "@/lib/seo";
 import { guardPanel } from "@/lib/auth/guard";
 import { pendingAcknowledgements } from "@/services/announcements";
-import { hasRole } from "@/lib/auth/rbac";
+import { hasRole, needsAuthorAgreement } from "@/lib/auth/rbac";
 import { PanelShell, writerNav } from "@/components/shell";
 
 /**
@@ -29,7 +29,7 @@ export default async function WriterLayout({ children }: { children: ReactNode }
   const locked = lockedByStatus || pending.length > 0;
 
   return (
-    <PanelShell user={user} area="yazar paneli" groups={writerNav(locked)}>
+    <PanelShell user={user} area="yazar paneli" groups={writerNav(locked, needsAuthorAgreement(user))}>
       {children}
     </PanelShell>
   );

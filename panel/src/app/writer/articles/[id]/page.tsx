@@ -4,7 +4,7 @@ import { eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { articleComments, users } from "@/db/schema";
 import { guardWriterInnerPages } from "@/lib/auth/guard";
-import { canWriteInAnyArea } from "@/lib/auth/rbac";
+import { canWriteInAnyArea, needsAuthorAgreement } from "@/lib/auth/rbac";
 import { findArticleById, listArticleVersions } from "@/services/articles";
 import { listArticleHistory } from "@/services/article-history";
 import { ArticleHistoryCard } from "@/components/article-history";
@@ -145,15 +145,20 @@ export default async function WriterArticleDetailPage({
                 Yazı, seçtiğiniz kategorinin editörüne düşer; editör onayladıktan
                 sonra ana editör, son olarak yönetici inceleyecektir.
               </p>
-              {/* The declaration itself, so it has to be visible before the click (D-238) */}
-              <p className="mb-4 text-sm">
-                Göndererek bu yazının{" "}
-                <Link href="/writer/agreement" className="text-accent underline">
-                  yazar sözleşmesindeki
-                </Link>{" "}
-                koşullarla yayımlanmasına izin verirsiniz. İzin, derginin yazıyı
-                yayımlama taahhüdü değildir.
-              </p>
+              {/* The declaration itself, so it has to be visible before the click (D-238);
+                  an admin has no contract to point at (D-305) */}
+              {needsAuthorAgreement(user) ? (
+                <p className="mb-4 text-sm">
+                  Göndererek bu yazının{" "}
+                  <Link href="/writer/agreement" className="text-accent underline">
+                    yazar sözleşmesindeki
+                  </Link>{" "}
+                  koşullarla yayımlanmasına izin verirsiniz. İzin, derginin yazıyı
+                  yayımlama taahhüdü değildir.
+                </p>
+              ) : (
+                <p className="mb-4 text-sm">Göndererek bu yazının dergide yayımlanmasına izin verirsiniz.</p>
+              )}
               <PanelForm action={submitArticleAction} csrfToken={csrfToken} submitLabel="İncelemeye gönder">
                 <input type="hidden" name="articleId" value={article.id} />
               </PanelForm>

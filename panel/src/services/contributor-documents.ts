@@ -37,7 +37,7 @@ import {
   type User,
 } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
-import { canManageAgreements, type Actor } from "@/lib/auth/rbac";
+import { canManageAgreements, needsAuthorAgreement, type Actor } from "@/lib/auth/rbac";
 import { hashDocument } from "@/lib/agreement/normalise";
 import {
   AgreementRenderError,
@@ -384,6 +384,10 @@ export async function prepareContributorDocuments(actor: Actor, meta: RequestMet
       skip("Hesap silinmiş: genel sözleşme hazırlanmadı");
       continue;
     }
+    if (!needsAuthorAgreement(person)) {
+      skip(ADMIN_SKIP);
+      continue;
+    }
     const current = generalOf.get(person.id);
     if (current?.status === "prepared") {
       summary.alreadyPrepared.general += 1;
@@ -412,6 +416,10 @@ export async function prepareContributorDocuments(actor: Actor, meta: RequestMet
       skip("Eserin sahibinin hesabı silinmiş: ruhsat hazırlanmadı");
       continue;
     }
+    if (!needsAuthorAgreement(author)) {
+      skip(ADMIN_SKIP);
+      continue;
+    }
     const current = licenceOf.get(work.id);
     if (current?.status === "prepared") {
       summary.alreadyPrepared.licence += 1;
@@ -431,6 +439,10 @@ export async function prepareContributorDocuments(actor: Actor, meta: RequestMet
     const author = byId.get(quiz.authorId!);
     if (!author || author.deletedAt) {
       skip("Testin sahibinin hesabı silinmiş: ruhsat hazırlanmadı");
+      continue;
+    }
+    if (!needsAuthorAgreement(author)) {
+      skip(ADMIN_SKIP);
       continue;
     }
     const current = quizLicenceOf.get(quiz.id);
@@ -669,7 +681,15 @@ function preparedRows(condition: SQL): Promise<PreparedRow[]> {
  * mail, no place in the awaiting list, no reminder. Their documents stay as
  * they are, and they are asked again once set active.
  */
-const notFrozen = () => or(isNull(users.writerStatus), ne(users.writerStatus, "suspended"));
+const notFrozen = () =>
+  and(
+    or(isNull(users.writerStatus), ne(users.writerStatus, "suspended")),
+    // Nor of an admin, who signs no contract (D-305)
+    ne(users.role, "admin"),
+  );
+
+/** Why an admin's contract and licence forms are not prepared (D-305). */
+const ADMIN_SKIP = "Yönetici: dergiyi kuran adminlerden sözleşme ve ruhsat istenmez";
 
 /** One person's mail: every prepared document as a PDF attachment. */
 async function documentsMail(person: User, rows: PreparedRow[]): Promise<OutgoingMail> {

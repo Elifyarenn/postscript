@@ -11887,3 +11887,44 @@ yazısını göndermeden önce sözleşmeyi kendisi de kabul etmelidir.
 değil), `canWriteInAnyArea` yalnızca admin. `tests/integration/issue-grants.test.ts`
 — admin tüm alanları görür, adminlere açık sayıya istediği alanda yazı başlatır;
 yazar kendi alanı dışında 400 alır.
+
+## D-305 — Dergiyi kuran iki adminden yazar sözleşmesi istenmez
+
+**Bağlam:** D-304'ten sonra adminler yazı yazabiliyor, ama "İncelemeye gönder"
+güncel Yazar Sözleşmesi'nin imzalı ve doğrulanmış olmasını istiyordu (D-238,
+D-275). Ürün sahibi: "adminlerden yazar sözleşmesi istenmesin, biz kurduk
+zaten." Sözleşme dergi ile dışarıdan katkı veren yazar arasındadır; dergiyi
+yöneten kurucuların kendileriyle sözleşme imzalaması anlamsız.
+
+**Karar:** Yeni saf fonksiyon `needsAuthorAgreement` (`rbac.ts`): admin için
+`false`, diğer herkes için `true`.
+
+- `transitionArticle` → `in_review`: admin kendi yazısını sözleşme kontrolü
+  olmadan gönderir. `confirmUncoveredSubmissions` da aynı.
+- **Eser başına yayın izni kaydı (D-238) yine yazılır:** admin gönderdiğinde
+  `rights_grants` satırı (metin, hash, sürüm, zaman) oluşur. Yayın kontrolü
+  (`checkTransition`) bu kayda dayandığı için yayın kuralı değişmedi; kayıt,
+  hangi metnin kimin izniyle yayımlandığının izi olarak kalır.
+- "Belgeleri hazırla" (D-276, D-300): admin için genel sözleşme ve admin
+  eserleri/testleri için ruhsat formu **hazırlanmaz**; özet "Yönetici: dergiyi
+  kuran adminlerden sözleşme ve ruhsat istenmez" diye sayar. Bekleyen
+  yüklemeler, toplu belge e-postası ve hatırlatmalar adminleri saymaz.
+- Yazar paneli: adminde "Sözleşmem" bağlantısı, "Yazar sayfalarınız kilitli"
+  uyarısı (D-304 sonrası adminde yanlışlıkla görünüyordu) ve gönder kartındaki
+  sözleşme bağlantısı yok; sözleşme kartı "Dergiyi kuran yöneticilerden yazar
+  sözleşmesi istenmez." der.
+
+**Hukukçu görüşü gerekiyor:** Admin yazılarında FSEK m. 52 anlamında yazılı
+bir izin belgesi yok; yalnızca panel kaydı var. Kurucuların kendi dergilerine
+izni kendiliğinden verdiği varsayılıyor. Dergi ileride bir tüzel kişiliğe
+(dernek vb.) geçerse ya da bir admin ayrılırsa, o adminin yazıları için yazılı
+izin gerekip gerekmediği danışmana sorulmalı. Muhafazakâr taraf: eser başına
+izin kaydı ve sürüm geçmişi tutulmaya devam ediyor, silinmiyor.
+
+**KVKK (D-084):** Yeni veri kalemi, amaç veya aktarım yok; metin değişmedi.
+
+**Doğrulama:** `tests/unit/rbac.test.ts` (`needsAuthorAgreement`),
+`tests/integration/submission-licence.test.ts` — sözleşmesiz admin gönderir,
+izin kaydı adminin adına `signed` oluşur; sözleşmesiz yazar hâlâ 409.
+`tests/integration/contributor-documents.test.ts` — admin ve admin eseri için
+belge hazırlanmaz, atlananlar listesinde sayılır.

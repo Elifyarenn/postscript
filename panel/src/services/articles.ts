@@ -30,6 +30,7 @@ import {
   canPerformTransition,
   canReadArticle,
   isActiveWriter,
+  needsAuthorAgreement,
   type Actor,
 } from "@/lib/auth/rbac";
 import { env } from "@/lib/env";
@@ -875,8 +876,9 @@ export async function transitionArticle(
   }
 
   // The declaration rests on the contract, so there is nothing to declare until
-  // the writer has accepted the version that is current now (D-238).
-  if (to === "in_review" && article.authorId === actor.id) {
+  // the writer has accepted the version that is current now (D-238). The
+  // admins founded the magazine and sign no contract with it (D-305).
+  if (to === "in_review" && article.authorId === actor.id && needsAuthorAgreement(actor)) {
     if (!(await hasAcceptedCurrentAgreement(actor.id))) {
       throw conflict(
         "Yazınızı göndermeden önce yazar sözleşmesini kabul etmeniz gerekiyor. " +

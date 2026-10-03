@@ -137,6 +137,19 @@ describe("preparing", () => {
     expect(rows.find((row) => row.articleId === s.accepted.id)!.userId).toBe(s.noBirthDate.id);
   });
 
+  it("prepares nothing for an admin's own work: the admins sign no contract (D-305)", async () => {
+    const s = await scenario();
+    await work(s.admin, "draft", "Kurucunun Yazısı");
+    const summary = await prepareContributorDocuments(actorOf(s.admin), noMeta);
+
+    expect(summary.skipped).toContainEqual({
+      reason: "Yönetici: dergiyi kuran adminlerden sözleşme ve ruhsat istenmez",
+      count: 2,
+    });
+    const rows = await db.select().from(contributorDocuments);
+    expect(rows.some((row) => row.userId === s.admin.id)).toBe(false);
+  });
+
   it("fills a complete contract, and keeps an incomplete one for review with its reason", async () => {
     const s = await scenario();
     await prepareContributorDocuments(actorOf(s.admin), noMeta);

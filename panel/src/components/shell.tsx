@@ -135,7 +135,7 @@ export function editorNav(reviewsTopics: boolean, contactsTeam = false): NavGrou
 }
 
 /** `locked` only greys the links out; each page checks the rule itself. */
-export function writerNav(locked: boolean): NavGroup[] {
+export function writerNav(locked: boolean, signsContract = true): NavGroup[] {
   return [
     {
       label: "Yazar",
@@ -143,7 +143,8 @@ export function writerNav(locked: boolean): NavGroup[] {
         { href: "/writer", label: "Genel bakış" },
         { href: "/writer/announcements", label: "Duyurular" },
         { href: "/writer/topics", label: "Sayılar ve konular", disabled: locked },
-        { href: "/writer/agreement", label: "Sözleşmem" },
+        // The admins sign no contract (D-305)
+        ...(signsContract ? [{ href: "/writer/agreement", label: "Sözleşmem" }] : []),
         { href: "/writer/approvals", label: "Eser Onayları", disabled: locked },
         { href: "/writer/articles", label: "Yazılarım", disabled: locked },
         { href: "/writer/profile", label: "Profil ve güvenlik" },

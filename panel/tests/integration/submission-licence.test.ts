@@ -149,6 +149,18 @@ describe("the licence declared by submitting", () => {
     expect(await findLiveApproval(draft.id)).toBeNull();
   });
 
+  it("asks no contract of an admin writing their own article, but records the declaration (D-305)", async () => {
+    const { adminActor } = await scenario({ accept: false });
+    expect(await hasAcceptedCurrentAgreement(adminActor.id)).toBe(false);
+    const draft = await draftOf(adminActor, "Kurucunun Yazısı");
+
+    const sent = await transitionArticle(adminActor, draft.id, "in_review", noMeta, {});
+    expect(sent.status).toBe("in_review");
+    const grant = await findLiveApproval(draft.id);
+    expect(grant?.status).toBe("signed");
+    expect(grant?.grantorId).toBe(adminActor.id);
+  });
+
   it("does not treat an editor's transition as the writer's declaration", async () => {
     const { adminActor, writer } = await scenario();
 

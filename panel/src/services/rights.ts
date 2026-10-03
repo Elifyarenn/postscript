@@ -23,7 +23,7 @@ import {
   type User,
 } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
-import { canAccessEditorPanel, canSignRightsGrant, type Actor } from "@/lib/auth/rbac";
+import { canAccessEditorPanel, canSignRightsGrant, needsAuthorAgreement, type Actor } from "@/lib/auth/rbac";
 import { hashDocument } from "@/lib/agreement/normalise";
 import { formatContractDateTime } from "@/lib/agreement/render";
 import { env } from "@/lib/env";
@@ -317,7 +317,8 @@ export async function confirmUncoveredSubmissions(
   actor: Actor,
   meta: RequestMeta,
 ): Promise<number> {
-  if (!(await hasAcceptedCurrentAgreement(actor.id))) {
+  // The admins sign no contract with the magazine they founded (D-305)
+  if (needsAuthorAgreement(actor) && !(await hasAcceptedCurrentAgreement(actor.id))) {
     throw conflict("Önce yazar sözleşmesini kabul etmeniz gerekiyor.");
   }
 

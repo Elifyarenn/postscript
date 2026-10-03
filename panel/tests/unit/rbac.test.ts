@@ -25,6 +25,7 @@ import {
   hasRole,
   isActiveWriter,
   isHybrid,
+  needsAuthorAgreement,
   panelPathFor,
   type Actor,
   type EditorAssignment,
@@ -213,6 +214,12 @@ describe("the hybrid role (D-060)", () => {
     expect(canWriteInAnyArea(actor({ role: "admin" }))).toBe(true);
     expect(canWriteInAnyArea(actor({ role: "editor", writerStatus: "active" }))).toBe(false);
     expect(canWriteInAnyArea(actor({ role: "writer", writerStatus: "active" }))).toBe(false);
+  });
+
+  it("asks the author contract of everyone but the admins (D-305)", () => {
+    expect(needsAuthorAgreement(actor({ role: "admin" }))).toBe(false);
+    expect(needsAuthorAgreement(actor({ role: "editor" }))).toBe(true);
+    expect(needsAuthorAgreement(actor({ role: "writer" }))).toBe(true);
   });
 });
 

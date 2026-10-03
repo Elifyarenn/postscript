@@ -196,6 +196,14 @@ export function canWriteInAnyArea(actor: Actor): boolean {
   return canAccessAdminPanel(actor);
 }
 
+/**
+ * The two admins founded the magazine, so no author contract is asked of them
+ * (D-305). Everyone else who writes still needs one before submitting.
+ */
+export function needsAuthorAgreement(actor: Pick<Actor, "role">): boolean {
+  return actor.role !== "admin";
+}
+
 /** An editor's scope over the review chain, read from the database by the caller. */
 export type EditorAssignment = {
   /** A main editor reads every category and approves the second review stage. */

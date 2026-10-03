@@ -7,7 +7,7 @@ import { listArticlesForWriter } from "@/services/articles";
 import { getCurrentAgreement, hasAcceptedCurrentAgreement } from "@/services/agreements";
 import { Alert, Card, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
-import { canProposeTopics } from "@/lib/auth/rbac";
+import { canProposeTopics, needsAuthorAgreement } from "@/lib/auth/rbac";
 import { periodState, submissionPeriod, topicPeriod } from "@/lib/issue-periods";
 import { writerStage, WRITER_STAGE_TEXT } from "@/lib/topic-stage";
 import { listIssueCalendar, listWriterIssues } from "@/services/topics";
@@ -17,6 +17,8 @@ export const metadata = { title: "Yazar paneli" };
 
 export default async function WriterDashboard() {
   const { user } = await guardPanel("writer");
+  // An admin writes with no writer duty and no contract (D-304, D-305)
+  const signsContract = needsAuthorAgreement(user);
   // The Hobby cron runs once a day; a panel visit is what sends this on time (D-270)
   await announceOpenedSubmissionWindowsSoon();
 
@@ -42,7 +44,7 @@ export default async function WriterDashboard() {
       />
 
       <div className="space-y-6">
-        {user.writerStatus !== "active" && (
+        {signsContract && user.writerStatus !== "active" && (
           <Alert tone="warning" title="Yazar sayfalarınız kilitli">
             {user.writerStatus === "suspended"
               ? "Yazarlığınız askıya alınmış. Bir yöneticiye başvurun."
@@ -129,7 +131,9 @@ export default async function WriterDashboard() {
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <h2 className="mb-3 font-serif text-lg">Sözleşme</h2>
-            {current === null ? (
+            {!signsContract ? (
+              <p className="text-sm text-muted">Dergiyi kuran yöneticilerden yazar sözleşmesi istenmez.</p>
+            ) : current === null ? (
               <p className="text-sm text-muted">Henüz yayınlanmış bir çerçeve sözleşme yok.</p>
             ) : agreementAccepted ? (
               <p className="text-sm">
