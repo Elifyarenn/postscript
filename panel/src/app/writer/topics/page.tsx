@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { guardWriterInnerPages } from "@/lib/auth/guard";
-import { canProposeTopics } from "@/lib/auth/rbac";
+import { canProposeTopics, canWriteInAnyArea } from "@/lib/auth/rbac";
 import { readCsrfToken } from "@/lib/csrf";
 import {
   formatPeriodMoment,
@@ -123,8 +123,10 @@ export default async function WriterTopicsPage() {
     selectableWriterCategories(actor),
     readCsrfToken().then((token) => token ?? ""),
   ]);
+  // An admin holds no area and may pick any of them (D-304)
+  const anyArea = canWriteInAnyArea(actor);
   const now = new Date();
-  const running = entries.filter((entry) => isIssueInProgress(entry.issue, now));
+  const running =entries.filter((entry) => isIssueInProgress(entry.issue, now));
   const past = entries.filter((entry) => !isIssueInProgress(entry.issue, now));
 
   return (
@@ -275,7 +277,9 @@ export default async function WriterTopicsPage() {
                   <h3 className="mb-3 text-sm font-medium">
                     {proposals.length === 0
                       ? "Konu Belirle"
-                      : `Diğer alanınız için konu belirleyin (${openAreas.join(", ")})`}
+                      : anyArea
+                        ? "Başka bir alan için konu belirleyin"
+                        : `Diğer alanınız için konu belirleyin (${openAreas.join(", ")})`}
                   </h3>
                   <PanelForm action={submitTopicAction} csrfToken={csrfToken} submitLabel="Konuyu gönder">
                     <input type="hidden" name="issueId" value={issue.id} />

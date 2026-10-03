@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { guardWriterInnerPages } from "@/lib/auth/guard";
-import { canProposeTopics } from "@/lib/auth/rbac";
+import { canProposeTopics, canWriteInAnyArea } from "@/lib/auth/rbac";
 import { selectableWriterCategories } from "@/services/editor-categories";
 import { listIssuesWithoutWindows, listWriterIssues } from "@/services/topics";
 import { readCsrfToken } from "@/lib/csrf";
@@ -25,11 +25,13 @@ export default async function WriterNewArticlePage({
   const actor = { ...user };
   const csrfToken = (await readCsrfToken()) ?? "";
   const { konu } = await searchParams;
+  // An admin holds no area: every area and their own working issue are open (D-304)
+  const anyArea = canWriteInAnyArea(actor);
 
   const [categories, entries, openIssues] = await Promise.all([
     selectableWriterCategories(actor),
     canProposeTopics(actor) ? listWriterIssues(actor) : Promise.resolve([]),
-    listIssuesWithoutWindows(user.id),
+    listIssuesWithoutWindows(user.id, anyArea),
   ]);
 
   // Accepted topics that have no article yet
@@ -105,7 +107,11 @@ export default async function WriterNewArticlePage({
           <Field
             label="Kategori"
             htmlFor="category"
-            hint="Yalnızca size tanımlı alanları seçebilirsiniz; yazı o alanın editörüne düşer."
+            hint={
+              anyArea
+                ? "Admin olarak istediğiniz alanı seçebilirsiniz; yazı o alanın editörüne düşer."
+                : "Yalnızca size tanımlı alanları seçebilirsiniz; yazı o alanın editörüne düşer."
+            }
           >
             <Select id="category" name="category" required defaultValue={chosen?.proposal.category ?? ""}>
               <option value="">Seçin…</option>

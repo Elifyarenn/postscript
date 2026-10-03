@@ -180,12 +180,20 @@ export function isHybrid(actor: Actor): boolean {
 }
 
 /**
- * Someone who may act as an author: an active writer, or an editor who also
- * holds an active writer duty (a hybrid). This is the gate for writing one's
- * own articles in the writer panel (step 1 of the review chain, D-059).
+ * Someone who may act as an author: an active writer, an editor who also
+ * holds an active writer duty (a hybrid), or an admin. This is the gate for
+ * writing one's own articles in the writer panel (step 1 of the review chain,
+ * D-059). The two admins write without a writer duty (D-304).
  */
 export function isActiveWriter(actor: Actor): boolean {
-  return isOperational(actor) && actor.writerStatus === "active" && hasRole(actor.role, "writer");
+  if (!isOperational(actor)) return false;
+  if (hasRole(actor.role, "admin")) return true;
+  return actor.writerStatus === "active" && hasRole(actor.role, "writer");
+}
+
+/** An admin is given no area: every live area is theirs to write in (D-304). */
+export function canWriteInAnyArea(actor: Actor): boolean {
+  return canAccessAdminPanel(actor);
 }
 
 /** An editor's scope over the review chain, read from the database by the caller. */

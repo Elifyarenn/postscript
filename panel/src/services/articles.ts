@@ -25,6 +25,7 @@ import { allowedTargets, autoTransitionAfter, checkTransition } from "@/lib/arti
 import { AUTHOR_TOLD_STATUSES } from "@/lib/article-history";
 import { writeAudit } from "@/lib/audit";
 import {
+  canAccessAdminPanel,
   canAccessEditorPanel,
   canPerformTransition,
   canReadArticle,
@@ -345,8 +346,9 @@ async function writerTargetIssue(
     .where(and(eq(issues.id, input.issueId), isNull(issues.deletedAt)))
     .limit(1);
   const issue = rows[0];
-  // The admins' working issue is not there for a writer, unless it was opened to them (D-296)
-  if (!issue || (issue.adminOnly && !(await hasIssueGrant(actor.id, issue.id)))) {
+  // The admins' working issue is not there for a writer, unless it was opened
+  // to them (D-296); an admin writes into it as their own (D-304)
+  if (!issue || (issue.adminOnly && !canAccessAdminPanel(actor) && !(await hasIssueGrant(actor.id, issue.id)))) {
     throw badRequest("Sayı bulunamadı.", { issueId: ["Sayı bulunamadı."] });
   }
   if (usesIssueWindows(issue)) {

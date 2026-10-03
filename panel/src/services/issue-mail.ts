@@ -94,7 +94,11 @@ export async function announceOpenedIssueWindows(now: Date = new Date()): Promis
   return (await announceOpenedTopicWindows(now)) + (await announceOpenedSubmissionWindows(now));
 }
 
-/** Everyone who may propose a topic and hand in an article: the same test as `isActiveWriter`. */
+/**
+ * Everyone who may propose a topic and hand in an article: the same test as
+ * `isActiveWriter`, except the admins, who write when they choose and are not
+ * mailed about windows (D-304).
+ */
 async function activeWriters() {
   return db
     .select({

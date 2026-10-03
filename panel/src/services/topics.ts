@@ -526,11 +526,13 @@ export async function acceptedTopicForNewArticle(actor: Actor, proposalId: strin
 /**
  * Issues a writer may still start an article in without a topic: those
  * without windows that are open to everyone, and any without windows an admin
- * opened to this writer alone (D-296).
+ * opened to this writer alone (D-296). An admin writing their own article
+ * also sees the admins' working issue (D-304).
  */
-export async function listIssuesWithoutWindows(writerId?: string): Promise<Issue[]> {
+export async function listIssuesWithoutWindows(writerId?: string, includeAdminOnly = false): Promise<Issue[]> {
   const granted = writerId ? await grantedIssueIds(writerId) : [];
-  const openToAll = and(eq(issues.adminOnly, false), inArray(issues.status, ["planning", "in_production"]));
+  const live = inArray(issues.status, ["planning", "in_production"]);
+  const openToAll = includeAdminOnly ? live : and(eq(issues.adminOnly, false), live);
   return db
     .select()
     .from(issues)
@@ -695,7 +697,8 @@ export async function issueProcessSummaries(actor: Actor, now: Date = new Date()
   if (running.length === 0) return [];
 
   // Everyone who may write their own articles today: the same test as
-  // `isActiveWriter`, read from the table
+  // `isActiveWriter`, read from the table; the admins write when they choose
+  // and are not counted as missing a topic (D-304)
   const writers = await db
     .select({ id: users.id, displayName: users.displayName, penName: users.penName })
     .from(users)

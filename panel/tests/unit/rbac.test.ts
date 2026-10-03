@@ -21,6 +21,7 @@ import {
   canReviewMainStage,
   canSignRightsGrant,
   canViewContractDocuments,
+  canWriteInAnyArea,
   hasRole,
   isActiveWriter,
   isHybrid,
@@ -203,6 +204,15 @@ describe("the hybrid role (D-060)", () => {
     expect(isActiveWriter(actor({ role: "editor", writerStatus: "active" }))).toBe(true);
     expect(isActiveWriter(actor({ role: "writer", writerStatus: "pending_agreement" }))).toBe(false);
     expect(isActiveWriter(actor({ role: "writer", writerStatus: null }))).toBe(false);
+  });
+
+  it("lets an admin write in any area without a writer duty (D-304)", () => {
+    expect(isActiveWriter(actor({ role: "admin" }))).toBe(true);
+    expect(isActiveWriter(actor({ role: "admin", isBanned: true }))).toBe(false);
+    expect(isActiveWriter(actor({ role: "admin", emailVerifiedAt: null }))).toBe(false);
+    expect(canWriteInAnyArea(actor({ role: "admin" }))).toBe(true);
+    expect(canWriteInAnyArea(actor({ role: "editor", writerStatus: "active" }))).toBe(false);
+    expect(canWriteInAnyArea(actor({ role: "writer", writerStatus: "active" }))).toBe(false);
   });
 });
 

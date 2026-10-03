@@ -17,7 +17,7 @@ import { db } from "@/db/client";
 import { editorCategories, users, writerAreas, type EditorCategory } from "@/db/schema";
 import { writeAudit, type Executor } from "@/lib/audit";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
-import { canManageUsers, type Actor, type EditorAssignment } from "@/lib/auth/rbac";
+import { canManageUsers, canWriteInAnyArea, type Actor, type EditorAssignment } from "@/lib/auth/rbac";
 import type { RequestMeta } from "./auth";
 
 type EditorCategoryRow = typeof editorCategories.$inferSelect;
@@ -260,8 +260,20 @@ export async function areaHasEditor(areaId: string): Promise<boolean> {
   return rows.length > 0;
 }
 
-/** Selectable categories for an author's own submissions: the areas they hold. */
+/**
+ * Selectable categories for an author's own submissions: the areas they hold,
+ * or every live area for an admin (D-304).
+ */
 export async function selectableWriterCategories(actor: Actor): Promise<string[]> {
+  if (canWriteInAnyArea(actor)) {
+    const rows = await db
+      .select({ name: writerAreas.name })
+      .from(writerAreas)
+      .where(eq(writerAreas.isActive, true))
+      .orderBy(writerAreas.sortOrder);
+    return rows.map((row) => row.name);
+  }
+
   const userRows = await db
     .select({
       writerArea: users.writerArea,

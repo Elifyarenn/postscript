@@ -11848,3 +11848,42 @@ yükleyen yöneticinin kaydedildiği eklendi.
 yükleme kişiye ait ve beklemede düşer, yükleyen admin dosyada ve denetim
 kaydında, üstüne ikinci dosya 409, doğrulanınca sözleşme sayılır; editör ve
 yazara 403, PDF olmayan 400, olmayan belge 404.
+
+## D-304 — İki admin de yazı yazar; alan atanmaz, istedikleri alanı seçerler
+
+**Bağlam:** Ürün sahibi: "iki admin de yazı yazabilsin, alan atama yapma,
+istedikleri alanı seçip yazabilsinler." Yazı yazma kapısı (`isActiveWriter`)
+`writer_status = active` istiyordu; adminlerde yazarlık görevi olmadığı için
+yazar panelinde konu öneremiyor, yazı başlatamıyorlardı. Kategori seçimi de
+yalnızca kişiye tanımlı alanlarla (`writer_area`, `writer_area2`) sınırlıydı.
+
+**Karar:**
+
+- `isActiveWriter`: e-postası doğrulanmış, yasaklı olmayan **admin** yazardır;
+  `writer_status` aranmaz. Admine `writer_area` atanmaz, rol değişmez, migration
+  yok.
+- Yeni saf fonksiyon `canWriteInAnyArea` (yalnızca admin):
+  `selectableWriterCategories` admin için **tüm etkin alanları** döndürür. Konu
+  önerisi (D-271) ve yazı kategorisi aynı listeden doğrulanır; admin her alan
+  için bir konu önerebilir, kategori seçmek zorunludur.
+- Adminin yazısı seçtiği alanın editörüne düşer; inceleme zinciri, yazı kabul
+  dönemi ve kurallar herkesle aynı.
+- Admin, yalnız adminlere açık çalışma sayısına (D-240, üretimde Sayı 1) da
+  konusuz yazı başlatabilir; yazarlar için D-296 izni aynen geçerli.
+- Yazar paneline geçiş: admin üst çubukta "Yazar Paneli / Yönetim Paneli"
+  düğmelerini görür (D-060'taki geçiş düğmesi).
+- Dönem e-postaları (D-272) ve yazı süreci özetindeki "konu bekleyen yazarlar"
+  listesi adminleri **saymaz**: adminler istedikleri zaman yazar, eksik
+  gösterilmez, e-postayla rahatsız edilmez.
+
+**Değişmeyen hukuki kontroller:** "İncelemeye gönder" için güncel Yazar
+Sözleşmesi'nin kabulü (D-238) ve yayın için o metne ait izin/ruhsat kontrolü
+(D-268) admin için de aynıdır. Admin yazar olarak kendi eserinin hak sahibidir;
+yazısını göndermeden önce sözleşmeyi kendisi de kabul etmelidir.
+
+**KVKK (D-084):** Yeni veri kalemi, amaç veya aktarım yok; metin değişmedi.
+
+**Doğrulama:** `tests/unit/rbac.test.ts` — admin yazardır (yasaklı/doğrulanmamış
+değil), `canWriteInAnyArea` yalnızca admin. `tests/integration/issue-grants.test.ts`
+— admin tüm alanları görür, adminlere açık sayıya istediği alanda yazı başlatır;
+yazar kendi alanı dışında 400 alır.

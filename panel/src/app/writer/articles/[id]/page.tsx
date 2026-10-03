@@ -4,6 +4,7 @@ import { eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { articleComments, users } from "@/db/schema";
 import { guardWriterInnerPages } from "@/lib/auth/guard";
+import { canWriteInAnyArea } from "@/lib/auth/rbac";
 import { findArticleById, listArticleVersions } from "@/services/articles";
 import { listArticleHistory } from "@/services/article-history";
 import { ArticleHistoryCard } from "@/components/article-history";
@@ -95,7 +96,11 @@ export default async function WriterArticleDetailPage({
                   <Field
                     label="Kategori"
                     htmlFor="category"
-                    hint="Yalnızca size tanımlı alanları seçebilirsiniz."
+                    hint={
+                      canWriteInAnyArea({ ...user })
+                        ? "Admin olarak istediğiniz alanı seçebilirsiniz."
+                        : "Yalnızca size tanımlı alanları seçebilirsiniz."
+                    }
                   >
                     <Select id="category" name="category" defaultValue={article.category ?? ""}>
                       <option value="">Seçin…</option>

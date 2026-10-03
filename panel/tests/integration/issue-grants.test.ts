@@ -15,7 +15,9 @@ import {
   listIssueGrantsForUser,
   revokeIssueSubmission,
 } from "@/services/issue-grants";
+import { selectableWriterCategories } from "@/services/editor-categories";
 import { listIssuesWithoutWindows } from "@/services/topics";
+import { DEFAULT_WRITER_AREAS } from "@/lib/writer-areas";
 import { resetTables, seedDefaultWriterAreas, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
 import { actorOf, createUser, noMeta } from "../helpers/factories";
 
@@ -130,5 +132,32 @@ describe("an issue closed to new articles", () => {
       noMeta,
     );
     expect(await statusOf(grantIssueSubmission(actorOf(admin), { issueId: windowed.id, userId: writer.id }, noMeta))).toBe(409);
+  });
+});
+
+describe("an admin writing their own article (D-304)", () => {
+  it("picks any live area and writes into the admins' working issue", async () => {
+    const { admin, issue } = await scenario();
+    const areas = await selectableWriterCategories(actorOf(admin));
+    expect(areas).toEqual([...DEFAULT_WRITER_AREAS]);
+
+    expect((await listIssuesWithoutWindows(admin.id, true)).map((row) => row.id)).toContain(issue.id);
+    const article = await createArticleAsWriter(
+      actorOf(admin),
+      { title: "Editörden", category: areas[areas.length - 1], issueId: issue.id },
+      noMeta,
+    );
+    expect(article.authorId).toBe(admin.id);
+    expect(article.category).toBe(areas[areas.length - 1]);
+  });
+
+  it("still keeps a writer to their own area", async () => {
+    const { issue, writer, admin } = await scenario();
+    await grantIssueSubmission(actorOf(admin), { issueId: issue.id, userId: writer.id }, noMeta);
+    expect(await selectableWriterCategories(actorOf(writer))).toEqual(["Sanat & Edebiyat"]);
+    const other = DEFAULT_WRITER_AREAS.find((name) => name !== "Sanat & Edebiyat")!;
+    expect(
+      await statusOf(createArticleAsWriter(actorOf(writer), { title: "Başka alan", category: other, issueId: issue.id }, noMeta)),
+    ).toBe(400);
   });
 });
