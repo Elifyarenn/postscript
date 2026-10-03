@@ -51,6 +51,7 @@ const MAX_SIGNED_CONTRACT_BYTES = MAX_SIGNED_CONTRACT_MB * 1024 * 1024;
 export const VERIFIED_MESSAGE = "İmzalı sözleşmeniz doğrulandı.";
 
 export type SignedContractStatus = SignedContract["status"];
+type ContributorDocument = typeof contributorDocuments.$inferSelect;
 
 /** The member's own open application that is waiting for its contract, if any. */
 async function applicationAwaitingContract(userId: string) {
@@ -97,7 +98,7 @@ const signedQuizzes = alias(issueQuizzes, "signed_quizzes");
 const signedWorkTitle = sql<string | null>`coalesce(${signedWorks.title}, ${signedQuizzes.title})`;
 
 /** The member's own uploads, newest first. Nobody else's. */
-export async function listOwnSignedContracts(actor: Actor): Promise<OwnSignedContract[]> {
+export async function listOwnSignedContracts(actor: Pick<Actor, "id">): Promise<OwnSignedContract[]> {
   const rows = await db
     .select({
       id: signedContracts.id,
@@ -144,17 +145,60 @@ export async function uploadSignedContract(
   if (!user.emailVerifiedAt) {
     throw conflict("Sözleşme yüklemeden önce e-posta adresinizi doğrulamanız gerekiyor.");
   }
+  return recordUpload({ memberId: actor.id, uploaderId: actor.id, document, buffer: input.buffer }, meta);
+}
+
+/**
+ * An admin uploads the signed copy of a member's prepared document for them
+ * (D-303): the member signed it but could not upload it from their phone and
+ * sent it another way. Only for a document the magazine prepared for that
+ * member, so the file is tied to a known text. It lands as `pending` like any
+ * upload and is verified the usual way; the admin stays on record as the
+ * file's uploader and in the audit log.
+ */
+export async function uploadSignedContractForMember(
+  actor: Actor,
+  input: { buffer: Buffer; fileName: string; declaredMime: string; documentId: string },
+  meta: RequestMeta,
+): Promise<{ id: string }> {
+  if (!canManageAgreements(actor)) throw forbidden();
+  const document = await preparedDocument(input.documentId);
+  if (document.userId === actor.id) throw forbidden("Kendi belgenizi kendi panelinizden yükleyin.");
+
+  assertPdf(input);
+
+  const member = await findUserById(document.userId);
+  if (!member.emailVerifiedAt) {
+    throw conflict("Bu kişi e-posta adresini doğrulamamış; adına belge yüklenemez.");
+  }
+  return recordUpload({ memberId: member.id, uploaderId: actor.id, document, buffer: input.buffer }, meta);
+}
+
+/**
+ * The common tail of both uploads: one pending file per document and none
+ * once it is verified, stored privately, audited under whoever uploaded it.
+ */
+async function recordUpload(
+  input: { memberId: string; uploaderId: string; document: ContributorDocument | null; buffer: Buffer },
+  meta: RequestMeta,
+): Promise<{ id: string }> {
+  const { document } = input;
+  const byAdmin = input.uploaderId !== input.memberId;
 
   const current = await getCurrentAgreement();
   if (!current) throw conflict("Yayınlanmış bir sözleşme sürümü yok.");
 
-  const own = await listOwnSignedContracts(actor);
+  const own = await listOwnSignedContracts({ id: input.memberId });
   // The same document, or for an upload without one the contract alone
   const same = own.filter((row) =>
     document ? row.contributorDocumentId === document.id : row.contributorDocumentId === null,
   );
   if (same.some((row) => row.status === "pending")) {
-    throw conflict("Bu belge için yüklediğiniz dosya inceleniyor. Sonuçlanmadan yenisini yükleyemezsiniz.");
+    throw conflict(
+      byAdmin
+        ? "Bu belge için yüklenmiş bir dosya zaten inceleniyor; önce onu doğrulayın ya da reddedin."
+        : "Bu belge için yüklediğiniz dosya inceleniyor. Sonuçlanmadan yenisini yükleyemezsiniz.",
+    );
   }
   if (document ? same.some((row) => row.status === "approved") : own.some((row) => row.isContract && row.status === "approved" && row.version === current.version)) {
     throw conflict(document ? "Bu belgenin imzalı kopyası zaten doğrulandı." : "Bu sürüm için imzalı sözleşmeniz zaten doğrulandı.");
@@ -164,13 +208,13 @@ export async function uploadSignedContract(
   const file = await storeGeneratedPdf(input.buffer, {
     prefix: "contracts/signed",
     fileName: document?.kind === "work_licence" ? `imzali-ruhsat-${document.id.slice(0, 8)}.pdf` : `imzali-sozlesme-v${current.version}.pdf`,
-    uploadedBy: actor.id,
+    uploadedBy: input.uploaderId,
   });
 
   const [row] = await db
     .insert(signedContracts)
     .values({
-      userId: actor.id,
+      userId: input.memberId,
       agreementVersionId: document?.agreementVersionId ?? current.id,
       contributorDocumentId: document?.id ?? null,
       fileMediaId: file.id,
@@ -183,11 +227,16 @@ export async function uploadSignedContract(
   if (!row) throw conflict("Bu belge için yüklediğiniz dosya inceleniyor. Sonuçlanmadan yenisini yükleyemezsiniz.");
 
   await writeAudit({
-    actorId: actor.id,
-    action: "signed_contract.uploaded",
+    actorId: input.uploaderId,
+    action: byAdmin ? "signed_contract.uploaded_for_member" : "signed_contract.uploaded",
     entityType: "signed_contracts",
     entityId: row.id,
-    after: { version: current.version, size: input.buffer.length, contributorDocumentId: document?.id ?? null },
+    after: {
+      version: current.version,
+      size: input.buffer.length,
+      contributorDocumentId: document?.id ?? null,
+      ...(byAdmin ? { memberId: input.memberId } : {}),
+    },
     ip: meta.ip,
   });
   return row;
@@ -207,10 +256,17 @@ function assertPdf(input: { buffer: Buffer; fileName: string; declaredMime: stri
 }
 
 /** A prepared document of the actor's own; anyone else's is "not found". */
-async function ownPreparedDocument(actor: Actor, id: string) {
+async function ownPreparedDocument(actor: Actor, id: string): Promise<ContributorDocument> {
+  const row = await preparedDocument(id);
+  if (row.userId !== actor.id) throw notFound("Belge bulunamadı.");
+  return row;
+}
+
+/** Anyone's prepared document; the caller decides who may touch it. */
+async function preparedDocument(id: string): Promise<ContributorDocument> {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw notFound("Belge bulunamadı.");
   const [row] = await db.select().from(contributorDocuments).where(eq(contributorDocuments.id, id)).limit(1);
-  if (!row || row.userId !== actor.id) throw notFound("Belge bulunamadı.");
+  if (!row) throw notFound("Belge bulunamadı.");
   if (row.status !== "prepared") throw conflict("Bu belge henüz hazır değil; imzalı kopyası yüklenemez.");
   return row;
 }

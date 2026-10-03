@@ -28,6 +28,7 @@ import {
   approveSignedContract,
   rejectSignedContract,
   uploadCountersigned,
+  uploadSignedContractForMember,
   VERIFIED_MESSAGE,
 } from "@/services/signed-contracts";
 import {
@@ -659,6 +660,34 @@ export async function uploadCountersignedAction(
 
     revalidatePath("/admin/agreements/imza");
     return { success: "İki tarafça imzalı PDF kaydedildi; katkı sağlayan kendi panelinden indirebilir." };
+  });
+}
+
+/** A member's signed copy, uploaded by the admin when the member could not (D-303). */
+export async function uploadSignedContractForMemberAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const file = formData.get("file");
+    if (!(file instanceof File) || file.size === 0) throw badRequest("Dosya seçilmedi.");
+
+    await uploadSignedContractForMember(
+      { ...user },
+      {
+        buffer: Buffer.from(await file.arrayBuffer()),
+        fileName: file.name,
+        declaredMime: file.type,
+        documentId: text(formData, "documentId"),
+      },
+      await requestMetadata(),
+    );
+
+    revalidatePath("/admin/agreements");
+    revalidatePath("/admin/agreements/imza");
+    return { success: "Kişi adına yüklendi. Doğrulamak için Sözleşme sürümleri sayfasındaki incelenecekler listesine bakın." };
   });
 }
 

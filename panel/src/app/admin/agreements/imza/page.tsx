@@ -7,7 +7,7 @@ import { listAwaitingUploads } from "@/services/contributor-documents";
 import { Card, EmptyState, PageHeader, Table, Td, Th } from "@/components/ui";
 import { ActionButton } from "@/components/form";
 import { SignedContractUploadForm } from "@/components/signed-contract";
-import { queueUploadRemindersAction, uploadCountersignedAction } from "../../actions";
+import { queueUploadRemindersAction, uploadCountersignedAction, uploadSignedContractForMemberAction } from "../../actions";
 
 export const metadata = { title: "İmzalanacak sözleşmeler" };
 
@@ -47,7 +47,9 @@ export default async function CountersignPage() {
           <Link href="/admin/mail" className="text-accent underline">
             E-posta kuyruğu
           </Link>{" "}
-          sayfasında &ldquo;Kuyruğu şimdi işle&rdquo;. Her basış yeni bir hatırlatma kuyruğa alır. Yazar durumu &ldquo;Donduruldu&rdquo; olanlar bu listede yer almaz.
+          sayfasında &ldquo;Kuyruğu şimdi işle&rdquo;. Her basış yeni bir hatırlatma kuyruğa alır. Kişi imzalı PDF&rsquo;i
+          başka yoldan (e-posta gibi) gönderdiyse belgenin altındaki &ldquo;Kişi adına yükle&rdquo; ile yükleyin; dosya
+          inceleniyor olarak düşer ve her zamanki gibi doğrulanır. Yazar durumu &ldquo;Donduruldu&rdquo; olanlar bu listede yer almaz.
         </p>
         {awaiting.length === 0 ? (
           <EmptyState>Yüklemesi beklenen belge yok.</EmptyState>
@@ -82,9 +84,22 @@ export default async function CountersignPage() {
                     <Td className="text-xs">
                       <ul className="list-disc pl-4">
                         {entry.documents.map((document) => (
-                          <li key={document.id}>
+                          <li key={document.id} className="mb-2">
                             {document.label}
                             {document.rejected && <span className="text-danger"> (reddedildi, yeniden bekleniyor)</span>}
+                            {/* For the member who signed but could not upload, e.g. from a phone (D-303) */}
+                            <details className="mt-1">
+                              <summary className="cursor-pointer text-accent underline">Kişi adına yükle</summary>
+                              <div className="mt-2 min-w-[16rem]">
+                                <SignedContractUploadForm
+                                  action={uploadSignedContractForMemberAction}
+                                  csrfToken={csrfToken}
+                                  maxMb={MAX_SIGNED_CONTRACT_MB}
+                                  documentId={document.id}
+                                  label="Kişinin imzaladığı PDF"
+                                />
+                              </div>
+                            </details>
                           </li>
                         ))}
                       </ul>

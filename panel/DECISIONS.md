@@ -11813,3 +11813,38 @@ alma, yazar→editör iki dönem, kaydı olmayan başlangıç `null`, işaret ge
 ve `tests/integration/team-memberships.test.ts` (editöre 403; güncel ve eski
 üye, çizer; okur ve yasaklı yok; çıktıda telefon/e-posta yok; denetim kaydı).
 Migration yok.
+
+## D-303 — Admin, imzalı belgeyi kişi adına yükleyebilir
+
+**Bağlam:** Belgesini imzalayan bir katkı sağlayan, PDF'i telefonundan panele
+yükleyemedi ve dosyayı başka yoldan gönderdi. Yükleme yalnızca kişinin kendi
+hesabından yapılabiliyordu (D-275, D-289).
+
+**Karar:** `/admin/agreements/imza` → "Belge yüklemesi bekleyenler" tablosunda
+her belgenin altında "Kişi adına yükle" var
+(`uploadSignedContractForMember`).
+
+- Yalnızca o kişi için **hazırlanmış bir belgeye** yüklenir; serbest "sözleşme"
+  yüklemesi yok, dosya her zaman bilinen bir metne bağlı.
+- Dosya kişiye ait kaydolur (`signed_contracts.user_id` = kişi), `inceleniyor`
+  olarak düşer ve her zamanki doğrulama/ret yolundan geçer. Otomatik doğrulama
+  yok.
+- Yükleyen admin `media.uploaded_by`'da ve `signed_contract.uploaded_for_member`
+  denetim kaydında (kişinin kimliğiyle) kalır. Şema değişmedi, migration yok.
+- PDF ve boyut denetimi aynı (`assertPdf`). E-postasını doğrulamamış kişiye,
+  kendi belgesine (admin kendi panelinden yükler) ve beklemede dosyası olan
+  belgeye yükleme reddedilir.
+- Muhafazakâr açık nokta: yükleyen admin aynı dosyayı kendisi doğrulayabilir.
+  Kişinin kendi yüklemesini doğrulamakla aynı kontrol (imzanın kişiye ait
+  olduğuna admin bakar); iki admin varken ikinci gözü zorunlu kılmak işi
+  durdururdu. İmzanın kişiden geldiğini gösteren yazışma (e-posta vb.) admin
+  tarafından saklanmalı; ispat değeri **hukukçu görüşüne bağlı**.
+
+**KVKK (D-084):** Yeni veri kalemi yok; aydınlatma metninin "Sözleşme"
+satırına başka yolla iletilen belgenin yönetici tarafından yüklenebileceği ve
+yükleyen yöneticinin kaydedildiği eklendi.
+
+**Doğrulama:** `tests/integration/signed-contracts.test.ts` — kişi adına
+yükleme kişiye ait ve beklemede düşer, yükleyen admin dosyada ve denetim
+kaydında, üstüne ikinci dosya 409, doğrulanınca sözleşme sayılır; editör ve
+yazara 403, PDF olmayan 400, olmayan belge 404.

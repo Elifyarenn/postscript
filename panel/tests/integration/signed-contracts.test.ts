@@ -23,6 +23,7 @@ import {
   listSignedContracts,
   rejectSignedContract,
   uploadSignedContract,
+  uploadSignedContractForMember,
 } from "@/services/signed-contracts";
 import { GET as getMediaRoute } from "@/app/api/media/[id]/route";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
@@ -357,6 +358,43 @@ describe("one signed copy per document sent (D-289)", () => {
     // Verified: no new file for it
     const more = await captureError(uploadSignedContract(actorOf(writer), { ...pdf, documentId: form.id }, noMeta));
     expect(more?.status).toBe(409);
+  });
+
+  it("lets an admin upload a member's signed copy for them, verified the usual way (D-303)", async () => {
+    const { admin, writer, documents } = await withDocuments();
+    const contract = documents.find((row) => row.kind === "general_agreement")!;
+
+    const { id } = await uploadSignedContractForMember(actorOf(admin), { ...pdf, documentId: contract.id }, noMeta);
+    const [row] = await db.select().from(signedContracts).where(eq(signedContracts.id, id));
+    expect(row).toMatchObject({ userId: writer.id, contributorDocumentId: contract.id, status: "pending" });
+    const [file] = await db.select().from(media).where(eq(media.id, row!.fileMediaId));
+    expect(file?.uploadedBy).toBe(admin.id);
+    const { auditLog } = await import("@/db/schema");
+    const [entry] = await db.select().from(auditLog).where(eq(auditLog.entityId, id));
+    expect(entry).toMatchObject({ actorId: admin.id, action: "signed_contract.uploaded_for_member" });
+
+    // The member sees it as their own, and nobody can stack a second one on it
+    expect((await listOwnSignedContracts(actorOf(writer))).map((own) => own.id)).toEqual([id]);
+    expect((await captureError(uploadSignedContract(actorOf(writer), { ...pdf, documentId: contract.id }, noMeta)))?.status).toBe(409);
+    expect((await captureError(uploadSignedContractForMember(actorOf(admin), { ...pdf, documentId: contract.id }, noMeta)))?.status).toBe(409);
+
+    await approveSignedContract(actorOf(admin), id, noMeta);
+    expect(await hasAcceptedCurrentAgreement(writer.id)).toBe(true);
+  });
+
+  it("refuses the upload for someone else to anyone but an admin, and checks the file the same way", async () => {
+    const { admin, writer, documents } = await withDocuments();
+    const editor = await createUser({ role: "editor" });
+    const document = documents[0]!;
+
+    for (const actor of [actorOf(editor), actorOf(writer)]) {
+      expect((await captureError(uploadSignedContractForMember(actor, { ...pdf, documentId: document.id }, noMeta)))?.status).toBe(403);
+    }
+    const notPdf = { buffer: Buffer.from("hello"), fileName: "x.pdf", declaredMime: "application/pdf", documentId: document.id };
+    expect((await captureError(uploadSignedContractForMember(actorOf(admin), notPdf, noMeta)))?.status).toBe(400);
+    const missing = { ...pdf, documentId: "00000000-0000-4000-8000-000000000000" };
+    expect((await captureError(uploadSignedContractForMember(actorOf(admin), missing, noMeta)))?.status).toBe(404);
+    expect(await db.select().from(signedContracts)).toHaveLength(0);
   });
 
   it("keeps a document whose signed copy was uploaded when the documents are cleared", async () => {
