@@ -89,6 +89,7 @@ saklanmaz**.
 | Yazar sözleşmesinin kurulması ve ispatı: imzalı sözleşme dosyanızın alınması, yöneticilerce kontrol edilip doğrulanması veya gerekçesiyle reddedilmesi | (c) Sözleşmenin kurulması veya ifası, (e) Bir hakkın tesisi, kullanılması ve korunması |
 | Her yazı için yayın izninin kurulması ve ispatı: yazıyı gönderdiğinizde hangi metne, hangi sözleşme sürümüne dayanarak ve ne zaman izin verdiğinizin kaydedilmesi | (c) Sözleşmenin ifası, (e) Bir hakkın tesisi, kullanılması ve korunması |
 | Dergi ekibindeki görevinizin (çizer, yetkili) kaydedilmesi ve yönetim panelinde gösterilmesi | (c) Sözleşmenin ifası, (f) Meşru menfaat |
+| Dergi ekibindeyseniz adınızın, mahlasınızın, ekipteki görevlerinizin (yazar, editör, yönetici, çizer, yetkili) ve bu görevlerin kayıtlı başlangıç ve bitiş tarihlerinin yöneticinin dergi işlerini takip ettiği kişisel ajanda uygulamasına aktarılması; orada size verilen dergi işlerinin, teslim tarihlerinin, işin yapılıp yapılmadığının ve hatırlatmaların yönetici tarafından not edilmesi. E-posta, telefon, doğum tarihi ve diğer hesap verileri aktarılmaz; kişisel değerlendirme tutulmaz | (c) Sözleşmenin ifası, (f) Meşru menfaat |
 | Dergi ekibindeyseniz (yazar, editör, çizer, yetkili) dergi işleriyle ilgili size telefonla veya WhatsApp üzerinden ulaşılabilmesi (paneldeki bağlantı WhatsApp'ı veya telefon aramasını yöneticinin ya da ana editörün kendi cihazında numaranızla açar; mesajı o kişi gönderir); telefon numaranız eksikse bunu tamamlamanızın e-postayla hatırlatılması. Numaranızı yalnızca yöneticiler ve ana editör görür | (c) Sözleşmenin ifası, (f) Meşru menfaat |
 | Yazar profilinin ve eserin dergide yayımlanması, künyede ad veya mahlas belirtilmesi | (c) Sözleşmenin ifası |
 | Çizer olarak işaretlenmiş hesapların Hakkında sayfasında mahlas veya topluluk adıyla listelenmesi | (c) Sözleşmenin ifası |
@@ -170,6 +171,7 @@ sağlayıcıların yurt dışındaki sistemlerinde tutulmaktadır:
 | Cloudflare, Inc. (ABD merkezli; R2 nesne depolama Avrupa Birliği veri yerleşimi garantili, Turnstile bot doğrulaması) | Görsel, PDF ve belge depolama; kayıt formlarında bot doğrulaması | Avrupa Birliği (depolama) | Profil görseli, ekip avatarı görselleri, örnek çalışma dosyaları, sözleşme PDF'leri; bot doğrulamasında IP adresi ve tarayıcı sinyalleri |
 | Resend, Inc. (ABD merkezli; gönderim sunucusu: AWS ap-northeast-1, Tokyo) | Doğrulama ve bildirim e-postalarının gönderimi | Japonya | E-posta adresi, görünen ad, e-posta içeriği |
 | Spotify AB | Çalma listesi çaları (yalnızca üyeler açtığında yüklenir) | İsveç | Çaları açtığınızda IP adresi ve tarayıcı bilgisi; aktarım tarayıcınızdan doğrudan yapılır |
+| Google LLC (ABD merkezli; Firebase Cloud Firestore, veri konumu: [FIRESTORE KONUMU]) | Yöneticinin iş takip ajandasının cihazlar arasında eşitlenmesi | [FIRESTORE KONUMU] | Dergi ekibindeyseniz ad, mahlas, ekip görevleri ve tarihleri; size verilen dergi işlerine ilişkin yönetici notları |
 
 Bu aktarımlar KVKK'nın 9. maddesinin üçüncü fıkrası uyarınca, taraflar arasında
 imzalanan ve Kişisel Verileri Koruma Kurumu'na bildirilen **standart sözleşme**
@@ -199,6 +201,7 @@ esas alınarak gerçekleştirilmektedir.
 | Takip, engelleme, kaydetme, beğeni, yeniden paylaşım ve topluluk üyeliği kayıtları | Siz geri alana kadar. Geri aldığınızda veya hesabınız silindiğinde kalıcı olarak silinir. |
 | İmzalı sözleşme dosyası ve doğrulama kaydı, önceki sözleşme kabul kaydı ve yayın izni beyanları (gönderilen metnin tam hâli dahil) | Sözleşme ilişkisi sona erdikten sonra 10 yıl — Türk Borçlar Kanunu m. 146 |
 | Görev işaretleri (çizer, yetkili; kullanılmayan eski hukuk danışmanı ve asistan işaretleri dahil) | İşaret kaldırılana veya hesabınız silinene kadar |
+| Yöneticinin ajandasına aktarılan ekip görevleri ve tarihleri, size verilen dergi işlerine ilişkin notlar | Yönetici ajandadan silene veya Bölüm 9'daki yolla silinmesini isteyene kadar. Ajandadaki kayıt panelden ayrı tutulur; hesabınızın silinmesi onu kendiliğinden silmez, silinmesini aynı yolla isteyebilirsiniz. |
 | Sayıya özel yazı gönderme izni | İzin geri alınana veya hesabınız silinene kadar |
 | Panel işlem (denetim) kayıtları | 10 yıl |
 | Yayımlanmış eserler ve künyedeki ad veya mahlas | Yayın arşivinin parçası olarak süresiz |

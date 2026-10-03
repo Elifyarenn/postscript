@@ -11772,3 +11772,44 @@ belirti ve mekanizma buna uyuyor.
 - Sınır (4 MB) değişmedi: barındırmanın tavanı aşılamaz. Daha büyük dosya
   gerekiyorsa çözüm tarayıcıdan depolamaya doğrudan yüklemedir (imzalı URL, R2
   CORS ve CSP `connect-src` değişikliği); ürün sahibinin kararı bekleniyor.
+
+## D-302 — Ekip üyelikleri ve tarihleri ajanda için JSON olarak dışa aktarılır
+
+**İstek (ürün sahibi):** Kişisel ajanda uygulamasındaki (Ajanda) Postscript
+sekmesine panelden **yalnızca ekip üyelikleri ve bu üyeliklere ait tarihler**
+gelsin; diğer proje bilgileri aktarılmasın.
+
+- `GET /api/admin/team-memberships.json` — `requireRole("admin")` (2FA'lı
+  yönetici oturumu), `no-store`, ek olarak indirilir. Bağlantı "Tüm
+  kullanıcılar" sayfasının başlığında: "Ekip üyeliklerini indir". Ajanda bu
+  dosyayı "Postscript'ten içe aktar" ile alır; panel ile ajanda arasında canlı
+  bağlantı ve paylaşılan sır yok.
+- **İçerik:** kişi başına `id`, `name` (hesap adı), `penName` (mahlas) ve
+  `memberships: [{ duty, startedAt, endedAt }]`. `duty` ∈ writer, editor,
+  admin, illustrator, authorized (D-295'ten sonra ekip sayılan işaretler).
+  E-posta, telefon, doğum tarihi, rıza kayıtları, yazılar ve başka hiçbir
+  proje kaydı yok (entegrasyon testi alan listesini sabitler).
+- **Tarihler kayıttan gelir, tahmin edilmez:** roller `role_changes`'tan,
+  çizer ve Yetkili işaretleri `user.illustrator_changed` /
+  `user.authorized_changed` denetim kayıtlarından. Kaydı olmayan başlangıç
+  (seed ile açılan ilk yönetici, eski işaretler) `null` kalır; hesap açılış
+  tarihi bilerek üyelik başlangıcı yerine konmaz. Yazardan editöre geçiş iki
+  ayrı dönemdir. Rolü `user`'a dönen eski üyeler bitiş tarihiyle listelenir.
+- Silinmiş, anonimleştirilmiş ve yasaklı hesaplar hiç yer almaz.
+- Her indirme `team_memberships.exported` denetim kaydı bırakır (üye sayısıyla).
+
+**KVKK (D-084):** Yeni amaç ve yeni yurt dışı alıcı var: ajanda verisi
+Google Firebase (Cloud Firestore) üzerinde eşitleniyor. Aydınlatma metnine
+amaç satırı, Bölüm 6.2'ye Google LLC satırı ve saklama süresi satırı eklendi.
+**Hukukçu görüşü gerekiyor:** (1) Firestore veri konumu kodda/yapılandırmada
+yok; metinde `[FIRESTORE KONUMU]` olarak bırakıldı, Firebase konsolundan
+doldurulmalı. (2) Bölüm 6.2'nin "standart sözleşme" cümlesi artık Google'ı da
+kapsıyor; Google ile KVKK m. 9 standart sözleşmesi ve Kurum'a bildirimi
+yapılmadan bu beyan doğru olmaz. Muhafazakâr seçim olarak aktarılan veri ad,
+mahlas, görev ve tarihle sınırlandı.
+
+**Doğrulama:** `tests/unit/team-membership.test.ts` (dönem hesabı: terfi/geri
+alma, yazar→editör iki dönem, kaydı olmayan başlangıç `null`, işaret geçmişi)
+ve `tests/integration/team-memberships.test.ts` (editöre 403; güncel ve eski
+üye, çizer; okur ve yasaklı yok; çıktıda telefon/e-posta yok; denetim kaydı).
+Migration yok.

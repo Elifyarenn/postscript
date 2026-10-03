@@ -40,7 +40,21 @@ export async function UsersListPage({
 
   return (
     <>
-      <PageHeader title={meta.title} description={meta.description} />
+      <PageHeader
+        title={meta.title}
+        description={meta.description}
+        actions={
+          // The agenda app imports this file (D-302); only duties and their dates are in it
+          segment === "all" ? (
+            <a
+              href="/api/admin/team-memberships.json"
+              className="rounded-md border border-line bg-surface px-3.5 py-2 text-sm hover:bg-paper"
+            >
+              Ekip üyeliklerini indir
+            </a>
+          ) : undefined
+        }
+      />
 
       <div className="space-y-6">
         {filters.deleted && (
