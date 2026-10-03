@@ -13,6 +13,7 @@ import { profileHref } from "@/lib/profile-link";
 import { renderAgreementForWriter } from "@/services/agreements";
 import { listAllWriterAreasWithQuota } from "@/services/writer-areas";
 import { listGrantableIssues, listIssueGrantsForUser } from "@/services/issue-grants";
+import { listAreaGrantableIssues, listIssueAreaGrantsForUser } from "@/services/issue-area-grants";
 import { listEditorAreasWithHolders, listEditorCategories } from "@/services/editor-categories";
 import { AgreementRenderError } from "@/lib/agreement/render";
 import { readCsrfToken } from "@/lib/csrf";
@@ -36,6 +37,8 @@ import {
   changeRoleAction,
   grantIssueSubmissionAction,
   revokeIssueSubmissionAction,
+  grantIssueAreaAction,
+  revokeIssueAreaAction,
   deleteUserAction,
   promoteToWriterAction,
   revokeUserSessionsAction,
@@ -97,6 +100,14 @@ export default async function AdminUserDetailPage({
     ? await Promise.all([listIssueGrantsForUser({ ...user }, id), listGrantableIssues({ ...user })])
     : [[], []];
   const openIssues = grantableIssues.filter((issue) => !issueGrants.some((grant) => grant.issueId === issue.id));
+  // An area for one issue only (D-306); an admin already writes in every area
+  const takesTemporaryAreas = writes && target.role !== "admin";
+  const [areaGrants, areaIssues] = takesTemporaryAreas
+    ? await Promise.all([listIssueAreaGrantsForUser({ ...user }, id), listAreaGrantableIssues({ ...user })])
+    : [[], []];
+  const temporaryAreaChoices = areas.filter(
+    (area) => area.isActive && area.name !== target.writerArea && area.name !== target.writerArea2,
+  );
   const age = target.birthDate ? calculateAge(target.birthDate) : null;
 
   // The info card shows what this kind of account actually carries (D-087):
@@ -371,6 +382,77 @@ export default async function AdminUserDetailPage({
                       ))}
                     </Select>
                   </Field>
+                </>
+              </PanelForm>
+            )}
+          </Card>
+        )}
+
+        {takesTemporaryAreas && (
+          <Card>
+            <h2 className="mb-1 font-serif text-lg">Geçici alan (sayıya özel)</h2>
+            <p className="mb-4 text-sm text-muted">
+              Yazara, kendi alanı olmayan bir alanı yalnızca seçtiğiniz sayı için verir. Yazar o
+              sayıda bu alanda konu önerebilir ve yazı yazabilir; başka sayılarda göremez. Kendi
+              alanları ve alan kotası değişmez. Verildiği anda yazara e-posta gider.
+            </p>
+            {areaGrants.length > 0 && (
+              <ul className="mb-4 space-y-2 text-sm">
+                {areaGrants.map((grant) => (
+                  <li key={grant.id} className="flex flex-wrap items-center gap-3">
+                    <span>
+                      Sayı {grant.issueNumber} · {grant.issueTitle} — <strong>{grant.areaName}</strong>
+                      <span className="text-muted"> · {formatDateTime(grant.createdAt)}</span>
+                    </span>
+                    <ActionButton
+                      action={revokeIssueAreaAction}
+                      csrfToken={csrfToken}
+                      label="Geri al"
+                      variant="ghost"
+                      fields={{ grantId: grant.id, userId: target.id }}
+                      confirmMessage="Bu geçici alan geri alınsın mı? O alanda açılmış konu ve yazılar yerinde kalır."
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+            {areaIssues.length === 0 || temporaryAreaChoices.length === 0 ? (
+              <p className="text-sm text-muted">Geçici alan verilebilecek sayı ya da alan yok.</p>
+            ) : (
+              <PanelForm
+                action={grantIssueAreaAction}
+                csrfToken={csrfToken}
+                submitLabel="Geçici alanı ver ve e-posta gönder"
+                submitVariant="secondary"
+              >
+                <>
+                  <input type="hidden" name="userId" value={target.id} />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Sayı" htmlFor="area-grant-issue">
+                      <Select id="area-grant-issue" name="issueId" required defaultValue="">
+                        <option value="" disabled>
+                          Seçin…
+                        </option>
+                        {areaIssues.map((issue) => (
+                          <option key={issue.id} value={issue.id}>
+                            Sayı {issue.number} · {issue.title || "(başlıksız)"}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                    <Field label="Alan" htmlFor="area-grant-area">
+                      <Select id="area-grant-area" name="areaId" required defaultValue="">
+                        <option value="" disabled>
+                          Seçin…
+                        </option>
+                        {temporaryAreaChoices.map((area) => (
+                          <option key={area.id} value={area.id}>
+                            {area.name}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                  </div>
                 </>
               </PanelForm>
             )}

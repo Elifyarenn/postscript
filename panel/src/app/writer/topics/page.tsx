@@ -10,7 +10,6 @@ import {
 } from "@/lib/issue-periods";
 import { writerStage, WRITER_STAGE_TEXT } from "@/lib/topic-stage";
 import { formatDateTime } from "@/lib/utils";
-import { selectableWriterCategories } from "@/services/editor-categories";
 import { isIssueInProgress, listWriterIssues, mayResubmit } from "@/services/topics";
 import { PanelForm } from "@/components/form";
 import { IssueWindows } from "@/components/issue-windows";
@@ -118,15 +117,14 @@ export default async function WriterTopicsPage() {
     );
   }
 
-  const [entries, categories, csrfToken] = await Promise.all([
+  const [entries, csrfToken] = await Promise.all([
     listWriterIssues(actor),
-    selectableWriterCategories(actor),
     readCsrfToken().then((token) => token ?? ""),
   ]);
   // An admin holds no area and may pick any of them (D-304)
   const anyArea = canWriteInAnyArea(actor);
   const now = new Date();
-  const running =entries.filter((entry) => isIssueInProgress(entry.issue, now));
+  const running = entries.filter((entry) => isIssueInProgress(entry.issue, now));
   const past = entries.filter((entry) => !isIssueInProgress(entry.issue, now));
 
   return (
@@ -141,7 +139,8 @@ export default async function WriterTopicsPage() {
           <EmptyState>Şu anda konu ya da yazı kabul eden bir sayı yok.</EmptyState>
         )}
 
-        {running.map(({ issue, proposals, openAreas, canProposeMore, articles }) => {
+        {/* Each issue has its own areas: one given for that issue only counts there (D-306) */}
+        {running.map(({ issue, proposals, areas: categories, openAreas, canProposeMore, articles }) => {
           const topicState = periodState(topicPeriod(issue), now);
           const submissionState = periodState(submissionPeriod(issue), now);
           // Two areas: each topic names its area, so the form offers only the free ones (D-271)

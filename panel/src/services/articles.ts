@@ -390,7 +390,7 @@ export async function createArticleAsWriter(
   const input = parsed.data;
   const target = await writerTargetIssue(actor, input);
   // The topic's area is the article's unless the writer picks another of theirs
-  const category = await assertAuthorCategoryAllowed(actor, input.category || target.topic?.category);
+  const category = await assertAuthorCategoryAllowed(actor, input.category || target.topic?.category, target.issueId);
   const slug = await resolveSlug(input.slug, input.title);
 
   const article = await db.transaction(async (tx) => {
@@ -443,15 +443,20 @@ export async function createArticleAsWriter(
 
 /**
  * The category of an author's submission must be one of the areas they hold
- * (their writer areas, plus their editor areas for hybrids), so the article
+ * (their writer areas, plus their editor areas for hybrids, plus an area given
+ * for this issue only, D-306), so the article
  * lands in the review queue of the right category editor.
  */
-async function assertAuthorCategoryAllowed(actor: Actor, category: string | null | undefined) {
+async function assertAuthorCategoryAllowed(
+  actor: Actor,
+  category: string | null | undefined,
+  issueId: string | null,
+) {
   const value = category?.trim() || null;
   if (!value) {
     throw badRequest("Makalenin kategorisini seçmelisiniz.");
   }
-  const allowed = await selectableWriterCategories(actor);
+  const allowed = await selectableWriterCategories(actor, issueId);
   if (!allowed.includes(value)) {
     throw badRequest(`"${value}" alanı size tanımlı değil; yazılarınızın alanını seçin.`);
   }
@@ -505,7 +510,7 @@ export async function updateArticleAsWriter(
     throw badRequest("Makale bilgileri geçersiz.", z.flattenError(parsed.error).fieldErrors);
   }
   const input = parsed.data;
-  const category = await assertAuthorCategoryAllowed(actor, input.category);
+  const category = await assertAuthorCategoryAllowed(actor, input.category, existing.issueId);
 
   // An explicit slug wins; otherwise it follows the title, keeping the old
   // one when neither changed.

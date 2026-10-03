@@ -1038,6 +1038,35 @@ export const issueSubmissionGrants = pgTable(
 );
 
 /**
+ * A temporary area for one issue (D-306): an admin lets a writer propose a
+ * topic and file an article under an area that is not theirs, in this issue
+ * only. Their own areas and the area quota stay as they are.
+ */
+export const issueAreaGrants = pgTable(
+  "issue_area_grants",
+  {
+    id: id(),
+    issueId: uuid("issue_id")
+      .notNull()
+      .references(() => issues.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // A temporary grant does not stand in the way of deleting an area
+    areaId: uuid("area_id")
+      .notNull()
+      .references(() => writerAreas.id, { onDelete: "cascade" }),
+    grantedBy: uuid("granted_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    uniqueIndex("issue_area_grants_triple_unique").on(t.issueId, t.userId, t.areaId),
+    index("issue_area_grants_user_idx").on(t.userId),
+  ],
+);
+
+/**
  * The pages an issue is laid out from (D-234).
  *
  * A page is a layout plus the words and pictures that layout asks for, not a

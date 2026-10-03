@@ -24,6 +24,7 @@ import {
 import { createVersionFromTemplate, publishAgreementVersion, replaceVersionTextWithTemplate } from "@/services/agreements";
 import { adminDecideApplication } from "@/services/writer-applications";
 import { grantIssueSubmission, revokeIssueSubmission } from "@/services/issue-grants";
+import { grantIssueArea, revokeIssueArea } from "@/services/issue-area-grants";
 import {
   approveSignedContract,
   rejectSignedContract,
@@ -224,6 +225,38 @@ export async function revokeIssueSubmissionAction(
     await revokeIssueSubmission({ ...user }, text(formData, "grantId"), await requestMetadata());
     revalidatePath(`/admin/users/${text(formData, "userId")}`);
     return { success: "Yazı gönderme izni geri alındı." };
+  });
+}
+
+/** Gives a writer an area for one issue only and mails them at once (D-306). */
+export async function grantIssueAreaAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const userId = text(formData, "userId");
+    await grantIssueArea(
+      { ...user },
+      { issueId: text(formData, "issueId"), userId, areaId: text(formData, "areaId") },
+      await requestMetadata(),
+    );
+    revalidatePath(`/admin/users/${userId}`);
+    return { success: "Geçici alan verildi; yazara e-posta gönderildi." };
+  });
+}
+
+export async function revokeIssueAreaAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    await revokeIssueArea({ ...user }, text(formData, "grantId"), await requestMetadata());
+    revalidatePath(`/admin/users/${text(formData, "userId")}`);
+    return { success: "Geçici alan geri alındı." };
   });
 }
 

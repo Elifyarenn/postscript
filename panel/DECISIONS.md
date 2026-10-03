@@ -11928,3 +11928,42 @@ izin kaydı ve sürüm geçmişi tutulmaya devam ediyor, silinmiyor.
 izin kaydı adminin adına `signed` oluşur; sözleşmesiz yazar hâlâ 409.
 `tests/integration/contributor-documents.test.ts` — admin ve admin eseri için
 belge hazırlanmaz, atlananlar listesinde sayılır.
+
+## D-306 — Yazara sayıya özel geçici alan
+
+**Bağlam:** Ürün sahibi: "yazarlara geçici alan atama yapmam için bir alan yap,
+hangi alanı hangi sayı için verdiğimi gireyim; sadece o sayı için o seçtiğim
+alana yazı atabilsin" ve "e-posta da gitsin yazara". Yazarın alanları
+(`writer_area`, `writer_area2`) kalıcıdır ve kotaya sayılır; bir sayıda başka
+bir alanda yazdırmanın yolu yoktu.
+
+**Karar:** Yeni tablo `issue_area_grants` (sayı, yazar, alan, veren admin,
+zaman; üçlü tekil). Migration `0060`.
+
+- `/admin/users/:id` → "Geçici alan (sayıya özel)" kartı: sayı + alan seçilir,
+  "Geçici alanı ver ve e-posta gönder". Verilenler listelenir, "Geri al" ile
+  silinir. Yalnızca admin; yalnızca aktif yazara (hibrit editör dahil),
+  adminlere verilmez (D-304, zaten her alan açık). Yazarın kendi alanı, pasif
+  alan, yayımlanmış/arşivlenmiş ya da silinmiş sayı reddedilir.
+- Kural tek yerde: `selectableWriterCategories(actor, issueId)` o sayı için
+  verilen alanları ekler. Yazı oluşturma/düzenleme (yazının sayısı), konu
+  önerme/yeniden gönderme (konunun sayısı) ve yazar panelindeki sayı kartları
+  (`listWriterIssues` → sayı başına `areas`) bunu kullanır. Başka bir sayıda o
+  alan seçilemez (400).
+- Geçici alan konu kapasitesine sayılır (D-271: alan başına bir konu); yazar o
+  sayıda o alan için de ayrı bir konu önerebilir.
+- Kotaya ve yazarın kalıcı alanlarına dokunmaz. Geri alınınca açılmış konu ve
+  yazılar yerinde kalır (kategori olarak tutulur).
+- Verildiği anda yazara e-posta (`issueAreaGranted`, kuyruk üzerinden): sayı,
+  alan, "Sayılar ve konular" bağlantısı. Geri almada e-posta yok.
+- Denetim kaydı: `issue.area_granted`, `issue.area_grant_revoked`.
+
+**KVKK (D-084):** Aydınlatma metnine "Sayıya özel geçici alan" veri kalemi
+(sayı, alan, veren yönetici, tarih, e-posta bildirimi) ve saklama süresi
+(geri alınana, sayı ya da hesap silinene kadar; kayıt ilgili satır
+silindiğinde cascade ile gider) eklendi.
+
+**Doğrulama:** `tests/integration/issue-area-grants.test.ts` — alan yalnızca o
+sayıda seçilir, başka sayıda 400; e-posta yazara gider; pencereli sayıda o
+alanda konu önerilir; yazar 403, kendi alanı/okur/admin 409, aynı ikinci kez
+409; geri alınca alan kalkar. `tests/unit/mail-templates.test.ts` örneği.

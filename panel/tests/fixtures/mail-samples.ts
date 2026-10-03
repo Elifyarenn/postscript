@@ -78,3 +78,13 @@ MAIL_SAMPLES.issueSubmissionGranted = [
   { displayName: "Ada <b>Yazar</b>", issueLabel: "Sayı 1 · Obsession", url: "https://example.com/writer/articles/new" },
 ];
 ADDED_AFTER_LAYOUT.add("issueSubmissionGranted");
+
+MAIL_SAMPLES.issueAreaGranted = [
+  {
+    displayName: "Ada <b>Yazar</b>",
+    issueLabel: "Sayı 1 · Obsession",
+    areaName: "Bilim & <Teknoloji>",
+    url: "https://example.com/writer/topics",
+  },
+];
+ADDED_AFTER_LAYOUT.add("issueAreaGranted");

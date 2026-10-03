@@ -2,6 +2,7 @@ import Link from "next/link";
 import { guardWriterInnerPages } from "@/lib/auth/guard";
 import { canProposeTopics, canWriteInAnyArea } from "@/lib/auth/rbac";
 import { selectableWriterCategories } from "@/services/editor-categories";
+import { temporaryAreasByIssue } from "@/services/issue-area-grants";
 import { listIssuesWithoutWindows, listWriterIssues } from "@/services/topics";
 import { readCsrfToken } from "@/lib/csrf";
 import { PanelForm } from "@/components/form";
@@ -28,11 +29,23 @@ export default async function WriterNewArticlePage({
   // An admin holds no area: every area and their own working issue are open (D-304)
   const anyArea = canWriteInAnyArea(actor);
 
-  const [categories, entries, openIssues] = await Promise.all([
+  const [categories, entries, openIssues, temporary] = await Promise.all([
     selectableWriterCategories(actor),
     canProposeTopics(actor) ? listWriterIssues(actor) : Promise.resolve([]),
     listIssuesWithoutWindows(user.id, anyArea),
+    temporaryAreasByIssue(user.id),
   ]);
+
+  // Areas given for one issue only (D-306): offered with that issue's number;
+  // the server checks the area against the issue the article goes into
+  const issueNumbers = new Map(
+    [...entries.map(({ issue }) => issue), ...openIssues].map((issue) => [issue.id, issue.number]),
+  );
+  const temporaryOptions = [...temporary].flatMap(([issueId, names]) =>
+    names
+      .filter((name) => !categories.includes(name))
+      .map((name) => ({ name, issueNumber: issueNumbers.get(issueId) ?? null })),
+  );
 
   // Accepted topics that have no article yet
   const topics = entries.flatMap(({ issue, proposals }) =>
@@ -118,6 +131,11 @@ export default async function WriterNewArticlePage({
               {categories.map((name) => (
                 <option key={name} value={name}>
                   {name}
+                </option>
+              ))}
+              {temporaryOptions.map(({ name, issueNumber }) => (
+                <option key={`${issueNumber}-${name}`} value={name}>
+                  {name} (yalnızca {issueNumber ? `Sayı ${issueNumber}` : "verildiği sayı"} için)
                 </option>
               ))}
             </Select>

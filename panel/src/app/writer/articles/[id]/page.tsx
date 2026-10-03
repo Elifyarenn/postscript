@@ -33,7 +33,8 @@ export default async function WriterArticleDetailPage({
 
   const editable = article.status === "draft" || article.status === "revision_requested";
   const [categories, versions, notes, history] = await Promise.all([
-    editable ? selectableWriterCategories({ ...user }) : Promise.resolve([]),
+    // An area given for this article's issue only is offered too (D-306)
+    editable ? selectableWriterCategories({ ...user }, article.issueId) : Promise.resolve([]),
     listArticleVersions({ ...user }, id),
     db
       .select({

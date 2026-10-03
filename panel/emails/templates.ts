@@ -718,3 +718,29 @@ export function issueSubmissionGranted(input: {
     ],
   });
 }
+
+/** An admin gave the writer an area for one issue only (D-306). */
+export function issueAreaGranted(input: {
+  displayName: string;
+  issueLabel: string;
+  areaName: string;
+  url: string;
+}): Template {
+  return renderMail({
+    kind: "issue_area_granted",
+    subject: `postscript · ${input.issueLabel} için geçici alanınız: ${input.areaName}`,
+    heading: "Bu sayı için yeni bir alanınız var",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "paragraph",
+        text: `Yönetim, ${input.issueLabel} için size geçici olarak "${input.areaName}" alanını verdi. Bu sayıda bu alanda konu önerebilir ve yazı yazabilirsiniz.`,
+      },
+      { type: "action", lead: "Konunuzu belirleyeceğiniz sayfa:", url: input.url, label: "Sayılar ve konular" },
+      {
+        type: "paragraph",
+        text: "Bu alan yalnızca bu sayı için geçerlidir; kendi alanlarınız değişmez.",
+      },
+    ],
+  });
+}

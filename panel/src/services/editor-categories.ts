@@ -19,6 +19,7 @@ import { writeAudit, type Executor } from "@/lib/audit";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { canManageUsers, canWriteInAnyArea, type Actor, type EditorAssignment } from "@/lib/auth/rbac";
 import type { RequestMeta } from "./auth";
+import { temporaryAreasFor } from "./issue-area-grants";
 
 type EditorCategoryRow = typeof editorCategories.$inferSelect;
 
@@ -262,9 +263,10 @@ export async function areaHasEditor(areaId: string): Promise<boolean> {
 
 /**
  * Selectable categories for an author's own submissions: the areas they hold,
- * or every live area for an admin (D-304).
+ * or every live area for an admin (D-304). With an issue, the areas an admin
+ * gave them for that issue only are added (D-306).
  */
-export async function selectableWriterCategories(actor: Actor): Promise<string[]> {
+export async function selectableWriterCategories(actor: Actor, issueId?: string | null): Promise<string[]> {
   if (canWriteInAnyArea(actor)) {
     const rows = await db
       .select({ name: writerAreas.name })
@@ -289,6 +291,7 @@ export async function selectableWriterCategories(actor: Actor): Promise<string[]
   const names = new Set<string>();
   if (user.writerArea) names.add(user.writerArea);
   if (user.writerArea2) names.add(user.writerArea2);
+  if (issueId) for (const name of await temporaryAreasFor(actor.id, issueId)) names.add(name);
   if (user.role === "editor") {
     const assignment = await getEditorAssignment(actor.id);
     for (const name of assignment.assignedAreas) names.add(name);

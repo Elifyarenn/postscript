@@ -48,6 +48,7 @@ import {
 import { sendMail } from "@/services/mail-queue";
 import * as templates from "@emails/templates";
 import { getEditorAssignment, selectableWriterCategories } from "./editor-categories";
+import { temporaryAreasByIssue } from "./issue-area-grants";
 import { grantedIssueIds } from "./issue-grants";
 import type { RequestMeta } from "./auth";
 
@@ -151,11 +152,12 @@ export const topicInputSchema = z.strictObject({
 
 /**
  * The topic's area (D-271). A given one must be one of the writer's areas, as
- * for articles. A writer with a single area proposes for it without choosing;
+ * for articles, an area given for this issue only included (D-306). A writer
+ * with a single area proposes for it without choosing;
  * one with two or more must say which, since each area gets its own topic.
  */
-async function resolveCategory(actor: Actor, category: string | null | undefined) {
-  const allowed = await selectableWriterCategories(actor);
+async function resolveCategory(actor: Actor, issueId: string, category: string | null | undefined) {
+  const allowed = await selectableWriterCategories(actor, issueId);
   const value = category?.trim() || null;
   if (value) {
     if (!allowed.includes(value)) {
@@ -197,7 +199,7 @@ export async function submitTopicProposal(
   if (state !== "open") {
     throw conflict(windowMessage(TOPIC_PERIOD_TEXT, state, formatPeriod(topicPeriod(issue))));
   }
-  const { category, allowed } = await resolveCategory(actor, parsed.data.category);
+  const { category, allowed } = await resolveCategory(actor, issue.id, parsed.data.category);
 
   // Older proposals may have no area (D-261); the count keeps them within the
   // same limit the index sets for the rest
@@ -302,7 +304,7 @@ export async function reviseTopicProposal(
   if (!mayResubmit(issue, now)) {
     throw conflict("Bu sayının yazı kabul süresi doldu; konu artık yeniden gönderilemez.");
   }
-  const { category } = await resolveCategory(actor, parsed.data.category);
+  const { category } = await resolveCategory(actor, issue.id, parsed.data.category);
 
   // Moving the topic onto an area that already has one is refused by the index
   const updated = await db.transaction(async (tx) => {
@@ -577,7 +579,7 @@ async function eventsFor(proposalIds: string[]): Promise<Map<string, ProposalEve
 export async function listWriterIssues(actor: Actor) {
   if (!canProposeTopics(actor)) throw forbidden();
 
-  const [issueRows, ownProposals, ownArticles, areas] = await Promise.all([
+  const [issueRows, ownProposals, ownArticles, ownAreas, temporary] = await Promise.all([
     db
       .select()
       .from(issues)
@@ -593,6 +595,7 @@ export async function listWriterIssues(actor: Actor) {
       .from(articles)
       .where(and(eq(articles.authorId, actor.id), isNull(articles.deletedAt))),
     selectableWriterCategories(actor),
+    temporaryAreasByIssue(actor.id),
   ]);
   const events = await eventsFor(ownProposals.map((row) => row.id));
 
@@ -602,9 +605,13 @@ export async function listWriterIssues(actor: Actor) {
         .filter((row) => row.issueId === issue.id)
         .map((proposal) => ({ proposal, events: events.get(proposal.id) ?? [] }));
       const used = new Set(proposals.map(({ proposal }) => proposal.category));
+      // Their own areas plus any given for this issue only (D-306)
+      const extra = (temporary.get(issue.id) ?? []).filter((name) => !ownAreas.includes(name));
+      const areas = [...ownAreas, ...extra];
       return {
         issue,
         proposals,
+        areas,
         // Areas that can still take a topic; a single-area writer's topic fills theirs
         openAreas: areas.filter((name) => !used.has(name)),
         canProposeMore: proposals.length < topicCapacity(areas),
