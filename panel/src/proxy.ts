@@ -29,6 +29,15 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Everything except static assets and the public API, which has no forms
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/public).*)"],
+  matcher: [
+    {
+      // API routes render no forms; the ones that check CSRF are called from
+      // pages, which have already been through here and carry the cookie
+      source: "/((?!_next/static|_next/image|favicon.ico|api/).*)",
+      // Once the cookie exists there is nothing left to do, so the proxy is not
+      // invoked at all; it ran on every request and was billed for each.
+      // A literal, not CSRF_COOKIE: Next reads this config statically at build
+      missing: [{ type: "cookie", key: "ps_csrf" }],
+    },
+  ],
 };

@@ -80,12 +80,18 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "4.5mb",
     },
   },
-  // These data files are read at runtime, so tracing must keep them
+  // Files read with fs at runtime (fonts, data/) are traced from the code that
+  // reads them, route by route. Listing them under "/**" copied them, and every
+  // migration snapshot, into each function; only what tracing cannot see is listed.
   outputFileTracingIncludes: {
-    "/**": ["./data/**", "./assets/fonts/**", "./drizzle/**"],
     // The preview's faces and stock photos (D-247): only the page that draws them
     // and the designers' pages kept in code (D-274), which the import reads
     "/editor/issues/**": ["./assets/issue-preview/**", "./assets/issue-design/**"],
+  },
+  outputFileTracingExcludes: {
+    // drizzle-kit's input for the next `db:generate`, never read at runtime; they
+    // grow with every migration, so no route may carry them
+    "/**": ["./drizzle/meta/*_snapshot.json"],
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

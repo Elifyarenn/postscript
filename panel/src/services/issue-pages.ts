@@ -366,12 +366,17 @@ export async function listIssuePages(actor: Actor, issueId: string): Promise<Iss
  * Two questions, both of which must pass: may this actor open the issue, and
  * does this page genuinely use this picture? The second stops the route being
  * a way to read the whole media library through a page the caller can see.
+ *
+ * The actor may be passed as a loader. A published issue is open to everyone,
+ * so its pictures (most of the traffic) are served without a session lookup;
+ * the loader runs only when the issue is closed to a visitor. `isPublic` tells
+ * the route the answer is the same for everyone.
  */
 export async function readPageMedia(
-  actor: Actor | null,
+  actor: Actor | null | (() => Promise<Actor | null>),
   pageId: string,
   mediaId: string,
-): Promise<{ mime: string; body: Buffer }> {
+): Promise<{ mime: string; body: Buffer; isPublic: boolean }> {
   const rows = await db
     .select({ page: issuePages, issue: issues })
     .from(issuePages)
@@ -380,7 +385,14 @@ export async function readPageMedia(
     .limit(1);
   const found = rows[0];
   if (!found || found.issue.deletedAt) throw notFound("Sayfa bulunamadı.");
-  if (!mayReadIssue(actor, found.issue)) throw notFound("Sayfa bulunamadı.");
+
+  // Whatever a visitor may open, every actor may open too (mayReadIssue only
+  // ever adds rights), so asking with `null` first cannot let anyone further
+  const isPublic = mayReadIssue(null, found.issue);
+  if (!isPublic) {
+    const resolved = typeof actor === "function" ? await actor() : actor;
+    if (!mayReadIssue(resolved, found.issue)) throw notFound("Sayfa bulunamadı.");
+  }
 
   const used = await pageUsesMedia(found.page, mediaId);
   if (!used) throw notFound("Görsel bulunamadı.");
@@ -388,7 +400,11 @@ export async function readPageMedia(
   const [row] = await db.select().from(media).where(eq(media.id, mediaId)).limit(1);
   if (!row || row.deletedAt) throw notFound("Görsel bulunamadı.");
 
-  return { mime: row.mime, body: await getStorage().get({ bucket: "media", key: row.storageKey }) };
+  return {
+    mime: row.mime,
+    body: await getStorage().get({ bucket: "media", key: row.storageKey }),
+    isPublic,
+  };
 }
 
 async function pageUsesMedia(page: typeof issuePages.$inferSelect, mediaId: string): Promise<boolean> {

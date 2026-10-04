@@ -19,8 +19,13 @@ import { blockAction, clearConversationAction, sendDirectMessageAction, unblockA
 
 export const metadata = { title: "Mesajlar" };
 
-/** How often an open conversation looks for new messages. */
-const REFRESH_MS = 5000;
+/**
+ * How often an open conversation looks for new messages. Each look renders the
+ * whole page on the server and marks the conversation read, so 5 seconds was
+ * billed as heavily as a busy page; one's own message still appears at once,
+ * because sending refreshes the page itself.
+ */
+const REFRESH_MS = 20_000;
 
 /**
  * One conversation in the design's three columns: list, thread, the other

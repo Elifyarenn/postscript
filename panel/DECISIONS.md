@@ -11996,3 +11996,47 @@ yolu yok (D-191'deki sınır geçerli). Gerçek bir Samsung cihazında doğrulan
 **Hukuk:** Değişiklik yok.
 
 **Doğrulama:** Kapı: typecheck, lint, test. Canlıda aynı öykünme ölçümü.
+
+## D-308 — Sunucu yükü: proxy, sayı görselleri, mesaj yoklaması, fonksiyon boyutu
+
+**İstek (ürün sahibi):** "Middleware, medya önbelleği ve polling optimizasyonları
+canlıda mı kontrol et. Eksik kalanları tamamla; CPU tüketiminin azaldığını doğrula."
+
+**Durum:** Dört değişiklik 1–3 Ekim'de başka bir oturumda yazılmış, hiç commit
+edilmemişti; canlıda yoktu. Bu adımda testleriyle birlikte yayına alındı.
+
+**Karar:**
+
+- **Proxy (`src/proxy.ts`).** Tek işi CSRF çerezini vermek. Matcher'a
+  `missing: [{ type: "cookie", key: "ps_csrf" }]` eklendi: çerez varsa proxy hiç
+  çağrılmaz (eskiden her istekte çalışıyor ve faturalanıyordu). `/api/` tamamen
+  dışarıda; CSRF kontrol eden API çağrıları zaten bir sayfadan, çerezle gelir.
+  Next matcher'ı derlemede statik okuduğu için çerez adı düz yazı;
+  `tests/unit/proxy.test.ts` onu `CSRF_COOKIE` ile eşit tutar.
+- **Sayı görselleri (`/api/issue-pages/[id]/media/[mediaId]`).** Yayımlanmış
+  sayının görseli herkese aynıdır: oturum sorgusu yapılmadan verilir ve
+  `private, max-age=3600` ile okurun kendi tarayıcısında bir saat tutulur.
+  Paylaşılan önbellek yok (`private`); yayında olmayan her şey `no-store` ve
+  oturuma bakılarak. Bir media kimliğinin baytı değişmez: görsel değişince yeni
+  media satırı açılır (`replacePageImage`), eski önbellek yanlış görsel gösteremez.
+- **Mesaj yoklaması.** Açık sohbet 5 yerine 20 saniyede bir yenilenir; her
+  yenileme sayfayı sunucuda baştan çizer. Sekmeye dönünce hemen yenilenir;
+  gönderen kendi mesajını anında görür.
+- **Fonksiyon boyutu (`next.config.ts`).** `"/**": ["./data/**", "./assets/fonts/**",
+  "./drizzle/**"]` kaldırıldı; `drizzle/meta/*_snapshot.json` dışlandı. Çalışma
+  anında okunan dosyalar (şifre listesi, fontlar, sözleşme şablonu, oyun metni)
+  izleme ile kendi rotalarına giriyor; derlemede `.nft.json` izleriyle
+  doğrulandı. Ölçüm (112 rota): izlenen toplam 2430 MB → 1286 MB, en büyük
+  fonksiyon 43,1 MB → 32,9 MB; her fonksiyonda taşınan 8,6 MB migration
+  anlık görüntüsü artık yok. Daha küçük fonksiyon = daha kısa soğuk başlangıç.
+
+**CPU doğrulaması:** `vercel metrics` Observability Plus, `vercel usage` ücretli
+plan istiyor; ikisi de bu hesapta kapalı. Ölçüm Vercel panelinin Usage
+sayfasından (Fluid Active CPU, Edge Middleware Invocations) günlük grafikle
+yapılır; etkisi yayından sonraki ilk tam günde görünür.
+
+**Hukuk:** Değişiklik yok; yeni kişisel veri, çerez veya saklama yok. Görsel
+önbelleği okurun tarayıcısında, yalnızca herkese açık sayı görselleri için.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Canlıda: sayı görselinin
+`cache-control` başlığı, dağıtımın proxy yönlendirme kuralı.

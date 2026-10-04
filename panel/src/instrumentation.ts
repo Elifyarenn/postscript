@@ -24,7 +24,10 @@ export async function register(): Promise<void> {
   const { setDatabase } = await import("@/db/client");
 
   const connection = await createConnection(url);
-  await connection.migrate(path.join(process.cwd(), "drizzle"));
+  // Kept out of file tracing: this file's trace is shared by every function, and
+  // a deployed function never takes the PGlite path, so the migration folder
+  // (and its snapshots) would only be dead weight copied into each of them
+  await connection.migrate(path.join(/* turbopackIgnore: true */ process.cwd(), "drizzle"));
   setDatabase(connection.db, connection.close);
 
   console.log(`[postscript] in-process PostgreSQL ready (${url})`);

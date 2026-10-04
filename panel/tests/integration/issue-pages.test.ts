@@ -356,6 +356,55 @@ describe("the working issue is the admins' alone", () => {
     expect(file.mime).toBe("image/png");
   });
 
+  it("serves a published issue's picture without asking who is reading (D-308)", async () => {
+    const admin = await createUser({ role: "admin" });
+    const issue = await makeIssue("published", 15);
+    await addPageImage(
+      actorOf(admin),
+      issue.id,
+      { buffer: png(), fileName: "kapak.png", declaredMime: "image/png" },
+      noMeta,
+    );
+    const [page] = await listIssuePages(actorOf(admin), issue.id);
+    const mediaId = page!.imageUrl!.split("/").pop()!;
+
+    let asked = 0;
+    const file = await readPageMedia(
+      async () => {
+        asked += 1;
+        return null;
+      },
+      page!.id,
+      mediaId,
+    );
+    expect(file.isPublic).toBe(true);
+    expect(asked).toBe(0);
+  });
+
+  it("asks who is reading only when the issue is closed, and says it is not public", async () => {
+    const admin = await createUser({ role: "admin" });
+    const issue = await makeIssue("planning", 16);
+    await addPageImage(
+      actorOf(admin),
+      issue.id,
+      { buffer: png(), fileName: "kapak.png", declaredMime: "image/png" },
+      noMeta,
+    );
+    const [page] = await listIssuePages(actorOf(admin), issue.id);
+    const mediaId = page!.imageUrl!.split("/").pop()!;
+
+    let asked = 0;
+    const loadVisitor = async () => {
+      asked += 1;
+      return null;
+    };
+    await expectStatus(readPageMedia(loadVisitor, page!.id, mediaId), 404);
+    expect(asked).toBe(1);
+
+    const file = await readPageMedia(async () => actorOf(admin), page!.id, mediaId);
+    expect(file.isPublic).toBe(false);
+  });
+
   it("does not let a page be used as a door into the media library", async () => {
     const admin = await createUser({ role: "admin" });
     const issue = await makeIssue("published", 12);
