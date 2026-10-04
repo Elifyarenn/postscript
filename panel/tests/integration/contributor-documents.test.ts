@@ -9,12 +9,14 @@ import { db, type Database } from "@/db/client";
 import {
   agreementVersions,
   articles,
+  auditLog,
   contributorDocuments,
   mailJobs,
   rightsGrants,
   users,
   type User,
 } from "@/db/schema";
+import { hashDocument } from "@/lib/agreement/normalise";
 import { createSession } from "@/lib/auth/session";
 import { isAppError } from "@/lib/errors";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
@@ -30,6 +32,7 @@ import {
   viewContributorDocument,
 } from "@/services/contributor-documents";
 import { articleHash } from "@/services/rights";
+import { processMailQueue } from "@/services/mail-queue";
 import { ADAPTATION_SCOPE_TEXT, LICENCE_DURATION_TEXT } from "@/lib/contributor-documents";
 import { GET as getPdfRoute } from "@/app/api/contributor-documents/[id]/pdf/route";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
@@ -390,9 +393,9 @@ describe("mailing a contributor their documents (D-285)", () => {
     // Nobody whose documents are all under review gets a mail
     expect(jobs.some((job) => job.recipient === s.noBirthDate.email)).toBe(people.has(s.noBirthDate.id));
 
+    // A second press finds them waiting in the outbox and queues nothing (D-314)
     const second = await queueAllContributorDocuments(actorOf(s.admin), noMeta);
     expect(second.mails).toBe(0);
-    expect(second.alreadyQueued).toBe(people.size);
     expect(await db.select().from(mailJobs)).toHaveLength(people.size);
 
     expect((await captureError(queueAllContributorDocuments(actorOf(s.editor), noMeta)))?.status).toBe(403);
@@ -613,5 +616,109 @@ describe("a quiz as a work (D-300)", () => {
     const { listAwaitingUploads } = await import("@/services/contributor-documents");
     const entry = (await listAwaitingUploads(actorOf(s.admin))).find((row) => row.userId === s.complete.id)!;
     expect(entry.documents.some((document) => document.label.endsWith(s.title))).toBe(true);
+  });
+});
+
+describe("mailed and unmailed documents kept apart (D-314)", () => {
+  it("never mails, clears or prepares again a document its owner received", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    await queueAllContributorDocuments(actorOf(s.admin), noMeta);
+
+    // Waiting in the outbox: listed as queued, and not cleared
+    const queued = (await listContributorDocuments(actorOf(s.admin))).filter((row) => row.status === "prepared");
+    expect(queued.every((row) => row.mailState === "queued" && row.mailedAt === null)).toBe(true);
+    await clearContributorDocuments(actorOf(s.admin), noMeta);
+    expect((await db.select().from(contributorDocuments)).filter((row) => row.status === "prepared")).toHaveLength(queued.length);
+
+    await processMailQueue();
+    const mailed = (await listContributorDocuments(actorOf(s.admin))).filter((row) => row.status === "prepared");
+    expect(mailed.every((row) => row.mailState === "sent" && row.mailedAt instanceof Date)).toBe(true);
+    const delivered = mailbox.outbox.length;
+
+    // Nothing goes a second time, in bulk or to one person
+    expect((await queueAllContributorDocuments(actorOf(s.admin), noMeta)).mails).toBe(0);
+    const again = await captureError(mailContributorDocuments(actorOf(s.admin), s.complete.id, noMeta));
+    expect(again?.status).toBe(409);
+    expect(again?.message).toContain("zaten gönderildi");
+    await processMailQueue();
+    expect(mailbox.outbox).toHaveLength(delivered);
+
+    // Clearing takes only what was never sent; preparing again adds nothing mailed
+    const unsent = (await db.select().from(contributorDocuments)).filter((row) => row.mailedAt === null).length;
+    expect(await clearContributorDocuments(actorOf(s.admin), noMeta)).toBe(unsent);
+    expect((await db.select().from(contributorDocuments)).map((row) => row.id).sort()).toEqual(
+      mailed.map((row) => row.id).sort(),
+    );
+    const prepared = await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    expect(prepared.alreadyPrepared.general + prepared.alreadyPrepared.licence).toBe(mailed.length);
+  });
+
+  it("sends one person only the documents they have not received", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const own = (await listOwnContributorDocuments(actorOf(s.complete))).filter((row) => row.status === "prepared");
+    expect(own.length).toBeGreaterThan(1);
+
+    // One of them reached them already
+    await db.update(contributorDocuments).set({ mailedAt: new Date() }).where(eq(contributorDocuments.id, own[0]!.id));
+    const result = await mailContributorDocuments(actorOf(s.admin), s.complete.id, noMeta);
+    expect(result.sent).toBe(own.length - 1);
+    await processMailQueue();
+    expect(mailbox.outbox.at(-1)!.attachments).toHaveLength(own.length - 1);
+    const after = await listOwnContributorDocuments(actorOf(s.complete));
+    expect(after.filter((row) => row.status === "prepared").every((row) => row.mailState === "sent")).toBe(true);
+  });
+
+  it("recognises mails sent before documents carried their job", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const rows = await db.select().from(contributorDocuments);
+    const ownOf = (userId: string) =>
+      rows
+        .filter((row) => row.userId === userId && row.status === "prepared")
+        .sort((a, b) => a.kind.localeCompare(b.kind) || a.createdAt.getTime() - b.createdAt.getTime());
+    const sentAt = new Date();
+
+    // A bulk mail as the old queue wrote it: keyed by the same set of documents
+    const bulk = ownOf(s.complete.id);
+    const key = hashDocument(bulk.map((row) => `${row.id}:${row.textHash}`).join("|"));
+    await db.insert(mailJobs).values({
+      kind: "contributor_documents",
+      recipient: s.complete.email,
+      subject: "postscript · Sözleşme ve ruhsat belgeleriniz",
+      textBody: null,
+      status: "sent",
+      sentAt,
+      dedupeKey: `contributor_documents:${s.complete.id}:${key}`,
+    });
+
+    // A single send as the old per-person button wrote it: an audit row naming the documents
+    const single = ownOf(s.illustrator.id);
+    expect(single.length).toBeGreaterThan(0);
+    await db.insert(mailJobs).values({
+      kind: "contributor_documents",
+      recipient: s.illustrator.email,
+      subject: "postscript · Sözleşme ve ruhsat belgeleriniz",
+      textBody: null,
+      status: "sent",
+      sentAt,
+    });
+    await db.insert(auditLog).values({
+      actorId: s.admin.id,
+      action: "contributor_documents.mailed",
+      entityType: "users",
+      entityId: s.illustrator.id,
+      after: { documentIds: single.map((row) => row.id) },
+    });
+
+    const listed = await listContributorDocuments(actorOf(s.admin));
+    const stateOf = (id: string) => listed.find((row) => row.id === id)!.mailState;
+    for (const row of [...bulk, ...single]) expect(stateOf(row.id)).toBe("sent");
+    // Everyone else's documents are still unsent
+    expect(listed.filter((row) => row.mailState === "sent")).toHaveLength(bulk.length + single.length);
+    expect((await queueAllContributorDocuments(actorOf(s.admin), noMeta)).documents).toBe(
+      listed.filter((row) => row.status === "prepared" && row.mailState !== "sent").length,
+    );
   });
 });

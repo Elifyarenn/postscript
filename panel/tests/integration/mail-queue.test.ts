@@ -286,7 +286,8 @@ describe("the change a mail announces", () => {
   it("is kept, and the mail still sent directly, when the outbox itself is missing", async () => {
     await db.execute(sql`alter table mail_jobs rename to mail_jobs_hidden`);
     try {
-      await expect(sendMail({ to: "okur@example.com", ...sample() })).resolves.toBeUndefined();
+      // Never throws; with no outbox there is no job to name (D-314)
+      await expect(sendMail({ to: "okur@example.com", ...sample() })).resolves.toBeNull();
       expect(mailbox.lastTo("okur@example.com")?.html).toContain("<!DOCTYPE html>");
     } finally {
       await db.execute(sql`alter table mail_jobs_hidden rename to mail_jobs`);

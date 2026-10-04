@@ -21,7 +21,7 @@ import "server-only";
 import { and, asc, count, desc, eq, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { mailJobs, type MailJob, type MailJobStatus, type StoredMailAttachment } from "@/db/schema";
+import { contributorDocuments, mailJobs, type MailJob, type MailJobStatus, type StoredMailAttachment } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import { canManageMailQueue, type Actor } from "@/lib/auth/rbac";
 import { runInBackground } from "@/lib/background";
@@ -170,20 +170,22 @@ async function deliverWithoutQueue(mail: OutgoingMail): Promise<void> {
  * before its migration — the message is sent directly as before, so a missing
  * table costs the retry, not the mail.
  */
-export async function sendMail(mail: OutgoingMail): Promise<void> {
+export async function sendMail(mail: OutgoingMail): Promise<string | null> {
   let ids: string[];
   try {
     ids = await enqueueMails([mail]);
   } catch (error) {
     console.error(`Mail queue unavailable (${mail.kind ?? "custom"}): ${describeMailError(error)}`);
     await runInBackground(() => deliverWithoutQueue(mail));
-    return;
+    return null;
   }
-  if (ids.length === 0) return;
+  if (ids.length === 0) return null;
 
   await runInBackground(async () => {
     await processMailQueue({ ids, alsoDue: DUE_RETRIES_PER_SEND, budgetMs: BACKGROUND_BUDGET_MS });
   });
+  // The job's id, for a caller that tracks what the mail carried (D-314)
+  return ids[0]!;
 }
 
 /**
@@ -339,6 +341,14 @@ async function attempt(job: MailJob, now: Date): Promise<Outcome> {
 
   // Delivered: the body has done its job and is not kept (KVKK notice §7)
   await settle(job, { ...PURGED, status: "sent", sentAt: now, purgedAt: now, lastError: null });
+  // The documents it carried are now their owner's; the job row is pruned in
+  // a few weeks, so the delivery is written onto them (D-314)
+  if (job.kind === "contributor_documents") {
+    await db
+      .update(contributorDocuments)
+      .set({ mailedAt: now })
+      .where(and(eq(contributorDocuments.mailJobId, job.id), isNull(contributorDocuments.mailedAt)));
+  }
   return "sent";
 }
 

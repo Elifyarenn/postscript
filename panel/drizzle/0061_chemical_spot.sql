@@ -1,0 +1,3 @@
+ALTER TABLE "contributor_documents" ADD COLUMN "mail_job_id" uuid;--> statement-breakpoint
+ALTER TABLE "contributor_documents" ADD COLUMN "mailed_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "contributor_documents" ADD CONSTRAINT "contributor_documents_mail_job_id_mail_jobs_id_fk" FOREIGN KEY ("mail_job_id") REFERENCES "public"."mail_jobs"("id") ON DELETE set null ON UPDATE no action;

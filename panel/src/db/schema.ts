@@ -898,6 +898,16 @@ export const contributorDocuments = pgTable(
     textHash: text("text_hash"),
     /** SHA-256 of the work's body the licence names, as it stood when prepared. */
     workContentHash: text("work_content_hash"),
+    /**
+     * The outbox job that carries this document to its owner (D-314). The job
+     * row is pruned some weeks after delivery; `mailedAt` is what stays.
+     */
+    mailJobId: uuid("mail_job_id").references((): AnyPgColumn => mailJobs.id, { onDelete: "set null" }),
+    /**
+     * When that mail was delivered. A delivered document is what its owner
+     * holds: it is never prepared again, queued again or cleared.
+     */
+    mailedAt: timestamp("mailed_at", { withTimezone: true }),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

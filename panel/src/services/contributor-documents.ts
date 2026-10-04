@@ -19,12 +19,13 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { and, desc, eq, inArray, isNull, ne, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, like, lte, ne, or, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db/client";
 import {
   agreementVersions,
   articles,
+  auditLog,
   contributorDocuments,
   issueQuizzes,
   issues,
@@ -478,19 +479,28 @@ export async function prepareContributorDocuments(actor: Actor, meta: RequestMet
 }
 
 /**
- * Deletes every prepared document so they can be prepared again from the
- * current templates (D-281). They are drafts: nothing was sent, and a signed
- * copy lives in `signed_contracts`, which this does not touch.
+ * Deletes the prepared documents so they can be prepared again from the
+ * current templates (D-281). Only drafts go: a document that was mailed, or is
+ * waiting in the outbox, stays (D-314), and a signed copy lives in
+ * `signed_contracts`, which this does not touch.
  */
 /** No signed copy was uploaded for the document; only such a document may be deleted. */
 export const withoutSignedCopy = sql`not exists (select 1 from ${signedContracts} where ${signedContracts.contributorDocumentId} = ${contributorDocuments.id})`;
 
+/**
+ * Not delivered and not waiting in the outbox (D-314): the only documents that
+ * may be queued, sent or cleared. A failed mail counts as not sent.
+ */
+const notMailed = sql`${contributorDocuments.mailedAt} is null and not exists (select 1 from ${mailJobs} where ${mailJobs.id} = ${contributorDocuments.mailJobId} and ${mailJobs.status} <> 'failed')`;
+
 export async function clearContributorDocuments(actor: Actor, meta: RequestMeta): Promise<number> {
   if (!canManageAgreements(actor)) throw forbidden();
-  // A document someone has uploaded a signed copy of stays (D-289)
+  await syncDocumentMails();
+  // A document someone has uploaded a signed copy of stays (D-289), and so
+  // does one that was mailed: it is what its owner holds (D-314)
   const removed = await db
     .delete(contributorDocuments)
-    .where(withoutSignedCopy)
+    .where(and(withoutSignedCopy, notMailed))
     .returning({ id: contributorDocuments.id });
   await writeAudit({
     actorId: actor.id,
@@ -505,6 +515,9 @@ export async function clearContributorDocuments(actor: Actor, meta: RequestMeta)
 /* ------------------------------------------------------------------ */
 /* Reading                                                             */
 /* ------------------------------------------------------------------ */
+
+/** Where a document's mail stands (D-314). */
+export type DocumentMailState = "sent" | "queued" | "failed" | "not_sent";
 
 export type ContributorDocumentItem = {
   id: string;
@@ -522,6 +535,9 @@ export type ContributorDocumentItem = {
   articleId: string | null;
   articleTitle: string | null;
   articleStatus: string | null;
+  mailState: DocumentMailState;
+  /** When its mail was delivered; null until then. */
+  mailedAt: Date | null;
 };
 
 const owners = alias(users, "owners");
@@ -545,9 +561,16 @@ function documentList() {
       // A quiz's licence shows the quiz's title in the same column (D-300)
       articleTitle: workTitle,
       articleStatus: articles.status,
+      mailState: sql<DocumentMailState>`case
+        when ${contributorDocuments.mailedAt} is not null or ${mailJobs.status} = 'sent' then 'sent'
+        when ${mailJobs.status} in ('pending', 'processing') then 'queued'
+        when ${mailJobs.status} = 'failed' then 'failed'
+        else 'not_sent' end`,
+      mailedAt: contributorDocuments.mailedAt,
     })
     .from(contributorDocuments)
     .innerJoin(owners, eq(contributorDocuments.userId, owners.id))
+    .leftJoin(mailJobs, eq(contributorDocuments.mailJobId, mailJobs.id))
     .leftJoin(articles, eq(contributorDocuments.articleId, articles.id))
     .leftJoin(issueQuizzes, eq(contributorDocuments.quizId, issueQuizzes.id));
 }
@@ -562,6 +585,7 @@ export async function listOwnContributorDocuments(actor: Actor): Promise<Contrib
 /** Every document with its account and work, for the admin to check. */
 export async function listContributorDocuments(actor: Actor): Promise<ContributorDocumentItem[]> {
   if (!canManageAgreements(actor)) throw forbidden();
+  await syncDocumentMails();
   return documentList().orderBy(owners.displayName, contributorDocuments.kind, contributorDocuments.createdAt);
 }
 
@@ -717,15 +741,18 @@ async function documentsMail(person: User, rows: PreparedRow[]): Promise<Outgoin
  * (D-286): nothing is delivered by this call. The admin sends the batch from
  * /admin/mail with "Kuyruğu şimdi işle"; the daily cron would also pick it up.
  * The same set of documents is never queued twice for a person, so a second
- * press adds only people whose documents changed.
+ * press adds only people whose documents changed. A document already mailed,
+ * or waiting in the outbox, is left out: only what was not sent goes (D-314).
  */
 export async function queueAllContributorDocuments(
   actor: Actor,
   meta: RequestMeta,
 ): Promise<{ mails: number; documents: number; alreadyQueued: number }> {
   if (!canManageAgreements(actor)) throw forbidden();
+  await syncDocumentMails();
 
-  const rows = await preparedRows(eq(contributorDocuments.status, "prepared"));
+  // What a person already received is not sent again (D-314)
+  const rows = await preparedRows(and(eq(contributorDocuments.status, "prepared"), notMailed)!);
   const byUser = new Map<string, PreparedRow[]>();
   for (const row of rows) byUser.set(row.document.userId, [...(byUser.get(row.document.userId) ?? []), row]);
   if (byUser.size === 0) return { mails: 0, documents: 0, alreadyQueued: 0 };
@@ -735,26 +762,37 @@ export async function queueAllContributorDocuments(
     .from(users)
     .where(and(inArray(users.id, [...byUser.keys()]), isNull(users.deletedAt), notFrozen()));
 
-  const mails: OutgoingMail[] = [];
+  let queued = 0;
+  let alreadyQueued = 0;
+  let documents = 0;
   for (const person of people) {
     const own = byUser.get(person.id)!;
-    const key = hashDocument(own.map(({ document }) => `${document.id}:${document.textHash}`).join("|"));
-    mails.push({ ...(await documentsMail(person, own)), dedupeKey: `contributor_documents:${person.id}:${key}` });
+    const mail: OutgoingMail = {
+      ...(await documentsMail(person, own)),
+      dedupeKey: `contributor_documents:${person.id}:${documentSetKey(own.map(({ document }) => document))}`,
+    };
+    // Stored only: enqueueMails does not start a delivery. One person at a
+    // time, so each job can be written onto the documents it carries
+    const [jobId] = await enqueueMails([mail]);
+    if (!jobId) {
+      alreadyQueued += 1;
+      continue;
+    }
+    queued += 1;
+    documents += own.length;
+    await db
+      .update(contributorDocuments)
+      .set({ mailJobId: jobId })
+      .where(inArray(contributorDocuments.id, own.map(({ document }) => document.id)));
   }
-
-  // Stored only: enqueueMails does not start a delivery
-  const ids = await enqueueMails(mails);
-  const alreadyQueued = mails.length - ids.length;
-  const documents = people.reduce((sum, person) => sum + byUser.get(person.id)!.length, 0);
-
   await writeAudit({
     actorId: actor.id,
     action: "contributor_documents.queued",
     entityType: "contributor_documents",
-    after: { mails: ids.length, alreadyQueued, documents },
+    after: { mails: queued, alreadyQueued, documents },
     ip: meta.ip,
   });
-  return { mails: ids.length, documents, alreadyQueued };
+  return { mails: queued, documents, alreadyQueued };
 }
 
 /**
@@ -777,10 +815,22 @@ export async function mailContributorDocuments(
     .limit(1);
   if (!person) throw notFound("Kullanıcı bulunamadı.");
 
-  const rows = await preparedRows(and(eq(contributorDocuments.userId, userId), eq(contributorDocuments.status, "prepared"))!);
-  if (rows.length === 0) throw conflict("Bu kullanıcının hazır belgesi yok; incelemedeki belgeler gönderilmez.");
+  await syncDocumentMails();
+  const ready = await preparedRows(and(eq(contributorDocuments.userId, userId), eq(contributorDocuments.status, "prepared"))!);
+  if (ready.length === 0) throw conflict("Bu kullanıcının hazır belgesi yok; incelemedeki belgeler gönderilmez.");
+  // What they already received, or what is waiting in the outbox, is not sent again (D-314)
+  const rows = await preparedRows(
+    and(eq(contributorDocuments.userId, userId), eq(contributorDocuments.status, "prepared"), notMailed)!,
+  );
+  if (rows.length === 0) throw conflict("Bu kullanıcının hazır belgeleri zaten gönderildi ya da e-posta kuyruğunda.");
 
-  await sendMail(await documentsMail(person, rows));
+  const jobId = await sendMail(await documentsMail(person, rows));
+  if (jobId) {
+    await db
+      .update(contributorDocuments)
+      .set({ mailJobId: jobId })
+      .where(inArray(contributorDocuments.id, rows.map(({ document }) => document.id)));
+  }
 
   await writeAudit({
     actorId: actor.id,
@@ -791,6 +841,109 @@ export async function mailContributorDocuments(
     ip: meta.ip,
   });
   return { sent: rows.length };
+}
+
+/** The outbox's dedupe key for one person's set of documents (D-286). */
+function documentSetKey(documents: Pick<ContributorDocument, "id" | "textHash">[]): string {
+  return hashDocument(documents.map((document) => `${document.id}:${document.textHash}`).join("|"));
+}
+
+/** How far around an audited send its outbox job may have been written. */
+const SEND_WINDOW_MS = 5 * 60 * 1000;
+
+/**
+ * Brings the documents' mail state in line with the outbox (D-314). Safe to
+ * run any number of times; the admin's document actions run it first.
+ *
+ *  1. a delivery the outbox recorded is written onto its documents, should
+ *     the queue's own write have been missed;
+ *  2. mails queued in bulk before documents carried their job are matched by
+ *     the outbox's own dedupe key: the same person's same set of documents;
+ *  3. mails sent to one person before then are matched by the audit record
+ *     that names their documents, and the outbox job written with it.
+ *
+ * A mail that cannot be matched is left alone: the document then shows as not
+ * sent, and the outbox's dedupe key still refuses the same set a second time.
+ */
+async function syncDocumentMails(): Promise<void> {
+  const delivered = await db
+    .selectDistinct({ jobId: mailJobs.id, sentAt: mailJobs.sentAt })
+    .from(contributorDocuments)
+    .innerJoin(mailJobs, eq(contributorDocuments.mailJobId, mailJobs.id))
+    .where(and(isNull(contributorDocuments.mailedAt), eq(mailJobs.status, "sent")));
+  for (const job of delivered) {
+    await db
+      .update(contributorDocuments)
+      .set({ mailedAt: job.sentAt ?? new Date() })
+      .where(and(eq(contributorDocuments.mailJobId, job.jobId), isNull(contributorDocuments.mailedAt)));
+  }
+
+  const link = async (job: typeof mailJobs.$inferSelect, documentIds: string[]) => {
+    if (documentIds.length === 0) return;
+    await db
+      .update(contributorDocuments)
+      .set({ mailJobId: job.id, mailedAt: job.status === "sent" ? (job.sentAt ?? job.createdAt) : null })
+      .where(
+        and(
+          inArray(contributorDocuments.id, documentIds),
+          isNull(contributorDocuments.mailJobId),
+          isNull(contributorDocuments.mailedAt),
+        ),
+      );
+  };
+  const unclaimed = sql`not exists (select 1 from ${contributorDocuments} where ${contributorDocuments.mailJobId} = ${mailJobs.id})`;
+
+  const bulk = await db
+    .select()
+    .from(mailJobs)
+    .where(and(eq(mailJobs.kind, "contributor_documents"), like(mailJobs.dedupeKey, "contributor_documents:%"), unclaimed));
+  for (const job of bulk) {
+    const [, userId, key] = job.dedupeKey!.split(":");
+    if (!userId || !key || !UUID.test(userId)) continue;
+    const candidates = await db
+      .select()
+      .from(contributorDocuments)
+      .where(
+        and(
+          eq(contributorDocuments.userId, userId),
+          eq(contributorDocuments.status, "prepared"),
+          lte(contributorDocuments.createdAt, job.createdAt),
+          isNull(contributorDocuments.mailJobId),
+        ),
+      )
+      .orderBy(contributorDocuments.kind, contributorDocuments.createdAt);
+    // The set as it stood when the mail was queued: made before it, and
+    // either already prepared then or prepared since
+    const sets = [candidates, candidates.filter((row) => row.updatedAt <= job.createdAt)];
+    const match = sets.find((set) => set.length > 0 && documentSetKey(set) === key);
+    if (match) await link(job, match.map((row) => row.id));
+  }
+
+  const single = await db
+    .select({ at: auditLog.createdAt, userId: auditLog.entityId, after: auditLog.after, email: users.email })
+    .from(auditLog)
+    .innerJoin(users, eq(auditLog.entityId, users.id))
+    .where(eq(auditLog.action, "contributor_documents.mailed"));
+  for (const sent of single) {
+    const ids = (sent.after as { documentIds?: unknown } | null)?.documentIds;
+    if (!Array.isArray(ids) || ids.length === 0) continue;
+    const [job] = await db
+      .select()
+      .from(mailJobs)
+      .where(
+        and(
+          eq(mailJobs.kind, "contributor_documents"),
+          eq(mailJobs.recipient, sent.email),
+          isNull(mailJobs.dedupeKey),
+          gte(mailJobs.createdAt, new Date(sent.at.getTime() - SEND_WINDOW_MS)),
+          lte(mailJobs.createdAt, new Date(sent.at.getTime() + SEND_WINDOW_MS)),
+          unclaimed,
+        ),
+      )
+      .orderBy(mailJobs.createdAt)
+      .limit(1);
+    if (job) await link(job, ids.filter((id): id is string => typeof id === "string" && UUID.test(id)));
+  }
 }
 
 /* ------------------------------------------------------------------ */

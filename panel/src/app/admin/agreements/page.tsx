@@ -2,7 +2,7 @@ import { guardPanel } from "@/lib/auth/guard";
 import { roleBadge } from "@/lib/auth/rbac";
 import { acceptanceReport, listAgreementVersions } from "@/services/agreements";
 import { listSignedContracts } from "@/services/signed-contracts";
-import { listContributorDocuments } from "@/services/contributor-documents";
+import { listContributorDocuments, type ContributorDocumentItem, type DocumentMailState } from "@/services/contributor-documents";
 import { listUnlicensedFormerWriterWorks } from "@/services/unlicensed-works";
 import { DOCUMENT_KIND_LABELS, DOCUMENT_STATUS_LABELS } from "@/lib/contributor-documents";
 import { documentPdfHref } from "@/components/contributor-documents";
@@ -56,6 +56,14 @@ const KNOWN_PLACEHOLDERS = [
   "acceptance.ip",
 ];
 
+/** Where a document's mail stands (D-314). */
+const MAIL_STATE_LABELS: Record<DocumentMailState, string> = {
+  sent: "Gönderildi",
+  queued: "Kuyrukta",
+  failed: "Gönderilemedi (/admin/mail)",
+  not_sent: "Gönderilmedi",
+};
+
 export default async function AdminAgreementsPage() {
   const { user } = await guardPanel("admin");
   const actor = { ...user };
@@ -67,10 +75,96 @@ export default async function AdminAgreementsPage() {
   const documents = await listContributorDocuments(actor);
   const unlicensed = await listUnlicensedFormerWriterWorks(actor);
   const reviewCount = documents.filter((row) => row.status === "needs_review").length;
+  // Mailed documents are their owners' now: listed apart, never sent or cleared again (D-314)
+  const sentDocuments = documents.filter((row) => row.mailState === "sent");
+  const unsentDocuments = documents.filter((row) => row.mailState !== "sent");
+  const clearable = unsentDocuments.filter((row) => row.mailState !== "queued").length;
   const preparedByUser = new Map<string, number>();
-  for (const row of documents) {
-    if (row.status === "prepared") preparedByUser.set(row.userId, (preparedByUser.get(row.userId) ?? 0) + 1);
+  for (const row of unsentDocuments) {
+    if (row.status === "prepared" && row.mailState !== "queued") {
+      preparedByUser.set(row.userId, (preparedByUser.get(row.userId) ?? 0) + 1);
+    }
   }
+  const documentTable = (rows: ContributorDocumentItem[], offerMail: boolean) => (
+    <Table>
+      <thead>
+        <tr>
+          <Th>Katkı sağlayan</Th>
+          <Th>Belge</Th>
+          <Th>Eser</Th>
+          <Th>Durum</Th>
+          <Th>E-posta</Th>
+          <Th>PDF</Th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row, index) => (
+          <tr key={row.id}>
+            <Td className="text-xs">
+              <Link href={`/admin/users/${row.userId}`} className="underline">
+                {row.userName}
+              </Link>
+              <span className="block">
+                <StatusBadge
+                  status={roleBadge({
+                    role: row.userRole,
+                    isMainEditor: row.userIsMainEditor,
+                    isIllustrator: row.userIsIllustrator,
+                  })}
+                />
+              </span>
+              {/* One button per person, on their first row; mail goes only on this click */}
+              {offerMail && rows[index - 1]?.userId !== row.userId && (preparedByUser.get(row.userId) ?? 0) > 0 && (
+                <span className="mt-1 block">
+                  <ActionButton
+                    action={mailContributorDocumentsAction}
+                    csrfToken={csrfToken}
+                    label={`Belgelerini mail gönder (${preparedByUser.get(row.userId)})`}
+                    fields={{ userId: row.userId }}
+                    confirmMessage={`${row.userName} adlı kullanıcıya henüz gönderilmemiş ${preparedByUser.get(row.userId)} hazır belge PDF ekiyle e-postayla gönderilecek. Devam edilsin mi?`}
+                  />
+                </span>
+              )}
+            </Td>
+            <Td className="text-xs">
+              <Link href={`/admin/agreements/documents/${row.id}`} className="text-accent underline">
+                {DOCUMENT_KIND_LABELS[row.kind]}
+              </Link>
+              {row.kind === "general_agreement" && <span className="text-muted"> · v{row.templateVersion}</span>}
+              <span className="block text-muted">Metni görmek için tıklayın</span>
+            </Td>
+            <Td className="text-xs">
+              {row.articleTitle ?? "—"}
+              {row.articleId && <span className="block font-mono text-[10px] text-muted">{row.articleId}</span>}
+            </Td>
+            <Td className="text-xs">
+              {DOCUMENT_STATUS_LABELS[row.status]}
+              {row.reviewReasons.length > 0 && (
+                <ul className="mt-1 list-disc pl-4 text-muted">
+                  {row.reviewReasons.map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              )}
+            </Td>
+            <Td className="text-xs">
+              {MAIL_STATE_LABELS[row.mailState]}
+              {row.mailedAt && <span className="block text-muted">{formatDateTime(row.mailedAt)}</span>}
+            </Td>
+            <Td className="text-xs">
+              {row.status === "prepared" ? (
+                <a href={documentPdfHref(row.id)} className="text-accent underline">
+                  İndir
+                </a>
+              ) : (
+                "—"
+              )}
+            </Td>
+          </tr>
+        ))}
+      </tbody>
+    </Table>
+  );
   // Waiting ones first; the rest stay listed as the record of what was decided
   const ordered = [...signed.filter((row) => row.status === "pending"), ...signed.filter((row) => row.status !== "pending")];
   const settings = await getSiteSettings();
@@ -294,7 +388,8 @@ export default async function AdminAgreementsPage() {
             şüpheli bir bilgi tahminle doldurulmaz; belge &ldquo;İnceleme gerekiyor&rdquo; olarak nedeniyle
             kalır. Tekrar çalıştırmak yalnızca eksikleri ekler ve incelemedekileri yeniden dener; hazır
             belgelere dokunmaz. Hazırlamak e-posta göndermez; hazır belgeler yalnızca kişinin satırındaki
-            &ldquo;Belgelerini mail gönder&rdquo; ile PDF ekiyle gönderilir.
+            &ldquo;Belgelerini mail gönder&rdquo; ile PDF ekiyle gönderilir. E-postayla gönderilmiş belgeler
+            ayrı listelenir; yeniden gönderilmez ve silinmez.
           </p>
           <div className="mb-4 flex flex-wrap gap-2">
             <ActionButton
@@ -308,17 +403,17 @@ export default async function AdminAgreementsPage() {
               <ActionButton
                 action={queueAllContributorDocumentsAction}
                 csrfToken={csrfToken}
-                label={`Hazır belgelerin hepsini mail kuyruğuna al (${preparedByUser.size} kişi)`}
-                confirmMessage={`${preparedByUser.size} kişiye hazır belgeleri PDF ekiyle e-posta kuyruğuna yazılacak. Gönderim /admin/mail'de "Kuyruğu şimdi işle" ile yapılır. Devam edilsin mi?`}
+                label={`Gönderilmemiş hazır belgeleri mail kuyruğuna al (${preparedByUser.size} kişi)`}
+                confirmMessage={`${preparedByUser.size} kişiye henüz gönderilmemiş hazır belgeleri PDF ekiyle e-posta kuyruğuna yazılacak; gönderilmiş belgeler tekrar gitmez. Gönderim /admin/mail'de "Kuyruğu şimdi işle" ile yapılır. Devam edilsin mi?`}
               />
             )}
-            {documents.length > 0 && (
+            {clearable > 0 && (
               <ActionButton
                 action={clearContributorDocumentsAction}
                 csrfToken={csrfToken}
-                label="Hazırlanan belgelerin hepsini sil"
+                label={`Gönderilmemiş belgelerin hepsini sil (${clearable})`}
                 variant="danger"
-                confirmMessage={`${documents.length} hazırlanmış belge silinecek (yüklenen imzalı sözleşmelere dokunulmaz). Sonra "Belgeleri hazırla" ile yeniden hazırlayabilirsiniz. Devam edilsin mi?`}
+                confirmMessage={`Henüz gönderilmemiş ${clearable} belge silinecek. E-postayla gönderilmiş ya da kuyrukta bekleyen belgelere ve yüklenen imzalı sözleşmelere dokunulmaz. Sonra "Belgeleri hazırla" ile yeniden hazırlayabilirsiniz. Devam edilsin mi?`}
               />
             )}
           </div>
@@ -328,79 +423,23 @@ export default async function AdminAgreementsPage() {
           ) : (
             <>
               <p className="mb-2 text-xs text-muted">
-                {documents.length} belge · {reviewCount} inceleme gerekiyor
+                {documents.length} belge · {reviewCount} inceleme gerekiyor · {sentDocuments.length} e-postayla
+                gönderildi
               </p>
-              <Table>
-                <thead>
-                  <tr>
-                    <Th>Katkı sağlayan</Th>
-                    <Th>Belge</Th>
-                    <Th>Eser</Th>
-                    <Th>Durum</Th>
-                    <Th>PDF</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {documents.map((row, index) => (
-                    <tr key={row.id}>
-                      <Td className="text-xs">
-                        <Link href={`/admin/users/${row.userId}`} className="underline">
-                          {row.userName}
-                        </Link>
-                        <span className="block">
-                          <StatusBadge status={roleBadge({
-                              role: row.userRole,
-                              isMainEditor: row.userIsMainEditor,
-                              isIllustrator: row.userIsIllustrator,
-                            })} />
-                        </span>
-                        {/* One button per person, on their first row; mail goes only on this click */}
-                        {documents[index - 1]?.userId !== row.userId && (preparedByUser.get(row.userId) ?? 0) > 0 && (
-                          <span className="mt-1 block">
-                            <ActionButton
-                              action={mailContributorDocumentsAction}
-                              csrfToken={csrfToken}
-                              label={`Belgelerini mail gönder (${preparedByUser.get(row.userId)})`}
-                              fields={{ userId: row.userId }}
-                              confirmMessage={`${row.userName} adlı kullanıcıya ${preparedByUser.get(row.userId)} hazır belge PDF ekiyle e-postayla gönderilecek. Devam edilsin mi?`}
-                            />
-                          </span>
-                        )}
-                      </Td>
-                      <Td className="text-xs">
-                        <Link href={`/admin/agreements/documents/${row.id}`} className="text-accent underline">
-                          {DOCUMENT_KIND_LABELS[row.kind]}
-                        </Link>
-                        {row.kind === "general_agreement" && <span className="text-muted"> · v{row.templateVersion}</span>}
-                        <span className="block text-muted">Metni görmek için tıklayın</span>
-                      </Td>
-                      <Td className="text-xs">
-                        {row.articleTitle ?? "—"}
-                        {row.articleId && <span className="block font-mono text-[10px] text-muted">{row.articleId}</span>}
-                      </Td>
-                      <Td className="text-xs">
-                        {DOCUMENT_STATUS_LABELS[row.status]}
-                        {row.reviewReasons.length > 0 && (
-                          <ul className="mt-1 list-disc pl-4 text-muted">
-                            {row.reviewReasons.map((reason) => (
-                              <li key={reason}>{reason}</li>
-                            ))}
-                          </ul>
-                        )}
-                      </Td>
-                      <Td className="text-xs">
-                        {row.status === "prepared" ? (
-                          <a href={documentPdfHref(row.id)} className="text-accent underline">
-                            İndir
-                          </a>
-                        ) : (
-                          "—"
-                        )}
-                      </Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
+
+              <h3 className="mb-2 mt-4 font-serif text-base">Gönderilmeyenler ({unsentDocuments.length})</h3>
+              {unsentDocuments.length === 0 ? (
+                <EmptyState>Gönderilmemiş belge yok.</EmptyState>
+              ) : (
+                documentTable(unsentDocuments, true)
+              )}
+
+              <h3 className="mb-2 mt-6 font-serif text-base">E-postayla gönderilenler ({sentDocuments.length})</h3>
+              {sentDocuments.length === 0 ? (
+                <EmptyState>Henüz e-postayla gönderilen belge yok.</EmptyState>
+              ) : (
+                documentTable(sentDocuments, false)
+              )}
             </>
           )}
         </Card>

@@ -578,7 +578,7 @@ export async function replaceCurrentVersionTextAction(
     const version = await replaceVersionTextWithTemplate({ ...user }, text(formData, "versionId"), await requestMetadata());
     revalidatePath("/admin/agreements");
     return {
-      success: `v${version.version} artık Genel Katkı Sağlayan Sözleşmesi. Belgeleri yenilemek için "Hazırlanan belgelerin hepsini sil" ve ardından "Belgeleri hazırla".`,
+      success: `v${version.version} artık Genel Katkı Sağlayan Sözleşmesi. Gönderilmemiş belgeleri yenilemek için "Gönderilmemiş belgelerin hepsini sil" ve ardından "Belgeleri hazırla"; gönderilmiş belgeler olduğu gibi kalır.`,
     };
   });
 }

@@ -12320,3 +12320,56 @@ dosyaları alır, bozulan bir şey olmaz.
 `tests/unit/speed-insights.test.ts` (adres kalıbı, sorgu dizesi yok),
 `tests/integration/issue-design.test.ts` (kopya yüklenir, `?w=` ile gelir, yoksa
 özgün, yetki aynı).
+
+## D-314 — Katkı belgeleri: e-postayla gönderilenler ve gönderilmeyenler ayrı
+
+**İstek (ürün sahibi):** "Belge hazırlarken tüm hepsini tekrar hazırlıyor; mail
+gönderilmiş ve gönderilmemiş diye ayırsın."
+
+**Neden oluyordu:** Bir belgenin e-postayla gidip gitmediği hiçbir yerde
+kayıtlı değildi. "Hazırlanan belgelerin hepsini sil" gönderilmiş belgeleri de
+siliyor, ardından "Belgeleri hazırla" hepsini yeni kimliklerle yeniden
+hazırlıyordu; toplu kuyruğun tekrar engeli (D-286) belge kimliklerinden
+hesaplandığı için yeni kimlikler herkese ikinci kez e-posta demekti.
+
+**Karar:**
+
+- `contributor_documents`'a iki sütun (migration 0061, yalnızca ekleme):
+  `mail_job_id` (belgeyi taşıyan e-posta kuyruğu işi; iş satırı budanınca
+  boşalır) ve `mailed_at` (teslim anı; kalıcı).
+- Kuyruk bir `contributor_documents` e-postasını teslim edince taşıdığı
+  belgelere `mailed_at` yazar (`mail-queue.ts`).
+- "Gönderilmemiş" = `mailed_at` boş ve bekleyen/teslim edilmiş bir işi yok;
+  başarısız iş gönderilmemiş sayılır. Toplu kuyruğa alma, kişiye gönderme ve
+  toplu silme yalnızca bunlara dokunur. Gönderilmiş belge yeniden gönderilmez,
+  silinmez; hazırlama zaten hazır belgeye dokunmuyordu.
+- Kişiye gönderme yalnızca o kişinin henüz almadığı belgeleri yollar; hepsi
+  gönderildiyse 409 "zaten gönderildi ya da e-posta kuyruğunda". Kaybolan bir
+  e-posta için yeniden gönderme düğmesi yok: PDF panelden indirilebilir
+  (muhafazakâr seçenek; istenirse ayrıca eklenir).
+- `/admin/agreements` belge listesi iki bölüm: "Gönderilmeyenler" (durum:
+  Gönderilmedi / Kuyrukta / Gönderilemedi) ve "E-postayla gönderilenler"
+  (gönderim zamanıyla). Düğmeler yalnızca gönderilmemişleri sayar.
+- **Geçmiş gönderimler:** Bu adımdan önce gönderilen e-postalar belgelere
+  bağlı değildi. `syncDocumentMails()` (yönetici belge işlemlerinden önce ve
+  liste açılırken çalışır, tekrar tekrar çalışabilir) bunları kuyruğun kendi
+  kaydından bulur: toplu gönderimler aynı tekrar anahtarıyla (aynı kişinin
+  aynı belge kümesi), kişiye gönderimler denetim kaydındaki belge
+  kimlikleri ve ±5 dakika içinde yazılmış kuyruk işiyle. Eşleşmeyen bir
+  gönderim belgeyi "gönderilmedi" gösterir; aynı küme yine de kuyruğun tekrar
+  engeline takılır. Kuyruk satırları teslimden sonra budandığı için bu eşleme
+  yalnızca budanmamış satırlar için çalışır — belge özelliği 1 Ekim'de canlıya
+  çıktı, satırlar henüz yerinde.
+
+**Hukuk:** Değişiklik yok; yeni kişisel veri yok (zaten tutulan e-posta
+gönderim kaydının belgeye bağlanması). Aydınlatma metni değişmedi.
+
+**Canlıya alma (D-079):** Push'tan önce 0061 üretime uygulanır; kod sütunları
+okuduğu için sırası budur.
+
+**Doğrulama:** Kapı: typecheck, lint, test (tek süreç). 
+`tests/integration/contributor-documents.test.ts`: gönderilen belge ikinci
+kez kuyruğa alınmaz, kişiye gönderilmez, silinmez, yeniden hazırlanmaz;
+kuyruktaki belge silinmez; kişiye yalnızca almadığı belgeler gider; eski toplu
+ve kişiye gönderimler eşleşir. `mail-queue.test.ts`: `sendMail` artık işin
+kimliğini döndürür, kuyruk yoksa `null`.
