@@ -29,6 +29,7 @@ import { parseQuestions, stripAnswers, type ReaderQuiz } from "@/lib/issue-quiz"
 import { PAGE_TEMPLATE_IDS, templateOf } from "@/lib/issue-templates";
 import { detectFileType } from "./media";
 import { buildStorageKey, getStorage } from "@/lib/storage";
+import { variantName, type PageVariantWidth } from "@/lib/issue-page-variants";
 import type { RequestMeta } from "./auth";
 
 /**
@@ -372,11 +373,15 @@ export async function listIssuePages(actor: Actor, issueId: string): Promise<Iss
  * so its pictures (most of the traffic) are served without a session lookup;
  * the loader runs only when the issue is closed to a visitor. `isPublic` tells
  * the route the answer is the same for everyone.
+ *
+ * A `width` asks for a smaller stored copy (D-313), after the same two
+ * questions; a picture that has no such copy answers with the original.
  */
 export async function readPageMedia(
   actor: Actor | null | (() => Promise<Actor | null>),
   pageId: string,
   mediaId: string,
+  width: PageVariantWidth | null = null,
 ): Promise<{ mime: string; body: Buffer; isPublic: boolean }> {
   const rows = await db
     .select({ page: issuePages, issue: issues })
@@ -400,6 +405,14 @@ export async function readPageMedia(
 
   const [row] = await db.select().from(media).where(eq(media.id, mediaId)).limit(1);
   if (!row || row.deletedAt) throw notFound("Görsel bulunamadı.");
+
+  const copyKey = width ? variantName(row.storageKey, width) : null;
+  if (copyKey) {
+    const copy = await getStorage()
+      .get({ bucket: "media", key: copyKey })
+      .catch(() => null);
+    if (copy) return { mime: "image/webp", body: copy, isPublic };
+  }
 
   return {
     mime: row.mime,

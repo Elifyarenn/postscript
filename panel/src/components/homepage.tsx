@@ -141,7 +141,7 @@ export function HomePage({
           <ul className="category-rail">
             {areas.map((name, index) => (
               <li key={name}>
-                <CategoryCard name={name} index={index} sizes="(min-width: 768px) 16rem, 70vw" />
+                <CategoryCard name={name} index={index} sizes="(min-width: 1280px) 14rem, 12rem" />
               </li>
             ))}
           </ul>
@@ -169,7 +169,9 @@ export function HomePage({
                       <Image
                         src={image}
                         alt={cardImageAlt(card)}
-                        sizes={upright ? "(min-width: 640px) 14rem, 90vw" : "(min-width: 1000px) 26rem, 90vw"}
+                        // Measured drawn widths (D-313): a poster is 201 px at every
+                        // width, the painting 274–507 px; "90vw" fetched twice that
+                        sizes={upright ? "13rem" : "(min-width: 1280px) 26rem, (min-width: 640px) 23rem, 85vw"}
                       />
                       <div className="space-y-4">
                         <h3 className="extra-heading" lang={card.lang}>

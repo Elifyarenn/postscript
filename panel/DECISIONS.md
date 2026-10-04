@@ -12230,3 +12230,93 @@ basılmaz. Yazar olan bir tasarımcı "Yazar" etiketini korur, işaret yanında
 ayrıca görünür. Topluluk ekranları işareti taşımadığından orada rolsüz üye
 eskisi gibi etiketsizdir. Görüntüden ibarettir: tasarımcı paneline giriş yine
 `canAccessIllustratorPanel` ile işaretin veritabanından okunmasına bağlıdır.
+
+## D-313 — Ana sayfa, okuyucu ve giriş sayfası mobilde hızlandı; Speed Insights kodda, kapalı
+
+**İstek (ürün sahibi):** "Speed Insights'ı kur. Ana sayfa, dergi okuyucusu ve giriş
+sayfasını mobilde ölç; yavaş açılmaya neden olan görselleri, fontları ve gereksiz
+kod yükünü düzelt. Önceki ve sonraki ölçümleri karşılaştır, mevcut tasarımı ve
+işlevleri koru."
+
+**Ölçüm yöntemi:** Lighthouse 12, mobil ön ayar (Moto G sınıfı, yavaş 4G, 4× CPU).
+Ana sayfa ve giriş canlıda ölçüldü. Sayı 01 5 Ekim 17.00'ye kadar yayında
+olmadığı için okuyucu canlıda 404; üç sayfa da aynı veriyle (Sayı 01 tasarım
+sayfaları içe aktarılmış ve yayımlanmış bir pglite) iki üretim derlemesinde,
+önce/sonra sunucuları yan yana çalışırken sırayla 5'er kez ölçüldü (medyan).
+
+| Sayfa | Puan | LCP | TBT | Toplam |
+|---|---|---|---|---|
+| Ana sayfa | 74 → 77 | 6,96 → 5,83 sn | 84 → 83 ms | 1009 → 757 KB |
+| Giriş | 96 → 96 | 2,49 → 2,54 sn | 118 → 108 ms | 187 → 192 KB |
+| Okuyucu | 65 → 81 | 8,03 → 4,84 sn | 437 → 121 ms | 1256 → 631 KB |
+
+Canlı önce (3 ölçüm medyanı): ana sayfa 77, LCP 4,80 sn, 965 KB; giriş 95.
+
+**Bulunanlar ve karar:**
+
+- **Kullanılmayan font.** Caveat (ekip avatarı oluşturucusunun el yazısı, D-195)
+  D-249'da oluşturucu kaldırılınca hiçbir yerde kullanılmıyordu ama
+  `src/lib/fonts.ts`'te tanımlı kaldığı için next/font her sayfada önceden
+  yüklüyordu: 2 dosya, 102 KB, en yüksek öncelikle. Kaldırıldı. Diğer üç yüz
+  ve latin-ext alt kümesi olduğu gibi kaldı: önceden yüklenmezse ş, ğ, ı, İ bir
+  an başka fontla görünür.
+- **Okuyucu görselleri.** Sayı sayfaları 2456×3474 px (150–986 KB); telefon
+  hepsini indiriyordu. `pnpm issue-design-variants` her sayfanın 720 ve 1280
+  px kopyasını (WebP q82) depoya yazar; içe aktarma kopyaları özgün dosyanın
+  yanına yükler; medya yolu `?w=720|1280` ile aynı yetki denetiminden sonra
+  kopyayı verir, kopya yoksa özgünü. Okuyucu `srcset` ve sayfanın çizilen
+  genişliğini (`calc(zoom * min(100vw / sayfa, 71vh))`) verir: telefon kendi
+  boyunda kopyayı, yakınlaştırılınca özgünü alır (4× yakınlaştırmada özgün
+  dosyanın geldiği denendi). Kapak 554 → 113 KB (1280) / 54 KB (720). Yeni
+  çalışma anı CPU'su yok; kopyalar derlemeden önce üretilir.
+- **Okuyucunun gereksiz kodu.** `magazine-reader` ve `issue-page-sheet`,
+  `issue-blocks.ts`'ten iki küçük yardımcıyı alırken modülün zod şemalarını da
+  tarayıcıya taşıyordu (85 KB sıkıştırılmış, 366 KB ham; 67 KB'ı kullanılmıyordu).
+  Yardımcılar zod'suz `src/lib/issue-block-rules.ts`'e taşındı; `issue-blocks`
+  onları yeniden dışa verir, sunucu kodu değişmedi.
+- **Ana sayfa görsel boyutları.** `sizes` değerleri ölçülen çizim genişliğine
+  göre düzeltildi (kategori kartı her genişlikte 187 px iken `70vw`, afiş 201 px
+  iken `90vw` istiyordu). Görseller 342 → 188 KB.
+- **Logo.** `POSTSCRIPT†` bir CSS maskesi; maske yalnızca saydamlık kanalını
+  kullanır. Saydamlık bayt bayt aynı, renkler siyah, kayıpsız WebP: 52 → 25 KB.
+  PNG paylaşım görseli için kalır (satori WebP çizemez).
+
+**Tasarım:** Önce/sonra derlemeleri 412 px telefonda tam sayfa ekran görüntüsüyle
+karşılaştırıldı: giriş piksel piksel aynı; ana sayfa %0,4 ve okuyucu %0,5
+pikselde farklı, hepsi küçültülmüş fotoğrafların kenar örneklemesi. Yerleşim,
+yazı ve renk değişmedi.
+
+**Kalan:** Ana sayfanın LCP'sinin çoğu artık çerçeve JavaScript'i (React/Next,
+her sayfada aynı) ve CSS; JS engellendiğinde LCP 3,9 sn. Bunlar bu adımın
+dışında.
+
+**Speed Insights:** `@vercel/speed-insights` 2.0, kök düzende, ama **kapalı**:
+yalnızca `SPEED_INSIGHTS=on` iken çizilir; varsayılan `off` ve hiçbir ortamda
+açılmadı. Açıldığında ziyaretlerin yarısı ölçülür (`sampleRate: 0.5`; ücretsiz
+katman 30 günde 10.000 olayı aşarsa 14 gün durur) ve `beforeSend` adresi rota
+kalıbına indirip sorgu dizesini atar: profil ve mesaj adreslerinde kullanıcı adı
+var.
+
+**Hukuk:** Aydınlatma metni bu adımda **değişmedi** (ürün sahibinin kararı: önceki
+metin korunur). Speed Insights kapalı olduğu için hiçbir ölçüm toplanmıyor; metin
+kodun fiilen işlediğiyle uyumlu. Açılması yeni bir amaç ve yurt dışı işleme olur:
+önce aydınlatma metnine eklenmesi gerekir. Vercel ölçüm verisinin tutulduğu ülkeyi
+belirtmiyor; doğrulanmadan metne ülke yazılmaz — **hukukçu görüşü / Vercel'den
+teyit gerekiyor**.
+
+**Açma sırası (ürün sahibinin kararıyla, şimdilik kapalı kalacak):** metindeki
+`[FIRESTORE KONUMU]` yer tutucusu çözülür, Speed Insights doğrulanmış bilgilerle
+metne eklenir ve yeni sürüm panelden yayımlanır → Vercel projesinde Speed Insights
+açılır → `SPEED_INSIGHTS=on` verilip yeniden yayınlanır. Yayımlama akışı yer
+tutucuyu kendisi engellemiyor (`publishKvkkVersion`), bu yüzden sıra elle korunur.
+
+**Canlıya alma:** Kod push ile gider. Kopyaların depolamaya gitmesi için bir
+admin Sayı 1'in sayfalar ekranında "Tasarım sayfalarını içe aktar / güncelle"
+düğmesine basmalı (D-309 için de bekleniyor); basılana kadar okuyucu özgün
+dosyaları alır, bozulan bir şey olmaz.
+
+**Doğrulama:** Kapı: typecheck, lint, test. `tests/unit/issue-page-variants.test.ts`
+(genişlik listesi, adlar, srcset, her sayfanın kopyası diskte ve doğru boyda),
+`tests/unit/speed-insights.test.ts` (adres kalıbı, sorgu dizesi yok),
+`tests/integration/issue-design.test.ts` (kopya yüklenir, `?w=` ile gelir, yoksa
+özgün, yetki aynı).

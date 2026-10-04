@@ -388,3 +388,35 @@ describe("undo", () => {
     expect((await db.select().from(auditLog).where(eq(auditLog.action, "issue_design.previous_pages_restored"))).length).toBe(0);
   });
 });
+
+describe("the smaller copies a phone reads (D-313)", () => {
+  it("are uploaded beside each original and served for ?w=, behind the same checks", async () => {
+    const issue = await makeIssue();
+    const admin = actorOf(await createUser({ role: "admin" }));
+    const deps = await depsFor(testManifest());
+    const copy = await webp("#aaaaaa");
+    // Only the cover has a 720 copy; every other width and page has none
+    const withCopy: DesignDeps = {
+      ...deps,
+      readAsset: (folder, file) => (file === "kapak.w720.webp" ? copy : deps.readAsset(folder, file)),
+    };
+    await importIssueDesign(admin, issue.id, noMeta, withCopy);
+
+    expect(storedKeys().filter((key) => /\.w720\.webp$/.test(key))).toHaveLength(1);
+    const [cover] = await db.select().from(issuePages).where(eq(issuePages.position, 1));
+
+    const small = await readPageMedia(admin, cover!.id, cover!.imageMediaId!, 720);
+    expect(small.body.equals(copy)).toBe(true);
+    expect(small.mime).toBe("image/webp");
+
+    // No 1280 copy: the original answers
+    const original = await readPageMedia(admin, cover!.id, cover!.imageMediaId!);
+    const wide = await readPageMedia(admin, cover!.id, cover!.imageMediaId!, 1280);
+    expect(wide.body.equals(original.body)).toBe(true);
+
+    // A width changes nothing about who may look
+    const reader = actorOf(await createUser({ role: "user" }));
+    await expectStatus(readPageMedia(reader, cover!.id, cover!.imageMediaId!, 720), 404);
+    await expectStatus(readPageMedia(null, cover!.id, cover!.imageMediaId!, 720), 404);
+  });
+});

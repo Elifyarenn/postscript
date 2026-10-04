@@ -18,10 +18,11 @@
 import { NextResponse } from "next/server";
 import { readerSession } from "@/lib/auth/guard";
 import { errorJson } from "@/lib/api";
+import { parseVariantWidth } from "@/lib/issue-page-variants";
 import { readPageMedia } from "@/services/issue-pages";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string; mediaId: string }> },
 ) {
   try {
@@ -33,7 +34,10 @@ export async function GET(
       return context ? { ...context.user } : null;
     };
 
-    const file = await readPageMedia(loadActor, id, mediaId);
+    // A smaller copy for a phone (D-313); an unknown width is the original
+    const width = parseVariantWidth(new URL(request.url).searchParams.get("w"));
+
+    const file = await readPageMedia(loadActor, id, mediaId, width);
 
     return new NextResponse(new Uint8Array(file.body), {
       status: 200,

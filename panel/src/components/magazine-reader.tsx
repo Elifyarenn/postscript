@@ -35,7 +35,7 @@ import {
   Square,
   X,
 } from "lucide-react";
-import { testQuizId } from "@/lib/issue-blocks";
+import { testQuizId } from "@/lib/issue-block-rules";
 import type { ReaderHotspot } from "@/lib/issue-hotspots";
 import type { ReaderQuiz } from "@/lib/issue-quiz";
 import { spreadStartFor, type ReaderPage } from "@/lib/issue-reader";
@@ -481,6 +481,9 @@ export function MagazineReader({
                 page={page}
                 onHotspot={openHotspot}
                 suppressClicks={suppressClicks}
+                // The page's drawn width (site.css .page-image), an upper bound
+                // in viewport units: fitted by width or by height at √2, then zoomed
+                sizes={`calc(${zoom} * min(${100 / shown.length}vw, 71vh))`}
               />
             ) : (
               // Laid out from a template before D-240 and never given a

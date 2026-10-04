@@ -15,7 +15,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Play, ZoomIn } from "lucide-react";
-import { blockIsReady, testQuizId, type PageBlock } from "@/lib/issue-blocks";
+import { blockIsReady, testQuizId } from "@/lib/issue-block-rules";
+import type { PageBlock } from "@/lib/issue-blocks";
 import { FIELD_PLACEHOLDERS, templateAsks, templateOf, type PageField } from "@/lib/issue-templates";
 import type { ReaderQuiz } from "@/lib/issue-quiz";
 import type { ReaderPage } from "@/lib/issue-reader";

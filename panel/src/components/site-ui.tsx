@@ -5,7 +5,10 @@
 import type { ReactNode } from "react";
 import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
-import wordmark from "@/assets/design/wordmark.png";
+// Only the alpha channel matters to a mask, so the copy served to pages keeps
+// it byte for byte and drops the colours: half the bytes (D-313). The PNG stays
+// for the share image, which cannot draw WebP
+import wordmark from "@/assets/design/wordmark-mask.webp";
 import type { SocialKey } from "@/lib/site";
 import { cn } from "@/lib/utils";
 

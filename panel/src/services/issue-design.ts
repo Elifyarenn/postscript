@@ -21,6 +21,7 @@ import {
   type DesignManifest,
   type RenderRecord,
 } from "@/lib/issue-design/manifest";
+import { PAGE_VARIANT_WIDTHS, variantName } from "@/lib/issue-page-variants";
 import { getStorage } from "@/lib/storage";
 import type { RequestMeta } from "./auth";
 import { createQuiz, updateQuiz } from "./issue-quizzes";
@@ -293,6 +294,26 @@ export async function importIssueDesign(
       await assertStored(storageKey, picture.sha, `“${page.title}”`);
       added += 1;
       pageIds.set(page.key, created.id);
+    }
+  }
+
+  // The smaller copies a phone reads (D-313), next to each original. Not read
+  // back: a missing copy only means the reader is given the original
+  for (const page of manifest.pages) {
+    const picture = pictures.get(page.key)!;
+    const storageKey = designStorageKey(manifest.folder, page.key, picture.sha);
+    for (const width of PAGE_VARIANT_WIDTHS) {
+      const file = variantName(picture.file, width);
+      const key = variantName(storageKey, width);
+      if (!file || !key) continue;
+      let body: Buffer;
+      try {
+        body = deps.readAsset(manifest.folder, file);
+      } catch {
+        continue;
+      }
+      if (!body?.length) continue;
+      await getStorage().put({ bucket: "media", key, body, mime: "image/webp" });
     }
   }
 

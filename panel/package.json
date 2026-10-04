@@ -24,6 +24,7 @@
     "seed-issue-pages": "tsx --tsconfig scripts/tsconfig.json scripts/seed-issue-pages.ts",
     "sample-issue-pages": "tsx --tsconfig scripts/tsconfig.json scripts/sample-issue-pages.ts",
     "render-issue-design": "tsx --tsconfig scripts/tsconfig.json scripts/render-issue-design.ts",
+    "issue-design-variants": "tsx --tsconfig scripts/tsconfig.json scripts/issue-design-variants.ts",
     "redraw-team-avatars": "tsx --tsconfig scripts/tsconfig.json scripts/redraw-team-avatars.ts",
     "prune-community": "tsx --tsconfig scripts/tsconfig.json scripts/prune-community.ts",
     "housekeeping": "tsx --tsconfig scripts/tsconfig.json scripts/housekeeping.ts"
@@ -33,6 +34,7 @@
     "@aws-sdk/s3-request-presigner": "^3.1127.0",
     "@node-rs/argon2": "^2.2.0",
     "@pdf-lib/fontkit": "^1.1.1",
+    "@vercel/speed-insights": "^2.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",

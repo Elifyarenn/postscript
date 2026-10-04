@@ -16,6 +16,7 @@ import { useId, useState } from "react";
 import { ExternalLink, HelpCircle, Info, MoveRight } from "lucide-react";
 import type { ReaderHotspot } from "@/lib/issue-hotspots";
 import type { ReaderPage } from "@/lib/issue-reader";
+import { pageSrcSet } from "@/lib/issue-page-variants";
 
 const MARKER_ICON = {
   link: ExternalLink,
@@ -47,12 +48,19 @@ export function IssuePageImage({
   /** Editing draws every area; reading draws only the ones asked to show. */
   showAllAreas = false,
   suppressClicks,
+  sizes,
 }: {
   page: ReaderPage;
   onHotspot: (area: ReaderHotspot) => void;
   showAllAreas?: boolean;
   /** True right after a drag, so panning never opens what it passed over. */
   suppressClicks?: () => boolean;
+  /**
+   * How wide the page is drawn, as an img `sizes`. Given by the reader so a
+   * phone downloads a copy its size and zooming in fetches the original
+   * (D-313); the area editor leaves it out and keeps the original.
+   */
+  sizes?: string;
 }) {
   const describedBy = useId();
   // Keyed by address, so turning to another page starts fresh
@@ -78,6 +86,8 @@ export function IssuePageImage({
       {page.imageUrl && !failed && (
         <img
           src={page.imageUrl}
+          srcSet={sizes && page.imageWidth ? pageSrcSet(page.imageUrl, page.imageWidth) : undefined}
+          sizes={sizes && page.imageWidth ? sizes : undefined}
           alt={page.imageAlt ?? `Sayfa ${page.position}`}
           width={page.imageWidth ?? undefined}
           height={page.imageHeight ?? undefined}

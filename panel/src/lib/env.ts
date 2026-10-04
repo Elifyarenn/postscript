@@ -49,6 +49,10 @@ const envSchema = z.object({
   // check is skipped until both are set, so a deploy cannot close registration
   TURNSTILE_SITE_KEY: z.string().optional(),
   TURNSTILE_SECRET_KEY: z.string().optional(),
+
+  // Vercel Speed Insights (D-313). Off until the new KVKK notice, which names
+  // where the measurements are kept, is published; "on" is a deliberate step
+  SPEED_INSIGHTS: z.enum(["on", "off"]).default("off"),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { env } from "@/lib/env";
 import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/seo";
+import { SiteSpeedInsights } from "@/components/speed-insights";
 import "./globals.css";
 
 // Only the production site is indexed; dev and test builds stay out of search.
@@ -34,7 +35,11 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="tr">
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        {children}
+        {/* Off by default: switched on only with the KVKK notice that names it (D-313) */}
+        {env().SPEED_INSIGHTS === "on" && <SiteSpeedInsights />}
+      </body>
     </html>
   );
 }
