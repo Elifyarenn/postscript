@@ -11967,3 +11967,32 @@ silindiğinde cascade ile gider) eklendi.
 sayıda seçilir, başka sayıda 400; e-posta yazara gider; pencereli sayıda o
 alanda konu önerilir; yazar 403, kendi alanı/okur/admin 409, aynı ikinci kez
 409; geri alınca alan kalkar. `tests/unit/mail-templates.test.ts` örneği.
+
+## D-307 — Samsung Internet'in zorla koyu modu da kapalı
+
+**İstek (ürün sahibi):** "Tarayıcıların siteyi otomatik koyulaştırmasını engelle.
+Cihaz veya tarayıcı koyu modda olsa da sitenin mevcut renkleri ve arka planı aynı
+kalsın. Mobilde doğrula."
+
+**Ölçüm:** D-191'in `only light` işareti canlıda. Galaxy S9+ öykünmesinde
+Chromium'un zorla koyu modu (`Emulation.setAutoDarkModeOverride`) açıkken işaretsiz
+bir kontrol sayfası `#f5f3ec`'ten `rgb(37,36,31)`'e döndü; postscriptmag.com'un
+pikselleri hiç değişmedi. Yani Chrome/Android (ve aynı motoru kullanan WebView)
+zaten engelli. Açık kalan: Samsung Internet. Kendi koyu modu `only light`'ı yok
+sayar; sayfanın `prefers-color-scheme: dark` için kendi cevabı varsa kendi
+dönüşümünü uygulamaz ("Prefer media query over force dark").
+
+**Karar:** `globals.css`'e `@media (prefers-color-scheme: dark)` bloğu; içinde
+`color-scheme: only light` ve aynı kâğıt/mürekkep renkleri. Görünüm değişmez,
+yalnızca "bu sayfa koyu tercihini kendisi karşılıyor" işareti verilir. Meta
+etiketi `only light` kalır: `light dark`'a çevirmek form alanlarını ve kaydırma
+çubuklarını koyu tarayıcı varsayılanlarına bırakırdı (muhafazakâr seçenek).
+
+**Sınır:** Kullanıcı Samsung Internet'te belirli siteler için koyu modu elle
+zorlarsa ya da bir koyu mod eklentisi kullanırsa web tarafında tamamen engellemenin
+yolu yok (D-191'deki sınır geçerli). Gerçek bir Samsung cihazında doğrulanmadı;
+öykünme Samsung'un kendi dönüşümünü çalıştıramaz.
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Canlıda aynı öykünme ölçümü.
