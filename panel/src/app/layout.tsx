@@ -37,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="tr">
       <body className="min-h-screen antialiased">
         {children}
-        {/* Off by default: switched on only with the KVKK notice that names it (D-313) */}
+        {/* Off unless the environment says "on" (D-313, D-315) */}
         {env().SPEED_INSIGHTS === "on" && <SiteSpeedInsights />}
       </body>
     </html>

@@ -12373,3 +12373,30 @@ kez kuyruğa alınmaz, kişiye gönderilmez, silinmez, yeniden hazırlanmaz;
 kuyruktaki belge silinmez; kişiye yalnızca almadığı belgeler gider; eski toplu
 ve kişiye gönderimler eşleşir. `mail-queue.test.ts`: `sendMail` artık işin
 kimliğini döndürür, kuyruk yoksa `null`.
+
+## D-315 — Speed Insights canlıda açıldı; aydınlatma metni değişmedi
+
+**İstek (ürün sahibi):** "Speed Insights'ı etkinleştir, KVKK metnine dokunma."
+
+**Karar:** Vercel üretim ortamına `SPEED_INSIGHTS=on` verildi ve yeniden
+yayınlandı; D-313'teki bileşen artık çiziliyor. Ücretsiz katmanda panelde ayrı
+bir "aç" düğmesi yok: paket kuruluyken yayın yeterli. Ayarlar D-313'teki gibi:
+ziyaretlerin yarısı (`sampleRate: 0.5`), adres rota kalıbına indirilir ve sorgu
+dizesi atılır (`/social/u/[username]`; kullanıcı adı gitmez).
+
+**Hukuk — aydınlatma metni neden değişmedi:** Ürün sahibi metne dokunulmamasını
+istedi. Gerekçe: Vercel'in kendi beyanına göre ölçüm anonimdir — çerez ve
+tarayıcıda tanımlayıcı yok, IP adresi saklanmaz, ölçüm bir kişiye ya da oturuma
+bağlanmaz; adresteki kişiye ait kısım da tarayıcıda çıkarılır. Bu hâliyle
+kişisel veri işleme sayılmadığı varsayılmıştır. Bu bir varsayımdır: ülke
+bilgisinin ziyaretçinin IP'sinden türetilmesi ve verinin yurt dışında
+tutulması bakımından **hukukçu görüşü gerekiyor**; görüş "kişisel veri" derse
+metne eklenir ya da `SPEED_INSIGHTS` kaldırılarak ölçüm durdurulur (kod
+değişikliği gerekmez). `CLAUDE.md`'nin "kişisel veri toplayan değişiklikte
+metin aynı adımda güncellenir" kuralı bu varsayım üzerine uygulanmadı.
+
+**Geri alma:** Vercel'de `SPEED_INSIGHTS` silinip yeniden yayınlanınca bileşen
+hiç çizilmez.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Canlıda: sayfada Speed Insights
+betiği, ölçüm isteğinin kendi alan adına gitmesi.
