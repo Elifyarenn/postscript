@@ -13,6 +13,7 @@ import { designFor } from "@/lib/issue-design";
 import {
   designKeyOf,
   designLabel,
+  designOrder,
   designStorageKey,
   manifestProblems,
   renderListSchema,
@@ -24,10 +25,12 @@ import { getStorage } from "@/lib/storage";
 import type { RequestMeta } from "./auth";
 import { createQuiz, updateQuiz } from "./issue-quizzes";
 import {
+  addIssuePage,
   addPageImage,
   replacePageImage,
   reorderIssuePages,
   saveHotspots,
+  updateIssuePage,
   updatePageMeta,
 } from "./issue-pages";
 
@@ -49,8 +52,8 @@ import {
  * Order of work, so a failure never leaves the admins without a preview:
  *
  *  1. every picture is stored and read back; only a byte-for-byte match counts
- *  2. the manifest's quizzes are written (D-297), then titles, contents
- *     entries and areas are set
+ *  2. the manifest's quizzes are written (D-297) and the pages that lay them
+ *     out (D-309), then titles, contents entries and areas are set
  *  3. only then are the issue's other pages (the temporary preview, the test
  *     and template pages) saved to a snapshot and taken out; the snapshot is
  *     written and read back first, and their pictures are left in place, so
@@ -300,6 +303,44 @@ export async function importIssueDesign(
     else quizIds.set(quiz.title, await createQuiz(actor, issue.id, quiz, meta));
   }
 
+  // A test page has no picture: it is a page that lays its quiz out (D-309),
+  // found again by the key in its label like every design page
+  for (const quizPage of manifest.quizPages ?? []) {
+    const content = {
+      template: "interactive",
+      heading: quizPage.quizTitle,
+      section: quizPage.section,
+      tocTitle: quizPage.contents,
+      inContents: quizPage.contents !== null,
+      blocks: [{ kind: "test", quizId: quizIds.get(quizPage.quizTitle)! }],
+    };
+    const found = byKey.get(quizPage.key);
+    let pageId: string;
+    if (found) {
+      await updateIssuePage(actor, found.id, content, meta);
+      // Only if this key was once a picture: the picture is no longer the page
+      if (found.imageMediaId) await releaseDesignMedia(found.imageMediaId, actor, meta);
+      unchanged += 1;
+      pageId = found.id;
+    } else {
+      pageId = await addIssuePage(actor, issue.id, content, meta);
+      added += 1;
+    }
+    await updatePageMeta(
+      actor,
+      pageId,
+      {
+        label: designLabel(quizPage.key, quizPage.title),
+        imageAlt: null,
+        transcript: null,
+        tocTitle: quizPage.contents,
+        inContents: quizPage.contents !== null,
+      },
+      meta,
+    );
+    pageIds.set(quizPage.key, pageId);
+  }
+
   for (const page of manifest.pages) {
     const pageId = pageIds.get(page.key)!;
     await updatePageMeta(
@@ -368,16 +409,17 @@ export async function importIssueDesign(
   }
 
   /* ---- 4. The manifest's order ---- */
+  const order = designOrder(manifest);
   await reorderIssuePages(
     actor,
     issue.id,
-    manifest.pages.map((page) => pageIds.get(page.key)!),
+    order.map((key) => pageIds.get(key)!),
     meta,
   );
 
   const result: DesignImportResult = {
     issueNumber: issue.number,
-    pages: manifest.pages.length,
+    pages: order.length,
     added,
     replaced,
     unchanged,

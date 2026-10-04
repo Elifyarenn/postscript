@@ -178,7 +178,10 @@ describe("what the reader is handed", () => {
 describe("a persona quiz (D-297)", () => {
   const body = { kind: OBSESSION_QUIZ.kind, questions: OBSESSION_QUIZ.questions, outcomes: OBSESSION_QUIZ.outcomes };
   const pick = (...personas: string[]) =>
-    Object.fromEntries(personas.map((persona, index) => [`s${index + 1}`, `s${index + 1}-${persona}`]));
+    // Options are a, b, c, d in the order Monica, Joe, Nina, Beth
+    Object.fromEntries(
+      personas.map((persona, index) => [`s${index + 1}`, `s${index + 1}-${"abcd"[["monica", "joe", "nina", "beth"].indexOf(persona)]}`]),
+    );
 
   it("ships finished: five questions, four options each, four results", () => {
     expect(quizProblems(body)).toEqual([]);

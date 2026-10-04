@@ -12040,3 +12040,62 @@ yapılır; etkisi yayından sonraki ilk tam günde görünür.
 
 **Doğrulama:** Kapı: typecheck, lint, test. Canlıda: sayı görselinin
 `cache-control` başlığı, dağıtımın proxy yönlendirme kuralı.
+
+## D-309 — Sayı 1'in testi derginin kendi sayfası: sorular sayfada, sonuç aynı sayfada
+
+**İstek (ürün sahibi, 2026-10-04):** "1. sayıda eğlence kısmının testini Gizli
+tıklama alanını ve test penceresini kaldır. Testi derginin kendi sayfası olarak
+göster; sayfaya gelince beş soru ve seçenekler doğrudan görünsün, cevaplar sayfa
+üzerinden seçilsin ve sonuç aynı sayfada açılsın. Mevcut içerik ve puanlamayı
+koru, masaüstü ve mobilde doğrula."
+
+**Karar:**
+
+- **Yeni blok türü `test`** (`src/lib/issue-blocks.ts`): sayfa yalnızca sayının
+  bir testine işaret eder (`quizId`); metin ve cevap anahtarı `issue_quizzes`'ta
+  kalır. Bloklar sayfada JSON olduğu için migration yok. `test` bloğu taşıyan
+  sayfa okuyucuda yalnızca testtir: başlık, metin alanı ya da "[Başlık]" boşluğu
+  çizilmez (`IssuePageSheet`).
+- **Sayfadaki test** (`src/components/issue-quiz-page.tsx`): beş soru ve bütün
+  şıklar sayfa açılınca görünür. Şıklar gerçek radyo düğmeleri: soru başına tek
+  seçim, ekran okuyucu her grubu sorusuyla okur, ok tuşları sayfa çevirmez
+  (okuyucu input içindeki tuşları zaten yok sayıyor). "Sonucumu göster" **bütün
+  sorular cevaplanınca** açılır — yarım cevaplı bir kişilik sonucu başkasını
+  anlatır; pencerede kısmi gönderim mümkündü, sayfada değil. Sonuç soruların
+  altında, aynı sayfada açılır; görünür alana kaydırılır ve odak ona geçer.
+  "Yeniden çöz" seçimleri temizler. Puanlama değişmedi: aynı
+  `/api/issue-quizzes/:id/answer`, aynı `gradeQuiz` (D-297), hiçbir şey saklanmaz.
+- **Pencere ve sonuç görünümü ortak** (`issue-quiz-result.tsx`): panelde çizilen
+  test alanları başka sayılar için çalışmaya devam eder; ama testin kendi sayfası
+  varsa alan artık pencere açmaz, o sayfaya götürür.
+- **Tasarım manifestinde `quizPages`**: görseli olmayan test sayfası, `after` ile
+  adı verilen görsel sayfanın hemen ardına konur (görsellerin sırası ve
+  `renders.json` değişmez). İçe aktarma sayfayı etiketindeki anahtarla yeniden
+  bulur; ikinci çalıştırma ikinci sayfa açmaz. Manifest denetimi: anahtar tekrarı,
+  olmayan sayfanın ardı, aynı sayfanın ardında iki test, manifestte olmayan test.
+- **Sayı 1:** "Eğlence & Dedikodu" açılışındaki "Have Fun" alanı kaldırıldı; test
+  sayfası (`eglence-dedikodu-test`) açılışın hemen ardında, çift sayfa
+  görünümünde açılışın karşısında. İçindekilerde testin adıyla yer alır.
+- **Masaüstü/mobil ölçü:** Test sayfası yanındaki tasarım sayfasıyla aynı yükseklik
+  ve A4 oranında; sığmayan kısım sayfanın içinde kayar. 640 px'ten dar sahnede
+  (telefon) sayfa bütün ekranı kaplar.
+- **Bulunan açık (D-297'den):** Şık kimlikleri `s1-monica` gibi karakter adını
+  taşıyordu ve tarayıcıya gidiyordu; cevap anahtarı sayfanın kaynağından
+  okunabiliyordu. Kimlikler `s1-a…d` oldu; `outcomeId` eşlemesi, dolayısıyla
+  puanlama aynı. Testte saklanan deneme olmadığı için eski kimliklere bağlı veri yok.
+- **Panel:** `test` bloğu "Blok ekle" listesinde yok; test sayfası tasarım
+  aktarımıyla gelir (hangi testin konduğunu manifest bilir). Panelde açılan test
+  sayfası düzenlenirse blok korunur.
+
+**Hukuk:** Değişiklik yok. Yeni kişisel veri, çerez ya da saklama yok; cevaplar
+yine yalnızca puanlanmak için gönderilir, yazılmaz (D-240).
+
+**Yayından sonra yapılacak:** Bir admin Sayı 1'in sayfalar ekranında "Tasarım
+sayfalarını içe aktar / güncelle"ye basar: test sayfası eklenir, "Have Fun" alanı
+silinir, testin metni yeni şık kimlikleriyle yeniden yazılır.
+
+**Doğrulama:** Kapı: typecheck, lint, test (birim: manifest kuralları ve Sayı 1
+sırası; entegrasyon: eski alanlı aktarımdan sonra yeniden aktarım alanı siler,
+sayfayı açılışın ardına koyar, okura beş soruyu anahtarsız verir, sunucu Monica
+sonucunu döndürür, ikinci aktarım sayfa çoğaltmaz). Canlıda masaüstü ve mobil
+genişlikte okuyucu.

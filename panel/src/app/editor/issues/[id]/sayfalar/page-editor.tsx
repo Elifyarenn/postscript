@@ -459,6 +459,12 @@ export function IssuePageEditor({
                     </div>
                   )}
 
+                  {block.kind === "test" && (
+                    <p className="text-xs text-muted">
+                      Sayının testlerinden birini bütün sorularıyla bu sayfada gösterir. Metni “Testler” ekranında.
+                    </p>
+                  )}
+
                   {block.kind === "playlist" && (
                     <p className="text-xs text-muted">Sayının kendi çalma listesini gösterir; ayrıca alan yok.</p>
                   )}
@@ -476,7 +482,8 @@ export function IssuePageEditor({
               }}
             >
               <option value="">Blok ekle…</option>
-              {BLOCK_KINDS.map((kind) => (
+              {/* A test page comes from the design import, which knows the quiz (D-309) */}
+              {BLOCK_KINDS.filter((kind) => kind.id !== "test").map((kind) => (
                 <option key={kind.id} value={kind.id}>
                   {kind.label} — {kind.hint}
                 </option>

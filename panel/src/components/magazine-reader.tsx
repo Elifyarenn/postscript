@@ -35,6 +35,7 @@ import {
   Square,
   X,
 } from "lucide-react";
+import { testQuizId } from "@/lib/issue-blocks";
 import type { ReaderHotspot } from "@/lib/issue-hotspots";
 import type { ReaderQuiz } from "@/lib/issue-quiz";
 import { spreadStartFor, type ReaderPage } from "@/lib/issue-reader";
@@ -300,7 +301,11 @@ export function MagazineReader({
   const openHotspot = useCallback(
     (area: ReaderHotspot) => {
       if (area.kind === "info") return setInfo(area);
-      if (area.kind === "quiz" && area.quizId) return setQuizId(area.quizId);
+      if (area.kind === "quiz" && area.quizId) {
+        // A quiz with a page of its own is answered there, not in a window (D-309)
+        const own = pages.findIndex((page) => testQuizId(page.blocks) === area.quizId);
+        return own >= 0 ? goTo(own) : setQuizId(area.quizId);
+      }
       if (area.kind === "page" && area.targetPageId) {
         const found = pages.findIndex((page) => page.id === area.targetPageId);
         if (found >= 0) goTo(found);
@@ -480,7 +485,7 @@ export function MagazineReader({
             ) : (
               // Laid out from a template before D-240 and never given a
               // picture: still shown, so nothing already typed is lost
-              <IssuePageSheet key={page.id} page={page} preview={preview} />
+              <IssuePageSheet key={page.id} page={page} preview={preview} quizzes={quizzes} />
             ),
           )}
         </div>

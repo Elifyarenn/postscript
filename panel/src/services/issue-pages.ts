@@ -317,12 +317,13 @@ export async function readIssuePages(actor: Actor | null, number: number): Promi
     hotspots: page.hotspots.filter((area) => area.ready),
   }));
 
-  // Only the quizzes a page actually opens. A quiz nobody can reach from this
-  // issue's pages is not part of the reader's copy of it.
+  // Only the quizzes a page actually opens or lays out (D-309). A quiz nobody
+  // can reach from this issue's pages is not part of the reader's copy of it.
   const reachable = new Set(
-    readable.flatMap((page) =>
-      page.hotspots.flatMap((area) => (area.quizId ? [area.quizId] : [])),
-    ),
+    readable.flatMap((page) => [
+      ...page.hotspots.flatMap((area) => (area.quizId ? [area.quizId] : [])),
+      ...page.blocks.flatMap((block) => (block.kind === "test" && block.quizId ? [block.quizId] : [])),
+    ]),
   );
 
   return {

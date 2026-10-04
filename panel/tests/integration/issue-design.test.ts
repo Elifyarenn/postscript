@@ -19,6 +19,7 @@ import { designKeyOf, type DesignManifest, type RenderRecord } from "@/lib/issue
 import { getStorage, MemoryStorageAdapter } from "@/lib/storage";
 import { addPageImage, readIssuePages, readPageMedia, saveHotspots } from "@/services/issue-pages";
 import { importIssueDesign, pendingSnapshot, restoreIssueDesignSnapshot, type DesignDeps } from "@/services/issue-design";
+import { answerQuiz } from "@/services/issue-quizzes";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
 import { actorOf, createUser, noMeta } from "../helpers/factories";
 
@@ -250,6 +251,54 @@ describe("a quiz the manifest carries (D-297)", () => {
     expect(after[0]!.intro).toBeNull();
     const [again] = await db.select().from(issuePageHotspots).where(eq(issuePageHotspots.pageId, pages[0]!.id));
     expect(again!.quizId).toBe(quiz!.id);
+  });
+});
+
+describe("a quiz page (D-309)", () => {
+  it("replaces the hidden area: a page of its own after the opener, every question in the reader's copy, marked on the server", async () => {
+    const issue = await makeIssue();
+    const admin = actorOf(await createUser({ role: "admin" }));
+    const area = { kind: "quiz" as const, name: "Testi çöz", rect: [0.1, 0.5, 0.3, 0.1] as [number, number, number, number], quizTitle: OBSESSION_QUIZ.title };
+    // Imported once the old way, with the quiz behind an area on the cover
+    await importIssueDesign(admin, issue.id, noMeta, await depsFor({ ...testManifest(undefined, [area]), quizzes: [OBSESSION_QUIZ] }));
+
+    const manifest: DesignManifest = {
+      ...testManifest(),
+      quizzes: [OBSESSION_QUIZ],
+      quizPages: [
+        { key: "test", after: "bolum-a", title: "Test", contents: "Test", section: "Eğlence", quizTitle: OBSESSION_QUIZ.title },
+      ],
+    };
+    const result = await importIssueDesign(admin, issue.id, noMeta, await depsFor(manifest));
+    expect(result).toMatchObject({ pages: 5, added: 1, retired: 0 });
+    expect(await db.select().from(issuePageHotspots)).toEqual([]);
+
+    const [quiz] = await db.select().from(issueQuizzes);
+    const reader = await readIssuePages(admin, 1);
+    expect(reader.pages.map((entry) => designKeyOf(entry.label))).toEqual(["kapak", "bolum-a", "test", "bolum-b", "arka"]);
+    const page = reader.pages[2]!;
+    expect(page.imageUrl).toBeNull();
+    expect(page.section).toBe("Eğlence");
+    expect(page.tocTitle).toBe("Test");
+    expect(page.blocks).toEqual([{ kind: "test", quizId: quiz!.id }]);
+
+    // The reader is handed the quiz the page lays out, all five questions, no key
+    const copy = reader.quizzes.find((entry) => entry.id === quiz!.id)!;
+    expect(copy.questions).toHaveLength(5);
+    expect(JSON.stringify(copy)).not.toMatch(/outcomeId|monica|nina|beth/);
+
+    // Every first option is Monica's: the page's answers come back as her result
+    const answers = Object.fromEntries(copy.questions.map((question) => [question.id, question.options[0]!.id]));
+    const marked = await answerQuiz(admin, quiz!.id, answers);
+    expect(marked).toMatchObject({ kind: "persona", answered: 5, total: 5 });
+    expect(marked.kind === "persona" && marked.outcome?.title).toMatch(/Monica/);
+
+    // A rerun keeps the same page, does not add another
+    const again = await importIssueDesign(admin, issue.id, noMeta, await depsFor(manifest));
+    expect(again).toMatchObject({ pages: 5, added: 0, unchanged: 5 });
+    const pages = await db.select().from(issuePages);
+    expect(pages).toHaveLength(5);
+    expect(pages.find((entry) => entry.id === page.id)).toBeDefined();
   });
 });
 

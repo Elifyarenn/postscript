@@ -5926,6 +5926,157 @@ html:has(.profile-editor[open]) {
   }
 }
 
+/* ──────────────── A quiz as a page (D-309) ──────────────── */
+
+/* Beside a designed page it takes that page's height and shape, so the spread
+   still reads as two pages; what does not fit scrolls inside the page */
+.ps-site .reader-pages .page-sheet[data-test] {
+  --test-height: calc(var(--zoom, 1) * min(100cqh, 100cqw / var(--pages, 1) * 1.4142));
+  width: calc(var(--test-height) / 1.4142);
+  height: var(--test-height);
+  aspect-ratio: auto;
+  padding: clamp(1.1rem, 2.6cqh, 2.2rem) clamp(1rem, 3cqh, 2.4rem) 2.2rem;
+  overscroll-behavior: contain;
+}
+
+/* A phone shows one page: the whole screen is the page, not a shrunken A4 */
+@container (max-width: 640px) {
+  .ps-site .reader-pages .page-sheet[data-test] {
+    width: calc(var(--zoom, 1) * 100cqw);
+    height: calc(var(--zoom, 1) * 100cqh);
+    padding-inline: 1rem;
+  }
+}
+
+.ps-site .quiz-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.ps-site .quiz-page-title {
+  margin-bottom: 0;
+  font-size: clamp(1.35rem, 3.2cqh, 2rem);
+}
+
+.ps-site .quiz-page-questions {
+  display: grid;
+  gap: 1.1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ps-site .quiz-page-questions fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ps-site .quiz-page-questions legend {
+  display: flex;
+  margin-bottom: 0.5rem;
+  padding: 0;
+  gap: 0.5rem;
+  font-size: 1.02rem;
+}
+
+.ps-site .quiz-page-number {
+  flex: none;
+  color: var(--site-wine);
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.75;
+}
+
+.ps-site .quiz-page-options {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.ps-site .quiz-page-options label {
+  display: flex;
+  align-items: flex-start;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--site-rule);
+  cursor: pointer;
+  gap: 0.55rem;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.ps-site .quiz-page-options label:hover,
+.ps-site .quiz-page-options label:focus-within {
+  border-color: var(--site-wine);
+  background: rgb(123 31 43 / 6%);
+}
+
+.ps-site .quiz-page-options label[data-chosen] {
+  border-color: var(--site-wine);
+  background: rgb(123 31 43 / 12%);
+}
+
+.ps-site .quiz-page-options input {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  margin: 0.1rem 0 0;
+  accent-color: var(--site-wine);
+}
+
+.ps-site .quiz-page fieldset:disabled label {
+  cursor: default;
+}
+
+.ps-site .quiz-page fieldset:disabled label:not([data-chosen]) {
+  opacity: 0.55;
+}
+
+.ps-site .quiz-page-submit {
+  display: grid;
+  justify-items: start;
+  gap: 0.4rem;
+}
+
+.ps-site .quiz-page-submit button {
+  padding: 0.6rem 1.2rem;
+  border: 1px solid var(--site-wine);
+  background: var(--site-wine);
+  color: var(--site-paper);
+  cursor: pointer;
+  font-size: 0.92rem;
+}
+
+.ps-site .quiz-page-submit button:disabled {
+  border-color: var(--site-rule);
+  background: transparent;
+  color: inherit;
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.ps-site .quiz-page-result {
+  display: grid;
+  padding-top: 1rem;
+  border-top: 2px solid var(--site-wine);
+  gap: 0.7rem;
+  scroll-margin-top: 1rem;
+}
+
+.ps-site .quiz-page-result:focus {
+  outline: none;
+}
+
+.ps-site .quiz-page-result-label {
+  color: var(--site-wine);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
 /* ════════════════ Phone menu ════════════════ */
 
 /*

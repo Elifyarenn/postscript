@@ -11,11 +11,14 @@ import {
   designKeyOf,
   designLabel,
   designManifestSchema,
+  designOrder,
   designStorageKey,
   manifestProblems,
   renderListSchema,
   type DesignManifest,
+  type DesignQuizPage,
 } from "@/lib/issue-design/manifest";
+import { OBSESSION_QUIZ } from "@/lib/issue-design/issue-01-quizzes";
 import { imageSize } from "@/lib/image-size";
 import { MAX_PAGE_IMAGE_BYTES } from "@/lib/page-image";
 
@@ -89,6 +92,44 @@ describe("what a manifest may not say", () => {
   });
 });
 
+describe("a quiz as a page of its own (D-309)", () => {
+  const quizPage = (extra: Partial<DesignQuizPage> = {}): DesignQuizPage => ({
+    key: "test",
+    after: "a",
+    title: "Test",
+    contents: "Test",
+    section: null,
+    quizTitle: OBSESSION_QUIZ.title,
+    ...extra,
+  });
+  const withQuiz = (pages: DesignManifest["pages"], quizPages: DesignQuizPage[]): DesignManifest => ({
+    ...manifest(pages),
+    quizzes: [OBSESSION_QUIZ],
+    quizPages,
+  });
+
+  it("stands right after the page it names, the pictures keeping their own order", () => {
+    const shape = withQuiz([page("a"), page("b", { sourcePage: 2 })], [quizPage()]);
+    expect(manifestProblems(shape)).toEqual([]);
+    expect(designOrder(shape)).toEqual(["a", "test", "b"]);
+    expect(designOrder(manifest([page("a")]))).toEqual(["a"]);
+  });
+
+  it("refuses a page after nowhere, a key a picture already has, and a quiz the manifest does not carry", () => {
+    const problems = manifestProblems(
+      withQuiz([page("a")], [quizPage({ after: "yok" }), quizPage({ key: "a" }), quizPage({ key: "c", quizTitle: "Olmayan" })]),
+    ).join("\n");
+    expect(problems).toMatch(/olmayan bir sayfanın ardına/);
+    expect(problems).toMatch(/"a" anahtarı iki kez/);
+    expect(problems).toMatch(/testi manifestte yok/);
+  });
+
+  it("does not let two test pages follow the same page", () => {
+    const problems = manifestProblems(withQuiz([page("a")], [quizPage(), quizPage({ key: "test-2" })]));
+    expect(problems.join("")).toMatch(/birden çok test sayfası/);
+  });
+});
+
 describe("issue 01 as shipped", () => {
   const issue = designFor(1)!;
   const folder = path.join(process.cwd(), "assets", "issue-design", issue.folder);
@@ -97,6 +138,13 @@ describe("issue 01 as shipped", () => {
   it("is registered once and has no problems", () => {
     expect(DESIGNS.filter((entry) => entry.issueNumber === 1)).toHaveLength(1);
     expect(manifestProblems(issue, renders)).toEqual([]);
+  });
+
+  it("shows the obsession quiz as the page after the Eğlence & Dedikodu opener, with no hidden area left", () => {
+    const order = designOrder(issue);
+    expect(order[order.indexOf("eglence-dedikodu-acilis") + 1]).toBe("eglence-dedikodu-test");
+    expect(issue.quizPages?.[0]?.quizTitle).toBe(OBSESSION_QUIZ.title);
+    expect(issue.pages.flatMap((entry) => entry.areas).filter((area) => area.kind === "quiz")).toEqual([]);
   });
 
   it("starts with the front cover and ends with the back cover", () => {

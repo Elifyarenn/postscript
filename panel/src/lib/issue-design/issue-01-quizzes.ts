@@ -18,7 +18,9 @@ function question(id: string, text: string, options: [string, string, string, st
   return {
     id,
     text,
-    options: options.map((option, index) => ({ id: `${id}-${order[index]!}`, text: option, outcomeId: order[index]! })),
+    // The option id reaches the browser, so it names a letter, not the
+    // character: a name there would be the answer key (D-309)
+    options: options.map((option, index) => ({ id: `${id}-${"abcd"[index]!}`, text: option, outcomeId: order[index]! })),
   };
 }
 

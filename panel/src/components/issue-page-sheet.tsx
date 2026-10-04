@@ -15,9 +15,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Play, ZoomIn } from "lucide-react";
-import { blockIsReady, type PageBlock } from "@/lib/issue-blocks";
+import { blockIsReady, testQuizId, type PageBlock } from "@/lib/issue-blocks";
 import { FIELD_PLACEHOLDERS, templateAsks, templateOf, type PageField } from "@/lib/issue-templates";
+import type { ReaderQuiz } from "@/lib/issue-quiz";
 import type { ReaderPage } from "@/lib/issue-reader";
+import { IssueQuizPage } from "./issue-quiz-page";
 
 /** A gap the editor still has to fill; shown only while laying the issue out. */
 function Gap({ field }: { field: PageField }) {
@@ -200,10 +202,12 @@ function Blocks({
   blocks,
   page,
   preview,
+  quizzes,
 }: {
   blocks: PageBlock[];
   page: ReaderPage;
   preview: boolean;
+  quizzes: ReaderQuiz[];
 }) {
   if (blocks.length === 0) return null;
   return (
@@ -262,10 +266,21 @@ function Blocks({
                 explanation={block.explanation}
               />
             );
+          case "test":
+            return <TestBlock key={position} quiz={quizzes.find((entry) => entry.id === block.quizId)} preview={preview} />;
         }
       })}
     </div>
   );
+}
+
+/**
+ * A quiz the reader was not handed — removed, or a preview with no quizzes,
+ * like the panel's editor — is a gap for the editor and nothing for a reader.
+ */
+function TestBlock({ quiz, preview, section = null }: { quiz: ReaderQuiz | undefined; preview: boolean; section?: string | null }) {
+  if (quiz) return <IssueQuizPage quiz={quiz} section={section} />;
+  return preview ? <p className="page-block page-block-empty">[Test — okuyucuda burada sayfanın testi görünür]</p> : null;
 }
 
 function blockKindLabel(kind: string): string {
@@ -278,6 +293,7 @@ function blockKindLabel(kind: string): string {
     media: "Ses / video",
     playlist: "Çalma listesi",
     quiz: "Soru",
+    test: "Test",
   };
   return labels[kind] ?? kind;
 }
@@ -320,8 +336,19 @@ function PlaylistBlock({ page, preview }: { page: ReaderPage; preview: boolean }
 /* The page itself                                                     */
 /* ------------------------------------------------------------------ */
 
-export function IssuePageSheet({ page, preview }: { page: ReaderPage; preview: boolean }) {
+export function IssuePageSheet({
+  page,
+  preview,
+  quizzes = [],
+}: {
+  page: ReaderPage;
+  preview: boolean;
+  /** The issue's quizzes as the reader may see them, for a test page (D-309). */
+  quizzes?: ReaderQuiz[];
+}) {
   const template = templateOf(page.template);
+  // A test page is the quiz and nothing else: no heading, body or gaps around it
+  const testId = testQuizId(page.blocks);
   const asks = (field: PageField) => templateAsks(page.template, field);
   // A linked article lends the page its words when the page has none of its own
   const bodyHtml = page.bodyHtml ?? page.article?.bodyHtml ?? null;
@@ -348,6 +375,15 @@ export function IssuePageSheet({ page, preview }: { page: ReaderPage; preview: b
   ) : null;
 
   const inner = () => {
+    if (testId) {
+      return (
+        <TestBlock
+          quiz={quizzes.find((entry) => entry.id === testId)}
+          preview={preview}
+          section={page.section}
+        />
+      );
+    }
     switch (page.template) {
       case "cover":
         return (
@@ -414,7 +450,7 @@ export function IssuePageSheet({ page, preview }: { page: ReaderPage; preview: b
               {standfirst}
               {byline}
               <Body html={bodyHtml} preview={preview} />
-              <Blocks blocks={page.blocks} page={page} preview={preview} />
+              <Blocks blocks={page.blocks} page={page} preview={preview} quizzes={quizzes} />
             </div>
           </div>
         );
@@ -433,7 +469,7 @@ export function IssuePageSheet({ page, preview }: { page: ReaderPage; preview: b
               {standfirst}
               {byline}
               <Body html={bodyHtml} preview={preview} />
-              <Blocks blocks={page.blocks} page={page} preview={preview} />
+              <Blocks blocks={page.blocks} page={page} preview={preview} quizzes={quizzes} />
             </div>
           </div>
         );
@@ -444,7 +480,7 @@ export function IssuePageSheet({ page, preview }: { page: ReaderPage; preview: b
             {page.heading && <p className="page-running-head">{page.heading}</p>}
             <Body html={bodyHtml} preview={preview} />
             <Picture page={page} preview={preview} />
-            <Blocks blocks={page.blocks} page={page} preview={preview} />
+            <Blocks blocks={page.blocks} page={page} preview={preview} quizzes={quizzes} />
           </div>
         );
 
@@ -510,7 +546,7 @@ export function IssuePageSheet({ page, preview }: { page: ReaderPage; preview: b
             {byline}
             {asks("image") && <Picture page={page} preview={preview} />}
             <Body html={bodyHtml} preview={preview} />
-            <Blocks blocks={page.blocks} page={page} preview={preview} />
+            <Blocks blocks={page.blocks} page={page} preview={preview} quizzes={quizzes} />
           </div>
         );
     }
@@ -521,6 +557,7 @@ export function IssuePageSheet({ page, preview }: { page: ReaderPage; preview: b
       className="page-sheet"
       data-template={page.template}
       data-bleed={template.bleed ? "" : undefined}
+      data-test={testId ? "" : undefined}
       aria-label={`Sayfa ${page.position}`}
     >
       {inner()}

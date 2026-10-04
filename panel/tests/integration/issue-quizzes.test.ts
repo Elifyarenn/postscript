@@ -238,7 +238,8 @@ describe("answering a quiz", () => {
     expect(stored!.outcomes).toHaveLength(4);
 
     const reader = await createUser({ role: "user" });
-    const answers = { s1: "s1-nina", s2: "s2-nina", s3: "s3-joe", s4: "s4-nina", s5: "s5-beth" };
+    // Options are a, b, c, d in the order Monica, Joe, Nina, Beth
+    const answers = { s1: "s1-c", s2: "s2-c", s3: "s3-b", s4: "s4-c", s5: "s5-d" };
     const result = await answerQuiz(actorOf(reader), id, answers);
     if (result.kind !== "persona") throw new Error("wrong kind");
     expect(result.outcome?.title).toBe("Nina’nın mükemmeliyetçilik takıntısı");
@@ -248,6 +249,7 @@ describe("answering a quiz", () => {
     const sent = JSON.stringify(pages.quizzes);
     expect(pages.quizzes).toHaveLength(1);
     expect(sent).not.toContain("outcomeId");
+    expect(sent).not.toMatch(/monica|nina|beth/);
     expect(sent).not.toContain("Nina");
   });
 

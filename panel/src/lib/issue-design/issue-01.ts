@@ -22,7 +22,9 @@
  *   { kind: "quiz", name: "Test", rect: [0.1, 0.8, 0.8, 0.1], quizTitle: "Testin panelde yazan tam adı" }
  *
  * Quizzes (`quizzes`) are written into the issue by the same button; their
- * text is in `issue-01-quizzes.ts`. An area opens one by its title.
+ * text is in `issue-01-quizzes.ts`. A quiz is shown as a page of its own
+ * (`quizPages`, D-309), placed after the picture page named in `after`, with
+ * every question on the page; an area can still open one by its title.
  *
  * Why the order is what it is (2026-09-30):
  *  - Within the science section the printed page numbers decide (04 → 05 → 06);
@@ -121,20 +123,8 @@ export const ISSUE_01_DESIGN: DesignManifest = {
     opener("sosyoloji-dusunce-acilis", "POSTSCRIPT sosyoloji düşünce.ai", "Sosyoloji & Düşünce", "dalgalanan bir bayrağın üzerinde Düşünen Adam heykeli ve konuşma balonu"),
     opener("fashion-lifestyle-acilis", "POSTSCRIPT fashion.ai", "Fashion & Lifestyle", "kabarık etekli bir terzi mankeni silüetinin içinde askıda kırmızı elbise ve alışveriş çantaları"),
     opener("yazar-kosesi-acilis", "yazar köşesi.ai", "Yazar Köşesi: PostScript", "bir kadın başı silüetinin içinde eski bir daktilo; kâğıtta “Yazar Köşesi: PostScript” yazıyor"),
-    {
-      ...opener("eglence-dedikodu-acilis", "eğlence dedikodu.ai", "Eğlence & Dedikodu", "büyük bir yıldızın önünde eski tip bir telefon ve “Have Fun” yazısı"),
-      // No page was designed for the quiz yet, so the section's own opener
-      // opens it: the “Have Fun” sign, marked so a reader sees it can be pressed
-      areas: [
-        {
-          kind: "quiz",
-          name: `Testi çöz: ${OBSESSION_QUIZ_TITLE}`,
-          rect: [0.17, 0.52, 0.7, 0.26],
-          showMarker: true,
-          quizTitle: OBSESSION_QUIZ_TITLE,
-        },
-      ],
-    },
+    // The quiz is the page after this one (`quizPages`), not a hidden area on it (D-309)
+    opener("eglence-dedikodu-acilis", "eğlence dedikodu.ai", "Eğlence & Dedikodu", "büyük bir yıldızın önünde eski tip bir telefon ve “Have Fun” yazısı"),
     {
       key: "arka-kapak",
       source: "POSTSCRIPT 01.ai",
@@ -149,6 +139,17 @@ export const ISSUE_01_DESIGN: DesignManifest = {
     },
   ],
   quizzes: [OBSESSION_QUIZ],
+  // No quiz page was designed, so the reader draws it in the magazine's type
+  quizPages: [
+    {
+      key: "eglence-dedikodu-test",
+      after: "eglence-dedikodu-acilis",
+      title: "Test: Hangi kurgusal karakterin takıntısına sahipsin?",
+      contents: OBSESSION_QUIZ_TITLE,
+      section: "Eğlence & Dedikodu",
+      quizTitle: OBSESSION_QUIZ_TITLE,
+    },
+  ],
   excluded: [
     { source: "POSTSCRIPT 01.ai", pages: [3, 4, 5, 6], reason: "Tamamen boş beyaz sayfa." },
     {

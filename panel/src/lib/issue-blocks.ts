@@ -18,6 +18,7 @@ export const BLOCK_KINDS = [
   { id: "media", label: "Ses / video", hint: "Okurun kendisi başlatır; hiçbir şey kendiliğinden çalmaz." },
   { id: "playlist", label: "Çalma listesi", hint: "Sayının kendi listesini bu sayfaya koyar." },
   { id: "quiz", label: "Soru", hint: "Tek soruluk quiz; şıklar ve doğru yanıt." },
+  { id: "test", label: "Test", hint: "Sayının testlerinden biri, bütün sorularıyla sayfanın üzerinde." },
 ] as const;
 
 export type BlockKind = (typeof BLOCK_KINDS)[number]["id"];
@@ -55,6 +56,12 @@ export const blockSchema = z.discriminatedUnion("kind", [
     answer: z.number().int().min(0).max(5).nullable().default(null),
     explanation: text(500),
   }),
+  /**
+   * One of the issue's quizzes, laid out on the page itself (D-309): every
+   * question visible, answered on the page, the result under them. The quiz
+   * and its answer key stay in `issue_quizzes`; the page only points at it.
+   */
+  z.strictObject({ kind: z.literal("test"), quizId: z.uuid().nullable().default(null) }),
 ]);
 
 export type PageBlock = z.infer<typeof blockSchema>;
@@ -92,7 +99,15 @@ export function blockIsReady(block: PageBlock): boolean {
       return true;
     case "quiz":
       return block.question !== "" && block.options.length >= 2 && block.answer !== null;
+    case "test":
+      return block.quizId !== null;
   }
+}
+
+/** The quiz a page lays out, when it is a test page (D-309). */
+export function testQuizId(blocks: PageBlock[]): string | null {
+  for (const block of blocks) if (block.kind === "test" && block.quizId) return block.quizId;
+  return null;
 }
 
 export function blockLabel(kind: string): string {

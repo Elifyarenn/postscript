@@ -74,6 +74,25 @@ export const designPageSchema = z.strictObject({
   areas: z.array(designAreaSchema).max(40),
 });
 
+/**
+ * A page that is a quiz rather than a picture (D-309): drawn by the reader in
+ * the magazine's type, every question on the page. It stands right after the
+ * picture page named in `after`, so the pictures' own order is untouched.
+ */
+export const designQuizPageSchema = z.strictObject({
+  key: z.string().regex(DESIGN_KEY),
+  /** The picture page this one follows. */
+  after: z.string().regex(DESIGN_KEY),
+  /** Shown in the panel's list after the key. */
+  title: z.string().trim().min(1).max(90),
+  /** What the reader's contents list calls it; null keeps it out of the list. */
+  contents: z.string().trim().min(1).max(200).nullable(),
+  /** The section name printed above the quiz. */
+  section: z.string().trim().min(1).max(120).nullable(),
+  /** One of `quizzes`, by its exact title. */
+  quizTitle: z.string().trim().min(1).max(200),
+});
+
 export const designManifestSchema = z.strictObject({
   issueNumber: z.number().int().min(1),
   /** Folder under `assets/issue-design/`. */
@@ -92,6 +111,8 @@ export const designManifestSchema = z.strictObject({
    * rerun rewrites them from here, so a change made in the panel does not last.
    */
   quizzes: z.array(quizInputSchema).max(10).optional(),
+  /** Quizzes laid out as pages of their own (D-309). */
+  quizPages: z.array(designQuizPageSchema).max(10).optional(),
   /** Pages of the delivered files that are left out, and why. Documentation only. */
   excluded: z.array(
     z.strictObject({ source: z.string(), pages: z.array(z.number().int().min(1)), reason: z.string() }),
@@ -100,6 +121,7 @@ export const designManifestSchema = z.strictObject({
 
 export type DesignArea = z.infer<typeof designAreaSchema>;
 export type DesignPage = z.infer<typeof designPageSchema>;
+export type DesignQuizPage = z.infer<typeof designQuizPageSchema>;
 export type DesignManifest = z.infer<typeof designManifestSchema>;
 
 /** One rendered picture, as the script records it in `renders.json`. */
@@ -130,6 +152,14 @@ export function assetFileName(key: string): string {
  */
 export function designStorageKey(folder: string, key: string, sha256: string): string {
   return `issue-pages/design/${folder}/${key}-${sha256.slice(0, 16)}.webp`;
+}
+
+/** Every page key in reading order: the pictures, each followed by its test page (D-309). */
+export function designOrder(manifest: DesignManifest): string[] {
+  return manifest.pages.flatMap((page) => [
+    page.key,
+    ...(manifest.quizPages ?? []).filter((quizPage) => quizPage.after === page.key).map((quizPage) => quizPage.key),
+  ]);
 }
 
 /**
@@ -172,6 +202,22 @@ export function manifestProblems(manifest: DesignManifest, renders?: RenderRecor
     titles.add(quiz.title);
     // An unfinished quiz would be imported and then refuse to open for a reader
     for (const problem of quizProblems(quiz)) problems.push(`"${quiz.title}" testi: ${problem}`);
+  }
+
+  const followed = new Set<string>();
+  for (const page of manifest.quizPages ?? []) {
+    if (keys.has(page.key)) problems.push(`"${page.key}" anahtarı iki kez kullanılmış.`);
+    keys.add(page.key);
+    if (!manifest.pages.some((entry) => entry.key === page.after)) {
+      problems.push(`"${page.key}" test sayfası olmayan bir sayfanın ardına konmuş: "${page.after}".`);
+    }
+    // Two after one page would leave their order to chance
+    if (followed.has(page.after)) problems.push(`"${page.after}" sayfasının ardında birden çok test sayfası var.`);
+    followed.add(page.after);
+    // The page lays the quiz out from the manifest's own text, never a panel one it cannot check
+    if (!titles.has(page.quizTitle)) {
+      problems.push(`"${page.key}" test sayfasının testi manifestte yok: "${page.quizTitle}".`);
+    }
   }
 
   if (renders) {
