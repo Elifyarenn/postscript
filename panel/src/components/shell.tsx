@@ -157,7 +157,7 @@ export function writerNav(locked: boolean, signsContract = true): NavGroup[] {
 export function illustratorNav(): NavGroup[] {
   return [
     {
-      label: "Çizer",
+      label: "Tasarımcı",
       items: [
         { href: "/cizer", label: "Sözleşmem ve belgelerim" },
         { href: "/account", label: "Hesabım" },

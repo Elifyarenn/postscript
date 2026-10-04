@@ -43,10 +43,10 @@ export const USER_SEGMENT_META: Record<
   },
   illustrators: {
     href: "/admin/users/illustrators",
-    navLabel: "Çizerler",
-    title: "Çizerler",
+    navLabel: "Tasarımcılar",
+    title: "Tasarımcılar",
     description: "Dergiye görsel üreten hesaplar. Hem yazan hem çizen hesaplar da burada.",
-    countNoun: "çizer",
+    countNoun: "tasarımcı",
   },
   // Replaced the legal adviser and assistant marks (D-295)
   authorized: {
@@ -61,7 +61,7 @@ export const USER_SEGMENT_META: Record<
     navLabel: "Kullanıcılar",
     title: "Kullanıcılar",
     description:
-      "Rolü olmayan okuyucu hesapları: doğrulama, yaş, KVKK onayı ve yazar başvurusu. Çizerler burada değil, kendi listelerinde.",
+      "Rolü olmayan okuyucu hesapları: doğrulama, yaş, KVKK onayı ve yazar başvurusu. Tasarımcılar burada değil, kendi listelerinde.",
     countNoun: "kullanıcı",
   },
 };

@@ -145,7 +145,7 @@ export default async function AdminDashboard() {
               ["user", "Kullanıcı", "/admin/users/readers"],
               ["writer", "Yazar", "/admin/users/writers"],
               ["editor", "Editör", "/admin/users/editors"],
-              ["illustrator", "Çizer", "/admin/users/illustrators"],
+              ["illustrator", "Tasarımcı", "/admin/users/illustrators"],
               ["admin", "Yönetici", "/admin/users?role=admin"],
             ] as const
           ).map(([role, label, href]) => (

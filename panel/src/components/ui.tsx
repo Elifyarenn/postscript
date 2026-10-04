@@ -225,11 +225,14 @@ export const STATUS_LABELS: Record<string, string> = {
   suspended: "Askıda",
   user: "Kullanıcı",
   writer: "Yazar",
-  // Not a role but a second hat a writer may also wear (D-151)
-  illustrator: "Çizer",
+  // Not a role but a second hat a writer may also wear (D-151); every design
+  // duty is shown under one name (D-310)
+  illustrator: "Tasarımcı",
   // Also a mark, not a role: an authorised person of the magazine (D-295)
   authorized: "Yetkili",
   editor: "Editör",
+  // An editor assignment, not a role (D-310)
+  main_editor: "Ana editör",
   admin: "Yönetici",
   // What an admin is called inside the community (D-179)
   community_admin: "Topluluk yöneticisi",
@@ -259,16 +262,25 @@ export const STATUS_LABELS: Record<string, string> = {
   topic_delivered: "Teslim edildi",
 };
 
+/** Team tags share one shape: a solid duty colour with cream text (D-310). */
+const TEAM_TAG = "text-role-ink";
+
 const BADGE_TONES: Record<string, string> = {
+  admin: `${TEAM_TAG} bg-role-admin border-role-admin`,
+  community_admin: `${TEAM_TAG} bg-role-admin border-role-admin`,
+  authorized: `${TEAM_TAG} bg-role-authorized border-role-authorized`,
+  main_editor: `${TEAM_TAG} bg-role-main-editor border-role-main-editor`,
+  editor: `${TEAM_TAG} bg-role-editor border-role-editor`,
+  // A hybrid is first of all an editor; the label names both duties
+  editor_writer: `${TEAM_TAG} bg-role-editor border-role-editor`,
+  writer: `${TEAM_TAG} bg-role-writer border-role-writer`,
+  illustrator: `${TEAM_TAG} bg-role-designer border-role-designer`,
+  user: `${TEAM_TAG} bg-role-user border-role-user`,
   published: "bg-accent-soft text-accent border-accent/30",
   signed: "bg-accent-soft text-accent border-accent/30",
   active: "bg-accent-soft text-accent border-accent/30",
   clean: "bg-accent-soft text-accent border-accent/30",
   pending_admin_approval: "bg-accent-soft text-accent border-accent/30",
-  editor_writer: "bg-accent-soft text-accent border-accent/30",
-  illustrator: "bg-accent-soft text-accent border-accent/30",
-  authorized: "bg-accent-soft text-accent border-accent/30",
-  community_admin: "bg-accent-soft text-accent border-accent/30",
   withdrawn: "bg-danger-soft text-danger border-danger/30",
   declined: "bg-danger-soft text-danger border-danger/30",
   revoked: "bg-danger-soft text-danger border-danger/30",

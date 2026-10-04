@@ -54,12 +54,17 @@ const COLUMNS: Record<ColumnId, Column> = {
   role: {
     label: "Rol",
     // A hybrid editor holds both duties; their combined title (D-060)
-    cell: (row) =>
-      row.role === "editor" && row.writerStatus !== null ? (
-        <StatusBadge status="editor_writer" />
-      ) : (
-        <StatusBadge status={row.role} />
-      ),
+    className: "space-x-1 whitespace-nowrap",
+    cell: (row) => (
+      <>
+        {row.role === "editor" && row.writerStatus !== null ? (
+          <StatusBadge status="editor_writer" />
+        ) : (
+          <StatusBadge status={row.role} />
+        )}
+        {row.isMainEditor && <StatusBadge status="main_editor" />}
+      </>
+    ),
   },
   status: {
     label: "Durum",
@@ -126,7 +131,7 @@ const COLUMNS: Record<ColumnId, Column> = {
   mainEditor: {
     label: "Ana editör",
     className: "text-xs",
-    cell: (row) => (row.isMainEditor ? "Evet" : "—"),
+    cell: (row) => (row.isMainEditor ? <StatusBadge status="main_editor" /> : "—"),
   },
   twoFactor: {
     label: "2FA",
@@ -168,7 +173,7 @@ const COLUMNS: Record<ColumnId, Column> = {
       ),
   },
   illustrator: {
-    label: "Çizer",
+    label: "Tasarımcı",
     className: "text-xs whitespace-nowrap",
     cell: (row) => (row.isIllustrator ? <StatusBadge status="illustrator" /> : "—"),
   },

@@ -24,7 +24,7 @@ test("an admin walks the users lists from the sidebar", async ({ page }) => {
   await expect(page.getByRole("columnheader", { name: "Sorumlu alanlar" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Genç Aday" })).toHaveCount(0);
 
-  await page.getByRole("link", { name: "Çizerler", exact: true }).click();
+  await page.getByRole("link", { name: "Tasarımcılar", exact: true }).click();
   await page.waitForURL("**/admin/users/illustrators");
   await expect(page.getByText("Henüz çizer yok.")).toBeVisible();
 

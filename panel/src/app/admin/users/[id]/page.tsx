@@ -262,6 +262,9 @@ export default async function AdminUserDetailPage({
                 {target.writerStatus && <StatusBadge status={target.writerStatus} />}
               </>
             )}
+            {target.isMainEditor && <StatusBadge status="main_editor" />}
+            {target.isIllustrator && <StatusBadge status="illustrator" />}
+            {target.isAuthorized && <StatusBadge status="authorized" />}
           </>
         }
       />
@@ -280,17 +283,17 @@ export default async function AdminUserDetailPage({
         </Card>
 
         <Card>
-          <h2 className="mb-1 font-serif text-lg">Çizer</h2>
+          <h2 className="mb-1 font-serif text-lg">Tasarımcı</h2>
           <p className="mb-4 text-sm text-muted">
-            Çizer, dergiye görsel üreten hesaptır. Ayrı bir rol değildir: hesabın rolü
-            değişmez, bu yüzden bir yazar aynı zamanda çizer olabilir. İşaret kendi
-            başına hiçbir panele giriş vermez; yalnızca Çizerler listesinde ve Hakkında
+            Tasarımcı (çizer dahil), dergiye görsel üreten hesaptır. Ayrı bir rol değildir:
+            hesabın rolü değişmez, bu yüzden bir yazar aynı zamanda tasarımcı olabilir. İşaret
+            kendi başına hiçbir panele giriş vermez; yalnızca Tasarımcılar listesinde ve Hakkında
             sayfasında görünür.
           </p>
           <PanelForm
             action={setIllustratorAction}
             csrfToken={csrfToken}
-            submitLabel={target.isIllustrator ? "Çizer işaretini kaldır" : "Çizer olarak işaretle"}
+            submitLabel={target.isIllustrator ? "Tasarımcı işaretini kaldır" : "Tasarımcı olarak işaretle"}
             submitVariant="secondary"
           >
             <>
@@ -301,7 +304,7 @@ export default async function AdminUserDetailPage({
                 value={target.isIllustrator ? "hayir" : "evet"}
               />
               <p className="text-sm">
-                Şu an: {target.isIllustrator ? "Çizer olarak işaretli." : "Çizer değil."}
+                Şu an: {target.isIllustrator ? "Tasarımcı olarak işaretli." : "Tasarımcı değil."}
               </p>
             </>
           </PanelForm>
@@ -310,7 +313,7 @@ export default async function AdminUserDetailPage({
         <Card>
           <h2 className="mb-1 font-serif text-lg">Yetkili</h2>
           <p className="mb-4 text-sm text-muted">
-            Dergi adına yetkili hesabı işaretler. Çizer işareti gibi ayrı bir rol değildir:
+            Dergi adına yetkili hesabı işaretler. Tasarımcı işareti gibi ayrı bir rol değildir:
             hesabın rolü değişmez, hiçbir panele giriş vermez ve içerik üzerinde yetki
             tanımaz. İşaretli hesap Yetkililer listesinde ve ekipte görünür.
           </p>

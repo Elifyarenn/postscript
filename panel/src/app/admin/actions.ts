@@ -178,7 +178,7 @@ export async function setIllustratorAction(
     revalidatePath("/admin/users/illustrators");
     // The about page lists the çizers by name (D-151)
     revalidatePath("/hakkinda");
-    return { success: "Çizer işareti güncellendi." };
+    return { success: "Tasarımcı işareti güncellendi." };
   });
 }
 

@@ -15,6 +15,16 @@
   --color-warning: #8a5a12;
   --color-warning-soft: #fbf1de;
 
+  /* Team tags (D-310): one solid colour per duty, light cream text on all */
+  --color-role-ink: #f6f1e7;
+  --color-role-admin: #641f2b;
+  --color-role-authorized: #92502f;
+  --color-role-main-editor: #633d68;
+  --color-role-editor: #305f6b;
+  --color-role-writer: #42634b;
+  --color-role-designer: #945064;
+  --color-role-user: #625d58;
+
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-serif: Georgia, "Times New Roman", serif;

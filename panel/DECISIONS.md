@@ -12099,3 +12099,37 @@ sırası; entegrasyon: eski alanlı aktarımdan sonra yeniden aktarım alanı si
 sayfayı açılışın ardına koyar, okura beş soruyu anahtarsız verir, sunucu Monica
 sonucunu döndürür, ikinci aktarım sayfa çoğaltmaz). Canlıda masaüstü ve mobil
 genişlikte okuyucu.
+
+
+## D-310 — Ekip etiketlerinin renkleri; tasarım görevleri "Tasarımcı" adıyla
+
+**İstek (ürün sahibi):** Ekip etiketleri şu zeminlerle, açık krem yazıyla
+görünsün: Admin `#641F2B`, Yetkili `#92502F`, Ana editör `#633D68`, Editör
+`#305F6B`, Yazar `#42634B`, Tasarımcı `#945064`, Normal kullanıcı `#625D58`.
+Çizer ve diğer tasarım rolleri "Tasarımcı" olarak gösterilsin; yetkiler
+değişmesin.
+
+**Karar:** Renkler `globals.css` içinde `--color-role-*` token'ları (yazı rengi
+`--color-role-ink: #f6f1e7`) olarak tanımlandı ve tek etiket bileşeni
+`StatusBadge`'in tonlarına bağlandı; etiket gösteren her ekran (panel başlığı,
+kullanıcı listeleri, kullanıcı sayfası, topluluk, mesajlar, yorumlar,
+sözleşme listeleri) aynı yerden beslendiği için ayrıca düzenlenmedi.
+`community_admin` admin rengini, `editor_writer` (hibrit) editör rengini alır.
+Krem yazı en açık zeminde (`#945064`) bile ~5:1 kontrast verir (WCAG AA).
+
+- **Ana editör** artık bir etiket (`main_editor`): kullanıcı listesinde rolün
+  yanında ve "Ana editör" sütununda, kullanıcı sayfasının başlığında. Panel
+  başlığı ve topluluk ana editör bilgisini taşımadığından orada rol etiketi
+  kalır; bunun için veri katmanına alan eklenmedi.
+- **Tasarımcı:** `illustrator` işaretinin görünen adı "Çizer" → "Tasarımcı";
+  admin listesi, sayaç kartı, kullanıcı sayfasındaki işaret kartı, tasarımcı
+  paneli menüsü ve hesap kartı aynı adı kullanır. Kullanıcı sayfası başlığı
+  Tasarımcı ve Yetkili işaretlerini de etiket olarak gösterir. Ekip avatarı
+  rol önerilerinden "Çizer" çıkarıldı; daha önce kaydedilmiş serbest metin
+  rollere dokunulmadı.
+- **Değişmeyenler:** `is_illustrator` kolonu, `/cizer` ve `/admin/users/illustrators`
+  yolları, `rbac.ts` ve tüm yetki kontrolleri. Sözleşme/katkı belgesindeki
+  "Rol / katkı türü: Çizer" ifadesi (`contributor-documents.ts`) hukuki metin
+  olduğu için değiştirilmedi; değiştirilmesi hukukçu görüşüyle birlikte ele
+  alınmalı. Hakkında sayfasının tasarımdan gelen "Tasarımcı ve çizerler"
+  bölümü de aynı kaldı (D-167).

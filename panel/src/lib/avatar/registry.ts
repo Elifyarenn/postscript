@@ -327,7 +327,7 @@ export const TEAM_ROLE_SUGGESTIONS = [
   "Genel Yayın Yönetmeni",
   "Editör",
   "Yazar",
-  "Çizer",
+  // Every design duty is one name in the team (D-310)
   "Tasarımcı",
   "Sosyal Medya",
   "Redaktör",

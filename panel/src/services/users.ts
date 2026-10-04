@@ -560,7 +560,7 @@ export async function setIllustrator(
   isIllustrator: boolean,
   meta: RequestMeta,
 ): Promise<User> {
-  if (!canManageUsers(actor)) throw forbidden("Çizer işareti yalnızca admin yetkisidir.");
+  if (!canManageUsers(actor)) throw forbidden("Tasarımcı işareti yalnızca admin yetkisidir.");
 
   const target = await findUserById(targetUserId);
   if (target.isIllustrator === isIllustrator) {

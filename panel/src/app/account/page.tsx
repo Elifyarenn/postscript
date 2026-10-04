@@ -154,13 +154,13 @@ export default async function AccountPage({
 
         {profile.isIllustrator && (
           <Card>
-            <h2 className="mb-1 font-serif text-lg">Çizer paneli</h2>
+            <h2 className="mb-1 font-serif text-lg">Tasarımcı paneli</h2>
             <p className="mb-3 text-sm text-muted">
               İmzaladığınız Genel Katkı Sağlayan Sözleşmesi&apos;ni PDF olarak yükleyin, doğrulama durumunu ve
               belgelerinizi görün.
             </p>
             <Link href="/cizer" className="text-sm text-accent underline">
-              Çizer paneline git
+              Tasarımcı paneline git
             </Link>
           </Card>
         )}
