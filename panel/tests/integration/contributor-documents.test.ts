@@ -381,7 +381,7 @@ describe("mailing a contributor their documents (D-285)", () => {
     const people = new Set(prepared.map((row) => row.userId));
 
     const first = await queueAllContributorDocuments(actorOf(s.admin), noMeta);
-    expect(first).toEqual({ mails: people.size, documents: prepared.length, alreadyQueued: 0 });
+    expect(first).toEqual({ mails: people.size, documents: prepared.length, alreadyQueued: 0, failedBefore: 0 });
 
     const jobs = await db.select().from(mailJobs);
     expect(jobs).toHaveLength(people.size);
@@ -480,6 +480,8 @@ describe("waiting for signed copies (D-291)", () => {
   it("lists who still owes a signed copy, and queues reminders without sending them", async () => {
     const s = await scenario();
     await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    // Only what was mailed is awaited (D-316): these documents went out
+    await db.update(contributorDocuments).set({ mailedAt: new Date() }).where(eq(contributorDocuments.status, "prepared"));
     const { listAwaitingUploads, queueUploadReminders } = await import("@/services/contributor-documents");
     const { uploadSignedContract } = await import("@/services/signed-contracts");
     const { setStorageAdapter, MemoryStorageAdapter } = await import("@/lib/storage");
@@ -523,6 +525,8 @@ describe("waiting for signed copies (D-291)", () => {
   it("awaits nothing from a frozen writer, and reminds them of nothing, until they are active again (D-299)", async () => {
     const s = await scenario();
     await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    // Their documents went out; everyone else's did not (D-316)
+    await db.update(contributorDocuments).set({ mailedAt: new Date() }).where(eq(contributorDocuments.userId, s.complete.id));
     const { listAwaitingUploads, queueUploadReminders } = await import("@/services/contributor-documents");
     const { setWriterStatus } = await import("@/services/users");
     const listed = async () => (await listAwaitingUploads(actorOf(s.admin))).some((entry) => entry.userId === s.complete.id);
@@ -613,6 +617,8 @@ describe("a quiz as a work (D-300)", () => {
     const s = await quizScenario();
     await s.setQuizAuthor(actorOf(s.admin), s.quizId, s.complete.email, noMeta);
     await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    // Awaited once mailed (D-316)
+    await db.update(contributorDocuments).set({ mailedAt: new Date() }).where(eq(contributorDocuments.userId, s.complete.id));
     const { listAwaitingUploads } = await import("@/services/contributor-documents");
     const entry = (await listAwaitingUploads(actorOf(s.admin))).find((row) => row.userId === s.complete.id)!;
     expect(entry.documents.some((document) => document.label.endsWith(s.title))).toBe(true);
@@ -722,3 +728,50 @@ describe("mailed and unmailed documents kept apart (D-314)", () => {
     );
   });
 });
+
+describe("release fixes for the document lists (D-316)", () => {
+  it("asks for a signed copy only from someone who was sent the document, or who sent one back", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const { listAwaitingUploads, queueUploadReminders } = await import("@/services/contributor-documents");
+
+    // Prepared, never mailed: nobody is waited on and nobody is reminded
+    expect(await listAwaitingUploads(actorOf(s.admin))).toEqual([]);
+    expect(await queueUploadReminders(actorOf(s.admin), "all", noMeta)).toEqual({ queued: 0 });
+
+    // Mailed and delivered: now they are awaited
+    await queueAllContributorDocuments(actorOf(s.admin), noMeta);
+    await processMailQueue();
+    const waiting = await listAwaitingUploads(actorOf(s.admin));
+    expect(waiting.some((entry) => entry.userId === s.complete.id)).toBe(true);
+  });
+
+  it("tells the admin a failed documents mail is failed, not already queued", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const first = await queueAllContributorDocuments(actorOf(s.admin), noMeta);
+    expect(first.mails).toBeGreaterThan(0);
+    await db.update(mailJobs).set({ status: "failed", failedAt: new Date() });
+
+    const again = await queueAllContributorDocuments(actorOf(s.admin), noMeta);
+    expect(again).toMatchObject({ mails: 0, alreadyQueued: 0, failedBefore: first.mails });
+    const listed = await listContributorDocuments(actorOf(s.admin));
+    expect(listed.filter((row) => row.status === "prepared").every((row) => row.mailState === "failed")).toBe(true);
+  });
+
+  it("counts for the buttons what the actions will do", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const { setWriterStatus } = await import("@/services/users");
+    await setWriterStatus(actorOf(s.admin), s.complete.id, "suspended", noMeta);
+
+    const listed = await listContributorDocuments(actorOf(s.admin));
+    const own = listed.filter((row) => row.userId === s.complete.id);
+    expect(own.length).toBeGreaterThan(0);
+    // A frozen owner is left out of the bulk mail, and the list says so
+    expect(own.every((row) => !row.ownerReachable)).toBe(true);
+    expect(listed.filter((row) => row.userId !== s.complete.id).every((row) => row.ownerReachable)).toBe(true);
+    expect(listed.every((row) => row.hasSignedCopy === false)).toBe(true);
+  });
+});
+

@@ -250,7 +250,9 @@ export async function confirmEmailChangeAction(
     // Whoever is still signed in goes back to the account page, where the
     // banner is, rather than into a panel (D-165)
     const context = await getAuthContext();
-    destination = context?.user.id === user.id ? "/account?emailChanged=1" : "/login";
+    // Confirming revokes every session, this one too (D-165), so the
+    // message travels with the sign-in page (D-316)
+    destination = context?.user.id === user.id ? "/account?emailChanged=1" : "/login?emailChanged=1";
   });
 
   if (destination) redirect(destination);

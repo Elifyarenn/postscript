@@ -19,7 +19,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { and, desc, eq, gte, inArray, isNull, like, lte, ne, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, like, lte, ne, not, or, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db/client";
 import {
@@ -491,7 +491,7 @@ export const withoutSignedCopy = sql`not exists (select 1 from ${signedContracts
  * Not delivered and not waiting in the outbox (D-314): the only documents that
  * may be queued, sent or cleared. A failed mail counts as not sent.
  */
-const notMailed = sql`${contributorDocuments.mailedAt} is null and not exists (select 1 from ${mailJobs} where ${mailJobs.id} = ${contributorDocuments.mailJobId} and ${mailJobs.status} <> 'failed')`;
+export const notMailed = sql`${contributorDocuments.mailedAt} is null and not exists (select 1 from ${mailJobs} where ${mailJobs.id} = ${contributorDocuments.mailJobId} and ${mailJobs.status} <> 'failed')`;
 
 export async function clearContributorDocuments(actor: Actor, meta: RequestMeta): Promise<number> {
   if (!canManageAgreements(actor)) throw forbidden();
@@ -538,6 +538,10 @@ export type ContributorDocumentItem = {
   mailState: DocumentMailState;
   /** When its mail was delivered; null until then. */
   mailedAt: Date | null;
+  /** A signed copy was uploaded for it: "delete all" leaves it alone. */
+  hasSignedCopy: boolean;
+  /** Its owner can be sent a bulk mail: not deleted, not frozen, not an admin (D-299, D-305). */
+  ownerReachable: boolean;
 };
 
 const owners = alias(users, "owners");
@@ -567,6 +571,8 @@ function documentList() {
         when ${mailJobs.status} = 'failed' then 'failed'
         else 'not_sent' end`,
       mailedAt: contributorDocuments.mailedAt,
+      hasSignedCopy: sql<boolean>`exists (select 1 from ${signedContracts} where ${signedContracts.contributorDocumentId} = ${contributorDocuments.id})`,
+      ownerReachable: sql<boolean>`(${owners.deletedAt} is null and (${owners.writerStatus} is null or ${owners.writerStatus} <> 'suspended') and ${owners.role} <> 'admin')`,
     })
     .from(contributorDocuments)
     .innerJoin(owners, eq(contributorDocuments.userId, owners.id))
@@ -747,7 +753,7 @@ async function documentsMail(person: User, rows: PreparedRow[]): Promise<Outgoin
 export async function queueAllContributorDocuments(
   actor: Actor,
   meta: RequestMeta,
-): Promise<{ mails: number; documents: number; alreadyQueued: number }> {
+): Promise<{ mails: number; documents: number; alreadyQueued: number; failedBefore: number }> {
   if (!canManageAgreements(actor)) throw forbidden();
   await syncDocumentMails();
 
@@ -755,7 +761,7 @@ export async function queueAllContributorDocuments(
   const rows = await preparedRows(and(eq(contributorDocuments.status, "prepared"), notMailed)!);
   const byUser = new Map<string, PreparedRow[]>();
   for (const row of rows) byUser.set(row.document.userId, [...(byUser.get(row.document.userId) ?? []), row]);
-  if (byUser.size === 0) return { mails: 0, documents: 0, alreadyQueued: 0 };
+  if (byUser.size === 0) return { mails: 0, documents: 0, alreadyQueued: 0, failedBefore: 0 };
 
   const people = await db
     .select()
@@ -764,6 +770,7 @@ export async function queueAllContributorDocuments(
 
   let queued = 0;
   let alreadyQueued = 0;
+  let failedBefore = 0;
   let documents = 0;
   for (const person of people) {
     const own = byUser.get(person.id)!;
@@ -775,7 +782,22 @@ export async function queueAllContributorDocuments(
     // time, so each job can be written onto the documents it carries
     const [jobId] = await enqueueMails([mail]);
     if (!jobId) {
-      alreadyQueued += 1;
+      // The same set was queued before. If that mail failed, the outbox will
+      // not take it again under the same key: it is retried from /admin/mail
+      const [earlier] = await db
+        .select({ id: mailJobs.id, status: mailJobs.status })
+        .from(mailJobs)
+        .where(eq(mailJobs.dedupeKey, mail.dedupeKey!))
+        .limit(1);
+      if (earlier?.status === "failed") {
+        failedBefore += 1;
+        await db
+          .update(contributorDocuments)
+          .set({ mailJobId: earlier.id })
+          .where(inArray(contributorDocuments.id, own.map(({ document }) => document.id)));
+      } else {
+        alreadyQueued += 1;
+      }
       continue;
     }
     queued += 1;
@@ -789,10 +811,10 @@ export async function queueAllContributorDocuments(
     actorId: actor.id,
     action: "contributor_documents.queued",
     entityType: "contributor_documents",
-    after: { mails: queued, alreadyQueued, documents },
+    after: { mails: queued, alreadyQueued, failedBefore, documents },
     ip: meta.ip,
   });
-  return { mails: queued, documents, alreadyQueued };
+  return { mails: queued, documents, alreadyQueued, failedBefore };
 }
 
 /**
@@ -968,11 +990,13 @@ function documentLabel(kind: ContributorDocumentKind, articleTitle: string | nul
 /**
  * Everyone who was sent a prepared document and has not uploaded its signed
  * copy, or whose upload was rejected. A copy under review or verified counts
- * as uploaded.
+ * as uploaded. "Sent" is the document's mail state (D-314): someone whose
+ * documents were never mailed is not asked for a signature (D-316).
  * A frozen writer is left out (D-299).
  */
 export async function listAwaitingUploads(actor: Actor): Promise<AwaitingUpload[]> {
   if (!canManageAgreements(actor)) throw forbidden();
+  await syncDocumentMails();
 
   const rows = await db
     .select({
@@ -992,6 +1016,7 @@ export async function listAwaitingUploads(actor: Actor): Promise<AwaitingUpload[
         eq(contributorDocuments.status, "prepared"),
         isNull(users.deletedAt),
         notFrozen(),
+        or(sql`${contributorDocuments.mailedAt} is not null`, not(withoutSignedCopy)),
       ),
     )
     .orderBy(users.displayName, contributorDocuments.kind, contributorDocuments.createdAt);

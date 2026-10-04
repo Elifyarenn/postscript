@@ -153,9 +153,11 @@ export function MagazineReader({
   const shown = pagesAt(pages, start, spread);
   const current = pages[index];
 
+  // Written once the reader has moved (or arrived at a page by link), so
+  // opening the reader does not overwrite the place they left (D-316)
   useEffect(() => {
-    if (current) writeResume(issueNumber, current.id);
-  }, [current, issueNumber]);
+    if (current && (moved || startPageId)) writeResume(issueNumber, current.id);
+  }, [current, issueNumber, moved, startPageId]);
 
   const goTo = useCallback(
     (next: number) => {

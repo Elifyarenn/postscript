@@ -301,7 +301,8 @@ export async function setIssueStatusAction(
     await setIssueStatus(
       { ...user },
       text(formData, "issueId"),
-      text(formData, "status") as "planning" | "in_production" | "published" | "archived",
+      // Checked against the issue states in the service (D-316)
+      text(formData, "status"),
       meta,
     );
 

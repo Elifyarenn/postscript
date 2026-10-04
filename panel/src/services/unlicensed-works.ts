@@ -21,7 +21,7 @@ import { writeAudit } from "@/lib/audit";
 import { canManageAgreements, type Actor } from "@/lib/auth/rbac";
 import { forbidden } from "@/lib/errors";
 import type { RequestMeta } from "./auth";
-import { withoutSignedCopy } from "./contributor-documents";
+import { notMailed, withoutSignedCopy } from "./contributor-documents";
 
 export type UnlicensedWork = {
   id: string;
@@ -85,7 +85,8 @@ export async function removeUnlicensedFormerWriterWorks(
     const licences = await tx
       .delete(contributorDocuments)
       .where(
-        and(eq(contributorDocuments.kind, "work_licence"), inArray(contributorDocuments.articleId, ids), withoutSignedCopy),
+        // A licence its owner was mailed stays: it is what they hold (D-314, D-316)
+        and(eq(contributorDocuments.kind, "work_licence"), inArray(contributorDocuments.articleId, ids), withoutSignedCopy, notMailed),
       )
       .returning({ id: contributorDocuments.id });
 
@@ -105,7 +106,7 @@ export async function removeUnlicensedFormerWriterWorks(
       ? await tx
           .delete(contributorDocuments)
           .where(
-            and(eq(contributorDocuments.kind, "general_agreement"), inArray(contributorDocuments.userId, gone), withoutSignedCopy),
+            and(eq(contributorDocuments.kind, "general_agreement"), inArray(contributorDocuments.userId, gone), withoutSignedCopy, notMailed),
           )
           .returning({ id: contributorDocuments.id })
       : [];

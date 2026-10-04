@@ -12400,3 +12400,79 @@ hiç çizilmez.
 
 **Doğrulama:** Kapı: typecheck, lint, test. Canlıda: sayfada Speed Insights
 betiği, ölçüm isteğinin kendi alan adına gitmesi.
+
+## D-316 — Yayın günü düzeltmeleri: sayıyı yayımlamak onu açar, belge listeleri, e-posta değişikliği, okuyucu
+
+**İstek (ürün sahibi):** "PostScript'i bugünkü yayına teknik olarak hazırla …
+somut hataları bulup düzelt. Yeni özellik ekleme."
+
+**İnceleme:** Kod dört alanda okundu (giriş/kayıt ve rol etiketleri; belge
+yükleme ve e-posta takibi; sayı erişimi, okuyucu, görseller, yakınlaştırma,
+tek sorulu test; bağlantılar ve yayın akışı). Canlıda oturumsuz 57 iç adres
+tarandı, hepsi 2xx/3xx; site haritasının 9 adresi 200. Vercel günlüklerinde son
+saatte 5xx yok (Hobby günlükleri kısa tutar; daha eskisi okunamadı).
+
+**Düzeltilenler:**
+
+1. **Sayıyı yayımlamak onu herkese açmıyordu (yayını engelleyen hata).** Sayı 1
+   canlıda `planning`, `admin_only = true` (D-240'ın örnek sayı kapısı). Panelde
+   "Yayınlandı" seçmek yalnızca `status`'u değiştiriyordu; her herkese açık yol
+   önce `admin_only`'ye baktığı için okur, sayfa görselleri, testler, sayı
+   listesi ve ana sayfa 404/"Çok yakında"da kalacaktı — yöneticiler kapıdan
+   geçtiği için fark etmeyecekti. Panelde `admin_only`'yi kapatan bir düğme de
+   yok. Artık `setIssueStatus` "published"a geçerken `admin_only`'yi de
+   kapatır; denetim kaydı önce/sonra `adminOnly`'yi yazar. Yayından geri dönmek
+   kapıyı yeniden kapatmaz. Yetki gevşemedi: yayımlanmış sayı zaten herkese
+   açıktır (D-257). Durum değeri artık zod ile denetlenir (bilinmeyen değer
+   veritabanı hatası/500 yerine 400).
+2. **Belge listeleri (D-314'ün eksikleri):**
+   - "İmza bekleyenler" ve hatırlatma e-postası, belgesi hiç gönderilmemiş
+     kişileri de kapsıyordu: PDF'i almamış birine "imzalı kopyanızı yükleyin"
+     gidebilirdi. Artık yalnızca belgesi e-postayla gitmiş ya da zaten bir kopya
+     yüklemiş (ör. reddedilmiş) kişi beklenir.
+   - Sahipsiz yazıları kaldırmak e-postayla gitmiş belgeleri de siliyordu;
+     artık yalnızca gönderilmemişler silinir.
+   - Toplu kuyruk düğmesindeki kişi sayısı dondurulmuş/silinmiş/admin sahipleri,
+     "hepsini sil" sayısı imzalı kopyası yüklenmiş belgeleri de sayıyordu;
+     sayılar artık eylemin yapacağıyla aynı.
+   - Daha önce gönderilemeyen (başarısız) bir belge e-postası tekrar kuyruğa
+     alınınca "zaten kuyrukta" deniyordu; artık "daha önce gönderilemedi,
+     /admin/mail'den yeniden deneyin" denir ve satır "Gönderilemedi" görünür.
+3. **E-posta değişikliği onayından sonra mesajsız giriş sayfası.** Onay bu
+   oturum dahil bütün oturumları kapatıyor (D-165), bu yüzden
+   `/account?emailChanged=1`'e hiç ulaşılamıyordu. Artık
+   `/login?emailChanged=1` ve giriş sayfasında "E-posta adresiniz güncellendi"
+   uyarısı; onay sayfasının metni "bu oturum dahil tüm oturumlarınız
+   kapatılacak" olarak düzeltildi.
+4. **Mesajlar ekranında yönetici "Yönetici" etiketiyle.** Topluluğun diğer her
+   ekranında "Topluluk yöneticisi" (D-312, `communityBadge`); burada da öyle.
+5. **Okuyucu "kaldığın yerden devam" kaydını açılışta eziyordu.** Okuyucu
+   açılır açılmaz ilk sayfayı "kaldığı yer" diye yazdığı için devam önerisi hiç
+   çıkmıyordu. Artık yer, okur sayfa değiştirince (ya da bir bağlantıyla belli
+   bir sayfaya gelince) yazılır.
+
+**Düzeltilmeyenler (yayını etkilemiyor, kayıt için):** eski doğrulanmamış
+hesaba gösterilen "kayıt isteğinizi aldık" metni; topluluk yorum eyleminde
+yazı kimliğiyle yapılan etkisiz `revalidatePath` (sayfa dinamik); arşivlenen
+yazı/sayı için dış önyüz bildirimi (canlıda `REVALIDATE_WEBHOOK_URL` yok).
+
+**Yayın öncesi bilinmesi gerekenler:**
+
+- Canlıda `CRON_SECRET` tanımlı değil: `/api/cron/daily` 401 döner, günlük
+  bakım (zamanlanmış yazı yayını, e-posta kuyruğu, saklama süresi silmeleri)
+  çalışmıyor. Bugün zamanlanmış yazı yok (0). Açılması saklama süresi
+  silmelerini de başlatacağından ürün sahibinin kararına bırakıldı.
+- Yazılar: 13 `ready_for_publishing`, 21 `pending_admin_approval`; sayının
+  yayımı yazıları kendiliğinden yayımlamaz.
+- Okuyucu canlıda görsel olarak doğrulanamadı (tarayıcı penceresi arka planda,
+  ekran görüntüsü alınamadı); davranış testleri ve yerel üretim derlemesindeki
+  ölçümler geçti.
+
+**Hukuk:** Değişiklik yok; aydınlatma metni değişmedi.
+
+**Doğrulama:** Kapı: typecheck, lint, test (tek süreç). Yeni testler:
+`lifecycle.test.ts` (yayımlanınca `admin_only` kapanır, diğer durumlar
+kapatmaz, geri dönüş açmaz; bilinmeyen durum 400), `contributor-documents.test.ts`
+(gönderilmemiş belge beklenmez/hatırlatılmaz, başarısız e-posta "gönderilemedi"
+sayılır, liste düğme sayılarının dayandığı alanları taşır),
+`unlicensed-works.test.ts` (gönderilmiş belge silinmez).

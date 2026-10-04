@@ -34,7 +34,8 @@ export default async function VerifyEmailChangePage({
       <h1 className="mb-1 font-serif text-xl">E-posta değişikliği</h1>
       <p className="mb-5 text-sm text-muted">
         Yeni adresinizi doğrulamak için aşağıdaki düğmeye basın. Hesabınızın adresi
-        değiştirilecek ve diğer tüm oturumlarınız kapatılacak.
+        değiştirilecek ve bu oturum dahil tüm oturumlarınız kapatılacak; yeni adresinizle
+        tekrar giriş yapacaksınız.
       </p>
 
       <PanelForm action={confirmEmailChangeAction} csrfToken={csrfToken} submitLabel="Adresi değiştir">

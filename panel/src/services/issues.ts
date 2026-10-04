@@ -176,22 +176,36 @@ export async function updateIssue(
   return updated!;
 }
 
+const issueStatusSchema = z.enum(["planning", "in_production", "published", "archived"]);
+
+/**
+ * Publishing is what makes an issue public, so it also lifts the admins'
+ * sample gate (`admin_only`, D-240). Before D-316 the gate stayed on: a
+ * "published" Issue 1 answered 404 to every reader while the admins, who pass
+ * the gate, saw it as live. Going back from "published" does not close it
+ * again; an issue that was public is not turned back into a sample.
+ */
 export async function setIssueStatus(
   actor: Actor,
   issueId: string,
-  status: "planning" | "in_production" | "published" | "archived",
+  status: string,
   meta: RequestMeta,
 ): Promise<Issue> {
   if (!canAccessAdminPanel(actor)) throw forbidden("Sayı yönetimi yalnızca yöneticinindir (D-059).");
+  const parsed = issueStatusSchema.safeParse(status);
+  if (!parsed.success) throw badRequest("Geçersiz sayı durumu.");
+  const next = parsed.data;
 
   const existing = await findIssue(issueId);
   const now = new Date();
+  const publishing = next === "published";
 
   const [updated] = await db
     .update(issues)
     .set({
-      status,
-      publishedAt: status === "published" ? (existing.publishedAt ?? now) : existing.publishedAt,
+      status: next,
+      publishedAt: publishing ? (existing.publishedAt ?? now) : existing.publishedAt,
+      ...(publishing ? { adminOnly: false } : {}),
       updatedAt: now,
     })
     .where(eq(issues.id, issueId))
@@ -202,12 +216,12 @@ export async function setIssueStatus(
     action: "issue.status_changed",
     entityType: "issues",
     entityId: issueId,
-    before: { status: existing.status },
-    after: { status },
+    before: { status: existing.status, adminOnly: existing.adminOnly },
+    after: { status: next, adminOnly: updated!.adminOnly },
     ip: meta.ip,
   });
 
-  if (status === "published") {
+  if (publishing) {
     await triggerRevalidate({ type: "issue.published", issueNumber: updated!.number });
   }
 

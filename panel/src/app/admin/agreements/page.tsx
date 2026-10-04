@@ -78,11 +78,15 @@ export default async function AdminAgreementsPage() {
   // Mailed documents are their owners' now: listed apart, never sent or cleared again (D-314)
   const sentDocuments = documents.filter((row) => row.mailState === "sent");
   const unsentDocuments = documents.filter((row) => row.mailState !== "sent");
-  const clearable = unsentDocuments.filter((row) => row.mailState !== "queued").length;
+  // The counts follow what each action will do (D-316): "delete all" leaves a
+  // signed copy's document, the bulk mail skips frozen, deleted and admin owners
+  const clearable = unsentDocuments.filter((row) => row.mailState !== "queued" && !row.hasSignedCopy).length;
   const preparedByUser = new Map<string, number>();
+  const bulkRecipients = new Set<string>();
   for (const row of unsentDocuments) {
     if (row.status === "prepared" && row.mailState !== "queued") {
       preparedByUser.set(row.userId, (preparedByUser.get(row.userId) ?? 0) + 1);
+      if (row.ownerReachable) bulkRecipients.add(row.userId);
     }
   }
   const documentTable = (rows: ContributorDocumentItem[], offerMail: boolean) => (
@@ -399,12 +403,12 @@ export default async function AdminAgreementsPage() {
               variant="primary"
               confirmMessage="Eksik sözleşme ve ruhsat belgeleri hazırlanacak. E-posta gönderilmez. Devam edilsin mi?"
             />
-            {preparedByUser.size > 0 && (
+            {bulkRecipients.size > 0 && (
               <ActionButton
                 action={queueAllContributorDocumentsAction}
                 csrfToken={csrfToken}
-                label={`Gönderilmemiş hazır belgeleri mail kuyruğuna al (${preparedByUser.size} kişi)`}
-                confirmMessage={`${preparedByUser.size} kişiye henüz gönderilmemiş hazır belgeleri PDF ekiyle e-posta kuyruğuna yazılacak; gönderilmiş belgeler tekrar gitmez. Gönderim /admin/mail'de "Kuyruğu şimdi işle" ile yapılır. Devam edilsin mi?`}
+                label={`Gönderilmemiş hazır belgeleri mail kuyruğuna al (${bulkRecipients.size} kişi)`}
+                confirmMessage={`${bulkRecipients.size} kişiye henüz gönderilmemiş hazır belgeleri PDF ekiyle e-posta kuyruğuna yazılacak; gönderilmiş belgeler tekrar gitmez. Gönderim /admin/mail'de "Kuyruğu şimdi işle" ile yapılır. Devam edilsin mi?`}
               />
             )}
             {clearable > 0 && (

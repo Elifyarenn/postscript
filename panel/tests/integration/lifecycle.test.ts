@@ -9,7 +9,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
-import { articleMedia, articles, media, rightsGrants, users } from "@/db/schema";
+import { articleMedia, articles, issues, media, rightsGrants, users } from "@/db/schema";
 import { publishAgreementVersion, createVersionFromTemplate } from "@/services/agreements";
 import {
   createArticle,
@@ -514,6 +514,32 @@ describe("public issue listing", () => {
     const published = await getPublishedIssue(1);
     expect(published.articles).toHaveLength(1);
     expect(published.articles[0]!.slug).toBe(article.slug);
+  });
+
+  it("opens an admin-only sample issue to everyone when it is published (D-316)", async () => {
+    const { admin } = await scenario();
+    const issue = await createIssue(admin, { number: 1, title: "Obsession", theme: "Bırakamadıklarımız" }, noMeta);
+    await db.update(issues).set({ adminOnly: true }).where(eq(issues.id, issue.id));
+
+    // Any other status keeps the gate
+    await setIssueStatus(admin, issue.id, "in_production", noMeta);
+    expect((await db.select().from(issues).where(eq(issues.id, issue.id)))[0]!.adminOnly).toBe(true);
+    await expect(getPublishedIssue(1)).rejects.toMatchObject({ status: 404 });
+
+    await setIssueStatus(admin, issue.id, "published", noMeta);
+    const [row] = await db.select().from(issues).where(eq(issues.id, issue.id));
+    expect(row!.adminOnly).toBe(false);
+    expect((await getPublishedIssue(1)).number).toBe(1);
+
+    // Going back does not turn a public issue into a sample again
+    await setIssueStatus(admin, issue.id, "archived", noMeta);
+    expect((await db.select().from(issues).where(eq(issues.id, issue.id)))[0]!.adminOnly).toBe(false);
+  });
+
+  it("refuses an issue status outside the list with 400, not a database error (D-316)", async () => {
+    const { admin } = await scenario();
+    const issue = await createIssue(admin, { number: 1, title: "İlk", theme: "Başlangıç" }, noMeta);
+    await expect(setIssueStatus(admin, issue.id, "live", noMeta)).rejects.toMatchObject({ status: 400 });
   });
 
   it("never exposes an author's e-mail or birth date", async () => {

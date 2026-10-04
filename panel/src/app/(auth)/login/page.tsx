@@ -14,7 +14,7 @@ export const metadata = { title: "Giriş" };
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ reset?: string; verified?: string }>;
+  searchParams: Promise<{ reset?: string; verified?: string; emailChanged?: string }>;
 }) {
   const csrfToken = (await readCsrfToken()) ?? "";
   const params = await searchParams;
@@ -34,6 +34,11 @@ export default async function LoginPage({
       {params.verified && (
         <div className="mb-4">
           <Alert tone="success">E-posta adresiniz doğrulandı.</Alert>
+        </div>
+      )}
+      {params.emailChanged && (
+        <div className="mb-4">
+          <Alert tone="success">E-posta adresiniz güncellendi. Yeni adresinizle giriş yapın.</Alert>
         </div>
       )}
 

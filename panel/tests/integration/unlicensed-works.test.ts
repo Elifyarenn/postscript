@@ -129,4 +129,16 @@ describe("unlicensed works of removed writers", () => {
     expect(row!.deletedAt).toBeNull();
     expect(await db.select().from(users)).toHaveLength(5);
   });
+
+  it("keeps a document its owner was already mailed (D-314, D-316)", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const mailed = (await db.select().from(contributorDocuments)).filter((row) => row.userId === s.removed.id);
+    expect(mailed.length).toBeGreaterThan(0);
+    await db.update(contributorDocuments).set({ mailedAt: new Date() }).where(eq(contributorDocuments.userId, s.removed.id));
+
+    await removeUnlicensedFormerWriterWorks(actorOf(s.admin), [s.unlicensedPublished.id, s.unlicensedDraft.id], noMeta);
+    const after = (await db.select().from(contributorDocuments)).filter((row) => row.userId === s.removed.id);
+    expect(after.map((row) => row.id).sort()).toEqual(mailed.map((row) => row.id).sort());
+  });
 });

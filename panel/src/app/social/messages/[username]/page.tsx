@@ -4,7 +4,7 @@ import { Ban, Ellipsis, FaceSlightlySmiling, Flag, Info, Paperclip, Phone, Send,
 import { requireSession } from "@/lib/auth/guard";
 import { readCsrfToken } from "@/lib/csrf";
 import { isAppError } from "@/lib/errors";
-import { roleBadge } from "@/lib/auth/rbac";
+import { communityBadge } from "@/lib/auth/rbac";
 import { getMemberSettings } from "@/services/social";
 import {
   listConversations,
@@ -136,9 +136,10 @@ export default async function ConversationPage({
             <Avatar username={other.username} size="lg" imageUrl={other.avatarUrl} />
             <p className="mt-3 font-serif text-lg">{memberName(other)}</p>
             <p className="text-sm text-muted">@{other.username}</p>
-            {other.role !== "user" && (
+            {/* The community's own labels, as on every other /social screen (D-312) */}
+            {communityBadge(other) && (
               <span className="mt-1">
-                <StatusBadge status={roleBadge(other)} />
+                <StatusBadge status={communityBadge(other)!} />
               </span>
             )}
             {other.bio && <p className="mt-3 text-sm whitespace-pre-wrap">{other.bio}</p>}

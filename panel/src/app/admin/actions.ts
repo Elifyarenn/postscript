@@ -612,6 +612,9 @@ export async function queueAllContributorDocumentsAction(
       success:
         `${result.mails} e-posta kuyruğa alındı (${result.documents} hazır belge)` +
         (result.alreadyQueued ? ` · ${result.alreadyQueued} kişinin aynı belgeleri zaten kuyrukta` : "") +
+        (result.failedBefore
+          ? ` · ${result.failedBefore} kişinin aynı belgeleri daha önce gönderilemedi; /admin/mail'den yeniden deneyin`
+          : "") +
         `. Göndermek için /admin/mail sayfasında "Kuyruğu şimdi işle".`,
     };
   });
