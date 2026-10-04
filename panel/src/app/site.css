@@ -5926,17 +5926,18 @@ html:has(.profile-editor[open]) {
   }
 }
 
-/* ──────────────── A quiz as a page (D-309) ──────────────── */
+/* ──────────────── A quiz as a page (D-309, D-311) ──────────────── */
 
 /* Beside a designed page it takes that page's height and shape, so the spread
-   still reads as two pages; what does not fit scrolls inside the page */
+   still reads as two pages. Nothing scrolls: one question at a time, and the
+   type is fitted to the page (useFitToBox) */
 .ps-site .reader-pages .page-sheet[data-test] {
   --test-height: calc(var(--zoom, 1) * min(100cqh, 100cqw / var(--pages, 1) * 1.4142));
   width: calc(var(--test-height) / 1.4142);
   height: var(--test-height);
   aspect-ratio: auto;
-  padding: clamp(1.1rem, 2.6cqh, 2.2rem) clamp(1rem, 3cqh, 2.4rem) 2.2rem;
-  overscroll-behavior: contain;
+  padding: clamp(1.1rem, 2.6cqh, 2.2rem) clamp(1rem, 3cqh, 2.4rem) 2rem;
+  overflow: hidden;
 }
 
 /* A phone shows one page: the whole screen is the page, not a shrunken A4 */
@@ -5949,132 +5950,133 @@ html:has(.profile-editor[open]) {
 }
 
 .ps-site .quiz-page {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.ps-site .quiz-page-head {
   display: grid;
-  gap: 1rem;
+  gap: 0.6rem;
+}
+
+.ps-site .quiz-page-head .page-section-name {
+  margin-bottom: 0;
 }
 
 .ps-site .quiz-page-title {
   margin-bottom: 0;
-  font-size: clamp(1.35rem, 3.2cqh, 2rem);
+  font-size: clamp(1.25rem, 3cqh, 1.85rem);
 }
 
-.ps-site .quiz-page-questions {
+/* The part that changes: a question or the result. Nothing in it scrolls: a
+   question's type is scaled by --fit (never below 14px for an option), a
+   result turns through page-wide columns (D-311) */
+.ps-site .quiz-page-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  font-size: calc(var(--fit, 1) * 1rem);
+}
+
+.ps-site .quiz-page-fit {
   display: grid;
-  gap: 1.1rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  align-content: start;
+  gap: 0.8em;
 }
 
-.ps-site .quiz-page-questions fieldset {
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
+.ps-site .quiz-page-fit:focus,
+.ps-site .quiz-page-result:focus {
+  outline: none;
 }
 
-.ps-site .quiz-page-questions legend {
+.ps-site .quiz-page-stage .quiz-question {
   display: flex;
-  margin-bottom: 0.5rem;
-  padding: 0;
-  gap: 0.5rem;
-  font-size: 1.02rem;
+  gap: 0.5em;
+  font-size: 1.15em;
+  line-height: 1.3;
 }
 
 .ps-site .quiz-page-number {
   flex: none;
   color: var(--site-wine);
   font-family: inherit;
-  font-size: 0.75rem;
+  font-size: 0.68em;
   font-weight: 600;
   letter-spacing: 0.08em;
-  line-height: 1.75;
+  line-height: 2;
 }
 
-.ps-site .quiz-page-options {
-  display: grid;
-  gap: 0.35rem;
-}
-
-.ps-site .quiz-page-options label {
-  display: flex;
-  align-items: flex-start;
-  padding: 0.5rem 0.7rem;
-  border: 1px solid var(--site-rule);
-  cursor: pointer;
-  gap: 0.55rem;
-  font-size: 0.9rem;
+/* 15px at full size, 14px at the floor */
+.ps-site .quiz-page-stage .quiz-options button {
+  padding: 0.65em 0.85em;
+  font-size: 0.94em;
   line-height: 1.35;
 }
 
-.ps-site .quiz-page-options label:hover,
-.ps-site .quiz-page-options label:focus-within {
-  border-color: var(--site-wine);
-  background: rgb(123 31 43 / 6%);
+.ps-site .quiz-page-stage .quiz-intro {
+  font-size: 0.94em;
 }
 
-.ps-site .quiz-page-options label[data-chosen] {
-  border-color: var(--site-wine);
-  background: rgb(123 31 43 / 12%);
+.ps-site .quiz-page-stage .quiz-sending,
+.ps-site .quiz-page-stage .quiz-error {
+  font-size: 0.85em;
 }
 
-.ps-site .quiz-page-options input {
-  flex: none;
-  width: 1rem;
-  height: 1rem;
-  margin: 0.1rem 0 0;
-  accent-color: var(--site-wine);
-}
-
-.ps-site .quiz-page fieldset:disabled label {
-  cursor: default;
-}
-
-.ps-site .quiz-page fieldset:disabled label:not([data-chosen]) {
-  opacity: 0.55;
-}
-
-.ps-site .quiz-page-submit {
-  display: grid;
-  justify-items: start;
-  gap: 0.4rem;
-}
-
-.ps-site .quiz-page-submit button {
-  padding: 0.6rem 1.2rem;
-  border: 1px solid var(--site-wine);
-  background: var(--site-wine);
-  color: var(--site-paper);
-  cursor: pointer;
-  font-size: 0.92rem;
-}
-
-.ps-site .quiz-page-submit button:disabled {
-  border-color: var(--site-rule);
-  background: transparent;
-  color: inherit;
-  cursor: not-allowed;
-  opacity: 0.55;
+/* Each column is exactly the page's width and height, so one column is one
+   part; the reader moves to the next by sliding the row along */
+.ps-site .quiz-page-parts {
+  width: var(--part-width, 100%);
+  height: 100%;
+  column-width: var(--part-width, 100vw);
+  column-gap: var(--part-gap, 2rem);
+  column-fill: auto;
+  transform: translateX(calc(-1 * var(--part, 0) * (var(--part-width, 0px) + var(--part-gap, 0px))));
+  transition: transform 0.25s ease;
 }
 
 .ps-site .quiz-page-result {
-  display: grid;
-  padding-top: 1rem;
-  border-top: 2px solid var(--site-wine);
-  gap: 0.7rem;
-  scroll-margin-top: 1rem;
+  font-size: 0.94rem;
+  line-height: 1.5;
 }
 
-.ps-site .quiz-page-result:focus {
-  outline: none;
+.ps-site .quiz-page-result .quiz-score {
+  margin-bottom: 0.6em;
+  font-size: 1.35em;
+  line-height: 1.2;
+  break-after: avoid;
 }
 
-.ps-site .quiz-page-result-label {
-  color: var(--site-wine);
-  font-size: 0.66rem;
-  font-weight: 600;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
+.ps-site .quiz-page-result .quiz-outcome {
+  font-size: 1em;
+  line-height: 1.5;
+}
+
+.ps-site .quiz-page-result .quiz-note {
+  margin-top: 0.8em;
+  font-size: 0.8em;
+}
+
+.ps-site .quiz-page .quiz-foot {
+  flex: none;
+}
+
+.ps-site .quiz-page .quiz-foot .quiz-note {
+  font-size: 0.8rem;
+}
+
+/* With the parts' buttons in front of it, "Yeniden çöz" goes to the far end */
+.ps-site .quiz-page-restart {
+  margin-left: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ps-site .quiz-page-parts {
+    transition: none;
+  }
 }
 
 /* ════════════════ Phone menu ════════════════ */

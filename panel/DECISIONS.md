@@ -12133,3 +12133,47 @@ Krem yazı en açık zeminde (`#945064`) bile ~5:1 kontrast verir (WCAG AA).
   olduğu için değiştirilmedi; değiştirilmesi hukukçu görüşüyle birlikte ele
   alınmalı. Hakkında sayfasının tasarımdan gelen "Tasarımcı ve çizerler"
   bölümü de aynı kaldı (D-167).
+
+## D-311 — Sayfadaki test tek tek soru sorar; sonuç sayfa sayfa okunur, kaydırma yok
+
+**İstek (ürün sahibi, 2026-10-04):** "Testte soruları tek tek göster. Bir seçenek
+seçilince otomatik sonraki soruya geçsin; ilerleme göstergesi ve önceki soruya
+dönme düğmesi olsun. Beşinci cevap sonrası sonucu aynı dergi sayfasında göster.
+Kaydırma veya açılır pencere gerektirmesin; içerik ve puanlamayı koru." Ardından:
+"Soru ve sonuçları mobilde okunabilir boyutta sayfaya sığdır; yazıyı aşırı
+küçültme."
+
+**Karar (D-309'u değiştirir):**
+
+- Test sayfası bir anda tek soru gösterir: soru, şıkları, "Soru 2 / 5" ve
+  cevaplanan soru sayısını gösteren ilerleme çubuğu (`role="progressbar"`).
+- Şıklar artık düğme (`aria-pressed`), radyo değil: radyoda ok tuşu seçimi
+  değiştirir, otomatik geçişle birleşince klavyeyle gezinen okuru istemeden
+  sonraki soruya atardı. Bir şıkka basmak cevabı kaydeder ve hemen sonraki soruya
+  geçer. "Önceki soru" bir önceki soruya döner; verilmiş cevap işaretli kalır.
+- Beşinci cevap sonucu sunucudan ister; sonuç soruların yerine, aynı sayfada açılır.
+  "Yeniden çöz" baştan başlatır. D-309'daki "Sonucumu göster" düğmesi kalktı.
+- **Kaydırma yok, yazı okunabilir kalır.** Ölçüm (canlı sitenin yazı tipleriyle,
+  2026-10-04): Sayı 1'in sonuçları 15 px gövde yazısıyla 327 px genişlikte
+  520–590 px tutuyor; telefonda başlığın altında kalan yer ~430 px, masaüstü
+  sayfasında ~400 px. Sonucu tek sayfaya sığdırmak yazıyı 11–12 px'e indirmek
+  demekti; bu yapılmadı.
+  - **Soru:** yazı sığana kadar %1'lik adımlarla küçülür, alt sınır %93 (şık
+    15 px → en az 14 px). Beş soru da bu sınırın üstünde sığar.
+  - **Sonuç:** 15 px (0,94 rem), satır aralığı 1,5, küçülmez. Sayfa genişliğinde
+    sütunlara dizilir; her sütun bir "parça", okur "Devamı ›" / "‹ Geri" ile
+    parçalar arasında geçer, "1 / 2" gösterilir — derginin bir yazıyı sonraki
+    sayfada sürdürmesi gibi. Parça sayısı ekran boyuna göre kendiliğinden çıkar,
+    telefon döndürülünce ve yakınlaştırınca yeniden hesaplanır. Ekran okuyucu
+    sonucun tamamını okur (gizlenen yalnızca görüntü).
+- Odak: okur bir şey yaptıktan sonra yeni soruya/sonuca taşınır; sayfaya ilk
+  gelişte odak çalınmaz.
+- İçerik, şık kimlikleri ve puanlama (D-297, D-309) aynı. Pencere oynatıcısı ve
+  sunucu tarafı değişmedi; yeniden içe aktarma gerekmez.
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:** typecheck, lint ve ilgili 10 test dosyası (146 test) tek süreçte
+(`--maxWorkers=1 --no-file-parallelism`); tam takım bellek yetersizliğinden
+durdurulduğu için koşturulmadı. Bileşen testi altyapısı (jsdom) depoda yok;
+akış canlıda denenir (sonuç aşağıya eklenecek).
