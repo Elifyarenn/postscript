@@ -53,6 +53,8 @@ export type Member = {
   username: string;
   /** The handle is the community name (D-166); the pen name is the magazine's and never shown here. */
   role: Role;
+  /** Only for the "Ana editör" tag (D-312). */
+  isMainEditor: boolean;
 };
 
 /**
@@ -63,7 +65,7 @@ export async function requireMember(actor: Actor): Promise<Member> {
   assertMayPost(actor);
 
   const rows = await db
-    .select({ id: users.id, username: users.username, role: users.role })
+    .select({ id: users.id, username: users.username, role: users.role, isMainEditor: users.isMainEditor })
     .from(users)
     .where(and(eq(users.id, actor.id), isNull(users.deletedAt)))
     .limit(1);
@@ -86,7 +88,7 @@ async function findReachableMember(rawUsername: string) {
       id: users.id,
       username: users.username,
       bio: users.bio,
-      role: users.role,
+      role: users.role, isMainEditor: users.isMainEditor,
       createdAt: users.createdAt,
       anonBoxEnabled: users.anonBoxEnabled,
       avatarMediaId: users.avatarMediaId,
@@ -470,7 +472,7 @@ const loadProfile = cache(async (viewerId: string, rawUsername: string): Promise
   return {
     id: target.id,
     username: target.username,
-    role: target.role,
+    role: target.role, isMainEditor: target.isMainEditor,
     bio: target.bio,
     anonBoxEnabled: target.anonBoxEnabled,
     avatarUrl: mediaUrl(target.avatarMediaId),
@@ -487,7 +489,7 @@ const loadProfile = cache(async (viewerId: string, rawUsername: string): Promise
 });
 
 /** A row in any list of people, with the picture they uploaded (D-208). */
-export type MemberListItem = Pick<Member, "username" | "role"> & { avatarUrl: string | null };
+export type MemberListItem = Pick<Member, "username" | "role" | "isMainEditor"> & { avatarUrl: string | null };
 
 /**
  * The profile pictures of the handles a screen names, in one query (D-189).
@@ -541,7 +543,7 @@ export async function searchMembers(actor: Actor, rawQuery: string, limit = 20):
     );
 
   const rows = await db
-    .select({ username: users.username, role: users.role, avatarMediaId: users.avatarMediaId })
+    .select({ username: users.username, role: users.role, isMainEditor: users.isMainEditor, avatarMediaId: users.avatarMediaId })
     .from(users)
     .where(
       and(
@@ -555,7 +557,7 @@ export async function searchMembers(actor: Actor, rawQuery: string, limit = 20):
     .limit(100);
 
   const found: MemberListItem[] = rows.flatMap((row) =>
-    row.username === null ? [] : [{ username: row.username, role: row.role, avatarUrl: mediaUrl(row.avatarMediaId) }],
+    row.username === null ? [] : [{ username: row.username, role: row.role, isMainEditor: row.isMainEditor, avatarUrl: mediaUrl(row.avatarMediaId) }],
   );
   return rankUsernameMatches(found, term).slice(0, limit);
 }
@@ -574,7 +576,7 @@ async function listGraph(
       : [follows.followerId, follows.followeeId];
 
   const rows = await db
-    .select({ username: users.username, role: users.role, avatarMediaId: users.avatarMediaId })
+    .select({ username: users.username, role: users.role, isMainEditor: users.isMainEditor, avatarMediaId: users.avatarMediaId })
     .from(follows)
     .innerJoin(users, eq(other, users.id))
     .where(and(eq(anchor, profile.id), isNull(users.deletedAt), eq(users.isBanned, false)))
@@ -582,7 +584,7 @@ async function listGraph(
     .limit(500);
 
   return rows.flatMap((row) =>
-    row.username === null ? [] : [{ username: row.username, role: row.role, avatarUrl: mediaUrl(row.avatarMediaId) }],
+    row.username === null ? [] : [{ username: row.username, role: row.role, isMainEditor: row.isMainEditor, avatarUrl: mediaUrl(row.avatarMediaId) }],
   );
 }
 
@@ -601,7 +603,7 @@ export async function listMutualFollows(actor: Actor, limit = 20): Promise<Membe
     .where(eq(follows.followeeId, me.id));
 
   const rows = await db
-    .select({ username: users.username, role: users.role, avatarMediaId: users.avatarMediaId })
+    .select({ username: users.username, role: users.role, isMainEditor: users.isMainEditor, avatarMediaId: users.avatarMediaId })
     .from(follows)
     .innerJoin(users, eq(users.id, follows.followeeId))
     .where(
@@ -628,7 +630,7 @@ export async function listMutualFollows(actor: Actor, limit = 20): Promise<Membe
     .limit(limit);
 
   return rows.flatMap((row) =>
-    row.username ? [{ username: row.username, role: row.role, avatarUrl: mediaUrl(row.avatarMediaId) }] : [],
+    row.username ? [{ username: row.username, role: row.role, isMainEditor: row.isMainEditor, avatarUrl: mediaUrl(row.avatarMediaId) }] : [],
   );
 }
 

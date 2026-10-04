@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "./ui";
+import { panelRoleBadges } from "@/lib/auth/rbac";
 import { PanelSidebar } from "./sidebar";
 import { House } from "lucide-react";
 import { BackButton } from "./back-button";
@@ -212,15 +213,11 @@ export async function PanelShell({
             <PanelModeSwitch user={user} />
             {/* Only a name: the account page is the site's, not the panel's (D-165) */}
             <span className="font-medium">{user.displayName}</span>
-            {/* A hybrid editor holds both duties and is titled "Editor & Yazar" (D-060) */}
-            {user.role === "editor" && user.writerStatus !== null ? (
-              <StatusBadge status="editor_writer" />
-            ) : (
-              <>
-                <StatusBadge status={user.role} />
-                {user.writerStatus && <StatusBadge status={user.writerStatus} />}
-              </>
-            )}
+            {/* Hybrid and main editor tags come from one rule (D-060, D-312) */}
+            {panelRoleBadges(user).map((badge) => (
+              <StatusBadge key={badge} status={badge} />
+            ))}
+            {user.role !== "editor" && user.writerStatus && <StatusBadge status={user.writerStatus} />}
           </div>
         </header>
 

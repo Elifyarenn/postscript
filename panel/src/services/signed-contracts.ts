@@ -283,6 +283,8 @@ export type SignedContractListItem = {
   memberId: string;
   memberName: string;
   memberRole: string;
+  memberIsMainEditor: boolean;
+  memberIsIllustrator: boolean;
   reviewerName: string | null;
   isContract: boolean;
   articleTitle: string | null;
@@ -306,6 +308,8 @@ export async function listSignedContracts(actor: Actor): Promise<SignedContractL
       memberId: users.id,
       memberName: users.displayName,
       memberRole: users.role,
+      memberIsMainEditor: users.isMainEditor,
+      memberIsIllustrator: users.isIllustrator,
       reviewerName: reviewers.displayName,
       documentKind: signedDocuments.kind,
       articleTitle: signedWorkTitle,

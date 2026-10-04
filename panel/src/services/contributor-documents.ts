@@ -517,6 +517,8 @@ export type ContributorDocumentItem = {
   userId: string;
   userName: string;
   userRole: string;
+  userIsMainEditor: boolean;
+  userIsIllustrator: boolean;
   articleId: string | null;
   articleTitle: string | null;
   articleStatus: string | null;
@@ -537,6 +539,8 @@ function documentList() {
       userId: owners.id,
       userName: owners.displayName,
       userRole: owners.role,
+      userIsMainEditor: owners.isMainEditor,
+      userIsIllustrator: owners.isIllustrator,
       articleId: articles.id,
       // A quiz's licence shows the quiz's title in the same column (D-300)
       articleTitle: workTitle,

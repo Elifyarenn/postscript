@@ -212,6 +212,8 @@ export type CommentListItem = {
   createdAt: Date;
   authorName: string | null;
   authorRole: Role | null;
+  /** Only for the "Ana editör" tag (D-312). */
+  authorIsMainEditor: boolean | null;
   /** Enough to link the name to the commenter's profile, nothing more (D-209). */
   authorPenName: string | null;
   authorPenNameSlug: string | null;
@@ -246,6 +248,7 @@ export async function listCommentsForArticle(
       createdAt: communityComments.createdAt,
       authorName: communityDisplayName,
       authorRole: users.role,
+      authorIsMainEditor: users.isMainEditor,
       authorPenName: users.penName,
       authorPenNameSlug: users.penNameSlug,
       authorUsername: users.username,

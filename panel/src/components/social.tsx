@@ -10,7 +10,7 @@
 import Link from "next/link";
 import { Bookmark, Heart, Link as LinkIcon, MessageCircle, Repeat2, Star } from "lucide-react";
 import type { Role } from "@/db/schema";
-import { communityBadge } from "@/lib/auth/rbac";
+import { communityBadge, type TagPerson } from "@/lib/auth/rbac";
 import { formatMonthYear, formatRelativeTime } from "@/lib/relative-time";
 import { cn, formatDateTime } from "@/lib/utils";
 import { ActionButton, PanelForm } from "./form";
@@ -124,7 +124,7 @@ export function ProfileHeader({
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="profile-name">{memberName(profile)}</h1>
             <Star aria-hidden className="profile-name-star" fill="currentColor" />
-            <RoleBadge role={profile.role} />
+            <RoleBadge person={profile} />
           </div>
           <p className="profile-handle">
             @{profile.username} · {formatMonthYear(profile.joinedAt)} tarihinde katıldı
@@ -323,8 +323,8 @@ function PostBody({ body }: { body: string }) {
 }
 
 /** A staff member's badge; an admin is shown as the community's moderator (D-179). */
-function RoleBadge({ role }: { role: Role }) {
-  const status = communityBadge(role);
+function RoleBadge({ person }: { person: TagPerson }) {
+  const status = communityBadge(person);
   return status ? <StatusBadge status={status} /> : null;
 }
 
@@ -354,7 +354,7 @@ export function PostCard({
         <div className="min-w-0 flex-1">
           <p className="post-meta">
             <MemberLink member={post.author} />
-            <RoleBadge role={post.author.role} />
+            <RoleBadge person={post.author} />
             <Link
               href={`/social/posts/${post.id}`}
               className="post-time"
@@ -523,7 +523,7 @@ export function MemberList({
         <li key={member.username} className="flex flex-wrap items-center gap-3 py-3">
           <Avatar username={member.username} size="sm" imageUrl={member.avatarUrl} />
           <MemberLink member={member} className="text-sm" />
-          <RoleBadge role={member.role} />
+          <RoleBadge person={member} />
           {followToken && (
             <ActionButton
               action={followAction}

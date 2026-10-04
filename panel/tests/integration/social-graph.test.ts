@@ -292,7 +292,8 @@ describe("searching members (D-186)", () => {
 
     const found = await searchMembers(actorOf(me), "@LUNA");
     expect(found.map((member) => member.username)).toEqual(["lunae", "lunar", "kara_lunae"]);
-    expect(Object.keys(found[0]!).sort()).toEqual(["avatarUrl", "role", "username"]);
+    // The main editor flag only picks the tag (D-312); still no name, mail or birth date
+    expect(Object.keys(found[0]!).sort()).toEqual(["avatarUrl", "isMainEditor", "role", "username"]);
 
     const lu = (await searchMembers(actorOf(me), "lu")).map((member) => member.username);
     expect(lu).not.toContain("engelli_lu");

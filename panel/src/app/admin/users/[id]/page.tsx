@@ -5,6 +5,7 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { roleChanges, users, type User } from "@/db/schema";
 import { guardPanel } from "@/lib/auth/guard";
+import { panelRoleBadges } from "@/lib/auth/rbac";
 import { isAppError } from "@/lib/errors";
 import { checkPromotionReadiness, findUserById, getUserOverview } from "@/services/users";
 import { calculateAge } from "@/lib/age";
@@ -254,16 +255,12 @@ export default async function AdminUserDetailPage({
         description={target.email}
         actions={
           <>
-            {target.role === "editor" && target.writerStatus !== null ? (
-              <StatusBadge status="editor_writer" />
-            ) : (
-              <>
-                <StatusBadge status={target.role} />
-                {target.writerStatus && <StatusBadge status={target.writerStatus} />}
-              </>
-            )}
-            {target.isMainEditor && <StatusBadge status="main_editor" />}
-            {target.isIllustrator && <StatusBadge status="illustrator" />}
+            {panelRoleBadges(target).map((badge) => (
+              <StatusBadge key={badge} status={badge} />
+            ))}
+            {target.role !== "editor" && target.writerStatus && <StatusBadge status={target.writerStatus} />}
+            {/* A designer with no team role already wears the tag above */}
+            {target.isIllustrator && target.role !== "user" && <StatusBadge status="illustrator" />}
             {target.isAuthorized && <StatusBadge status="authorized" />}
           </>
         }

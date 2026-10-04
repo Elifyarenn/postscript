@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { guardPanel } from "@/lib/auth/guard";
+import { roleBadge } from "@/lib/auth/rbac";
 import { isAppError } from "@/lib/errors";
 import { renderMarkdown } from "@/lib/markdown";
 import { DOCUMENT_KIND_LABELS, DOCUMENT_STATUS_LABELS } from "@/lib/contributor-documents";
@@ -55,7 +56,11 @@ export default async function ContributorDocumentPage({ params }: { params: Prom
                 <Link href={`/admin/users/${item.userId}`} className="underline">
                   {item.userName}
                 </Link>{" "}
-                <StatusBadge status={item.userRole} />
+                <StatusBadge status={roleBadge({
+                    role: item.userRole,
+                    isMainEditor: item.userIsMainEditor,
+                    isIllustrator: item.userIsIllustrator,
+                  })} />
                 <span className="block text-xs text-muted">{view.ownerEmail}</span>
               </dd>
             </div>

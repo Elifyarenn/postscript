@@ -37,6 +37,10 @@ export type SessionUser = Actor & {
   writerIntentAt: Date | null;
   /** True once the user completed the TOTP setup; the login then needs a code. */
   totpEnabled: boolean;
+  /** For the "Ana editör" tag only (D-312); the main editor's powers come from `editor-categories`. */
+  isMainEditor: boolean;
+  /** For the Tasarımcı tag only (D-312); the designer panel checks the mark itself. */
+  isIllustrator: boolean;
 };
 
 export type AuthContext = {
@@ -178,6 +182,8 @@ async function loadAuthContext(): Promise<AuthContext | null> {
       birthDate: users.birthDate,
       writerIntentAt: users.writerIntentAt,
       totpEnabledAt: users.totpEnabledAt,
+      isMainEditor: users.isMainEditor,
+      isIllustrator: users.isIllustrator,
       deletedAt: users.deletedAt,
     })
     .from(sessions)
@@ -222,6 +228,8 @@ async function loadAuthContext(): Promise<AuthContext | null> {
     birthDate: row.birthDate,
     writerIntentAt: row.writerIntentAt,
     totpEnabled: row.totpEnabledAt !== null,
+    isMainEditor: row.isMainEditor,
+    isIllustrator: row.isIllustrator,
   };
 
   return { user, sessionId: row.sessionId };

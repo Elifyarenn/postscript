@@ -60,6 +60,7 @@ type Participant = {
   id: string;
   username: string | null;
   role: Role;
+  isMainEditor: boolean;
   bio: string | null;
   avatarMediaId: string | null;
   birthDate: string | null;
@@ -72,7 +73,7 @@ type Participant = {
 const participantColumns = {
   id: users.id,
   username: users.username,
-  role: users.role,
+  role: users.role, isMainEditor: users.isMainEditor,
   bio: users.bio,
   avatarMediaId: users.avatarMediaId,
   birthDate: users.birthDate,
@@ -287,7 +288,7 @@ export type ConversationMessage = {
 };
 
 export type ConversationView = {
-  other: { id: string; username: string; role: Role; bio: string | null; avatarUrl: string | null };
+  other: { id: string; username: string; role: Role; isMainEditor: boolean; bio: string | null; avatarUrl: string | null };
   conversationId: string | null;
   messages: ConversationMessage[];
   canSend: boolean;
@@ -365,7 +366,7 @@ export async function openConversation(actor: Actor, rawUsername: string): Promi
     other: {
       id: other.id,
       username: other.username,
-      role: other.role,
+      role: other.role, isMainEditor: other.isMainEditor,
       bio: other.bio,
       avatarUrl: mediaUrl(other.avatarMediaId),
     },
@@ -379,7 +380,7 @@ export async function openConversation(actor: Actor, rawUsername: string): Promi
 
 export type ConversationSummary = {
   conversationId: string;
-  other: { username: string | null; role: Role; avatarUrl: string | null };
+  other: { username: string | null; role: Role; isMainEditor: boolean; avatarUrl: string | null };
   lastMessage: { body: string; createdAt: Date; isOwn: boolean };
   unread: number;
 };
@@ -432,7 +433,7 @@ export async function listConversations(actor: Actor, limit = 50): Promise<Conve
 
   const [others, blockers, lastMessages, unreadRows] = await Promise.all([
     db
-      .select({ id: users.id, username: users.username, role: users.role, avatarMediaId: users.avatarMediaId })
+      .select({ id: users.id, username: users.username, role: users.role, isMainEditor: users.isMainEditor, avatarMediaId: users.avatarMediaId })
       .from(users)
       .where(inArray(users.id, otherIds)),
     db
@@ -475,6 +476,7 @@ export async function listConversations(actor: Actor, limit = 50): Promise<Conve
       other: {
         username: other?.username ?? null,
         role: other?.role ?? "user",
+        isMainEditor: other?.isMainEditor ?? false,
         avatarUrl: mediaUrl(other?.avatarMediaId ?? null),
       },
       lastMessage: { body: last.body, createdAt: last.createdAt, isOwn: last.senderId === me.id },

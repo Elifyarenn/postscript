@@ -12177,3 +12177,56 @@ küçültme."
 (`--maxWorkers=1 --no-file-parallelism`); tam takım bellek yetersizliğinden
 durdurulduğu için koşturulmadı. Bileşen testi altyapısı (jsdom) depoda yok;
 akış canlıda denenir (sonuç aşağıya eklenecek).
+
+
+## D-312 — Ana editör her ekranda aynı etiketle; rolsüz tasarımcı "Tasarımcı" etiketiyle
+
+**İstek (ürün sahibi):** "Ana editör etiketini toplulukta ve panel üst
+başlığında da göster. Ana editör olan kullanıcılar her yerde aynı etiket ve
+renkle görünsün. Mevcut yetkileri koru."
+
+**Karar:** Etiketin kuralı tek yerde, `rbac.ts`'te:
+- `roleBadge(person)` — rolü `editor` ve `is_main_editor` doğru olan kişi
+  `main_editor` ("Ana editör", `#633D68`) etiketini **"Editör" yerine** taşır.
+  Başka bir rolde kalmış bir işaret etikete dönüşmez.
+- `communityBadge(person)` — toplulukta admin yine "Topluluk yöneticisi",
+  sıradan üye etiketsiz; geri kalan `roleBadge`'den gelir.
+- `panelRoleBadges(person)` — paneldeki hibrit kural (D-060) burada: hibrit
+  editör "Editor & Yazar", hibrit **ana** editör iki ayrı etiket ("Ana editör"
+  + "Yazar").
+
+D-310'da kullanıcı listesinde rolün *yanına* eklenen "Ana editör" etiketi,
+tek etiket kuralına uyması için rolün *yerine* geçti.
+
+**Ek istek (ürün sahibi):** "ana editörde hem editör hem ana editör tag'i
+olmasın, sadece ana editör." Kural zaten buydu; yazar ve editör listelerinin
+durum sütunlarında hibrit hesaplara kurala bakılmadan basılan "Editor & Yazar"
+etiketi de ana editörde "Ana editör"e çevrildi. Ana editör hiçbir ekranda
+"Editör" ya da "Editor & Yazar" etiketi taşımaz.
+
+**Kullanıldığı yerler:** panel üst başlığı (`shell.tsx`), kullanıcı listesi
+ve kullanıcı sayfası, editör ekip sayfası (eski "· ana editör" yazısı yerine
+etiket), topluluk profili, gönderiler, üye listeleri, özel mesaj bilgi kartı,
+dergi yorumları, admin sözleşme ve belge listeleri. Bunun için `is_main_editor`
+şu tiplere eklendi: `SessionUser`, `Member`/`MemberListItem`, `PostAuthor`,
+mesaj katılımcısı, `CommentListItem`, sözleşme ve belge listesi satırları.
+
+**Yetkiler değişmedi.** Yeni alanlar yalnızca görüntü içindir. Ana editörün
+yetkileri yine `getEditorAssignment` (`editor-categories`) üzerinden okunur;
+`SessionUser.isMainEditor` hiçbir yetki kontrolünde kullanılmaz. Şema ve
+migration değişmedi.
+
+**Hukuk:** Yeni kişisel veri yok; rol zaten toplulukta görünüyordu, ana editör
+bilgisi derginin görev unvanıdır. Topluluk sohbeti (`community_messages`)
+rol etiketi göstermediği için değişmedi.
+
+**Ek istek (ürün sahibi):** "tasarımcı olanlar panelde kullanıcı olarak
+tag'leniyor, onu düzelt." Rolü `user` olup Tasarımcı işareti (`is_illustrator`)
+taşıyan kişi panelde "Kullanıcı" yerine **"Tasarımcı"** etiketini alır
+(`roleBadge`). Bunun için işaret `SessionUser`'a (üst başlık) ve sözleşme/belge
+listesi satırlarına eklendi; kullanıcı listesi, kullanıcı sayfası ve ekip
+sayfası zaten taşıyordu. Kullanıcı sayfası ve ekip sayfasında etiket iki kez
+basılmaz. Yazar olan bir tasarımcı "Yazar" etiketini korur, işaret yanında
+ayrıca görünür. Topluluk ekranları işareti taşımadığından orada rolsüz üye
+eskisi gibi etiketsizdir. Görüntüden ibarettir: tasarımcı paneline giriş yine
+`canAccessIllustratorPanel` ile işaretin veritabanından okunmasına bağlıdır.

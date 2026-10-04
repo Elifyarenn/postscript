@@ -4,6 +4,7 @@ import { Ban, Ellipsis, FaceSlightlySmiling, Flag, Info, Paperclip, Phone, Send,
 import { requireSession } from "@/lib/auth/guard";
 import { readCsrfToken } from "@/lib/csrf";
 import { isAppError } from "@/lib/errors";
+import { roleBadge } from "@/lib/auth/rbac";
 import { getMemberSettings } from "@/services/social";
 import {
   listConversations,
@@ -137,7 +138,7 @@ export default async function ConversationPage({
             <p className="text-sm text-muted">@{other.username}</p>
             {other.role !== "user" && (
               <span className="mt-1">
-                <StatusBadge status={other.role} />
+                <StatusBadge status={roleBadge(other)} />
               </span>
             )}
             {other.bio && <p className="mt-3 text-sm whitespace-pre-wrap">{other.bio}</p>}

@@ -1,4 +1,5 @@
 import { guardPanel } from "@/lib/auth/guard";
+import { roleBadge } from "@/lib/auth/rbac";
 import { acceptanceReport, listAgreementVersions } from "@/services/agreements";
 import { listSignedContracts } from "@/services/signed-contracts";
 import { listContributorDocuments } from "@/services/contributor-documents";
@@ -347,7 +348,11 @@ export default async function AdminAgreementsPage() {
                           {row.userName}
                         </Link>
                         <span className="block">
-                          <StatusBadge status={row.userRole} />
+                          <StatusBadge status={roleBadge({
+                              role: row.userRole,
+                              isMainEditor: row.userIsMainEditor,
+                              isIllustrator: row.userIsIllustrator,
+                            })} />
                         </span>
                         {/* One button per person, on their first row; mail goes only on this click */}
                         {documents[index - 1]?.userId !== row.userId && (preparedByUser.get(row.userId) ?? 0) > 0 && (
@@ -430,7 +435,11 @@ export default async function AdminAgreementsPage() {
                       </Link>
                     </Td>
                     <Td>
-                      <StatusBadge status={row.memberRole} />
+                      <StatusBadge status={roleBadge({
+                          role: row.memberRole,
+                          isMainEditor: row.memberIsMainEditor,
+                          isIllustrator: row.memberIsIllustrator,
+                        })} />
                     </Td>
                     <Td className="text-xs">{formatDateTime(row.uploadedAt)}</Td>
                     <Td className="text-xs">

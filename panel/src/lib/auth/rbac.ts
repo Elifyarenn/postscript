@@ -156,10 +156,43 @@ export function canModerateCommunity(actor: Actor): boolean {
   return canAccessAdminPanel(actor);
 }
 
+/** Who a duty tag describes; `isMainEditor` only ever counts for an editor. */
+export type TagPerson = {
+  // A plain string, because some admin lists carry the role column untyped
+  role: string;
+  isMainEditor: boolean | null;
+  writerStatus?: string | null;
+  /** The Tasarımcı mark (D-151, D-310); left out where a screen does not carry it. */
+  isIllustrator?: boolean | null;
+};
+
+/**
+ * A person's duty tag. A main editor wears the "Ana editör" tag in place of
+ * "Editör" on every screen (D-312); this is display only, the main editor's
+ * powers are read from `editor-categories`, never from here.
+ */
+export function roleBadge(person: TagPerson): string {
+  if (person.role === "editor" && person.isMainEditor === true) return "main_editor";
+  // A designer without a team role is a designer, not a plain "Kullanıcı" (D-312)
+  if (person.role === "user" && person.isIllustrator === true) return "illustrator";
+  return person.role;
+}
+
+/**
+ * The panel's role tags. A hybrid editor holds both duties and is titled
+ * "Editor & Yazar" (D-060); a hybrid main editor keeps both tags apart.
+ */
+export function panelRoleBadges(person: TagPerson): string[] {
+  const hybrid = person.role === "editor" && person.writerStatus != null;
+  if (!hybrid) return [roleBadge(person)];
+  return person.isMainEditor === true ? ["main_editor", "writer"] : ["editor_writer"];
+}
+
 /** The badge the community shows beside a staff member's handle (D-179). */
-export function communityBadge(role: Actor["role"]): string | null {
-  if (role === "admin") return "community_admin";
-  return role === "user" ? null : role;
+export function communityBadge(person: TagPerson): string | null {
+  if (person.role === "admin") return "community_admin";
+  // The community carries no Tasarımcı mark: a plain member stays untagged there
+  return person.role === "user" ? null : roleBadge(person);
 }
 
 /** The writing areas are managed from the admin panel (D-055). */

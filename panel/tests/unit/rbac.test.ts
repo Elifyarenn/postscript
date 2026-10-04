@@ -14,6 +14,8 @@ import {
   canManageUsers,
   canModerateCommunity,
   communityBadge,
+  panelRoleBadges,
+  roleBadge,
   canPerformTransition,
   canContactTeam,
   canReadArticle,
@@ -318,8 +320,46 @@ describe("community moderation (D-179)", () => {
   });
 
   it("shows an admin as the community's moderator and a plain member with no badge", () => {
-    expect(communityBadge("admin")).toBe("community_admin");
-    expect(communityBadge("editor")).toBe("editor");
-    expect(communityBadge("user")).toBeNull();
+    expect(communityBadge({ role: "admin", isMainEditor: false })).toBe("community_admin");
+    expect(communityBadge({ role: "editor", isMainEditor: false })).toBe("editor");
+    expect(communityBadge({ role: "user", isMainEditor: false })).toBeNull();
+  });
+
+  it("shows a main editor with the main editor tag in the community (D-312)", () => {
+    expect(communityBadge({ role: "editor", isMainEditor: true })).toBe("main_editor");
+  });
+});
+
+describe("role tags (D-312)", () => {
+  it("gives a main editor one tag everywhere, and only an editor can wear it", () => {
+    expect(roleBadge({ role: "editor", isMainEditor: true })).toBe("main_editor");
+    expect(roleBadge({ role: "editor", isMainEditor: false })).toBe("editor");
+    expect(roleBadge({ role: "editor", isMainEditor: null })).toBe("editor");
+    // A stale flag on another role never turns into the tag
+    expect(roleBadge({ role: "admin", isMainEditor: true })).toBe("admin");
+    expect(roleBadge({ role: "writer", isMainEditor: true })).toBe("writer");
+  });
+
+  it("tags a designer without a team role as Tasarımcı, never as Kullanıcı", () => {
+    expect(roleBadge({ role: "user", isMainEditor: false, isIllustrator: true })).toBe("illustrator");
+    expect(roleBadge({ role: "user", isMainEditor: false, isIllustrator: false })).toBe("user");
+    expect(roleBadge({ role: "user", isMainEditor: false })).toBe("user");
+    // A designer who also writes keeps the team role's tag; the mark is shown beside it
+    expect(roleBadge({ role: "writer", isMainEditor: false, isIllustrator: true })).toBe("writer");
+    expect(panelRoleBadges({ role: "user", isMainEditor: false, isIllustrator: true })).toEqual(["illustrator"]);
+    // The community has no Tasarımcı mark to read, so a plain member stays untagged there
+    expect(communityBadge({ role: "user", isMainEditor: false, isIllustrator: true })).toBeNull();
+  });
+
+  it("titles a hybrid editor and keeps a hybrid main editor's two duties apart", () => {
+    expect(panelRoleBadges({ role: "editor", isMainEditor: false, writerStatus: "active" })).toEqual([
+      "editor_writer",
+    ]);
+    expect(panelRoleBadges({ role: "editor", isMainEditor: true, writerStatus: "active" })).toEqual([
+      "main_editor",
+      "writer",
+    ]);
+    expect(panelRoleBadges({ role: "editor", isMainEditor: true, writerStatus: null })).toEqual(["main_editor"]);
+    expect(panelRoleBadges({ role: "writer", isMainEditor: false, writerStatus: "active" })).toEqual(["writer"]);
   });
 });

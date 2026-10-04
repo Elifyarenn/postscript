@@ -44,7 +44,7 @@ describe("listMutualFollows (D-143)", () => {
 
     expect(await listMutualFollows(actorOf(me))).toEqual([
       // The picture travels with the person, null when they uploaded none (D-208)
-      { username: "karsilikli", role: "user", avatarUrl: null },
+      { username: "karsilikli", role: "user", isMainEditor: false, avatarUrl: null },
     ]);
   });
 

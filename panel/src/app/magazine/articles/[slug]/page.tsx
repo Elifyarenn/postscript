@@ -26,6 +26,7 @@ import {
   Textarea,
 } from "@/components/ui";
 import { readCsrfToken } from "@/lib/csrf";
+import { roleBadge } from "@/lib/auth/rbac";
 import { isAppError } from "@/lib/errors";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { addCommentAction } from "@/app/community/actions";
@@ -217,7 +218,11 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                         fallback="Silinmiş kullanıcı"
                       />
                     </span>
-                    {comment.authorRole && <StatusBadge status={comment.authorRole} />}
+                    {comment.authorRole && (
+                      <StatusBadge
+                        status={roleBadge({ role: comment.authorRole, isMainEditor: comment.authorIsMainEditor })}
+                      />
+                    )}
                     <span className="text-muted">{formatDateTime(comment.createdAt)}</span>
                     <Link
                       href={`/social/report?type=comment&id=${comment.id}`}

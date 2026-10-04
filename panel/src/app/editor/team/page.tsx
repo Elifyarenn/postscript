@@ -1,6 +1,6 @@
 import { forbidden } from "next/navigation";
 import { guardPanel } from "@/lib/auth/guard";
-import { canContactTeam } from "@/lib/auth/rbac";
+import { canContactTeam, panelRoleBadges } from "@/lib/auth/rbac";
 import { telHref, whatsappHref } from "@/lib/whatsapp";
 import { getEditorAssignment } from "@/services/editor-categories";
 import { listTeamContacts, type TeamContact } from "@/services/team-contacts";
@@ -10,10 +10,8 @@ export const metadata = { title: "Ekip iletişimi" };
 
 /** A hybrid editor reads as "Editor & Yazar", the same badge the admin card shows. */
 function badgesFor(contact: TeamContact): string[] {
-  const badges = [
-    contact.role === "editor" && contact.writerStatus !== null ? "editor_writer" : contact.role,
-  ].filter((badge) => badge !== "user");
-  if (contact.isIllustrator) badges.push("illustrator");
+  const badges = panelRoleBadges(contact).filter((badge) => badge !== "user");
+  if (contact.isIllustrator && !badges.includes("illustrator")) badges.push("illustrator");
   if (contact.isAuthorized) badges.push("authorized");
   return badges;
 }
@@ -73,7 +71,6 @@ export default async function TeamContactsPage({
                     {badgesFor(contact).map((badge) => (
                       <StatusBadge key={badge} status={badge} />
                     ))}
-                    {contact.isMainEditor && <span className="text-xs text-muted">· ana editör</span>}
                   </div>
 
                   <dl className="mt-4 text-sm">

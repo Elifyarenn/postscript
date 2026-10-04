@@ -77,7 +77,7 @@ export const postSchema = z.strictObject({
 });
 
 /** Whoever the community names, with the picture they uploaded (D-208). */
-export type PostAuthor = { username: string; role: Role; avatarUrl: string | null };
+export type PostAuthor = { username: string; role: Role; isMainEditor: boolean; avatarUrl: string | null };
 
 export type PostView = {
   id: string;
@@ -159,7 +159,7 @@ async function hydrate(
       communitySlug: communities.slug,
       communityName: communities.name,
       username: users.username,
-      role: users.role,
+      role: users.role, isMainEditor: users.isMainEditor,
       avatarMediaId: users.avatarMediaId,
     })
     .from(posts)
@@ -203,9 +203,9 @@ async function hydrate(
       .from(bookmarks)
       .where(and(eq(bookmarks.userId, viewerId), inArray(bookmarks.postId, visibleIds))),
     parentIds.length === 0
-      ? Promise.resolve([] as { id: string; username: string | null; role: Role; avatarMediaId: string | null }[])
+      ? Promise.resolve([] as { id: string; username: string | null; role: Role; isMainEditor: boolean; avatarMediaId: string | null }[])
       : db
-          .select({ id: posts.id, username: users.username, role: users.role, avatarMediaId: users.avatarMediaId })
+          .select({ id: posts.id, username: users.username, role: users.role, isMainEditor: users.isMainEditor, avatarMediaId: users.avatarMediaId })
           .from(posts)
           .innerJoin(users, eq(posts.authorId, users.id))
           .where(and(inArray(posts.id, parentIds), isNull(posts.deletedAt), ...visibleAuthor, ...notBlocked)),
@@ -232,12 +232,12 @@ async function hydrate(
       id: row.id,
       body: row.body,
       createdAt: row.createdAt,
-      author: { username: row.username, role: row.role, avatarUrl: mediaUrl(row.avatarMediaId) },
+      author: { username: row.username, role: row.role, isMainEditor: row.isMainEditor, avatarUrl: mediaUrl(row.avatarMediaId) },
       replyTo: row.replyToId
         ? {
             id: row.replyToId,
             author: parent?.username
-              ? { username: parent.username, role: parent.role, avatarUrl: mediaUrl(parent.avatarMediaId) }
+              ? { username: parent.username, role: parent.role, isMainEditor: parent.isMainEditor, avatarUrl: mediaUrl(parent.avatarMediaId) }
               : null,
           }
         : null,
@@ -524,7 +524,7 @@ export async function listHomeFeed(actor: Actor, limit = 50): Promise<PostView[]
         postId: postReposts.postId,
         at: postReposts.createdAt,
         username: users.username,
-        role: users.role,
+        role: users.role, isMainEditor: users.isMainEditor,
         avatarMediaId: users.avatarMediaId,
       })
       .from(postReposts)
@@ -540,7 +540,7 @@ export async function listHomeFeed(actor: Actor, limit = 50): Promise<PostView[]
       ...reposts.map((row) => ({
         postId: row.postId,
         at: row.at,
-        repostedBy: { username: row.username!, role: row.role, avatarUrl: mediaUrl(row.avatarMediaId) },
+        repostedBy: { username: row.username!, role: row.role, isMainEditor: row.isMainEditor, avatarUrl: mediaUrl(row.avatarMediaId) },
       })),
     ],
     limit,
@@ -624,18 +624,23 @@ export async function suggestMembers(actor: Actor, limit = 5): Promise<MemberLis
   if (shortlist.length === 0) return [];
 
   const rows = await db
-    .select({ id: users.id, username: users.username, role: users.role, avatarMediaId: users.avatarMediaId })
+    .select({ id: users.id, username: users.username, role: users.role, isMainEditor: users.isMainEditor, avatarMediaId: users.avatarMediaId })
     .from(users)
     .where(and(inArray(users.id, shortlist), ...visibleAuthor));
 
   const byId = new Map(rows.map((row) => [row.id, row]));
   return shortlist
     .map((id) => byId.get(id))
-    .filter((row): row is { id: string; username: string; role: Role; avatarMediaId: string | null } =>
+    .filter((row): row is { id: string; username: string; role: Role; isMainEditor: boolean; avatarMediaId: string | null } =>
       Boolean(row?.username),
     )
     .slice(0, limit)
-    .map(({ username, role, avatarMediaId }) => ({ username, role, avatarUrl: mediaUrl(avatarMediaId) }));
+    .map(({ username, role, isMainEditor, avatarMediaId }) => ({
+      username,
+      role,
+      isMainEditor,
+      avatarUrl: mediaUrl(avatarMediaId),
+    }));
 }
 
 export type ProfileTab = "posts" | "replies" | "favorites";
@@ -643,7 +648,7 @@ export type ProfileTab = "posts" | "replies" | "favorites";
 /** How many posts a profile shows at once; the design draws a pager (D-150). */
 export const PROFILE_PAGE_SIZE = 10;
 
-type ProfileOwner = { id: string; username: string; role: Role; avatarUrl: string | null };
+type ProfileOwner = { id: string; username: string; role: Role; isMainEditor: boolean; avatarUrl: string | null };
 
 /** One page of a tab's entries, newest first. */
 async function profileEntries(
@@ -674,7 +679,7 @@ async function profileEntries(
     return replies.map((row) => ({ ...row, repostedBy: null }));
   }
 
-  const author: PostAuthor = { username: profile.username, role: profile.role, avatarUrl: profile.avatarUrl };
+  const author: PostAuthor = { username: profile.username, role: profile.role, isMainEditor: profile.isMainEditor, avatarUrl: profile.avatarUrl };
   // Two sources become one timeline, so each is read down to the end of the
   // asked-for page and the window is cut only after they are merged
   const reach = limit + offset;
@@ -807,7 +812,7 @@ export async function listProfileComments(
       body: posts.body,
       createdAt: posts.createdAt,
       username: users.username,
-      role: users.role,
+      role: users.role, isMainEditor: users.isMainEditor,
       avatarMediaId: users.avatarMediaId,
     })
     .from(posts)
@@ -834,7 +839,7 @@ export async function listProfileComments(
             id: row.id,
             body: row.body,
             createdAt: row.createdAt,
-            author: { username: row.username, role: row.role, avatarUrl: mediaUrl(row.avatarMediaId) },
+            author: { username: row.username, role: row.role, isMainEditor: row.isMainEditor, avatarUrl: mediaUrl(row.avatarMediaId) },
           },
         ],
   );

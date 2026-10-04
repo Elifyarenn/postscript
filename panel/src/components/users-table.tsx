@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useCallback, useSyncExternalStore, type ReactNode } from "react";
 import { Card, EmptyState, StatusBadge, Table, Td, Th } from "./ui";
 import { formatDate } from "@/lib/utils";
+import { panelRoleBadges } from "@/lib/auth/rbac";
 import { USER_SEGMENT_META, type UserListRow, type UserSegment } from "@/lib/user-segments";
 
 type ColumnId =
@@ -36,6 +37,11 @@ type ColumnId =
   | "illustrator"
   | "authorized";
 
+/** A hybrid's editor-side tag: "Editor & Yazar", or "Ana editör" alone (D-312). */
+function hybridBadge(row: UserListRow): string {
+  return row.isMainEditor ? "main_editor" : "editor_writer";
+}
+
 type Column = { label: string; className?: string; cell: (row: UserListRow) => ReactNode };
 
 const COLUMNS: Record<ColumnId, Column> = {
@@ -53,18 +59,9 @@ const COLUMNS: Record<ColumnId, Column> = {
   email: { label: "E-posta", className: "text-xs", cell: (row) => row.email },
   role: {
     label: "Rol",
-    // A hybrid editor holds both duties; their combined title (D-060)
+    // Hybrid and main editor tags come from one rule (D-060, D-312)
     className: "space-x-1 whitespace-nowrap",
-    cell: (row) => (
-      <>
-        {row.role === "editor" && row.writerStatus !== null ? (
-          <StatusBadge status="editor_writer" />
-        ) : (
-          <StatusBadge status={row.role} />
-        )}
-        {row.isMainEditor && <StatusBadge status="main_editor" />}
-      </>
-    ),
+    cell: (row) => panelRoleBadges(row).map((badge) => <StatusBadge key={badge} status={badge} />),
   },
   status: {
     label: "Durum",
@@ -96,8 +93,9 @@ const COLUMNS: Record<ColumnId, Column> = {
     cell: (row) => (
       <>
         {row.writerStatus ? <StatusBadge status={row.writerStatus} /> : "—"}
-        {/* An editor in this list is a hybrid; the badge says why it is here */}
-        {row.role === "editor" && <StatusBadge status="editor_writer" />}
+        {/* An editor in this list is a hybrid; the badge says why it is here,
+            and a main editor is only ever tagged "Ana editör" (D-312) */}
+        {row.role === "editor" && <StatusBadge status={hybridBadge(row)} />}
         {row.isBanned && <span className="text-xs text-danger">yasaklı</span>}
       </>
     ),
@@ -118,7 +116,7 @@ const COLUMNS: Record<ColumnId, Column> = {
     cell: (row) => (
       <>
         <StatusBadge status={row.editorStatus ?? "active"} />
-        {row.writerStatus !== null && <StatusBadge status="editor_writer" />}
+        {row.writerStatus !== null && <StatusBadge status={hybridBadge(row)} />}
         {row.isBanned && <span className="text-xs text-danger">yasaklı</span>}
       </>
     ),
