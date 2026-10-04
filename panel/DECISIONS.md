@@ -12476,3 +12476,61 @@ kapatmaz, geri dönüş açmaz; bilinmeyen durum 400), `contributor-documents.te
 (gönderilmemiş belge beklenmez/hatırlatılmaz, başarısız e-posta "gönderilemedi"
 sayılır, liste düğme sayılarının dayandığı alanları taşır),
 `unlicensed-works.test.ts` (gönderilmiş belge silinmez).
+
+## D-317 — Yayından çıkan sayı herkese kapanır; CRON_SECRET yokken e-posta yolu
+
+**İstek (ürün sahibi):** "Sayıyı 'Yayınlandı' durumundan çıkarınca normal
+kullanıcıların okuyucuya, API'ye ve görsellere erişiminin kapandığını test et;
+açıksa düzelt. CRON_SECRET kapalıyken mail kuyruğunun nasıl gönderildiğini
+netleştir. Silme işlerini etkinleştirmeden güvenli gönderim yolunu doğrula."
+
+**Bulunan açık:** `mayReadIssue` (okuyucu, sayfa görselleri ve `?w=` kopyaları,
+testler) `archived` sayıyı da herkese açık sayıyordu; herkese açık API ve sayı
+sayfası (`getPublishedIssue`, `listPublishedIssues`) ise yalnızca `published`.
+Sayı "Arşivlendi"ye alınınca API kapanıyor ama okuyucu ve görseller açık
+kalıyordu. `CLAUDE.md`: "yayında olmayan her şey 404"; yazılar da yalnızca
+`published` iken herkese açık. **Düzeltme:** `mayReadIssue` ve `isPreview`
+yalnızca `published`'ı herkese açık sayar. Editör ve admin önizlemesi aynı.
+`planning`/`in_production` zaten kapanıyordu.
+
+Not: yayımlanmış sayının görselleri okurun kendi tarayıcısında en çok bir saat
+tutulur (`private, max-age=3600`, D-308). Sayı yayından çıkınca sunucu hemen
+404 verir; daha önce görmüş bir tarayıcı kendi kopyasını en geç bir saat içinde
+bırakır. Ortak (CDN) önbellek yok.
+
+**CRONSUZ e-posta (canlıdaki durum):**
+
+- `/api/cron/daily` ve `/api/cron/mail` aynı `CRON_SECRET`'i ister; tanımlı
+  değilken ikisi de 401 döner. Vercel Cron yalnızca `/api/cron/daily`'yi çağırır
+  (`vercel.json`) ve o rota saklama süresi silmelerini de yapar.
+- Tekil e-postalar (doğrulama, şifre sıfırlama, bildirimler — `sendMail`)
+  istekten hemen sonra arka planda gönderilir; her gönderim sırası gelmiş en çok
+  10 eski denemeyi de dener.
+- Toplu duyurular (`queueMails`) yazıldıkları anda 45 saniyelik bir bütçeyle
+  gönderilmeye başlar; sığmayan kalır.
+- Katkı belgeleri ve imza hatırlatmaları yalnızca kuyruğa yazılır.
+- Kuyrukta kalan her şey, başarısız denemelerin yeniden denenmesi dahil, ancak
+  `/admin/mail` → **"Kuyruğu şimdi işle"** ile (ya da sonraki bir tekil
+  gönderimin yanında) gider. Bu düğme yalnızca `processMailQueue`'yu çalıştırır:
+  silme, budama, anonimleştirme yok.
+- Konu/teslim penceresi açıldı duyuruları (`announceOpenedIssueWindows`) cron
+  dışında yalnızca admin, editör ya da yazar paneli ana ekranı açılınca arka
+  planda kuyruğa yazılır.
+
+**Güvenli gönderim yolu:** `CRON_SECRET` tanımsız kalır; kuyruk `/admin/mail`'den
+"Kuyruğu şimdi işle" ile gönderilir. `CRON_SECRET` tanımlamak `/api/cron/mail`'i
+açar ama Vercel'in günlük çağrısıyla `/api/cron/daily`'nin silme işlerini de
+başlatır; bu ayrım için ayrı bir anahtar ya da `vercel.json`'dan günlük işin
+çıkarılması gerekir — ürün sahibinin kararı.
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test (tek süreç).
+`tests/integration/issue-unpublish.test.ts`: yayımlıyken herkese açık; `planning`,
+`in_production` ve `archived`'a alınınca oturumsuz, üye ve yazar için okuyucu,
+görsel (kopyası dahil), test, sayı sayfası ve `/api/public/issues/1` 404;
+editör önizlemesi açık. `tests/integration/mail-without-cron.test.ts`:
+`CRON_SECRET` yokken iki cron rotası 401; "Kuyruğu şimdi işle" ve tekil gönderim
+kuyruğu bellek içi adaptöre teslim eder; 40 günlük e-posta kayıtları, süresi
+geçmiş doğrulanmamış hesap ve süresi dolmuş bekleyen kayıt yerinde kalır.
+Gerçek e-posta gönderilmedi, sayı yayımlanmadı.
