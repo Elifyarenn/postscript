@@ -12534,3 +12534,38 @@ editör önizlemesi açık. `tests/integration/mail-without-cron.test.ts`:
 kuyruğu bellek içi adaptöre teslim eder; 40 günlük e-posta kayıtları, süresi
 geçmiş doğrulanmamış hesap ve süresi dolmuş bekleyen kayıt yerinde kalır.
 Gerçek e-posta gönderilmedi, sayı yayımlanmadı.
+
+## D-318 — Ana editör yazıyı reddedebilir
+
+**Talep:** "Ana editöre yazıyı reddetme butonu yap."
+
+**Karar:** Ret yeni bir durum değil; ana editör aşamasındaki
+(`pending_admin_approval`) mevcut `→ draft` kenarıdır (`isRejection`,
+`src/lib/article-status.ts`). Yeni enum değeri ve migration yok; geçiş tablosu ve
+`canPerformTransition` değişmedi (bu kenarı zaten yalnızca ana editör ve admin
+çekebiliyordu).
+
+- Makale sayfasındaki durum panelinde bu aşamada "Taslağa Dön" düğmesi
+  **"Reddet"** olarak görünür; seçilince zorunlu **"Ret gerekçesi"** alanı açılır.
+- Gerekçe sunucuda da zorunlu: `checkTransition` boş ya da yalnız boşluk
+  gerekçeyi 409 ile reddeder. Diğer taslağa dönüşler (kategori editörü, admin)
+  eskisi gibi gerekçesizdir.
+- Yazar e-postayla haberdar edilir ("ana editör tarafından reddedildi", gerekçe
+  editör notu olarak). `draft` normalde yazara bildirilmez; istisna yalnızca bu
+  kenar.
+- Yazı geçmişinde adım "Ana editör reddetti" olarak okunur; kenardan çıkarıldığı
+  için eski kayıtlar da aynı okunur. Gerekçe audit kaydının `note` alanındadır.
+
+**Muhafazakâr seçim (soru sorulmadı):** Kalıcı bir "reddedildi" son durumu
+(yazarın tekrar gönderemeyeceği) enum migration'ı ister ve geri alınması zordur.
+Reddedilen yazı yazara taslak olarak döner; yazar onu ancak teslim penceresi
+açıkken ve kabul edilmiş konusuyla yeniden gönderebilir (D-261). Kalıcı ret
+istenirse ayrı bir karar olur.
+
+**Hukuk:** Yeni kişisel veri yok; e-posta mevcut durum bildirimi kanalıdır.
+Aydınlatma metni değişmedi.
+
+**Doğrulama:** Kapı: typecheck, lint, test (1265 geçti).
+`tests/unit/article-status.test.ts`, `tests/unit/article-history.test.ts`,
+`tests/integration/editor-categories.test.ts`: gerekçesiz ret 409 ve e-posta
+yok; gerekçeli ret taslağa döner, yazara gerekçeli e-posta gider.

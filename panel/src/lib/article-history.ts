@@ -7,6 +7,7 @@
  * the Turkish status labels.
  */
 import type { ArticleStatus } from "@/db/schema";
+import { isRejection } from "@/lib/article-status";
 
 export type AuditRow = {
   id: string;
@@ -78,14 +79,19 @@ export function describeStep(row: AuditRow): HistoryStep {
       return { ...base, label: "Makale düzenlendi" };
     case "article.updated_by_author":
       return { ...base, label: "Yazar taslağı düzenledi" };
-    case "article.status_changed":
+    case "article.status_changed": {
+      const fromStatus = field(row.before, "status");
+      const toStatus = field(row.after, "status");
+      // The rejection is read from the edge itself, so older rows read the same (D-318)
+      const rejected = isRejection(fromStatus as ArticleStatus, toStatus as ArticleStatus);
       return {
         ...base,
-        label: "Durum değişti",
-        fromStatus: field(row.before, "status"),
-        toStatus: field(row.after, "status"),
+        label: rejected ? "Ana editör reddetti" : "Durum değişti",
+        fromStatus,
+        toStatus,
         note: field(row.after, "note"),
       };
+    }
     case "article.comment_added":
       return { ...base, label: "Editöryal not eklendi" };
     case "article.plagiarism_status_set": {

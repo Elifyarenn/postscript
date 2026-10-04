@@ -21,7 +21,12 @@ import {
   type Article,
   type ArticleStatus,
 } from "@/db/schema";
-import { allowedTargets, autoTransitionAfter, checkTransition } from "@/lib/article-status";
+import {
+  allowedTargets,
+  autoTransitionAfter,
+  checkTransition,
+  isRejection,
+} from "@/lib/article-status";
 import { AUTHOR_TOLD_STATUSES } from "@/lib/article-history";
 import { writeAudit } from "@/lib/audit";
 import {
@@ -898,6 +903,7 @@ export async function transitionArticle(
     rightsGrantStatus: grant?.status ?? null,
     allMediaLicensed: await allMediaLicensed(article.id),
     withdrawnReason: options.withdrawnReason,
+    note: options.note,
   });
 
   if (!check.ok) throw conflict(check.reason);
@@ -959,7 +965,7 @@ async function applyStatus(
     ip: meta.ip,
   });
 
-  await notifyAuthorOfStatus(updated!, to, options.note);
+  await notifyAuthorOfStatus(updated!, to, options.note, isRejection(article.status, to));
 
   if (to === "published") {
     await triggerRevalidate({ type: "article.published", slug: updated!.slug });
@@ -976,9 +982,11 @@ async function notifyAuthorOfStatus(
   article: Article,
   status: ArticleStatus,
   note?: string,
+  rejected = false,
 ): Promise<void> {
-  // The statuses the author is e-mailed about, the reviewer's note included
-  if (!AUTHOR_TOLD_STATUSES.includes(status) || !article.authorId) return;
+  // The statuses the author is e-mailed about, the reviewer's note included;
+  // a rejection lands on `draft`, which is otherwise silent (D-318)
+  if ((!rejected && !AUTHOR_TOLD_STATUSES.includes(status)) || !article.authorId) return;
 
   const rows = await db
     .select({ email: users.email, displayName: users.displayName })
@@ -991,7 +999,7 @@ async function notifyAuthorOfStatus(
   const message = templates.articleStatusChanged({
     displayName: author.displayName,
     articleTitle: article.title,
-    status,
+    status: rejected ? "rejected" : status,
     note,
     url: `${env().APP_URL}/writer/articles`,
   });

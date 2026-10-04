@@ -307,6 +307,8 @@ export function articleStatusChanged(input: {
     revision_requested: "revizyon istendi",
     published: "yayınlandı",
     withdrawn: "geri çekildi",
+    // Not a status: the main editor's rejection, which returns it to draft (D-318)
+    rejected: "ana editör tarafından reddedildi",
   };
   const label = labels[input.status] ?? input.status;
 

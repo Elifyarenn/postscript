@@ -34,12 +34,23 @@ export type TransitionContext = {
   allMediaLicensed: boolean;
   /** `withdrawn_reason` is mandatory when withdrawing. */
   withdrawnReason?: string | null;
+  /** The reviewer's note; mandatory when the main editor rejects (D-318). */
+  note?: string | null;
 };
 
 export type TransitionCheck = { ok: true } | { ok: false; reason: string };
 
 export function allowedTargets(from: ArticleStatus): readonly ArticleStatus[] {
   return TRANSITIONS[from];
+}
+
+/**
+ * The main editor's rejection (D-318) is the existing edge back to `draft`
+ * from their own stage rather than a status of its own: the article returns
+ * to the author, who is told why, and no enum migration is needed.
+ */
+export function isRejection(from: ArticleStatus, to: ArticleStatus): boolean {
+  return from === "pending_admin_approval" && to === "draft";
 }
 
 export function isKnownTransition(from: ArticleStatus, to: ArticleStatus): boolean {
@@ -91,6 +102,11 @@ export function checkTransition(
 
   if (to === "withdrawn" && !context.withdrawnReason?.trim()) {
     return { ok: false, reason: "Geri çekme gerekçesi zorunludur." };
+  }
+
+  // A rejection without a reason leaves the author nothing to act on
+  if (isRejection(from, to) && !context.note?.trim()) {
+    return { ok: false, reason: "Ret gerekçesi zorunludur; yazara iletilir." };
   }
 
   return { ok: true };

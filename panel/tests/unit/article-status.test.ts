@@ -4,7 +4,12 @@
  * with unlicensed media.
  */
 import { describe, expect, it } from "vitest";
-import { allowedTargets, checkTransition, autoTransitionAfter } from "@/lib/article-status";
+import {
+  allowedTargets,
+  checkTransition,
+  autoTransitionAfter,
+  isRejection,
+} from "@/lib/article-status";
 import type { ArticleStatus } from "@/db/schema";
 
 const clean = {
@@ -122,6 +127,25 @@ describe("withdrawal", () => {
     expect(
       checkTransition("published", "withdrawn", { ...clean, withdrawnReason: "Telif itirazı" }).ok,
     ).toBe(true);
+  });
+});
+
+describe("main editor rejection (D-318)", () => {
+  it("is only the edge from the main editor's stage back to draft", () => {
+    expect(isRejection("pending_admin_approval", "draft")).toBe(true);
+    expect(isRejection("in_review", "draft")).toBe(false);
+    expect(isRejection("pending_admin_approval", "revision_requested")).toBe(false);
+  });
+
+  it("requires a reason", () => {
+    expect(checkTransition("pending_admin_approval", "draft", clean).ok).toBe(false);
+    expect(checkTransition("pending_admin_approval", "draft", { ...clean, note: "  " }).ok).toBe(false);
+    expect(checkTransition("pending_admin_approval", "draft", { ...clean, note: "Konu dışı." }).ok).toBe(true);
+  });
+
+  it("leaves the other ways back to draft as they were", () => {
+    expect(checkTransition("in_review", "draft", clean).ok).toBe(true);
+    expect(checkTransition("ready_for_publishing", "draft", clean).ok).toBe(true);
   });
 });
 

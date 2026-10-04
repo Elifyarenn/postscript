@@ -36,6 +36,14 @@ describe("describeStep", () => {
     });
   });
 
+  it("names the main editor's rejection, and only that edge back to draft (D-318)", () => {
+    expect(transition("pending_admin_approval", "draft", "Konu dışı.")).toMatchObject({
+      label: "Ana editör reddetti",
+      note: "Konu dışı.",
+    });
+    expect(transition("in_review", "draft", "").label).toBe("Durum değişti");
+  });
+
   it("treats an empty note as no note", () => {
     expect(transition("draft", "in_review", "  ").note).toBeNull();
   });

@@ -26,6 +26,7 @@ import {
 import { setHybridWriterRole } from "@/services/users";
 import { setWriterAreas } from "@/services/writer-areas";
 import { isAppError } from "@/lib/errors";
+import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import {
   resetTables,
   seedDefaultWriterAreas,
@@ -36,9 +37,11 @@ import { actorOf, createUser, noMeta, testIssueId } from "../helpers/factories";
 import { acceptCurrentContract, publishContract } from "../helpers/factories";
 
 let database: Database;
+const mailbox = new MemoryMailAdapter();
 
 beforeAll(async () => {
   database = await setupTestDatabase();
+  setMailAdapter(mailbox);
   await seedDefaultWriterAreas();
 });
 
@@ -250,6 +253,35 @@ describe("the staged review chain", () => {
     const approval = await findLiveApproval(draft.id);
     expect(approval?.status).toBe("signed");
     expect(approval?.acceptedBodyMarkdown).toBe("Gövde.");
+  });
+
+  it("lets the main editor reject with a reason, which the author is mailed (D-318)", async () => {
+    const { categoryEditor, mainEditor, writer } = await chainScenario();
+
+    const draft = await createArticleAsWriter(
+      actorOf(writer),
+      { issueId: await testIssueId(), title: "Reddedilecek Deneme", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
+      noMeta,
+    );
+    await transitionArticle(actorOf(writer), draft.id, "in_review", noMeta);
+    await transitionArticle(actorOf(categoryEditor), draft.id, "pending_admin_approval", noMeta);
+    mailbox.clear();
+
+    // No reason, no rejection: the author would have nothing to act on
+    const refused = await captureError(
+      transitionArticle(actorOf(mainEditor), draft.id, "draft", noMeta, { note: "  " }),
+    );
+    expect(refused?.status).toBe(409);
+    expect(mailbox.outbox).toHaveLength(0);
+
+    const rejected = await transitionArticle(actorOf(mainEditor), draft.id, "draft", noMeta, {
+      note: "Sayının konusuyla örtüşmüyor.",
+    });
+    expect(rejected.status).toBe("draft");
+
+    const mail = mailbox.lastTo(writer.email)!;
+    expect(mail.subject).toContain("reddedildi");
+    expect(mail.text).toContain("Sayının konusuyla örtüşmüyor.");
   });
 
   it("stores the author's slug and validates it (D-069)", async () => {

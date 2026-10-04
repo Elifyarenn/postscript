@@ -11,6 +11,8 @@ import { useState } from "react";
 import { Alert, Button, Field, Input, Textarea, STATUS_LABELS } from "@/components/ui";
 import { ActionForm, useActionForm, useSubmitPending } from "@/components/form";
 import type { ServerAction } from "@/components/form";
+import type { ArticleStatus } from "@/db/schema";
+import { isRejection } from "@/lib/article-status";
 
 /**
  * The wording of the transition buttons, in the product's own words (D-059,
@@ -58,6 +60,12 @@ export function StatusPanel({
   const { state } = form;
   const [selected, setSelected] = useState<string | null>(null);
 
+  // At the main editor's stage the way back to draft is their rejection (D-318)
+  const rejects = (target: string) =>
+    isRejection(currentStatus as ArticleStatus, target as ArticleStatus);
+  const labelFor = (target: string) =>
+    rejects(target) ? "Reddet" : (TRANSITION_LABELS[target] ?? STATUS_LABELS[target] ?? target);
+
   if (targets.length === 0) {
     return (
       <Alert tone="info">
@@ -77,10 +85,12 @@ export function StatusPanel({
           <Button
             key={target}
             type="button"
-            variant={selected === target ? "primary" : "secondary"}
+            variant={
+              selected === target ? (rejects(target) ? "danger" : "primary") : "secondary"
+            }
             onClick={() => setSelected(selected === target ? null : target)}
           >
-            {TRANSITION_LABELS[target] ?? STATUS_LABELS[target] ?? target}
+            {labelFor(target)}
           </Button>
         ))}
       </div>
@@ -117,8 +127,18 @@ export function StatusPanel({
             </Field>
           )}
 
+          {rejects(selected) && (
+            <Field
+              label="Ret gerekçesi"
+              htmlFor="note"
+              hint="Zorunludur. Yazara e-postayla iletilir; yazı yazara taslak olarak döner."
+            >
+              <Textarea id="note" name="note" required minLength={3} />
+            </Field>
+          )}
+
           <Submit
-            label={`"${TRANSITION_LABELS[selected] ?? STATUS_LABELS[selected] ?? selected}" durumuna geç`}
+            label={rejects(selected) ? "Yazıyı reddet" : `"${labelFor(selected)}" durumuna geç`}
           />
         </ActionForm>
       )}
