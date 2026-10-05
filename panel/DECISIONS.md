@@ -12852,3 +12852,40 @@ yayında" satırı bu tek değerden okunur. Sayının kendisi yine panelden elle
 
 **Doğrulama:** Kapı: typecheck, lint, test (tek süreç; `countdown.test.ts` gerçek anı 19.00 olarak sabitler). Canlıda ana sayfa ve
 `/magazine/issues` "19.00" gösteriyor.
+
+## D-327 — Sayı 01: dokuz bölümün yazıları geldi, sayfa numaraları iki kaydı
+
+**İstek (ürün sahibi, 18.35, yayından 25 dakika önce):** "sayı'daki dosyaları
+hızlıca okuyucuda işle."
+
+**Durum:** `sayı/` klasörüne dokuz bölümün yeni `.ai` dosyası geldi (Bilim,
+Psikoloji ve `01` yok; onlar D-323/D-324'teki gibi kaldı). Her bölümde açılıştan
+sonraki beş sayfa artık yazılı (Eğlence & Dedikodu'da üçü; 70 ve 71 hâlâ boş).
+Basılı numaralar ikişer kaydı: Film, Dizi & Kitap açılışı 16 değil 18, …,
+Eğlence & Dedikodu 64 değil 66; son sayfa 71. Çizim alanı düzeni aynı
+(açılış 5., ardından 6., sonra 1–4.).
+
+**Karar:**
+- `section()` artık yazılı sayfayı da çiziyor: metni
+  `issue-01-section-transcripts.ts`'te olan sayfa yazı sayfasıdır, olmayan
+  numaralı boş şablondur. Anahtarlar yeni numarayla (ör. `film-dizi-kitap-19`);
+  eski numaralı 18 anahtarın görselleri silindi, düğmeye basılınca o sayfalar
+  sayıdan çıkar, yenileri girer.
+- Zaman olmadığı için ekran okuyucu metni D-323'teki gibi elle değil,
+  `.ai`'nin metin katmanından otomatik alındı: karakter haritası olmayan
+  yazı tipindeki başlıklar boş çıktığı için eksik, paragraflar metin çerçevesi
+  sınırında bölünebilir. Alt metin genel ("yazı sayfası"), içindekiler
+  bağlantısı (`contents`) yok. **Sonra elle düzeltilmeli** (sayfa sayfa,
+  `issue-01-transcripts.ts`'teki gibi).
+- Kenar karşılaştırması bu turda yapılmadı; aynı `trim` kullanıldı.
+
+**Tasarımda görülen (tasarımcıya iletilmeli):** Yazar Köşesi sayfalarının üst
+başlığı "BİLİM & TEKNOLOJİ"; Eğlence & Dedikodu açılışında "YAZAR KÖŞESİ"
+yazısı duruyor; 16–17 numaraları hiçbir teslim edilen dosyada yok (Psikoloji
+10–15'te bitiyor, Film 18'de başlıyor).
+
+**Canlıya etkisi:** Kod gelince hiçbir şey değişmez. Admin, Sayı 1 hâlâ
+"yalnızca yöneticiler" iken (yayımlanmadan önce, D-316) sayfalar ekranında
+"Tasarım sayfalarını içe aktar / güncelle"ye basmalı. Migration yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test.

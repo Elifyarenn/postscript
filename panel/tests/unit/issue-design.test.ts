@@ -162,10 +162,10 @@ describe("issue 01 as shipped", () => {
     expect(science).toEqual([4, 5, 6, 7, 8, 9]);
   });
 
-  it("puts the numbered sections in printed order, 16 to 69 without a gap (D-323)", () => {
+  it("puts the numbered sections in printed order, 18 to 71 without a gap (D-327)", () => {
     const from = issue.pages.findIndex((entry) => entry.key === "film-dizi-kitap-acilis");
     const numbers = issue.pages.slice(from, -1).map((entry) => entry.printedNumber);
-    expect(numbers).toEqual(Array.from({ length: 54 }, (_, index) => 16 + index));
+    expect(numbers).toEqual(Array.from({ length: 54 }, (_, index) => 18 + index));
   });
 
   it("gives every written page its text", () => {

@@ -48,6 +48,7 @@
  *    comes first and the back last.
  */
 import { OBSESSION_QUIZ, OBSESSION_QUIZ_TITLE } from "./issue-01-quizzes";
+import { ISSUE_01_SECTION_TRANSCRIPTS } from "./issue-01-section-transcripts";
 import { ISSUE_01_TRANSCRIPTS } from "./issue-01-transcripts";
 import type { DesignManifest } from "./manifest";
 
@@ -183,18 +184,16 @@ export const ISSUE_01_DESIGN: DesignManifest = {
       "“Büyük Dansa Karşı Koymak” öyküsünün devamı: sol üstte bordo yarım daire içinde öykünün girişi, iki sütun metin."),
     article("psikoloji-buyuk-dans-15", "POSTSCRIPT psikoloj.ai", 4, 7, "Büyük dansa karşı koymak (son)", null,
       "“Büyük Dansa Karşı Koymak” öyküsünün sonu: sağ üstte bordo yarım daire, iki sütun metin."),
-    ...section("film-dizi-kitap", "POSTSCRIPT film dizi kitap.ai", 16, "Film, Dizi & Kitap", "FİLM, DİZİ & KİTAP", "altın rengi süslü bir çerçevenin içinde eski bir televizyon ve üst üste kitaplar"),
-    // Page 23 shows a sliver of the opener's open book at its left edge: the
-    // picture runs over the artboard in the file, drawn as delivered
-    ...section("sanat-edebiyat", "POSTSCRIPT sanat edebiyat.ai", 22, "Sanat & Edebiyat", "SANAT & EDEBİYAT", "açık bir kitabın üzerinde boya kutuları, tüpler, uçuşan harfler ve kırmızı bir heykel figürü"),
-    ...section("pop-culture", "POSTSCRIPT pop culture.ai", 28, "Pop Culture", "POP CULTURE", "topuzlu, inci kolyeli bir kadın sakız balonu şişiriyor; çevresinde plaklar, “On Air” tabelası ve damalı şerit"),
-    ...section("tarih-dunya", "tarih dünya.ai", 34, "Tarih & Dünya", "TARİH & DÜNYA", "eski bir dünya haritası dairesinin içinde Kolezyum, cep saati ve bir asker figürü"),
-    ...section("sosyal-feminizm", "sosyal feminizm.ai", 40, "Sosyal & Feminizm", "SOSYAL & FEMİNİZM", "yan yana duran kadınlar “Women” ve “Break the silence, end violence!” yazılı pankartlar taşıyor, üstte kalkmış bir yumruk"),
-    ...section("sosyoloji-dusunce", "POSTSCRIPT sosyoloji düşünce.ai", 46, "Sosyoloji & Düşünce", "SOSYOLOJİ & DÜŞÜNCE", "dalgalanan bir bayrağın üzerinde Düşünen Adam heykeli ve konuşma balonu"),
-    ...section("fashion-lifestyle", "POSTSCRIPT fashion.ai", 52, "Fashion & Lifestyle", "FASHION & LİFESTYLE", "kabarık etekli bir terzi mankeni silüetinin içinde askıda kırmızı elbise ve alışveriş çantaları"),
-    ...section("yazar-kosesi", "yazar köşesi.ai", 58, "Yazar Köşesi: PostScript", "YAZAR KÖŞESİ: “P.S.”", "bir kadın başı silüetinin içinde eski bir daktilo; kâğıtta “Yazar Köşesi: PostScript” yazıyor"),
+    ...section("film-dizi-kitap", "POSTSCRIPT film dizi kitap.ai", 18, "Film, Dizi & Kitap", "FİLM, DİZİ & KİTAP", "altın rengi süslü bir çerçevenin içinde eski bir televizyon ve üst üste kitaplar"),
+    ...section("sanat-edebiyat", "POSTSCRIPT sanat edebiyat.ai", 24, "Sanat & Edebiyat", "SANAT & EDEBİYAT", "açık bir kitabın üzerinde boya kutuları, tüpler, uçuşan harfler ve kırmızı bir heykel figürü"),
+    ...section("pop-culture", "POSTSCRIPT pop culture.ai", 30, "Pop Culture", "POP CULTURE", "topuzlu, inci kolyeli bir kadın sakız balonu şişiriyor; çevresinde plaklar, “On Air” tabelası ve damalı şerit"),
+    ...section("tarih-dunya", "tarih dünya.ai", 36, "Tarih & Dünya", "TARİH & DÜNYA", "eski bir dünya haritası dairesinin içinde Kolezyum, cep saati ve bir asker figürü"),
+    ...section("sosyal-feminizm", "sosyal feminizm.ai", 42, "Sosyal & Feminizm", "SOSYAL & FEMİNİZM", "yan yana duran kadınlar “Women” ve “Break the silence, end violence!” yazılı pankartlar taşıyor, üstte kalkmış bir yumruk"),
+    ...section("sosyoloji-dusunce", "POSTSCRIPT sosyoloji düşünce.ai", 48, "Sosyoloji & Düşünce", "SOSYOLOJİ & DÜŞÜNCE", "dalgalanan bir bayrağın üzerinde Düşünen Adam heykeli ve konuşma balonu"),
+    ...section("fashion-lifestyle", "POSTSCRIPT fashion.ai", 54, "Fashion & Lifestyle", "FASHION & LİFESTYLE", "kabarık etekli bir terzi mankeni silüetinin içinde askıda kırmızı elbise ve alışveriş çantaları"),
+    ...section("yazar-kosesi", "yazar köşesi.ai", 60, "Yazar Köşesi: PostScript", "YAZAR KÖŞESİ: “P.S.”", "bir kadın başı silüetinin içinde eski bir daktilo; kâğıtta “Yazar Köşesi: PostScript” yazıyor"),
     // The quiz is the page after the opener (`quizPages`), not a hidden area on it (D-309)
-    ...section("eglence-dedikodu", "eğlence dedikodu.ai", 64, "Eğlence & Dedikodu", "EĞLENCE & DEDİKODU", "büyük bir yıldızın önünde eski tip bir telefon ve “Have Fun” yazısı"),
+    ...section("eglence-dedikodu", "eğlence dedikodu.ai", 66, "Eğlence & Dedikodu", "EĞLENCE & DEDİKODU", "büyük bir yıldızın önünde eski tip bir telefon ve “Have Fun” yazısı"),
     {
       key: "arka-kapak",
       source: "POSTSCRIPT 01.ai",
@@ -256,27 +255,35 @@ function article(
 }
 
 /**
- * A section still to be written: its opener (printed number `first`) and five
- * numbered blank pages. In every one of these files the opener is the 5th
- * artboard, the page after it the 6th, and the four after that the 1st–4th.
+ * A section of the files re-delivered on 2026-10-05 evening (D-327): its
+ * opener (printed number `first`) and the five pages after it. A page with a
+ * text in `issue-01-section-transcripts.ts` is a written page; one without is
+ * still the numbered blank template. In every one of these files the opener
+ * is the 5th artboard, the page after it the 6th, and the four after that the
+ * 1st–4th.
  */
 function section(prefix: string, source: string, first: number, name: string, header: string, picture: string): Page[] {
-  const blanks = [6, 1, 2, 3, 4].map((sourcePage, index): Page => {
+  const pages = [6, 1, 2, 3, 4].map((sourcePage, index): Page => {
     const printed = first + 1 + index;
+    const key = `${prefix}-${pad(printed)}`;
+    const text = ISSUE_01_SECTION_TRANSCRIPTS[key];
+    const common = { key, source, sourcePage, printedNumber: printed, role: "page" as const, contents: null, areas: [] };
+    if (text) {
+      return {
+        ...common,
+        title: `${name} · ${pad(printed)}`,
+        alt: `${name} bölümünün ${pad(printed)} numaralı sayfası: yazı sayfası; metni ekran okuyucu metninde.`,
+        transcript: text,
+      };
+    }
     return {
-      key: `${prefix}-${pad(printed)}`,
-      source,
-      sourcePage,
-      printedNumber: printed,
-      role: "page",
+      ...common,
       title: `${name} · boş sayfa ${pad(printed)}`,
-      contents: null,
       alt: `${name} bölümünün ${pad(printed)} numaralı sayfası, henüz boş: üstte bölüm adı, köşede bordo yarım daire, altta sayfa numarası.`,
       transcript: `${header}. ${pad(printed)}`,
-      areas: [],
     };
   });
-  return [opener(`${prefix}-acilis`, source, 5, first, name, picture), ...blanks];
+  return [opener(`${prefix}-acilis`, source, 5, first, name, picture), ...pages];
 }
 
 function pad(number: number): string {
