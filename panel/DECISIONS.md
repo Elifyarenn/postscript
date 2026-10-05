@@ -12840,3 +12840,15 @@ uçları 401, yayımlanmamış sayı ve görselleri 404; depoda gizli anahtar yo
 açmaz, yanlış parola bağlantıyı harcamaz), `contributor-documents.test.ts`
 (2FA'sız admin başkasının belgesine 404, 2FA sonrası 200),
 `security-audit.test.ts` (2FA'sız admin sözleşme PDF'ine 403; senaryodaki admin artık 2FA'lı).
+
+## D-326 — Sayı 1 sayacı 19.00'a
+
+**İstek (ürün sahibi):** "Sayacı 19.00'a ayarla sitede."
+
+**Karar:** Sayı 1'in yayın anı `2026-10-05T19:00:00+03:00` (`src/lib/issue-extras.ts`).
+Sayılar sayfasındaki geri sayım ve ana sayfa başlığındaki "5 Ekim 19.00'de
+yayında" satırı bu tek değerden okunur. Sayının kendisi yine panelden elle
+"Yayınlandı"ya alınır; sayaç bitince sayfa "Çok yakında" gösterir.
+
+**Doğrulama:** Kapı: typecheck, lint, test (tek süreç; `countdown.test.ts` gerçek anı 19.00 olarak sabitler). Canlıda ana sayfa ve
+`/magazine/issues` "19.00" gösteriyor.

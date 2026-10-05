@@ -71,8 +71,8 @@ export type IssueExtras = {
 
 const ISSUE_EXTRAS: Record<number, IssueExtras> = {
   1: {
-    // The owner's date: 5 October, 17.00 Turkey time (D-192, moved from 1 October in D-292)
-    release: { at: "2026-10-05T17:00:00+03:00", title: "Obsession" },
+    // The owner's date: 5 October, 19.00 Turkey time (D-192; 1 October → 5 October 17.00 in D-292, → 19.00 in D-326)
+    release: { at: "2026-10-05T19:00:00+03:00", title: "Obsession" },
     titleLang: "en",
     // Texts are the designer's, read from the Illustrator file's own text
     // layer, including the cards placed outside its artboard (D-120)

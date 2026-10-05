@@ -20,7 +20,8 @@ describe("issue countdown (D-192)", () => {
     expect(formatReleaseMoment(release)).toBe("5 Ekim 17.00");
   });
 
-  it("counts down to Obsession on 5 October at 17.00 (D-292)", () => {
-    expect(issueExtrasFor(1)?.release).toEqual({ at: release, title: "Obsession" });
+  it("counts down to Obsession on 5 October at 19.00 (D-292, D-326)", () => {
+    expect(issueExtrasFor(1)?.release).toEqual({ at: "2026-10-05T19:00:00+03:00", title: "Obsession" });
+    expect(formatReleaseMoment(issueExtrasFor(1)!.release!.at)).toBe("5 Ekim 19.00");
   });
 });
