@@ -40,8 +40,9 @@
  *    still says 04 and its pages 07/08 under a "BİLİM & TEKNOLOJİ" header.
  *    It sits where its contents number (02) and the gap 10–15 put it, and its
  *    pages follow the text, which runs on from one page to the next.
- *  - The front matter (editor's letter, two contents pages, the memorial
- *    page) has no printed numbers. Its order here is a preview order.
+ *  - The front matter has no printed numbers. Its order is the one an admin
+ *    set by hand in the panel after the first import (D-324): the memorial
+ *    page right after the cover, then the letter and the two contents pages.
  *  - The two covers sit side by side in "POSTSCRIPT 01.ai" the way a wrap-around
  *    cover does: the back on the left, the front on the right. So the front
  *    comes first and the back last.
@@ -73,6 +74,24 @@ export const ISSUE_01_DESIGN: DesignManifest = {
       transcript:
         "POSTSCRIPT. Takıntının Trajedisi — Zihnin Zahir ile imtihanı. Takıntılı Bilim İnsanları — Fizik ve Obsesyon. Sayı 01, Ekim 2026. OBSESSSION",
       areas: [],
+    },
+    {
+      key: "anma",
+      source: "POSTSCRIPT 01.ai",
+      sourcePage: 5,
+      printedNumber: null,
+      role: "page",
+      title: "Hayatı yarım bırakılanlar için",
+      contents: "Hayatı Yarım Bırakılanlar İçin",
+      alt: "Siyah zeminde kırmızı yazılarla bir anma metni; altında iki kadın sembolünün içinde kalkmış yumruk.",
+      transcript: [
+        "BU SAYFA HAYATI YARIM BIRAKILANLAR İÇİN.",
+        "Hikâyesini anlatamayan, yazısını tamamlayamayan, sesini duyuramayan, adı bir haberde birkaç satıra sığdırılan kız kardeşlerimiz için bu sayfayı boş bırakıyoruz.",
+        "Çünkü burada olması gereken sözleri onların yazması gerekiyordu.",
+      ].join("\n\n"),
+      areas: [],
+      // The file has the text twice, the 2nd copy 316 pt lower over the symbol (D-324)
+      omitTextObjects: [3, 4],
     },
     {
       key: "sunus",
@@ -131,23 +150,6 @@ export const ISSUE_01_DESIGN: DesignManifest = {
         "09 — LIFESTYLE & FASHION: El Alem Ne Giyer? Bir Parçanın Peşinden Gitmek. “Aesthetic” Hayatlar. Skincare: Cilt Bakımı mı, Cilt Takıntısı mı. Parfüm: Bir Takıntının Kokusu. Dijital Takıntı. Takıntıdan Dönüşen Stil: Streetwear.",
         "10 — YAZAR KÖŞESİ: “P.S.”: Takıntının Trajedisi: Zihnin Zahir'le İmtihanı. Takıntı: Kar Tanesi ve Zihnin Sonsuz Fraktalı. Susamayan Zihinlerin Yankısı.",
         "11 — EĞLENCE & DEDİKODU: Başarı Takıntısı Grubun Önüne Geçer mi? Çay Koy Yeniden Başlayalım: Bir Fincandaki Gizli Şifa. Hangi Takıntılı Karaktersin? QUIZ!",
-      ].join("\n\n"),
-      areas: [],
-    },
-    {
-      key: "anma",
-      source: "POSTSCRIPT 01.ai",
-      sourcePage: 5,
-      printedNumber: null,
-      role: "page",
-      title: "Hayatı yarım bırakılanlar için",
-      contents: "Hayatı Yarım Bırakılanlar İçin",
-      alt: "Siyah zeminde kırmızı yazılarla bir anma metni; altında iki kadın sembolünün içinde kalkmış yumruk.",
-      // The page prints the text twice, one copy over the other; read once
-      transcript: [
-        "BU SAYFA HAYATI YARIM BIRAKILANLAR İÇİN.",
-        "Çünkü burada olması gereken sözleri onların yazması gerekiyordu.",
-        "Hikâyesini anlatamayan, yazısını tamamlayamayan, sesini duyuramayan, adı bir haberde birkaç satıra sığdırılan kız kardeşlerimiz için bu sayfayı boş bırakıyoruz.",
       ].join("\n\n"),
       areas: [],
     },

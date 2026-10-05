@@ -152,6 +152,11 @@ describe("issue 01 as shipped", () => {
     expect(issue.pages.at(-1)!.role).toBe("back_cover");
   });
 
+  it("keeps the front matter in the order set in the panel, the memorial page drawn once (D-324)", () => {
+    expect(issue.pages.slice(0, 5).map((entry) => entry.key)).toEqual(["on-kapak", "anma", "sunus", "icindekiler-1", "icindekiler-2"]);
+    expect(issue.pages[1]!.omitTextObjects).toEqual([3, 4]);
+  });
+
   it("keeps the science section in printed order 04 → 09", () => {
     const science = issue.pages.filter((entry) => entry.source === "POSTSCRIPT bilim.ai").map((entry) => entry.printedNumber);
     expect(science).toEqual([4, 5, 6, 7, 8, 9]);

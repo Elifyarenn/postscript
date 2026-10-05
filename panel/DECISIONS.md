@@ -12732,3 +12732,36 @@ sayfalar ekranında "Tasarım sayfalarını içe aktar / güncelle"ye bastığı
 (D-316) düğme reddeder. Migration yok.
 
 **Doğrulama:** Kapı: typecheck, lint, test.
+
+## D-324 — Sayı 01: anma sayfasındaki çift metin çizimden çıkarıldı, ön kısım panel sırasıyla
+
+**İstek (ürün sahibi, D-323'ün canlı kontrolünden sonra):** "Anma yazısında
+yazılar birbirine girmiş; sayfa sıraları yanlıştı, onu düzelttim."
+
+**Durum:** `POSTSCRIPT 01.ai`'nin 5. çizim alanında aynı metin iki kez var:
+içerik akışında dört metin nesnesi (BT…ET), 3. ve 4. olanlar 1. ve 2.'nin
+316 pt aşağı kaydırılmış birebir kopyası. Dosyada tek katman var, gizli
+katman yok. Alttaki kopya kadın sembolünün üzerine biniyor; üstteki kopya
+sembolle birlikte düzgün bir sayfa oluşturuyor. İki seçenek de çizilip
+karşılaştırıldı, üstteki tutuldu. Ayrıca aktarımdan sonra bir admin panelde
+anma sayfasını kapağın arkasına taşıdı; düğmeye yeniden basılırsa manifest
+bu sırayı geri alırdı.
+
+**Karar:**
+- Manifest sayfasına isteğe bağlı `omitTextObjects` alanı eklendi: çizim
+  sırasında bellekteki kopyadan çıkarılacak metin nesnelerinin sırası.
+  `.ai` dosyası yazılmaz. Sayfada istenen numaralı nesne yoksa betik tahmin
+  etmez, durur ("dosya değişmiş olabilir"). Anma sayfası için `[3, 4]`.
+- Ön kısmın sırası panelde verilen sıra oldu: kapak → anma → sunuş →
+  içindekiler 1 → içindekiler 2. Geri kalan sıra canlıdakiyle zaten aynıydı.
+- Ekran okuyucu metni sayfadaki sıraya göre: başlık, beyaz metin, kırmızı
+  kapanış cümlesi.
+
+Tasarımcıya yine de söylenmeli: dosyada kopya duruyor; bir sonraki teslimde
+düzeltilirse `omitTextObjects` kaldırılır (kopya yoksa betik durur ve bunu
+hatırlatır).
+
+**Canlıya etkisi:** Düğmeye yeniden basıldığında yalnızca anma görseli yeni
+anahtarla yüklenir, sıra değişmez. Migration yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test.

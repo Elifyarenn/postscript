@@ -12,6 +12,18 @@
     "quality": 92
   },
   {
+    "key": "anma",
+    "source": "POSTSCRIPT 01.ai",
+    "sourcePage": 5,
+    "sourceSha256": "2990760d27ec02ad477be86c3db2dca69531a524513131df717f4d74b875a608",
+    "file": "anma.webp",
+    "width": 2456,
+    "height": 3474,
+    "bytes": 228076,
+    "sha256": "36ae020eba835ee817f7faca04163d63d5910629b2c45966dd09da339e264e62",
+    "quality": 92
+  },
+  {
     "key": "sunus",
     "source": "POSTSCRIPT 01.ai",
     "sourcePage": 6,
@@ -45,18 +57,6 @@
     "height": 3474,
     "bytes": 432204,
     "sha256": "15c74d4738a332eee63f9bce19db8229745344d9c50e64be28c5e84519440222",
-    "quality": 92
-  },
-  {
-    "key": "anma",
-    "source": "POSTSCRIPT 01.ai",
-    "sourcePage": 5,
-    "sourceSha256": "2990760d27ec02ad477be86c3db2dca69531a524513131df717f4d74b875a608",
-    "file": "anma.webp",
-    "width": 2456,
-    "height": 3474,
-    "bytes": 379314,
-    "sha256": "56b6cd9a9976f5006e90c1ebf2c42ec0cfad98b5fe3e6a3d8db5f0cc8f4ed491",
     "quality": 92
   },
   {

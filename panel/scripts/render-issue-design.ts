@@ -34,6 +34,32 @@ function sha256(buffer: Uint8Array): string {
   return createHash("sha256").update(buffer).digest("hex");
 }
 
+/**
+ * Drops the listed BT…ET text objects from a page's content stream, in the
+ * copy held in memory (D-324). Refuses rather than guessing when the page
+ * has fewer text objects than asked for: the file must have changed.
+ */
+function omitTextObjects(doc: mupdf.Document, pageIndex: number, numbers: number[]): void {
+  const page = (doc as mupdf.PDFDocument).loadPage(pageIndex) as mupdf.PDFPage;
+  const contents = page.getObject().get("Contents");
+  const streams = contents.isArray() ? Array.from({ length: contents.length }, (_, i) => contents.get(i)) : [contents];
+  let seen = 0;
+  const dropped = new Set<number>();
+  for (const stream of streams) {
+    const text = stream.readStream().asString().replace(/\bBT\b[\s\S]*?\bET\b/g, (object) => {
+      seen += 1;
+      if (!numbers.includes(seen)) return object;
+      dropped.add(seen);
+      return "";
+    });
+    stream.writeStream(text);
+  }
+  const missing = numbers.filter((number) => !dropped.has(number));
+  if (missing.length) {
+    throw new Error(`Sayfa ${pageIndex + 1}: ${seen} metin nesnesi var, ${missing.join(", ")} bulunamadı. Dosya değişmiş olabilir.`);
+  }
+}
+
 async function main(): Promise<void> {
   const issueNumber = Number(argument("issue") ?? "1");
   const manifest = DESIGNS.find((entry) => entry.issueNumber === issueNumber);
@@ -76,6 +102,7 @@ async function main(): Promise<void> {
     if (page.sourcePage > doc.countPages()) {
       throw new Error(`${page.source} dosyasında ${page.sourcePage}. sayfa yok (${doc.countPages()} sayfa).`);
     }
+    if (page.omitTextObjects?.length) omitTextObjects(doc, page.sourcePage - 1, page.omitTextObjects);
     const drawn = doc.loadPage(page.sourcePage - 1);
     const [x0, y0, x1, y1] = drawn.getBounds();
     const scale = manifest.renderWidth / (x1 - x0);

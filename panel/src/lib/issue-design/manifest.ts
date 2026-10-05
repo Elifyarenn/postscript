@@ -72,6 +72,12 @@ export const designPageSchema = z.strictObject({
   alt: z.string().trim().min(1).max(400),
   transcript: z.string().trim().max(20_000).nullable(),
   areas: z.array(designAreaSchema).max(40),
+  /**
+   * Text objects (BT…ET, 1-based, in the order of the page's content stream)
+   * left out when the page is drawn: for a copy of a text the designer left
+   * on the artboard by mistake (D-324). The .ai file itself is never changed.
+   */
+  omitTextObjects: z.array(z.number().int().min(1)).max(20).optional(),
 });
 
 /**
