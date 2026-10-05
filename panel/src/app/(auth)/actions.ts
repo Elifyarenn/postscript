@@ -219,7 +219,7 @@ export async function verifyEmailAction(
     await assertCsrfFromForm(formData);
     const meta = await requestMetadata();
 
-    const user = await verifyEmail(text(formData, "token"), meta);
+    const user = await verifyEmail(text(formData, "token"), meta, text(formData, "password"));
 
     // Someone who followed the link in the same browser goes straight in;
     // anyone else is sent to sign in with a confirmed address

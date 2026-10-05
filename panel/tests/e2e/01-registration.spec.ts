@@ -37,6 +37,8 @@ test("registers as a reader, verifies the address, and stays a reader", async ({
 
   // Following the link creates the account and lands on the login screen
   await page.goto(linkFrom(message.text));
+  // The password chosen on the form proves who is clicking (D-325)
+  await page.getByLabel("Şifre").fill(NEW_READER.password);
   await page.getByRole("button", { name: "Doğrula" }).click();
   await page.waitForURL("**/login?verified=1");
 

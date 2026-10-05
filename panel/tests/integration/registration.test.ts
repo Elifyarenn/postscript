@@ -109,7 +109,7 @@ describe("reader registration", () => {
 
   it("refuses an address that belongs to a live account", async () => {
     const { verificationToken } = await register(validReader, noMeta);
-    await verifyEmail(verificationToken, noMeta);
+    await verifyEmail(verificationToken, noMeta, validReader.password);
 
     const error = await captureError(register(validReader, noMeta));
     expect(error.status).toBe(409);
@@ -121,11 +121,27 @@ describe("reader registration", () => {
     expect(second.verificationToken).not.toBe(first.verificationToken);
 
     // Only the newest link works; the first is dead
-    const stale = await captureError(verifyEmail(first.verificationToken, noMeta));
+    const stale = await captureError(verifyEmail(first.verificationToken, noMeta, validReader.password));
     expect(stale.status).toBe(400);
 
-    const verified = await verifyEmail(second.verificationToken, noMeta);
+    const verified = await verifyEmail(second.verificationToken, noMeta, validReader.password);
     expect(verified.emailVerifiedAt).not.toBeNull();
+  });
+
+  it("needs the registration password to open the account, so a stranger's registration cannot become one (D-325)", async () => {
+    // A stranger registers the owner's address with a password of their own
+    const stranger = await register({ ...validReader, password: "Yabanci-Sifre-2026" }, noMeta);
+
+    // The owner clicks the mail but does not know that password: no account
+    const missing = await captureError(verifyEmail(stranger.verificationToken, noMeta));
+    expect(missing.status).toBe(400);
+    const wrong = await captureError(verifyEmail(stranger.verificationToken, noMeta, validReader.password));
+    expect(wrong.status).toBe(400);
+    expect(await db.select().from(users).where(eq(users.email, "yeni.okur@example.com"))).toHaveLength(0);
+
+    // A wrong password does not spend the link
+    const verified = await verifyEmail(stranger.verificationToken, noMeta, "Yabanci-Sifre-2026");
+    expect(verified.email).toBe("yeni.okur@example.com");
   });
 
   it("refuses a password from the common-password list", async () => {
@@ -144,7 +160,7 @@ describe("verification", () => {
   it("creates the account at verification, born verified and as a plain reader", async () => {
     const { verificationToken } = await register(validReader, noMeta);
 
-    const verified = await verifyEmail(verificationToken, noMeta);
+    const verified = await verifyEmail(verificationToken, noMeta, validReader.password);
     expect(verified.emailVerifiedAt).not.toBeNull();
     expect(verified.role).toBe("user");
     expect(verified.email).toBe("yeni.okur@example.com");
@@ -162,11 +178,11 @@ describe("verification", () => {
 
   it("refuses a spent or unknown token", async () => {
     const { verificationToken } = await register(validReader, noMeta);
-    await verifyEmail(verificationToken, noMeta);
+    await verifyEmail(verificationToken, noMeta, validReader.password);
 
     // The consumed pending row is hard-deleted, so a reused link is
     // indistinguishable from an unknown one: 404 (D-067)
-    const spent = await captureError(verifyEmail(verificationToken, noMeta));
+    const spent = await captureError(verifyEmail(verificationToken, noMeta, validReader.password));
     expect(spent.status).toBe(404);
 
     const unknown = await captureError(verifyEmail("made-up-token-value", noMeta));

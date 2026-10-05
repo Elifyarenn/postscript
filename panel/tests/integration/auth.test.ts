@@ -76,7 +76,7 @@ describe("registration", () => {
   it("always assigns the user role, and refuses a request that tries to set one", async () => {
     // The role is decided when the account is born, i.e. at verification
     const { verificationToken } = await register(validRegistration, noMeta);
-    const verified = await verifyEmail(verificationToken, noMeta);
+    const verified = await verifyEmail(verificationToken, noMeta, validRegistration.password);
     expect(verified.role).toBe("user");
     expect(verified.writerStatus).toBeNull();
 
@@ -109,7 +109,7 @@ describe("registration", () => {
 
   it("refuses an address that belongs to a live account", async () => {
     const { verificationToken } = await register(validRegistration, noMeta);
-    await verifyEmail(verificationToken, noMeta);
+    await verifyEmail(verificationToken, noMeta, validRegistration.password);
 
     const error = await captureError(register(validRegistration, noMeta));
     expect(error.status).toBe(409);
@@ -131,13 +131,13 @@ describe("e-mail verification", () => {
   it("creates the account, born verified, and burns the token", async () => {
     const { verificationToken } = await register(validRegistration, noMeta);
 
-    const verified = await verifyEmail(verificationToken, noMeta);
+    const verified = await verifyEmail(verificationToken, noMeta, validRegistration.password);
     expect(verified.emailVerifiedAt).not.toBeNull();
     expect(verified.role).toBe("user");
 
     // A verification link is single use; the consumed pending row is hard
     // deleted, so a reuse is indistinguishable from an unknown token: 404
-    const reuse = await captureError(verifyEmail(verificationToken, noMeta));
+    const reuse = await captureError(verifyEmail(verificationToken, noMeta, validRegistration.password));
     expect(reuse.status).toBe(404);
 
     const rows = await db.select().from(users).where(eq(users.email, "yeni.kullanici@example.com"));
@@ -160,7 +160,7 @@ describe("e-mail verification", () => {
 
   it("refuses to resend once the address is verified", async () => {
     const { verificationToken } = await register(validRegistration, noMeta);
-    await verifyEmail(verificationToken, noMeta);
+    await verifyEmail(verificationToken, noMeta, validRegistration.password);
 
     const error = await captureError(
       resendVerificationEmail("yeni.kullanici@example.com"),

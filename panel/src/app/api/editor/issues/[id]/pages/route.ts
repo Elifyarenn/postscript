@@ -22,11 +22,13 @@ import { addPageImage, replacePageImage } from "@/services/issue-pages";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    // The role first: it reads only the cookie, so a stranger's upload is
+    // refused before its body is parsed into memory (D-325)
+    const { user } = await requireRole("admin");
+
     const form = await request.formData();
     const token = form.get("csrfToken");
     await assertCsrf(typeof token === "string" ? token : null);
-
-    const { user } = await requireRole("admin");
     const meta = await requestMetadata();
     const { id } = await params;
 

@@ -7,13 +7,13 @@
  * is no file that could be reached around this route.
  */
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth/session";
+import { requireAuthForFiles } from "@/lib/auth/session";
 import { errorJson } from "@/lib/api";
 import { contributorDocumentPdf } from "@/services/contributor-documents";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const context = await requireAuth();
+    const context = await requireAuthForFiles();
     const { id } = await params;
     const file = await contributorDocumentPdf({ ...context.user }, id);
 

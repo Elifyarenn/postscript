@@ -473,6 +473,12 @@ describe("reading and downloading", () => {
     expect(own.headers.get("cache-control")).toBe("private, no-store");
     expect((await fetchAs(s.illustrator)).status).toBe(404);
     expect((await fetchAs(null)).status).toBe(401);
+
+    // An admin's password-only session (no second factor yet) reads as a
+    // member: someone else's document stays closed until 2FA is set up (D-325)
+    expect((await fetchAs(s.admin)).status).toBe(404);
+    await db.update(users).set({ totpEnabledAt: new Date() }).where(eq(users.id, s.admin.id));
+    expect((await fetchAs(s.admin)).status).toBe(200);
   });
 });
 

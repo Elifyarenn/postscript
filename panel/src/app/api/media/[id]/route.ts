@@ -15,9 +15,10 @@
  */
 import { and, eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { db } from "@/db/client";
 import { agreementAcceptances, media, rightsGrants, signedContracts, writerApplications } from "@/db/schema";
-import { requireAuth } from "@/lib/auth/session";
+import { requireAuthForFiles } from "@/lib/auth/session";
 import { canAccessAdminPanel, canAccessEditorPanel, canViewContractDocuments } from "@/lib/auth/rbac";
 import { getStorage } from "@/lib/storage";
 import { isProfileImage } from "@/services/profile-images";
@@ -31,9 +32,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   try {
     // `requireAuth`, not `getAuthContext`: a banned or unverified account must
     // not pull files out of the library either (D-072)
-    const context = await requireAuth();
+    const context = await requireAuthForFiles();
 
     const { id } = await params;
+    // A malformed id reached the uuid column and came back as a 500 (D-325)
+    if (!z.uuid().safeParse(id).success) throw notFound("Dosya bulunamadı.");
     const rows = await db.select().from(media).where(eq(media.id, id)).limit(1);
     const row = rows[0];
     if (!row || row.deletedAt) throw notFound("Dosya bulunamadı.");

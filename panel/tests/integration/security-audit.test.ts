@@ -140,7 +140,8 @@ async function contractScenario() {
     .where(eq(signedContracts.userId, writer.id));
 
   const editor = await withTotp(await createUser({ role: "editor", editorStatus: "active" }));
-  return { admin, writer, editor, contractId: signed!.fileMediaId };
+  // Staff powers on the file routes need the second factor too (D-325)
+  return { admin: await withTotp(admin), writer, editor, contractId: signed!.fileMediaId };
 }
 
 /* ------------------------------------------------------------------ */
@@ -213,6 +214,14 @@ describe("contract PDFs and the media library", () => {
 
     await signIn(admin);
     expect((await fetchMedia(contractId)).status).toBe(200);
+  });
+
+  it("GET /api/media/:id: an admin whose password-only session has no second factor yet reads as a member (D-325)", async () => {
+    const { admin, contractId } = await contractScenario();
+    await db.update(users).set({ totpEnabledAt: null }).where(eq(users.id, admin.id));
+
+    await signIn(admin);
+    expect((await fetchMedia(contractId)).status).toBe(403);
   });
 
   it("GET /api/media/:id: another writer gets 403, and no session gets 401", async () => {

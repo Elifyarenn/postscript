@@ -164,6 +164,7 @@ test("lets the listed writer in once the address is verified", async ({ page }) 
   await registerReader(page, writer);
   const message = await waitForMail(writer.email);
   await page.goto(linkFrom(message.text));
+  await page.getByLabel("Şifre").fill(writer.password);
   await page.getByRole("button", { name: "Doğrula" }).click();
   await page.waitForURL("**/login?verified=1");
 

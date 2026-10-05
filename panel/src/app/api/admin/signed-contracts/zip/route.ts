@@ -6,14 +6,14 @@
  * Admin only (the service checks); the archive is written as it is sent, one
  * file at a time.
  */
-import { requireAuth } from "@/lib/auth/session";
+import { requireAuthForFiles } from "@/lib/auth/session";
 import { errorJson } from "@/lib/api";
 import { zipStream } from "@/lib/zip";
 import { countersignZipEntries } from "@/services/signed-contracts";
 
 export async function GET(request: Request) {
   try {
-    const context = await requireAuth();
+    const context = await requireAuthForFiles();
     const which = new URL(request.url).searchParams.get("which") === "all" ? "all" : "waiting";
     const { entries } = await countersignZipEntries({ ...context.user }, which);
 

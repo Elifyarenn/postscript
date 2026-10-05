@@ -185,9 +185,16 @@ async function issuePendingRegistration(data: PendingRegistrationData): Promise<
  * Spends a pending registration's link token. Returns null when the token is
  * unknown (so `verifyEmail` can fall back to the legacy path); throws when the
  * row exists but the link is spent or expired.
+ *
+ * The link alone is not enough: the password chosen on the form must be typed
+ * again (D-325). Otherwise anyone could register someone else's address with a
+ * password of their own, and the owner clicking the mail they never asked for
+ * (or the newest of two) would create an account the stranger can log into.
+ * A wrong password does not spend the link.
  */
 async function consumePendingRegistration(
   token: string,
+  password: string | null,
 ): Promise<(PendingRegistrationData & { id: string }) | null> {
   const tokenHash = hashToken(token, env().SESSION_SECRET);
   const rows = await db
@@ -200,6 +207,12 @@ async function consumePendingRegistration(
   if (!row) return null;
   if (row.usedAt) throw badRequest("Bu bağlantı daha önce kullanılmış.");
   if (row.expiresAt.getTime() <= Date.now()) throw badRequest("Bağlantının süresi dolmuş.");
+
+  if (!password || !(await verifyPassword(row.passwordHash, password))) {
+    throw badRequest("Kayıt olurken belirlediğiniz parolayı girin.", {
+      password: ["Parola, kayıt formunda belirlediğinizle aynı değil."],
+    });
+  }
 
   // Two clicks must not both win: the row is spent atomically
   const consumed = await db
@@ -279,8 +292,13 @@ async function consumeEmailToken(
  * verified. The legacy path (an account created before the two-step flow) only
  * fills in `email_verified_at` on the existing row.
  */
-export async function verifyEmail(token: string, meta: RequestMeta): Promise<User> {
-  const pending = await consumePendingRegistration(token);
+export async function verifyEmail(
+  token: string,
+  meta: RequestMeta,
+  /** The password typed on the registration form; needed for a new account (D-325). */
+  password: string | null = null,
+): Promise<User> {
+  const pending = await consumePendingRegistration(token, password);
   if (pending) {
     // The address may have been taken out of band between submission and click
     const taken = await db
@@ -361,6 +379,12 @@ export async function resendVerificationEmail(
   meta: RequestMeta = { ip: null, userAgent: null },
   botToken?: string | null,
 ): Promise<void> {
+  // The answer tells a waiting registration from an unknown address, so the
+  // form shares the registration's per-address limit rather than having none:
+  // it cannot be used to sort a list of addresses at speed (D-325)
+  const limit = await consumeAttempt("register_ip", meta.ip ?? "unknown");
+  if (!limit.allowed) throw rateLimited("Çok fazla deneme yapıldı, 10 dakika bekleyin.");
+
   // The resend form mails a typed-in address too, so it takes the same check (D-111)
   await assertHuman(botToken, meta.ip, "resend_verification");
 

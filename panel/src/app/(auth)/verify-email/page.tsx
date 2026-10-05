@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { readCsrfToken } from "@/lib/csrf";
-import { Alert, Card } from "@/components/ui";
+import { Alert, Card, Field, Input } from "@/components/ui";
 import { PanelForm } from "@/components/form";
 import { verifyEmailAction } from "../actions";
 
@@ -32,11 +32,17 @@ export default async function VerifyEmailPage({
     <Card>
       <h1 className="mb-1 font-serif text-xl">E-posta doğrulama</h1>
       <p className="mb-5 text-sm text-muted">
-        Adresinizi doğrulamak için aşağıdaki düğmeye basın.
+        Adresinizi doğrulamak için kayıt olurken belirlediğiniz şifreyi girip
+        düğmeye basın.
       </p>
 
+      {/* The password proves the person clicking is the one who registered:
+          the link alone would let a stranger's registration through (D-325) */}
       <PanelForm action={verifyEmailAction} csrfToken={csrfToken} submitLabel="Doğrula">
         <input type="hidden" name="token" value={token} />
+        <Field label="Şifre" htmlFor="password">
+          <Input id="password" name="password" type="password" autoComplete="current-password" required />
+        </Field>
       </PanelForm>
 
       <p className="mt-5 text-sm">

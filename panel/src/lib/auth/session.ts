@@ -259,6 +259,25 @@ export async function requireAuth(): Promise<AuthContext> {
   return context;
 }
 
+/**
+ * An editor or admin who has not set up the mandatory second factor holds a
+ * session made with the password alone. `requireRole` and `guardPanel` bounce
+ * such a session to the setup screen, but the routes that only ask for a
+ * member (the reader, page pictures, files) would otherwise grant it the
+ * role's reach: unpublished issues, every contract file (D-325). Until the
+ * second factor exists, the account reads as an ordinary member.
+ */
+export function withoutUnprovenStaffRights(context: AuthContext): AuthContext {
+  const { user } = context;
+  if (user.totpEnabled || !hasRole(user.role, "editor")) return context;
+  return { ...context, user: { ...user, role: "user", editorStatus: null } };
+}
+
+/** `requireAuth` for the file routes: staff powers only after the second factor (D-325). */
+export async function requireAuthForFiles(): Promise<AuthContext> {
+  return withoutUnprovenStaffRights(await requireAuth());
+}
+
 /** Throws 401/403 unless the caller holds at least `minimum` and passed 2FA. */
 export async function requireRole(minimum: Role): Promise<AuthContext> {
   const context = await requireAuth();

@@ -9,7 +9,7 @@ import "server-only";
  * asks for.
  */
 import { forbidden, redirect } from "next/navigation";
-import { getAuthContext, type AuthContext } from "./session";
+import { getAuthContext, withoutUnprovenStaffRights, type AuthContext } from "./session";
 import {
   canAccessAdminPanel,
   canAccessEditorPanel,
@@ -45,12 +45,13 @@ export async function guardWriterInnerPages(): Promise<AuthContext> {
  * The magazine is open to everyone (D-257): a session only adds the member
  * features (comments, bookmarks). A banned or unverified account reads as a
  * visitor here, so it gets the public view and no member controls it could
- * not use anyway.
+ * not use anyway. An editor or admin without the second factor reads as a
+ * member, so an unpublished issue stays closed to a password-only session (D-325).
  */
 export async function readerSession(): Promise<AuthContext | null> {
   const context = await getAuthContext();
   if (!context || context.user.isBanned || context.user.emailVerifiedAt === null) return null;
-  return context;
+  return withoutUnprovenStaffRights(context);
 }
 
 /**

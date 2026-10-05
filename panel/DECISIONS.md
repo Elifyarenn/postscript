@@ -12765,3 +12765,78 @@ hatırlatır).
 anahtarla yüklenir, sıra değişmez. Migration yok.
 
 **Doğrulama:** Kapı: typecheck, lint, test.
+
+## D-325 — Yayın öncesi güvenlik incelemesi: kayıt doğrulamada parola, 2FA'sız ekip hesabı, küçük açıklar
+
+**İstek (ürün sahibi):** "PostScript'in yayın öncesi güvenlik kontrolünü yap …
+somut açıkları düzelt." Canlıda saldırı/yük testi yok; gerçek kullanıcı, veri,
+rol değişmedi; e-posta gönderilmedi.
+
+**İnceleme:** Kod dört alanda okundu (giriş/oturum/parola sıfırlama/CSRF/hız
+sınırı/gizli anahtarlar; yayımlanmamış sayı, görsel, test, sözleşme ve belge
+erişimi; başkasının mesajı/belgesi/hesap verisi (IDOR); XSS/yükleme/başlıklar/
+yönlendirme/SSRF/SQL). Canlıda yalnızca oturumsuz, tekil GET istekleri.
+
+**Düzeltilenler:**
+
+1. **Başkasının adresiyle kayıt → hesabı ele geçirme (orta).** Bekleyen kayıt,
+   formu gönderenin parolasını taşıyordu; aynı adrese yeni kayıt eskisini
+   iptal ediyordu. Bir yabancı sahibin adresini kendi parolasıyla kaydedip,
+   sahip gelen bağlantıya tıklayınca yabancının bildiği parolayla hesap
+   oluşuyordu. Artık doğrulama sayfası kayıtta belirlenen parolayı da ister;
+   yanlış parola bağlantıyı harcamaz. Kayıt öncesi açılmış eski hesapların
+   (eski yol) doğrulaması değişmedi.
+2. **İki adımlı doğrulaması kurulmamış editör/admin (orta).** Yalnızca parolayla
+   açılan oturum panelde kurulum ekranına yönleniyordu ama okuyucu, sayı
+   görselleri, test cevabı, `/api/media`, katkı belgesi PDF'i ve imzalı
+   sözleşme zip'i rolü olduğu gibi kabul ediyordu: yayımlanmamış sayılar ve
+   tüm sözleşme dosyaları açıktı. Artık bu yollarda böyle bir hesap sıradan üye
+   sayılır (`withoutUnprovenStaffRights`, `requireAuthForFiles`). Canlıda 2
+   admin ve 6 editörün hepsinde 2FA açık; açık bugün kullanılamıyordu, yeni
+   terfi edilen ekip üyesi için kapanır.
+3. **Doğrulama bağlantısını tekrar gönderme formunda sınır yoktu (düşük).** Yanıt
+   bekleyen kaydı bilinmeyen adresten ayırdığı için adres listesi taranabilirdi;
+   artık kayıtla aynı IP sınırına (10 dakikada 5) tabi.
+4. **Silinmiş yazı sayfada (düşük).** Yayımlanmış bir sayının sayfası silinmiş bir
+   yazıya bağlıysa başlığı ve yazar adı okura gidiyordu; silinmiş yazı artık
+   birleştirilmez. Yayımlanmamış (ör. incelemedeki) yazının başlığının sayfada
+   görünmesi bilinçli tasarım (gövde ve bağlantı gizli; `issue-pages.test.ts`),
+   değiştirilmedi.
+5. **Sayfa görseli yükleme rotası (düşük):** rol denetimi gövde okunmadan önce.
+6. **`/api/media/<bozuk id>` 500 yerine 404.**
+
+**Düzeltilmeyenler (kayıt için, yayını engellemiyor):**
+
+- E-posta değişikliği yalnızca oturum ister; eski adrese bildirim gitmez,
+  parola değişikliğinde de bildirim yok (orta; çalınmış oturumu kalıcı ele
+  geçirmeye çevirir). Mevcut parola + eski adrese bildirim gerekiyor — arayüz
+  değişikliği, yayından sonra.
+- TOTP kodu 90 sn içinde tekrar kullanılabilir (düşük-orta): son kullanılan
+  adım için sütun ve migration gerekir.
+- Başarılı giriş, IP'nin deneme sayacını sıfırlıyor; geçerli hesabı olan biri
+  IP sınırını aşabilir (düşük). Sayaç yalnız başarısızları sayacak şekilde
+  yeniden yazılmalı (sürücüye duyarlı upsert, D-078); yayın saatinde ortak
+  ağlardaki okurları kilitleme riski yüzünden ertelendi.
+- CSP `script-src 'unsafe-inline'` (nonce'a geçiş proxy maliyeti, D-308);
+  profil fotoğraflarında EXIF/GPS sunucuda silinmiyor (yeni bağımlılık);
+  kategori editörü önizlemede kendi alanı dışındaki yazı gövdesini görebilir;
+  Vercel'de kullanılmayan `SEED_ADMIN_PASSWORD` değişkeni duruyor (ürün
+  sahibi silmeli).
+
+**Doğrulananlar (sorun yok):** oturum belirteci 256 bit, veritabanında
+biberli hash, httpOnly/secure/lax, 30 gün mutlak/7 gün boşta süre; parola
+sıfırlama/doğrulama/e-posta belirteçleri tek kullanımlık ve süreli; 2FA
+meydan okuması kullanıcıya bağlı, 5 dk; CSRF origin + çift gönderim çerezi;
+IDOR yok (mesaj, belge, bildirim, oturum, yazı); rol istemciden alınmıyor;
+Markdown `rehype-sanitize` varsayılan şema; yüklemelerde sihirli bayt, SVG/HTML
+yok; açık yönlendirme, SSRF, SQL enjeksiyonu yok; canlıda HSTS, CSP,
+X-Frame-Options DENY, nosniff; oturumsuz istekte sözleşme/belge/medya/yönetim
+uçları 401, yayımlanmamış sayı ve görselleri 404; depoda gizli anahtar yok.
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test (tek süreç). Yeni testler:
+`registration.test.ts` (yabancının kaydı parolasız/yanlış parolayla hesap
+açmaz, yanlış parola bağlantıyı harcamaz), `contributor-documents.test.ts`
+(2FA'sız admin başkasının belgesine 404, 2FA sonrası 200),
+`security-audit.test.ts` (2FA'sız admin sözleşme PDF'ine 403; senaryodaki admin artık 2FA'lı).

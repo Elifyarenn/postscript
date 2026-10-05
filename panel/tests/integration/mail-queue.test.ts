@@ -382,7 +382,7 @@ describe("sign-in links", () => {
     expect(delivered.html).toContain(`href="${url}"`);
 
     const token = decodeURIComponent(new URL(url!).searchParams.get("token")!);
-    const account = await verifyEmail(token, noMeta);
+    const account = await verifyEmail(token, noMeta, "Cok-Guclu-Sifre-2026");
     expect(account.email).toBe(email);
 
     const job = await onlyJob(email);

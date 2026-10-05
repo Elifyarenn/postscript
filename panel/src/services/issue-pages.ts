@@ -227,7 +227,8 @@ async function pagesOf(issueId: string, preview: boolean): Promise<IssuePageView
     .select(pageColumns)
     .from(issuePages)
     .leftJoin(media, eq(issuePages.imageMediaId, media.id))
-    .leftJoin(articles, eq(issuePages.articleId, articles.id))
+    // A deleted article is not joined, whatever its status says (D-325)
+    .leftJoin(articles, and(eq(issuePages.articleId, articles.id), isNull(articles.deletedAt)))
     .leftJoin(users, eq(articles.authorId, users.id))
     .where(eq(issuePages.issueId, issueId))
     .orderBy(asc(issuePages.position));
