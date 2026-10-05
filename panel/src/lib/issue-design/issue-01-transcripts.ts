@@ -90,8 +90,8 @@ export const ISSUE_01_TRANSCRIPTS: Record<string, string> = {
     "Bir otomobili kaybetmekten korkmak değil, o otomobille birlikte kendinden bir şey kaybetmekten korkmak. Bugün asıl soru Volkswagen’in Almanya’ya ne kadar bağımlı olduğu değil, Almanya’nın Volkswagen’e ne kadar bağımlı olduğudur çünkü Volkswagen artık yalnızca otomobil üretmiyor. Almanya’nın üretim gücünü, işçi sınıfının geleceğini, mühendislik gururunu ve geçmişten miras kalan güven duygusunu aynı kaputun altında taşıyor ve belki de bu yüzden bir Volkswagen fabrikasının ışıkları söndüğünde Almanya’da yalnızca bir üretim hattı kararmıyor, bir ülkenin kendisi hakkında yıllardır inandığı hikâyenin bir cümlesi eksiliyor. Takıntı dediğimiz şey de belki tam olarak budur: Bir şeyi kaybettiğimizde aslında onun kendisini değil, onunla birlikte kim olduğumuzu kaybetmekten korkmak..",
     "09",
   ].join(PARAGRAPH),
-  "psikoloji-iyilesmek-11": [
-    "BİLİM & TEKNOLOJİ",
+  "psikoloji-iyilesmek-13": [
+    "PSİKOLOJİ & İLİŞKİLER",
     "İYİLEŞMEK NE ZAMAN YENİ BİR BASKIYA DÖNÜŞTÜ?",
     "İyileşmek öyle değil, böyle olur!",
     "Her gün biraz daha iyi olmamız, daha huzurlu, daha mutlu, daha “iyileşmiş”bir hâle gelmemiz gerektiği söyleniyor. Peki ya iyi hissetmemek de insan olmanın doğal bir parçasıysa?",
@@ -104,10 +104,10 @@ export const ISSUE_01_TRANSCRIPTS: Record<string, string> = {
     "Tüm bu kusursuzlaşma baskısının temelinde, zihnimizin bize kurduğu bilişsel bir tuzak yatar. Akademik literatürde Düşünce-Eylem Birleşimi olarak adlandırılan bu yanılsama; aklımızdan geçen olumsuz bir düşünceyi, duyguyu veya anlık kaygıyı sanki gerçekleşmiş bir eylem ya da kaçınılmaz bir gerçekmiş gibi algılamamıza neden olur. İçimizde doğan kıskançlık, öfke, yetersizlik veya kırgınlık gibi hislerimizi “İyileşemedim, hâlâ hastayım, yanlış yapıyorum” şeklinde yorumlamak, düşünce ile gerçeği bir tutmanın sonucudur. Oysa zihin, her gün binlerce rastgele düşünce üreten dinamik bir yapıdır. Bir düşünceye sahip olmak, o eylemi gerçekleştirmek anlamına gelmez; karakterimiz de sadece o düşünceden ibaret değildir.",
     "Sonuç olarak zihnin ürettiği her dalgayı durdurmaya çalışmak, fırtınalı bir denizi kontrol etmeye çalışmaktan farksızdır. Zihnimizden geçen her olumsuz düşünceyi ya da kırgınlığı \"tamir edilmesi gereken bir arıza\" olarak görmeyi bıraktığımızda, Öz Yardım Endüstrisi'nin üzerimize yüklediği o ağır, görünmez yük de hafiflemeye başlar. Asıl özgürlük, her an kusursuz bir iyi oluş hâli sergilemek değil; kendi içimizdeki gölgelere, kırılmalara ve çözümlenmemiş duygulara yer açabilmektir. Belki de aradığımız nihai huzur; sürekli bir iyileşme projesi olmaktan vazgeçip iyileşmeme hakkını kullanabilmekte, insan olmanın karmaşasını ve kırılganlığını olduğu gibi kucaklayabilmektedir.",
     "Çünkü iyileşme tam olarak böyle olur!",
-    "07",
+    "13",
   ].join(PARAGRAPH),
-  "psikoloji-dusunmemeye-12": [
-    "BİLİM & TEKNOLOJİ",
+  "psikoloji-dusunmemeye-14": [
+    "PSİKOLOJİ & İLİŞKİLER",
     "DÜŞÜNMEMEYE ÇALIŞTIKÇA NEDEN DAHA ÇOK DÜŞÜNÜYORUZ?",
     "Düşünmemeye Çalıştıkça Neden Daha Çok Düşünürüz?",
     "“Bunu düşünme” dediğimiz anda zihnimiz neden tam olarak o düşünceye koşuyor? Belki de bazı düşüncelerden kurtulmanın yolu onları susturmak değil, gelmelerine izin vermektir.",
@@ -120,10 +120,10 @@ export const ISSUE_01_TRANSCRIPTS: Record<string, string> = {
     "İkincisi ise \"izleme süreci\": Otomatik, bilinçsizce çalışan ve asla yorulmayan bir arka plan tarayıcısıdır. Tek görevi, yasaklanan düşüncenin zihne sızıp sızmadığını durmaksızın denetlemektir. İşte paradoks tam da bu noktada başlar: Bu denetimi yapabilmek için izleme süreci, bastırmaya çalıştığımız o düşüncenin izini hafızada sürekli canlı tutmak zorunda kalır. Kısacası zihin, yasaklı düşünceyi \"Var mı, yok mu?\" diye ararken her seferinde onu kendi elleriyle yeniden uyandırır.",
     "Normal koşullarda işletim süreci güçlü olduğu için bu küçük canlanma fark edilmeden bastırılır. Fakat zihnimiz yorgunken, stres altındayken ya da yoğun kaygı içindeyken çaba gerektiren işletim süreci zayıflar; otomatik izleme süreci ise kesintisiz çalışmayı sürdürür. Sonuçta yasaklı düşünce, tam da ondan en çok uzak durmak istediğimiz anda kontrolsüzce bilince sızar. Gece üçte uyumaya çabalarken sunumu daha çok düşünmemizin ya da sınav anında kendimize \"Sakin ol\" dememizin hiçbir işe yarayamamasının sebebi tam olarak budur.",
     "Bu bulgunun klinik psikolojideki yankıları azımsanmayacak kadar büyüktür. Obsesif kompulsif bozuklukta kişilerin istenmeyen düşünceleri bastırma çabası, paradoksal biçimde bu düşüncelerin sıklığını ve şiddetini tırmandırır. Travma sonrası stres bozukluğunda \"o anıyı düşünmeme\" gayreti, geri dönüşlerin önünü kesmek yerine onları tetikler. Yas sürecinde sergilenen \"Artık üzülmeyeceğim\" kararlılığı ise acıyı dindirmekten ziyade erteler ve çok daha sarsıcı biçimde geri getirir. Bağımlılıkla mücadele edenlerde de benzer bir tuzak işler: \"Artık canım istemeyecek\" diyenler, zihnine hiç böyle bir baskı kurmayanlara kıyasla çok daha yoğun aşerme krizleriyle karşılaşır. Diyet yapanlarda da tablo değişmez: \"Pastayı aklıma getirmeyeceğim\" diyen biri, mutfaktan geçerken kokuyu herkesten önce ve çok daha keskin hisseder. Çünkü zihni zaten arka planda o pastayı aramakla meşguldür.",
-    "08",
+    "14",
   ].join(PARAGRAPH),
-  "psikoloji-dusunmemeye-13": [
-    "BİLİM & TEKNOLOJİ",
+  "psikoloji-dusunmemeye-15": [
+    "PSİKOLOJİ & İLİŞKİLER",
     "Peki, çıkış yolu nerede? Wegner ve ardıllarının ortak cevabı son derece net: Bastırmak yerine kabullenmek, düşünceyle cephe savaşına girmeyip onun geçip gitmesine izin vermek. Örneğin Kabul ve Kararlılık Terapisi, kişiye düşüncelerini susturmayı değil, onlarla barışık yaşamayı öğretir: \"Bırak zihninde dursun, ancak eylemlerini onun yönetmesine izin verme.\" Amaç arka plandaki izleme mekanizmasını devreden çıkarmak değildir; zaten bu fiziken mümkün de değildir. Asıl gaye, o düşüncenin üzerimizdeki tehdit gücünü zayıflatmaktır. Yasaklı fikir bir \"kriz\" olmaktan çıkıp \"gelip geçici bir zihinsel olay\" halini aldığında, bumerang etkisi de gücünü yitirir. Bir diğer strateji ise zihni soyut bir yasakla terbiye etmek yerine somut bir odakla beslemektir. Çünkü beyin mutlak bir boşluk yaratamaz, ona ne düşünmemesi gerektiğini söylediğiniz an zihninizin gideceği ilk durak yine o yasaklı düşünce olur.",
     "Gece üçteki o ana geri dönersek: Mesele belki de sunumu düşünmemek değil, düşünmemeye çalışmaktan vazgeçmekti. Çünkü zihnimiz bir kapıyı zorla kapalı tutmaya çalıştığı her an, o kapının ardında neyin beklediğini hatırlamak zorunda kalıyor. Tam da bu yüzden, bastırılmak istendiği her an o beyaz ayı biraz daha büyüyor; silinmek yerine zihnin tam ortasında devasa bir gölgeye dönüşüyor.",
     "Kaynak: Wegner, D. M., Schneider, D. J., Carter, S. R., & White, T. L. (1987). \"Paradoxical Effects of Thought Suppression.\" Journal of Personality and Social Psychology. Wegner, D. M. (1994). \"Ironic Processes of Mental Control.\" Psychological Review.",
@@ -136,10 +136,10 @@ export const ISSUE_01_TRANSCRIPTS: Record<string, string> = {
     "“Tik tak.”",
     "Öfkeyle arkanızı dönüp yelkovandan kalan iki kurşunlu tabancayı doğrulttuğunuzda, namlunun ucunda yansımanızı görürsünüz. İşte en büyük soru burada başlar: Kontrol etmek istediğimiz şey zaman ve dış dünyaysa neden namlunun ucunda yine yansımamız var? Ya kontrol etmek istediğimiz şey zaman değil de en korktuğumuz şey zihnimizse? Çünkü eğer dış dünya kontrolden çıkar da duygularınızla yüzleşmek zorunda kalırsanız o mermileri sıkmak değil, yutmak zorunda kalırsınız ve üstünde adınızın yazılı olduğu mermiyle birlikte mide asidinizi özenle dizdiğiniz kitaplarınıza kusar, tüm o düzeni kirletmekle kalmaz, yavaş yavaş eridiğine şahit olursunuz. Kitapları asitten kurtarmaya çalışıp kucaklayarak kaçarken fısıltı size çelme takar ve konuşur:",
     "“Yok olmaları gerek.”",
-    "07",
+    "15",
   ].join(PARAGRAPH),
-  "psikoloji-buyuk-dans-14": [
-    "BİLİM & TEKNOLOJİ",
+  "psikoloji-buyuk-dans-16": [
+    "PSİKOLOJİ & İLİŞKİLER",
     "“Tik tak”lar hiç susmadığında zamanı suçlamak kolaydır. Asıl soru ise şudur: Kaçmaya çalıştığımız şey gerçekten zaman mı, yoksa kendi zihnimizin içinde yüzleşmekten korktuğumuz kişi mi?",
     "Yazar: Elif Yaren Çekiç",
     "Anlam veremeyen bakışlarınızı gördüğünde kahkaha nidalarının tükürükleri yüzünüze çarpar ve o an anlarsınız ki çok inanarak kontrol ettiğinizi sandığınız her şey sizi yok eder. Yok eder ki anlayın: Ne şuursuzca akan nehri durdurabilir, ne bir yanardağın patlamasını önleyebilir, ne de zamanın dansını bölebilirsiniz. Zaman hem en büyük düşmanınız hem de en büyük öğreticiniz olur. Olur da fısıltının tükürüklerinin teninizde kurumasını beklerseniz asit yavaş yavaş tüm o düzenli karmaşayı eritir.",
@@ -156,10 +156,10 @@ export const ISSUE_01_TRANSCRIPTS: Record<string, string> = {
     "“Bizden kaçıyor sayın hâkim. Biz jüriden, duygulardan.” Hâkim jüri üyelerine baktığında Sevgi sessizce başıyla onaylar. Şefkat hemen ardındadır; acıyarak siz Fani’ye bakar. Zaman, Güven’in daha fazla konuşmasına izin vermez: “Sadece bizleri de sabote etmedi hâkimim. Sizi darmadağın etti, topladı zannedip her seferinde boğdu. Sonra beni durdurayım derken sizi parçalayıp kanattı. Dansımın ortasında düşen parçalarınız yüzünden tadınız hâlâ aklımda.” Hâkim önce Zaman’a, sonra jüriye bakar ve ardından Fani’ye bakamadan öfkeyle açılan kapıya döner.",
     "Kapının sert açılışı tüm salonu o yöne döndürmüştü. Daha siz dönemeden bir ses yükseldi. Tiz, cılız, tanıdık bir ses. “Ben de şikâyetçiyim sayın hâkim.”",
     "O tanıdık sese döndüğünüzde karşınızda uzun zaman önce vedalaştığınız genç hâlinizi görürsünüz. Cılız ses öfkeyle parlarken salonun ortasına yürür. “Beni bir kış akşamı bir söğüt ağacının altında yapayalnız bıraktı!”. Genç durduğunda ve jüriyle bakıştığında aradaki özlem bariz şekilde ortada olacak.",
-    "08",
+    "16",
   ].join(PARAGRAPH),
-  "psikoloji-buyuk-dans-15": [
-    "BİLİM & TEKNOLOJİ",
+  "psikoloji-buyuk-dans-17": [
+    "PSİKOLOJİ & İLİŞKİLER",
     "Ortada olacak ki herkes bir süre susacak ve sessizliği bölme sırası size gelecek. “Çok yaşıyordun.” Genç, şaşkınlıkla öfke karışımı bir ifadeyle size döndüğünde bir adım gerilemenizle Zaman’ın kısık kahkahasını duyacaksınız. Genç ise konuşacak, konuşacak ki öfkesini kusabilsin: “Ben bunun için dünyaya geldim! Yaşamak için.”",
     "Şefkat ve Öfke usulca jüri masasından çıkıp gencin iki yanından tutarak masalarına götürür. Şefkat genci usulca oturturken Öfke tüm o iri cüssesiyle ayakta kalır ve size bakar. “Ya bana yaptıklarına ne demeli? Bizden kaçmaya çalışırken her seferinde sonuçları yüzünden tekrardan beni kullandın. Beyni sanki ben dağıtmışım, Zaman’a o kurşunu ben sıkmışım, sana o kurşunu ben yutturmuşum gibi beni suçladın. Beni büyüttükçe büyüttün.”",
     "Öfke elini masaya vurdu.“Her yerim çatlaklar ve kesiklerle dolu!”",
@@ -173,6 +173,6 @@ export const ISSUE_01_TRANSCRIPTS: Record<string, string> = {
     "Tam kapıdan çıkacakken salona döner. “Ha, bu arada dansıma davetlisiniz.”",
     "Ardından o soğuk gri gözlerini size diker.",
     "“En çok da sen.”",
-    "07",
+    "17",
   ].join(PARAGRAPH),
 };

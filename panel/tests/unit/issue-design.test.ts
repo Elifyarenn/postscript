@@ -162,6 +162,12 @@ describe("issue 01 as shipped", () => {
     expect(science).toEqual([4, 5, 6, 7, 8, 9]);
   });
 
+  it("keeps the psychology section in printed order 12 → 17 (D-328)", () => {
+    const psychology = issue.pages.filter((entry) => entry.source === "POSTSCRIPT psikoloj.ai");
+    expect(psychology.map((entry) => entry.printedNumber)).toEqual([12, 13, 14, 15, 16, 17]);
+    expect(psychology.slice(1).every((entry) => entry.key.endsWith(`-${entry.printedNumber}`))).toBe(true);
+  });
+
   it("puts the numbered sections in printed order, 18 to 71 without a gap (D-327)", () => {
     const from = issue.pages.findIndex((entry) => entry.key === "film-dizi-kitap-acilis");
     const numbers = issue.pages.slice(from, -1).map((entry) => entry.printedNumber);

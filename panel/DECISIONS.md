@@ -12889,3 +12889,33 @@ yazısı duruyor; 16–17 numaraları hiçbir teslim edilen dosyada yok (Psikolo
 "Tasarım sayfalarını içe aktar / güncelle"ye basmalı. Migration yok.
 
 **Doğrulama:** Kapı: typecheck, lint, test.
+
+## D-328 — Sayı 01: altı dosyanın düzeltilmiş hâli, Psikoloji 12–17
+
+**İstek (ürün sahibi, 20.40):** "içerik dosyalarını güncelledim, yükle."
+
+**Durum:** `sayı/` klasöründe 20.11–20.38 arasında altı dosya değişti: Fashion,
+Film, Pop Culture, Sanat & Edebiyat ve Yazar Köşesi'nin yeni hâli ve yeni
+Psikoloji dosyası. İlk beşinde metin aynı, görseller değişti; Yazar Köşesi'nin
+"BİLİM & TEKNOLOJİ" üst başlığı düzeltilmiş. Psikoloji artık kendi
+numaralarını taşıyor: açılış 12, sayfalar 13–17, üst başlık "PSİKOLOJİ &
+İLİŞKİLER". Yazılar aynı (İyileşmek, Düşünmemeye, Büyük Dansa Karşı Koymak).
+
+**Karar:**
+- Bu altı dosyanın 36 sayfası yeniden çizildi; diğer dosyalar (Tarih,
+  Sosyal, Sosyoloji, Eğlence, Bilim, `01`) değişmedi, yeniden çizilmedi.
+- Psikoloji sayfalarının anahtarları basılı numaraya uyduruldu
+  (`psikoloji-iyilesmek-13` … `psikoloji-buyuk-dans-17`), elle yazılmış ekran
+  okuyucu metinleri korunup üst başlık ve sayfa numarası yeni baskıya göre
+  düzeltildi; içindekiler bağlantıları aynen duruyor.
+- Otomatik metin (D-327) yeni dosyalardan yeniden alındı; artık her sayfanın
+  numarası da metinde.
+
+**Hâlâ açık (tasarımcıya):** Bilim 04–09'da bitiyor, Psikoloji 12'de
+başlıyor: 10–11 hiçbir dosyada yok.
+
+**Canlıya etkisi:** Admin, Sayı 1'in sayfalar ekranında "Tasarım sayfalarını
+içe aktar / güncelle"ye basmalı; Sayı 1 hâlâ "yalnızca yöneticiler" olmalı
+(D-316). Migration yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test.

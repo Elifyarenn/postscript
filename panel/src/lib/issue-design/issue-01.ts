@@ -36,9 +36,8 @@
  *  - Within a file the artboards are not in page order (the opener is the 5th
  *    artboard, the page after it the 6th, then the 1st–4th); the printed
  *    number wins over the artboard order.
- *  - Psychology is the one section whose numbers were not updated: its opener
- *    still says 04 and its pages 07/08 under a "BİLİM & TEKNOLOJİ" header.
- *    It sits where its contents number (02) and the gap 10–15 put it, and its
+ *  - Psychology was re-delivered on 2026-10-05 evening with its own numbers,
+ *    12–17 (D-328); before that it said 04 and 07/08. Its
  *    pages follow the text, which runs on from one page to the next.
  *  - The front matter has no printed numbers. Its order is the one an admin
  *    set by hand in the panel after the first import (D-324): the memorial
@@ -169,20 +168,19 @@ export const ISSUE_01_DESIGN: DesignManifest = {
     article("bilim-volkswagen-09", "POSTSCRIPT bilim.ai", 4, 9, "Volkswagen Almanya için sadece bir otomobil mi?",
       "Almanya'nın Volkswagen Takıntısı",
       "Bilim & Teknoloji yazısı “Volkswagen Almanya için sadece bir otomobil mi?”: sağ üstte bordo yarım daire içinde yazının girişi, küçük puntoyla iki sütun metin."),
-    // Printed numbers below are what the page says (04, 07, 08), not where it stands (10–15)
-    opener("psikoloji-acilis", "POSTSCRIPT psikoloj.ai", 5, 4, "Psikoloji ve İlişkiler", "karalama çizgilerden oluşan bir kadın başı profili ve yanında düğümlenmiş bir kalp"),
-    article("psikoloji-iyilesmek-11", "POSTSCRIPT psikoloj.ai", 6, 7, "İyileşmek ne zaman yeni bir baskıya dönüştü?",
+    opener("psikoloji-acilis", "POSTSCRIPT psikoloj.ai", 5, 12, "Psikoloji ve İlişkiler", "karalama çizgilerden oluşan bir kadın başı profili ve yanında düğümlenmiş bir kalp"),
+    article("psikoloji-iyilesmek-13", "POSTSCRIPT psikoloj.ai", 6, 13, "İyileşmek ne zaman yeni bir baskıya dönüştü?",
       "İyileşmek Öyle Değil, Böyle Olur!",
       "Psikoloji yazısı “İyileşmek ne zaman yeni bir baskıya dönüştü?”: solda başlık, sağ üstte bordo yarım daire içinde yazının girişi, iki sütun metin."),
-    article("psikoloji-dusunmemeye-12", "POSTSCRIPT psikoloj.ai", 1, 8, "Düşünmemeye çalıştıkça neden daha çok düşünüyoruz?",
+    article("psikoloji-dusunmemeye-14", "POSTSCRIPT psikoloj.ai", 1, 14, "Düşünmemeye çalıştıkça neden daha çok düşünüyoruz?",
       "Düşünmemeye Çalıştıkça Neden Daha Çok Düşünürüz?",
       "Psikoloji yazısı “Düşünmemeye çalıştıkça neden daha çok düşünüyoruz?”: sol üstte bordo yarım daire içinde yazının girişi, sağda başlık, iki sütun metin."),
-    article("psikoloji-dusunmemeye-13", "POSTSCRIPT psikoloj.ai", 2, 7, "Düşünmemeye çalıştıkça… (devam) / Büyük dansa karşı koymak",
+    article("psikoloji-dusunmemeye-15", "POSTSCRIPT psikoloj.ai", 2, 15, "Düşünmemeye çalıştıkça… (devam) / Büyük dansa karşı koymak",
       "Büyük Dansa Karşı Koymak",
       "Önceki yazının sonu ve kaynakları; ardından “Ya kontrol takıntısı, kontrolünü kaybetmenin ta kendisiyse?” başlıklı öykünün başlangıcı."),
-    article("psikoloji-buyuk-dans-14", "POSTSCRIPT psikoloj.ai", 3, 8, "Büyük dansa karşı koymak (devam)", null,
+    article("psikoloji-buyuk-dans-16", "POSTSCRIPT psikoloj.ai", 3, 16, "Büyük dansa karşı koymak (devam)", null,
       "“Büyük Dansa Karşı Koymak” öyküsünün devamı: sol üstte bordo yarım daire içinde öykünün girişi, iki sütun metin."),
-    article("psikoloji-buyuk-dans-15", "POSTSCRIPT psikoloj.ai", 4, 7, "Büyük dansa karşı koymak (son)", null,
+    article("psikoloji-buyuk-dans-17", "POSTSCRIPT psikoloj.ai", 4, 17, "Büyük dansa karşı koymak (son)", null,
       "“Büyük Dansa Karşı Koymak” öyküsünün sonu: sağ üstte bordo yarım daire, iki sütun metin."),
     ...section("film-dizi-kitap", "POSTSCRIPT film dizi kitap.ai", 18, "Film, Dizi & Kitap", "FİLM, DİZİ & KİTAP", "altın rengi süslü bir çerçevenin içinde eski bir televizyon ve üst üste kitaplar"),
     ...section("sanat-edebiyat", "POSTSCRIPT sanat edebiyat.ai", 24, "Sanat & Edebiyat", "SANAT & EDEBİYAT", "açık bir kitabın üzerinde boya kutuları, tüpler, uçuşan harfler ve kırmızı bir heykel figürü"),
