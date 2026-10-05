@@ -12629,3 +12629,17 @@ admin sözleşme sayfasındaki teknik özet/yer tutucu adları.
 **Doğrulama:** Kapı: typecheck, lint, test (tek süreç). Yerel ölçüm betiği ve
 ekran görüntüleri: 360, 390, 412 px; canlıda yayından sonra herkese açık
 sayfalarda aynı ölçüm.
+
+## D-320 — Sayı kartlarının noktaları telefonda yine küçük, yuvarlak
+
+**İstek (ürün sahibi):** "Sayının filmi vs olan slider'ın noktaları mobilde
+büyük ve oval; küçük ve sadece nokta olarak yap."
+
+**Neden:** D-319'daki telefon kuralı (sayfa gövdesindeki her düğme en az 40 px)
+kart kaydırıcısının noktalarını da yakaladı: 8×8 px nokta 8×40 px oval oldu.
+**Karar:** `.rail-dot` o kuraldan çıkarıldı ve telefonda da 0,55rem'lik
+yuvarlak nokta olarak sabitlendi (`min-height: 0`, `flex: none`). Kartlar
+kaydırılarak da gezildiği için noktalar dokunma hedefi kuralının dışında kalır.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Canlıda 360/390/412 px'te noktanın
+genişliği ve yüksekliği eşit ve küçük.

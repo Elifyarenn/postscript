@@ -6330,8 +6330,18 @@ html:has(.profile-editor[open]) {
   }
 
   /* Controls in the page body: at least 40px to tap */
-  .ps-site .site-main :is(button, input[type="submit"], .profile-link, .settings-edit):not(.fit-line *) {
+  .ps-site .site-main :is(button, input[type="submit"], .profile-link, .settings-edit):not(.fit-line *, .rail-dot) {
     min-height: 2.5rem;
+  }
+
+  /* The card rail's dots stay small round dots (D-320): the 40px rule above
+     had stretched them into tall ovals */
+  .ps-site .rail-dot {
+    flex: none;
+    width: 0.55rem;
+    min-height: 0;
+    height: 0.55rem;
+    padding: 0;
   }
 
   .ps-site .profile-actions a[href^="/social/report"] {
