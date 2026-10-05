@@ -12659,3 +12659,22 @@ yüksekliğini korur. Masaüstü ve 640–760 px aralığı değişmedi.
 
 **Doğrulama:** Kapı: typecheck, lint, test (tek süreç). Canlıda 360/390/412 px:
 dört alan aynı satırda, her biri iki satır, yatay taşma yok.
+
+## D-322 — İmza listelerinde yalnızca hâlâ katkı verenler
+
+**İstek (ürün sahibi):** "Yazar ya da tasarım olmayanları çıkar listeden."
+
+**Durum:** `/admin/agreements/imza`'daki "Belge yüklemesi bekleyenler" ve
+"dergi imzası bekleyen" listeleri, yazarlıktan okura döndürülen kişileri
+(ekipten çıkarılanlar) de göstermeye devam ediyordu.
+
+**Karar:** İki liste de yalnızca şu kişileri gösterir: rolü `user`'dan yüksek
+olanlar, tasarımcı işaretliler (`is_illustrator`) ve başvurusu admin onaylı
+olup sözleşmesini bekleyen adaylar. Ölçüt tek yerde: `stillContributing()`
+(`src/services/contributor-documents.ts`). Hatırlatma maili bekleyenler
+listesinden okuduğu için onlara da gitmez. "Tümünü indir (ZIP)" arşivdir;
+eski katkı verenlerin doğrulanmış ve karşı imzalı belgeleri orada kalır
+(imzalı belge hukuki kayıttır). Kayıtların kendisine dokunulmaz.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Canlıda Elif Eylül Çekim, Elif
+Yetim ve Ceren Boztepe iki listede de görünmez.

@@ -33,6 +33,7 @@ import {
   rightsGrants,
   signedContracts,
   users,
+  writerApplications,
   type AgreementVersion,
   type ContributorDocument,
   type User,
@@ -722,6 +723,18 @@ const notFrozen = () =>
     ne(users.role, "admin"),
   );
 
+/**
+ * Someone the magazine still works with (D-322): writer and above, a designer,
+ * or an applicant whose approved application waits for its contract. A writer
+ * sent back to reader drops off the signing lists; their records stay.
+ */
+export const stillContributing = () =>
+  or(
+    ne(users.role, "user"),
+    eq(users.isIllustrator, true),
+    sql`exists (select 1 from ${writerApplications} where ${writerApplications.userId} = ${users.id} and ${writerApplications.status} = 'admin_approved')`,
+  );
+
 /** Why an admin's contract and licence forms are not prepared (D-305). */
 const ADMIN_SKIP = "Yönetici: dergiyi kuran adminlerden sözleşme ve ruhsat istenmez";
 
@@ -1016,6 +1029,7 @@ export async function listAwaitingUploads(actor: Actor): Promise<AwaitingUpload[
         eq(contributorDocuments.status, "prepared"),
         isNull(users.deletedAt),
         notFrozen(),
+        stillContributing(),
         or(sql`${contributorDocuments.mailedAt} is not null`, not(withoutSignedCopy)),
       ),
     )

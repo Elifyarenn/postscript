@@ -471,4 +471,22 @@ describe("the magazine's signature (D-290)", () => {
     const [row] = await db.select().from(signedContracts).where(eq(signedContracts.id, id));
     expect(row!.countersignedMediaId).toBeNull();
   });
+
+  it("leaves out someone no longer contributing, but keeps them in the full archive (D-322)", async () => {
+    const { admin, writer, id } = await verified();
+    const { listForCountersign, countersignZipEntries } = await import("@/services/signed-contracts");
+    const listed = async () => (await listForCountersign(actorOf(admin))).some((row) => row.id === id);
+    expect(await listed()).toBe(true);
+
+    // Sent back to reader: off the list and off the to-sign ZIP
+    await db.update(users).set({ role: "user", writerStatus: null }).where(eq(users.id, writer.id));
+    expect(await listed()).toBe(false);
+    expect((await countersignZipEntries(actorOf(admin), "waiting")).count).toBe(0);
+    expect((await countersignZipEntries(actorOf(admin), "all")).count).toBe(1);
+    expect((await listForCountersign(actorOf(admin), { includeFormer: true })).map((row) => row.id)).toEqual([id]);
+
+    // A designer is still contributing
+    await db.update(users).set({ isIllustrator: true }).where(eq(users.id, writer.id));
+    expect(await listed()).toBe(true);
+  });
 });

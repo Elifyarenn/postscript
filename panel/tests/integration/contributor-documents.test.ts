@@ -554,6 +554,30 @@ describe("waiting for signed copies (D-291)", () => {
     await setWriterStatus(actorOf(s.admin), s.complete.id, "active", noMeta);
     expect(await listed()).toBe(true);
   });
+
+  it("awaits nothing from someone sent back to reader, unless a designer or an applicant (D-322)", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    await db.update(contributorDocuments).set({ mailedAt: new Date() }).where(eq(contributorDocuments.userId, s.complete.id));
+    const { listAwaitingUploads } = await import("@/services/contributor-documents");
+    const listed = async () => (await listAwaitingUploads(actorOf(s.admin))).some((entry) => entry.userId === s.complete.id);
+    expect(await listed()).toBe(true);
+
+    await db.update(users).set({ role: "user", writerStatus: null }).where(eq(users.id, s.complete.id));
+    expect(await listed()).toBe(false);
+
+    // An approved applicant still owes the contract that finishes their application
+    const { writerApplications } = await import("@/db/schema");
+    const [application] = await db
+      .insert(writerApplications)
+      .values({ userId: s.complete.id, status: "admin_approved" })
+      .returning({ id: writerApplications.id });
+    expect(await listed()).toBe(true);
+    await db.delete(writerApplications).where(eq(writerApplications.id, application!.id));
+
+    await db.update(users).set({ isIllustrator: true }).where(eq(users.id, s.complete.id));
+    expect(await listed()).toBe(true);
+  });
 });
 
 describe("a quiz as a work (D-300)", () => {

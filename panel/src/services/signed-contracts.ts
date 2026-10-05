@@ -36,6 +36,7 @@ import { uniqueEntryNames, type ZipEntry } from "@/lib/zip";
 import { canAccessIllustratorPanel, canAccessWriterPanel, canManageAgreements, type Actor } from "@/lib/auth/rbac";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { getCurrentAgreement } from "./agreements";
+import { stillContributing } from "./contributor-documents";
 import { detectFileType, storeGeneratedPdf } from "./media";
 import { checkWriterEligibility, findUserById } from "./users";
 import { completeApplicationWithSignedContract } from "./writer-applications";
@@ -464,9 +465,13 @@ const countersigners = alias(users, "countersigners");
 
 /**
  * Every verified upload in one place, for the magazine to sign: those still
- * waiting for its signature first, then the finished ones.
+ * waiting for its signature first, then the finished ones. Someone no longer
+ * contributing is left out (D-322) unless `includeFormer` asks for the archive.
  */
-export async function listForCountersign(actor: Actor): Promise<CountersignItem[]> {
+export async function listForCountersign(
+  actor: Actor,
+  { includeFormer = false }: { includeFormer?: boolean } = {},
+): Promise<CountersignItem[]> {
   if (!canManageAgreements(actor)) throw forbidden();
   const rows = await db
     .select({
@@ -489,7 +494,7 @@ export async function listForCountersign(actor: Actor): Promise<CountersignItem[
     .leftJoin(signedDocuments, eq(signedContracts.contributorDocumentId, signedDocuments.id))
     .leftJoin(signedWorks, eq(signedDocuments.articleId, signedWorks.id))
     .leftJoin(signedQuizzes, eq(signedDocuments.quizId, signedQuizzes.id))
-    .where(eq(signedContracts.status, "approved"))
+    .where(and(eq(signedContracts.status, "approved"), includeFormer ? undefined : stillContributing()))
     .orderBy(users.displayName, signedContracts.reviewedAt);
   const items = rows.map(({ documentKind, ...row }) => ({ ...row, isContract: documentKind !== "work_licence" }));
   return [...items.filter((row) => !row.countersignedMediaId), ...items.filter((row) => row.countersignedMediaId)];
@@ -515,7 +520,10 @@ export async function countersignZipEntries(
   actor: Actor,
   which: "waiting" | "all",
 ): Promise<{ count: number; entries: AsyncIterable<ZipEntry> }> {
-  const items = (await listForCountersign(actor)).filter((row) => which === "all" || !row.countersignedMediaId);
+  // The full archive keeps former contributors' signed copies; the to-sign set does not
+  const items = (await listForCountersign(actor, { includeFormer: which === "all" })).filter(
+    (row) => which === "all" || !row.countersignedMediaId,
+  );
   const names = uniqueEntryNames(items.map(countersignFileName));
   async function* entries(): AsyncGenerator<ZipEntry> {
     for (const [index, item] of items.entries()) {
