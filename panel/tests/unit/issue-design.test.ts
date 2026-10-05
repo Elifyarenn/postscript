@@ -157,9 +157,9 @@ describe("issue 01 as shipped", () => {
     expect(issue.pages[1]!.omitTextObjects).toEqual([3, 4]);
   });
 
-  it("keeps the science section in printed order 04 → 09", () => {
+  it("keeps the science section in printed order 06 → 11 (D-329)", () => {
     const science = issue.pages.filter((entry) => entry.source === "POSTSCRIPT bilim.ai").map((entry) => entry.printedNumber);
-    expect(science).toEqual([4, 5, 6, 7, 8, 9]);
+    expect(science).toEqual([6, 7, 8, 9, 10, 11]);
   });
 
   it("keeps the psychology section in printed order 12 → 17 (D-328)", () => {

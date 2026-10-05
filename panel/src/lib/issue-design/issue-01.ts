@@ -31,7 +31,7 @@
  * Why the order is what it is (2026-10-05, the files delivered that day):
  *  - Every page of the twelve files is in, the empty ones too (D-323): a
  *    section's unwritten pages are its numbered blank template pages.
- *  - The pages carry their printed numbers 04–69 and the two contents pages
+ *  - The pages carry their printed numbers 06–71 and the two contents pages
  *    list the sections 01–11 in the same order, so both decide.
  *  - Within a file the artboards are not in page order (the opener is the 5th
  *    artboard, the page after it the 6th, then the 1st–4th); the printed
@@ -153,19 +153,19 @@ export const ISSUE_01_DESIGN: DesignManifest = {
       ].join("\n\n"),
       areas: [],
     },
-    opener("bilim-acilis", "POSTSCRIPT bilim.ai", 5, 4, "Bilim & Teknoloji", "halkalı gezegen, roket ve yıldızlarla çevrili hilal içinde bölüm adı"),
-    article("bilim-karadelik-05", "POSTSCRIPT bilim.ai", 6, 5, "Ya bir karadeliğe değil, bir ilişkiye çekiliyorsanız?",
+    opener("bilim-acilis", "POSTSCRIPT bilim.ai", 5, 6, "Bilim & Teknoloji", "halkalı gezegen, roket ve yıldızlarla çevrili hilal içinde bölüm adı"),
+    article("bilim-karadelik-07", "POSTSCRIPT bilim.ai", 6, 7, "Ya bir karadeliğe değil, bir ilişkiye çekiliyorsanız?",
       "Çekimin Saplantılı Hali: Karadelikler ve Toksik İlişkiler",
       "Bilim & Teknoloji yazısı “Ya bir karadeliğe değil, bir ilişkiye çekiliyorsanız?”: solda başlık ve metin, sağ üstte bordo yarım daire içinde yazının girişi, altta iki sütun metin."),
-    article("bilim-takinti-basari-06", "POSTSCRIPT bilim.ai", 1, 6, "Takıntı, başarının sırrı olabilir mi?",
+    article("bilim-takinti-basari-08", "POSTSCRIPT bilim.ai", 1, 8, "Takıntı, başarının sırrı olabilir mi?",
       "Bilim İnsanları ve Obsesyon",
       "Bilim & Teknoloji yazısı “Takıntı, başarının sırrı olabilir mi?”: sol üstte bordo yarım daire içinde yazının girişi, sağda başlık, iki sütun metin."),
-    article("bilim-bir-hap-07", "POSTSCRIPT bilim.ai", 2, 7, "Bir hap ne zaman fazla?",
+    article("bilim-bir-hap-09", "POSTSCRIPT bilim.ai", 2, 9, "Bir hap ne zaman fazla?",
       "Reçetenin Öteki Yüzü: İlacın Tedaviden Bağımlılığa Uzanan Sessiz Yolu",
       "Önceki yazının sonu ve “Bir hap ne zaman fazla?” yazısının başlangıcı: iki sütun metin, sağ altta yere dökülmüş hap şişesi çizimi."),
-    article("bilim-bir-hap-08", "POSTSCRIPT bilim.ai", 3, 8, "Bir hap ne zaman fazla? (devam)", null,
+    article("bilim-bir-hap-10", "POSTSCRIPT bilim.ai", 3, 10, "Bir hap ne zaman fazla? (devam)", null,
       "“Bir hap ne zaman fazla?” yazısının devamı: sol üstte bordo yarım daire içinde yazının girişi, iki sütun metin ve iki vurgulu soru satırı."),
-    article("bilim-volkswagen-09", "POSTSCRIPT bilim.ai", 4, 9, "Volkswagen Almanya için sadece bir otomobil mi?",
+    article("bilim-volkswagen-11", "POSTSCRIPT bilim.ai", 4, 11, "Volkswagen Almanya için sadece bir otomobil mi?",
       "Almanya'nın Volkswagen Takıntısı",
       "Bilim & Teknoloji yazısı “Volkswagen Almanya için sadece bir otomobil mi?”: sağ üstte bordo yarım daire içinde yazının girişi, küçük puntoyla iki sütun metin."),
     opener("psikoloji-acilis", "POSTSCRIPT psikoloj.ai", 5, 12, "Psikoloji ve İlişkiler", "karalama çizgilerden oluşan bir kadın başı profili ve yanında düğümlenmiş bir kalp"),

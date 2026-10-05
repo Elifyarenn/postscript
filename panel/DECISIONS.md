@@ -12919,3 +12919,36 @@ içe aktar / güncelle"ye basmalı; Sayı 1 hâlâ "yalnızca yöneticiler" olma
 (D-316). Migration yok.
 
 **Doğrulama:** Kapı: typecheck, lint, test.
+
+## D-329 — Sayı 01: `son/` teslimiyle dokuz bölüm yeniden çizildi, Bilim 06–11
+
+**İstek (ürün sahibi, 21.00–21.25):** "POSTSCRIPT bilim.ai'ı bilim kısmına
+güncelle"; "psikoloj (2).ai bunu da psikolojiye işle"; "bu dosyalar eski";
+"son bununla komple güncelle"; "bitince pushla".
+
+**Durum:** `son/` klasöründe dokuz dosya (Eğlence, Fashion, Feminizm, Film,
+Pop, Psikoloji, Sanat, Tarih, Yazar) en son hâl olarak teslim edildi; Bilim,
+Sosyoloji ve `01` bu teslimde yok. Dokuzunun metni ve basılı numaraları
+canlıdakiyle (D-327/D-328) birebir aynı, değişiklik görsellerde. Kök klasörde
+ayrıca yeni `POSTSCRIPT bilim.ai` (21.02) geldi: metni aynı, basılı numaraları
+06–11 (açılış 06, sayfalar 07–11); `deneme/`deki 12.50 tarihli kopya da 06–11.
+Böylece D-328'de açık kalan 10–11 boşluğu kapandı: numaralı sayfalar 06'dan
+71'e kesintisiz. Volkswagen sayfasının alt başlığı artık "Almanya'nın
+Volkswagen Takıntısı" (D-323'te karadelik yazısınınkinin kopyasıydı).
+
+**Karar:**
+- Dokuz bölümün 54 sayfası `son/`dan yeniden çizildi (dosya adları manifestteki
+  adlara eşlenerek). Yalnızca Tarih & Dünya'nın altı görseli değişti; diğer
+  sekiz dosya canlıdakiyle bayt bayt aynı görseli verdi. Sosyoloji `sayı/`daki 18.09 dosyasından, `01` D-324'teki
+  hâliyle kaldı.
+- Bilim'in altı sayfası 21.02 dosyasından çizildi; anahtarlar basılı numaraya
+  uyduruldu (`bilim-karadelik-07` … `bilim-volkswagen-11`), elle yazılmış ekran
+  okuyucu metinlerinin sayfa numaraları ve Volkswagen alt başlığı düzeltildi.
+- Bu makinede bellek az olduğu için her sayfa ayrı süreçte çizildi; bir sayfa
+  kesilirse `renders.json`daki kaynak dosya parmak izi hangilerinin kaldığını
+  gösteriyor.
+
+**Canlıya etkisi:** Admin, Sayı 1 hâlâ "yalnızca yöneticiler" iken
+"Tasarım sayfalarını içe aktar / güncelle"ye basmalı (D-316). Migration yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test.

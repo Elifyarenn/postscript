@@ -11,7 +11,7 @@
 const PARAGRAPH = "\n\n";
 
 export const ISSUE_01_TRANSCRIPTS: Record<string, string> = {
-  "bilim-karadelik-05": [
+  "bilim-karadelik-07": [
     "BİLİM & TEKNOLOJİ",
     "YA BİR KARADELİĞE DEĞİL, BİR İLİŞKİYE ÇEKİLİYORSANIZ?",
     "Çekimin Saplantılı Hali: Karadelikler ve Toksik İlişkiler",
@@ -23,9 +23,9 @@ export const ISSUE_01_TRANSCRIPTS: Record<string, string> = {
     "Evet, tüm bu bilgileri öğrendiğimize göre artık bir karadeliğe düşmemek için fazlaca sebebimiz var diyebiliriz. Tabii gerçekte kimse bir karadeliğin içine düşmese de hayatta bizi karadelik gibi içine çeken durumlar var. Başta güzel ve tatlı gelen bu ilişkiler zamanla sınırlarımızı görünmez kılıyor, bizi kendimize yabancılaştırıyor ve hatta hissettirmeden kontrolümüzü elimizden alıyor. Toksik ilişkiler de işte tam olarak böyle çalışıyor. İlk başlarda güçlü bir çekim ve yoğun bir bağ yaratıyor. İşte bu çekim alanına bir kez girdiğinizde olay ufkunun ötesine geçen cismin geri dönüşü olmaması gibi, bazı şeyleri ilk günkü gibi tutmak neredeyse imkansız hale geliyor.",
     "Bu yüzden konu “karadeliğin içine çekilmek” değil, neye sürüklendiğini fark edebilmekte. Bir karadeliğin fiziksel sınırları olduğu gibi biz insanların da ruhsal ve duygusal sınırları vardır. Bu sınırlar bize zarar vermek için değil bizi korumak için oradalar. Gerçek hayatta bir karadeliğe düşmeseniz bile toksik kişiler ve ilişkiler sizi kendine çekebilir. Ama evrenimizin aksine siz kendi olay ufkunuzu fark edebilirsiniz. Fark ettiğiniz anda ise yapılabilecek en güçlü şey de bu sınırı korumayı seçmektir.",
     "Olay ufkundan uzakta ve sağlıcakla kalın!",
-    "05",
+    "07",
   ].join(PARAGRAPH),
-  "bilim-takinti-basari-06": [
+  "bilim-takinti-basari-08": [
     "BİLİM & TEKNOLOJİ",
     "TAKINTI, BAŞARININ SIRRI OLABİLİR Mİ?",
     "Bilim İnsanları ve Obsesyon",
@@ -38,9 +38,9 @@ export const ISSUE_01_TRANSCRIPTS: Record<string, string> = {
     "Temizlik olarak aşırı takıntılı biri olmasına rağmen güvercinlere karşı apayrı bir sevgisi ve takıntısı vardı. Çalışmadığı zamanlarda bolca güvercin besler ve seyrederdi. Yaralanan güvercinleri evine götürür, iyileştirmeye çalışırdı. Hatta ileri bir boyuta varmış olan bu takıntısını beyaz bir güvercine aşık olduğunu söyleyerek dile getirmişti. Bunun yanında bahsettiğimiz gibi hijyen takıntısına da sahipti. Hafif lekeli kumaşlardan nefret eder, saçlarına dokundurtmaz, yemek yerken çokça peçete bulundurur ve bir kez kullandığı havlu gibi eşyaları tekrar kullanmazdı.",
     "Sayısal hesaplamalar yapmayı da severdi ki hatta 3 sayısı yine burada boyut olarak karşımıza çıkmakta. Adım sayılarını sayar; yediği lokmalarını kübik parçalara bölerek hacmini hesaplamaya çalışırdı.",
     "Ezeli düşmanı olan Thomas Alva Edison'un da hastalık boyutunda OKB’si bulunuyordu. Kendisi başlı başına bir uyku düşmanı ve zaman kaybına dair takıntıları olan biriydi. Günde sadece 3-4 saat uyur ve öğlenleri 15-20 dakikalık power nap denen şekerleme uykusu uyurdu. Bunun dışında uyumayı kesinlikle vakit kaybı olarak görürdü.",
-    "06",
+    "08",
   ].join(PARAGRAPH),
-  "bilim-bir-hap-07": [
+  "bilim-bir-hap-09": [
     "BİLİM & TEKNOLOJİ",
     "Kendisine ve ekibine fikir kotaları koyardı ve nicelik takıntısına sahipti. İyi bir fikir ancak kötü olan yüzlerce fikrin arasından çıkabilirdi. Buradan da ampulün uzun süreli yanmasında 999 kez denemesinin ardından vazgeçmeyip 1.000'inci denemede buluşundan anlayabiliyoruz. Bunun yanında kendisine her 10 günde bir küçük icat, her 6 ayda bir büyük ticari buluş bulma hedefi koymuştu. Bir probleme karşı 40 ila 120 fikir bulma konusunda kendine katı bir kural koymuş ve bu takıntısı sayesinde de 1.093 patent almayı başarmıştı. Tam anlamıyla takıntılarıyla yaşayan bir adamdı.",
     "Thomas Alva Edison küçük yaşlarda geçirdiği hastalıklar veyahut bir tren kazası sonucu (Sebebi tam olarak bilinmemekle beraber bu iki ihtimal üzerinde durulur.) işitme engeline sahip olmuştu ve bu konuda tedavi olmayı yıllarca reddetmişti. Sağır olmasını dünyadaki dış gürültüye karşı savunma mekanizması olarak görmüş ve icatlarına daha iyi konsantre olabildiğini savunmuştu.",
@@ -53,9 +53,9 @@ export const ISSUE_01_TRANSCRIPTS: Record<string, string> = {
     "İlaç kullanımındaki artıştan söz edildiğinde çoğu zaman rakamlar konuşulur: sağlık harcamaları, reçete sayıları, kutu satışları, ilaç sektörünün büyüklüğü... Oysa rakamların arkasında çok daha sessiz bir hikâye vardır.",
     "İlaçların hayatımızdaki yeri kolayca inkâr edilebilecek bir şey değildir. Bir tansiyon ilacı yıllarca bir insanın hayatını koruyabilir, bir antidepresan, uzun zamandır yardım arayan birinin yeniden günlük hayatına dönmesini sağlayabilir, bir ağrı kesici dayanılmaz bir ağrıyı birkaç saatliğine bile olsa susturabilir.",
     "Modern tıp bize yalnızca hastalıklarla savaşmanın değil, hastalıklarla birlikte yaşamayı mümkün kılmanın da yollarını veriyor. Bazen aynı hikâyenin başka bir yüzü ortaya çıkıyor. Bazı ilaçlar, özellikle yanlış kullanıldığında ya da gereğinden uzun süre kullanıldığında tolerans ve fiziksel bağımlılık gibi sorunlara yol açabiliyor. Burada küçük fakat önemli bir ayrım var, uzun süre ilaç kullanan her insan bağımlı değildir. Özellikle antidepresanlar söz konusu olduğunda ilaç kullanmakla bağımlı olmak aynı şey değildir. Antidepresanların önemli bir bölümü klasik anlamda bağımlılık oluşturmaz, yalnızca bazıları aniden bırakıldığında kesilme belirtilerine yol açabilir. Yani mesele yalnızca ilacın kendisi değildir.",
-    "07",
+    "09",
   ].join(PARAGRAPH),
-  "bilim-bir-hap-08": [
+  "bilim-bir-hap-10": [
     "BİLİM & TEKNOLOJİ",
     "İlaçlar hayatımızı değiştirebilir. Peki onları ne kadar süre kullanmamız gerektiğini gerçekten biliyor muyuz?",
     "Yazar: Rabia K",
@@ -67,12 +67,12 @@ export const ISSUE_01_TRANSCRIPTS: Record<string, string> = {
     "İlaç artık yalnızca hastalığı tedavi etmez, kişi kendisini ilacın yokluğunda daha kötü hissetmeye başlar. Bağımlılığın en tehlikeli yanlarından biri de belki budur: bazen bağımlılık, tedavinin kendisine benzeyebilir. Bu hikâyeyi yalnızca hastanın davranışları üzerinden anlatmak da bir kolaycılık olur çünkü reçetenin arkasında yalnızca hasta yoktur, hekim ve sağlık sistemi de vardır. Hastaya ayrılabilen birkaç dakika, takip imkânları, psikolojik destek hizmetlerine erişim ve ilaç dışındaki tedavi seçeneklerinin ulaşılabilirliği de bu tabloya dahildir. Bir hekimin önünde onlarca hastanın beklediği bir sistemde ayrıntılı bir yaşam öyküsü almak, davranışsal tedavi seçeneklerini konuşmak ya da ilacın aylar sonrasını kapsayan bir planını anlatmak her zaman kolay değildir. İlaç bazen gerçekten en hızlı çözümdüröama en hızlı çözüm her zaman en iyi çözüm değildir.",
     "Şimdi eczanenin önündeki kadına geri dönelim. Belki üç ilacın üçü de gereklidir: tansiyon ilacını yıllarca kullanması gerekecektir, uyku ilacı belki de yalnızca kısa bir süre için verilmiştir, “sinirleri” için aldığı ilacın etkisini değerlendirmek üzere birkaç hafta sonra yeniden doktora gitmesi gerekecektir. Bunu reçeteye bakarak bilemeyiz; ama onun sorması gereken soru hâlâ aynıdır: “Bunu ne kadar süre kullanacağım?”. Çünkü güvenli ilaç kullanımı yalnızca doğru ilacı seçmekten ibaret değildir. Doğru doz, doğru süre, doğru takip ve gerektiğinde doğru şekilde bırakmak da tedavinin bir parçasıdır. İlaçların hayatımızdaki yeri inkâr edilemez; onlar modern tıbbın en güçlü araçlarından biridir. Fakat her araç gibi nasıl kullanıldıkları önemlidir. Bir ilaç insanı hastalıktan kurtarabilir, yanlış kullanıldığında ise başka bir sorunun başlangıcı olabilir. Asıl mesele ilaçlardan korkmak değildir, onlara ne fazla güvenmek ne de gereksiz yere şüpheyle yaklaşmaktır. Asıl mesele, ilacın hayatımızdaki yerini bilmektir. Çünkü bir hap bazen yalnızca bir haptır",
     "Eczanenin önündeki kadın reçetesini tekrar katlıyor. Sırası gelince içeri giriyor ve ilaçlarını alıyor Fakat bu kez eve giderken kendine yalnızca “Bunları kullanmalı mıyım?” diye sormayacak; “Bunları neden kullanıyorum, ne kadar süre kullanacağım ve güvenli bir şekilde nasıl bırakacağım?” diye de soracak. Güvenli ilaç kullanımının başladığı yer tam burası işte. Reçetenin yazıldığı yerde değil.Hastanın reçeteyi anlamaya başladığı yerde..",
-    "08",
+    "10",
   ].join(PARAGRAPH),
-  "bilim-volkswagen-09": [
+  "bilim-volkswagen-11": [
     "BİLİM & TEKNOLOJİ",
     "VOLKSWAGEN ALMANYA İÇİN SADECE BİR OTOMOBİL Mİ?",
-    "Çekimin Saplantılı Hali: Karadelikler ve Toksik İlişkiler",
+    "Almanya’nın Volkswagen Takıntısı",
     "Bir ülke bir otomobili kaybettiğinde gerçekten yalnızca bir otomobili mi kaybeder, yoksa onunla birlikte kendisi hakkında inandığı bir şeyi de mi?",
     "Yazar: Milerza",
     "Bir ülkenin bir otomobile bu kadar bağlanması normal mi?\n\nBazı takıntılar dışarıdan bakıldığında anlamsız görünür. Bir otomobil markasına duyulan bağlılık da bunlardan biri olabilir. Sonuç olarak otomobil dediğimiz şey dört tekerlek, bir motor, biraz mühendislik ve her gün bizi bir yerden başka bir yere götüren metal bir kabuktan ibaret değil midir? Fakat söz konusu Almanya olduğunda Volkswagen’e böyle bakmak mümkün değil çünkü Volkswagen, Almanya için yalnızca bir otomobil değildir. Bir alışkanlık, bir güven duygusu, bir çalışma kültürü, bir mühendislik iddiası ve belki de bütün bunların üzerinde ülkenin kendisi hakkında anlatmayı sevdiği bir hikâyedir. İşte takıntı tam burada başlar.",
@@ -88,7 +88,7 @@ export const ISSUE_01_TRANSCRIPTS: Record<string, string> = {
     "2023’te BYD, Çin’de Volkswagen’i geride bıraktı. Volkswagen’in Çin satışları zirvedeki 4,2 milyon seviyesinden yaklaşık 2 milyona kadar geriledi. Bir zamanlar Almanya’nın üretim modelini besleyen Çin pazarı artık aynı güveni vermiyordu ve Volkswagen’in yıllardır üzerine kurduğu hikâyenin çatlakları görünür hale geldi.",
     "Takıntının bedeli\n\nYıllarca Almanya’nın sanayi gücünü temsil eden üretim düzeni; Çin’in yükselişi, elektrikli otomobiller ve yazılım çağının getirdiği rekabet karşısında sınanıyor. Bir zamanlar Almanya’dan dünyaya giden üretim gücü, şimdi dünyanın başka bir köşesinden Almanya’ya doğru hareket ediyor. Takıntının en acı tarafı belki de burada ortaya çıkıyor: İnsan bazen kaybetmekte olduğunu, ancak onu korumak için harcadığı çaba artık yetmediğinde fark ediyor. Belki de Almanya’nın Volkswagen takıntısı tam olarak budur.",
     "Bir otomobili kaybetmekten korkmak değil, o otomobille birlikte kendinden bir şey kaybetmekten korkmak. Bugün asıl soru Volkswagen’in Almanya’ya ne kadar bağımlı olduğu değil, Almanya’nın Volkswagen’e ne kadar bağımlı olduğudur çünkü Volkswagen artık yalnızca otomobil üretmiyor. Almanya’nın üretim gücünü, işçi sınıfının geleceğini, mühendislik gururunu ve geçmişten miras kalan güven duygusunu aynı kaputun altında taşıyor ve belki de bu yüzden bir Volkswagen fabrikasının ışıkları söndüğünde Almanya’da yalnızca bir üretim hattı kararmıyor, bir ülkenin kendisi hakkında yıllardır inandığı hikâyenin bir cümlesi eksiliyor. Takıntı dediğimiz şey de belki tam olarak budur: Bir şeyi kaybettiğimizde aslında onun kendisini değil, onunla birlikte kim olduğumuzu kaybetmekten korkmak..",
-    "09",
+    "11",
   ].join(PARAGRAPH),
   "psikoloji-iyilesmek-13": [
     "PSİKOLOJİ & İLİŞKİLER",
