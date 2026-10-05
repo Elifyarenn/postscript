@@ -1,12 +1,14 @@
 /**
- * Issue 01's designed pages — THE file to edit (D-274).
+ * Issue 01's designed pages — THE file to edit (D-274, D-323).
  *
  * The order of `pages` is the order in the reader. After editing:
  *
  *   1. A new page or a new picture: put the delivered .ai file in a folder and
  *      run  `pnpm render-issue-design -- --source <folder>`
- *      (add `--only <key>,<key>` to redraw only some pages). This writes
- *      `assets/issue-design/sayi-01/<key>.webp` and `renders.json`.
+ *      (add `--only <key>,<key>` to redraw only some pages), then
+ *      `pnpm issue-design-variants`. This writes
+ *      `assets/issue-design/sayi-01/<key>.webp`, its smaller copies and
+ *      `renders.json`.
  *   2. Only order, titles, texts or areas changed: no redraw needed.
  *   3. Run `pnpm test`, commit, push. Then in the panel, on Issue 1's pages
  *      screen, press "Tasarım sayfalarını içe aktar / güncelle". Running it
@@ -26,28 +28,37 @@
  * (`quizPages`, D-309), placed after the picture page named in `after`, with
  * every question on the page; an area can still open one by its title.
  *
- * Why the order is what it is (2026-09-30):
- *  - Within the science section the printed page numbers decide (04 → 05 → 06);
- *    in the delivered file the order was 06, (empty 07–09), 04, 05.
- *  - Every section opener carries the printed number 04 (they were made from
- *    one template) and no contents page was delivered, so the order *between*
- *    sections is not known. It follows the magazine's area list
- *    (`DEFAULT_WRITER_AREAS`) as a changeable preview order, not an editorial one.
+ * Why the order is what it is (2026-10-05, the files delivered that day):
+ *  - Every page of the twelve files is in, the empty ones too (D-323): a
+ *    section's unwritten pages are its numbered blank template pages.
+ *  - The pages carry their printed numbers 04–69 and the two contents pages
+ *    list the sections 01–11 in the same order, so both decide.
+ *  - Within a file the artboards are not in page order (the opener is the 5th
+ *    artboard, the page after it the 6th, then the 1st–4th); the printed
+ *    number wins over the artboard order.
+ *  - Psychology is the one section whose numbers were not updated: its opener
+ *    still says 04 and its pages 07/08 under a "BİLİM & TEKNOLOJİ" header.
+ *    It sits where its contents number (02) and the gap 10–15 put it, and its
+ *    pages follow the text, which runs on from one page to the next.
+ *  - The front matter (editor's letter, two contents pages, the memorial
+ *    page) has no printed numbers. Its order here is a preview order.
  *  - The two covers sit side by side in "POSTSCRIPT 01.ai" the way a wrap-around
  *    cover does: the back on the left, the front on the right. So the front
  *    comes first and the back last.
  */
 import { OBSESSION_QUIZ, OBSESSION_QUIZ_TITLE } from "./issue-01-quizzes";
+import { ISSUE_01_TRANSCRIPTS } from "./issue-01-transcripts";
 import type { DesignManifest } from "./manifest";
+
+type Page = DesignManifest["pages"][number];
 
 export const ISSUE_01_DESIGN: DesignManifest = {
   issueNumber: 1,
   folder: "sayi-01",
   renderWidth: 2480,
-  // Six artboards have a 2–11 px strip at one side where the dark background
-  // stops short of the edge (white on fashion, pop culture, sosyal feminizm,
-  // tarih, yazar köşesi; a black line on the front cover). Cutting the same
-  // ~0.5% from every page removes them and keeps the proportions.
+  // Some artboards have a 2–11 px strip at one side where the dark background
+  // stops short of the edge. Cutting the same ~0.5% from every page removes
+  // them and keeps the proportions.
   trim: { x: 12, y: 17 },
   pages: [
     {
@@ -58,73 +69,130 @@ export const ISSUE_01_DESIGN: DesignManifest = {
       role: "cover",
       title: "Ön kapak",
       contents: null,
-      alt: "PostScript Sayı 01 kapağı: koyu kırmızı elbiseli, siyah saçlı bir kadın göz desenli açık zeminde bir sandığın önünde oturuyor; elinde kirazlı bir kadeh.",
+      alt: "PostScript Sayı 01 kapağı: kırmızı kazaklı, uzun sarı saçlı, yeşil gözlü bir kadın gözyaşları içinde gülümsüyor, iki elini göğsünde yumruk yapmış.",
       transcript:
         "POSTSCRIPT. Takıntının Trajedisi — Zihnin Zahir ile imtihanı. Takıntılı Bilim İnsanları — Fizik ve Obsesyon. Sayı 01, Ekim 2026. OBSESSSION",
       areas: [],
     },
     {
-      key: "bilim-acilis",
-      source: "POSTSCRIPT bilim.ai",
-      sourcePage: 5,
-      printedNumber: 4,
-      role: "page",
-      title: "Bilim & Teknoloji açılışı",
-      contents: "Bilim & Teknoloji",
-      alt: "Bilim & Teknoloji bölüm açılışı: koyu zemin üzerinde halkalı gezegen, roket ve yıldızlarla çevrili hilal içinde bölüm adı.",
-      transcript: "POSTSCRIPT. Bilim & Teknoloji. 04",
-      areas: [],
-    },
-    {
-      key: "bilim-bir-hap-05",
-      source: "POSTSCRIPT bilim.ai",
+      key: "sunus",
+      source: "POSTSCRIPT 01.ai",
       sourcePage: 6,
-      printedNumber: 5,
+      printedNumber: null,
       role: "page",
-      title: "Bir hap ne zaman fazla? (05)",
-      contents: "Bir Hap Ne Zaman Fazla?",
-      alt: "Bilim & Teknoloji yazısının açılış sayfası: büyük italik başlık “Bir hap ne zaman fazla?”, altında metin ve köşede yere dökülmüş hap şişesi çizimi.",
+      title: "Sunuş: Merhaba!",
+      contents: "Sunuş",
+      alt: "Sunuş yazısı: koyu bordo zeminde PostScript logosu, altında çerçeve içinde ekibin okura mektubu ve “The things left unsaid…” yazısı.",
       transcript: [
-        "BİLİM & TEKNOLOJİ",
-        "BİR HAP NE ZAMAN FAZLA?",
-        "Reçete'nin öteki yüzü: İlacın tedaviden bağımlılığa uzanan sessiz yolu",
-        "İlaçlar hayatımızı değiştirebilir. Peki onları ne kadar süre kullanmamız gerektiğini gerçekten biliyor muyuz?",
-        "Eczanenin önünde sırasını bekleyen kadın, elindeki kâğıdı ikinci kez katlayıp açıyor. Reçetede üç ilaç var: biri tansiyonu için, biri uykusu için, biri de sinirleri için. Doktoruyla son görüşmesinde ancak birkaç dakika konuşabilmiş, birkaç dakikanın sonunda da elinde üç kutuyla muayenehaneden çıkmış. Şimdi eczanenin önünde beklerken aklından hep aynı soru geçiyor: “Bunları gerçekten bu kadar uzun süre kullanmam mı gerekiyor?”. Aynı soru Türkiye’nin herhangi bir şehrinde, herhangi bir öğleden sonra, bir başkasının da aklından geçiyordur. Belki aynı reçete başka bir doktorun masasında duruyor, belki başka bir hasta aynı kutuları alıp aynı eczanenin kapısından çıkıyor. Çünkü reçeteler uzaktan bakıldığında yalnızca birkaç ilaç isminden ibarettir: bir kâğıt, birkaç kutu, bir imza. Oysa o kâğıdın eve kadar uzanan başka bir hikâyesi vardır. Bir ilaç ne zaman tedavidir, ne zaman alışkanlığa dönüşür? İnsan, hangi noktadan sonra ilacın kendisinden çok onun yokluğundan korkmaya başlar?",
-        "05",
+        "POSTSCRIPT",
+        "Merhaba!",
+        "Bu sayıyı hazırlarken en çok şunu düşündük: Biz nasıl bir dergi okumak isterdik? İçinde merak ettiğimiz konuların, farklı fikirlerin ve “Bunu ben de düşünüyorum!” diyeceğimiz yazıların olduğu bir dergi…",
+        "Bu sorudan yola çıktık; konuştuk, yazdık, sildik ve yeniden denedik. Her birimizden bir şeyler taşıyan bu sayfaları şimdi sizinle paylaşıyoruz.",
+        "Umarız okurken kendinize yakın bir ses bulur, belki de daha önce hiç düşünmediğiniz bir konuya takılırsınız. Umarız söyleyemediğiniz cümleleri burada sizin için söyleyebiliyoruzdur. Bu derginin hazırlanmasında bizim kadar, okunmasında da sizin payınız var.",
+        "İyi ki buradasınız. Keyifli okumalar!",
+        "Postscript Ekibi",
+        "The things left unsaid…",
       ].join("\n\n"),
       areas: [],
     },
     {
-      key: "bilim-bir-hap-06",
-      source: "POSTSCRIPT bilim.ai",
-      sourcePage: 1,
-      printedNumber: 6,
+      key: "icindekiler-1",
+      source: "POSTSCRIPT 01.ai",
+      sourcePage: 3,
+      printedNumber: null,
       role: "page",
-      title: "Bir hap ne zaman fazla? (06)",
-      contents: null,
-      alt: "“Bir hap ne zaman fazla?” yazısının devam sayfası: iki sütun metin, solda italik sorular.",
+      title: "İçindekiler (1/2)",
+      contents: "İçindekiler",
+      alt: "İçindekiler sayfasının ilki: açık zeminde 01 Bilim & Teknoloji'den 05 Pop Culture'a bölümler ve yazı başlıkları.",
       transcript: [
-        "BİLİM & TEKNOLOJİ",
-        "İlaç kullanımındaki artıştan söz edildiğinde çoğu zaman rakamlar konuşulur: sağlık harcamaları, reçete sayıları, kutu satışları, ilaç sektörünün büyüklüğü... Oysa rakamların arkasında çok daha sessiz bir hikâye vardır. İlaçların hayatımızdaki yeri kolayca inkâr edilebilecek bir şey değildir. Bir tansiyon ilacı yıllarca bir insanın hayatını koruyabilir, bir antidepresan, uzun zamandır yardım arayan birinin yeniden günlük hayatına dönmesini sağlayabilir, bir ağrı kesici dayanılmaz bir ağrıyı birkaç saatliğine bile olsa susturabilir.",
-        "Modern tıp bize yalnızca hastalıklarla savaşmanın değil, hastalıklarla birlikte yaşamayı mümkün kılmanın da yollarını veriyor. Bazen aynı hikâyenin başka bir yüzü ortaya çıkıyor. Bazı ilaçlar, özellikle yanlış kullanıldığında ya da gereğinden uzun süre kullanıldığında tolerans ve fiziksel bağımlılık gibi sorunlara yol açabiliyor. Burada küçük fakat önemli bir ayrım var, uzun süre ilaç kullanan her insan bağımlı değildir. Özellikle antidepresanlar söz konusu olduğunda ilaç kullanmakla bağımlı olmak aynı şey değildir. Antidepresanların önemli bir bölümü klasik anlamda bağımlılık oluşturmaz, yalnızca bazıları aniden bırakıldığında kesilme belirtilerine yol açabilir. Yani mesele yalnızca ilacın kendisi değildir.",
-        "Hangi ilaç? Hangi doz? Ne kadar süre?",
-        "En önemlisi: Kim tarafından, nasıl takip edilerek? Türkiye’de ilaç tüketimindeki büyük artış da tam bu noktada düşündürücü hâle geliyor. Özellikle antidepresan kullanımının son yirmi yılda ciddi biçimde yükselmesi, toplumun ruh sağlığıyla kurduğu ilişkinin değiştiğini gösteriyor. Ama bu artışın tamamını “ilaç bağımlılığı” olarak okumak kolaycılık olur. Belki artık ruhsal hastalıkları daha iyi tanıyoruz, belki insanlar psikiyatrik yardım almaktan eskisi kadar çekinmiyor, belki sağlık hizmetlerine erişim arttı ve daha önce tedavi görmeyen insanlar artık tedaviye ulaşabiliyor. Yine de rakamların önümüze bıraktığı başka bir soru var: İnsanlar gerçekten daha mı hasta, yoksa artık her sıkıntının karşılığını bir reçetede mi arıyoruz?",
-        "Modern tıp ağrıyı azaltabiliyor, uykuyu düzenleyebiliyor, kaygıyı kontrol altına alabiliyor, kronik hastalıkların ilerlemesini yavaşlatabiliyor. Bunların her biri başlı başına büyük bir başarı. Fakat tıbbın bize sunduğu bu kolaylık, garip bir paradoksu da beraberinde getiriyor: bir ilaç ne kadar kolay ulaşılabilir ve etkiliyse, onu hayatımızdaki her türlü rahatsızlığa karşı ilk çözüm olarak görme ihtimalimiz de o kadar artabiliyor.",
-        "06",
+        "İÇİNDEKİLER",
+        "01 — BİLİM & TEKNOLOJİ: Bilim İnsanları ve Obsesyon. Çekimin Saplantılı Hali: Karadelikler ve Toksik İlişkiler. Reçetenin Öteki Yüzü: İlacın Tedaviden Bağımlılığa Uzanan Sessiz Yolu. Almanya'nın Volkswagen Takıntısı.",
+        "02 — PSİKOLOJİ & İLİŞKİLER: İyileşmek Öyle Değil, Böyle Olur! Düşünmemeye Çalıştıkça Neden Daha Çok Düşünürüz? Büyük Dansa Karşı Koymak.",
+        "03 — FİLM, DİZİ & KİTAP: Eşyaların Gölgesinde Saklanan Bir Cinnet: Masumiyet Müzesi ve Kemal'in Takıntısı. Saplantının Çekici Yüzü: Gudd'ın 41 Ödüllü Travması. Başarmak Uğruna Nelerden Vazgeçebilirsin?",
+        "04 — SANAT & EDEBİYAT: Girilmez. Bir Başkasının Umudu, Bir Başkasının Kabusu: Ron Francis ve Takıntının Anatomisi. Üç Kalem. Ayın Şiiri.",
+        "05 — POP CULTURE: Ne Zamana Kadar Benlesin? Stalker? Stan? Gözümüz Üzerinizde: Diana'dan Algoritmalara Röntgen Kültürü.",
       ].join("\n\n"),
       areas: [],
     },
-    opener("psikoloji-acilis", "POSTSCRIPT psikoloj.ai", "Psikoloji ve İlişkiler", "karalama çizgilerden oluşan bir kadın başı profili ve yanında düğümlenmiş bir kalp"),
-    opener("film-dizi-kitap-acilis", "POSTSCRIPT film dizi kitap.ai", "Film, Dizi & Kitap", "altın rengi süslü bir çerçevenin içinde eski bir televizyon ve üst üste kitaplar"),
-    opener("sanat-edebiyat-acilis", "POSTSCRIPT sanat edebiyat.ai", "Sanat & Edebiyat", "açık bir kitabın üzerinde boya kutuları, tüpler, uçuşan harfler ve kırmızı bir heykel figürü"),
-    opener("pop-culture-acilis", "POSTSCRIPT pop culture.ai", "Pop Culture", "topuzlu, inci kolyeli bir kadın sakız balonu şişiriyor; çevresinde plaklar, “On Air” tabelası ve damalı şerit"),
-    opener("tarih-dunya-acilis", "tarih dünya.ai", "Tarih & Dünya", "eski bir dünya haritası dairesinin içinde Kolezyum, cep saati ve bir asker figürü"),
-    opener("sosyal-feminizm-acilis", "sosyal feminizm.ai", "Sosyal & Feminizm", "yan yana duran kadınlar “Women” ve “Break the silence, end violence!” yazılı pankartlar taşıyor, üstte kalkmış bir yumruk"),
-    opener("sosyoloji-dusunce-acilis", "POSTSCRIPT sosyoloji düşünce.ai", "Sosyoloji & Düşünce", "dalgalanan bir bayrağın üzerinde Düşünen Adam heykeli ve konuşma balonu"),
-    opener("fashion-lifestyle-acilis", "POSTSCRIPT fashion.ai", "Fashion & Lifestyle", "kabarık etekli bir terzi mankeni silüetinin içinde askıda kırmızı elbise ve alışveriş çantaları"),
-    opener("yazar-kosesi-acilis", "yazar köşesi.ai", "Yazar Köşesi: PostScript", "bir kadın başı silüetinin içinde eski bir daktilo; kâğıtta “Yazar Köşesi: PostScript” yazıyor"),
-    // The quiz is the page after this one (`quizPages`), not a hidden area on it (D-309)
-    opener("eglence-dedikodu-acilis", "eğlence dedikodu.ai", "Eğlence & Dedikodu", "büyük bir yıldızın önünde eski tip bir telefon ve “Have Fun” yazısı"),
+    {
+      key: "icindekiler-2",
+      source: "POSTSCRIPT 01.ai",
+      sourcePage: 4,
+      printedNumber: null,
+      role: "page",
+      title: "İçindekiler (2/2)",
+      contents: null,
+      alt: "İçindekiler sayfasının ikincisi: açık zeminde 06 Tarih & Dünya'dan 11 Eğlence & Dedikodu'ya bölümler ve yazı başlıkları.",
+      transcript: [
+        "İÇİNDEKİLER",
+        "06 — TARİH & DÜNYA: Yıkımdan İkona: Ananke'nin Hikayesi. Potsdam Devleri ve Kusursuzluk Hastalığı. Ölmek ya da Ölmemek — İşte Tüm Takıntı Bu.",
+        "07 — SOSYAL & FEMİNİZM: Zayıflık Takıntısı. Meta, Metalaştırmak, Metalaştırılmak! Mükemmel Kadınlığın Cenderesi.",
+        "08 — SOSYOLOJİ & DÜŞÜNCE: Obsessio' Zihinsel Abluka. Eskiden Her Şey Gerçekten Daha mı Güzeldi?: Hiç Yaşamadığımız Günlerin Özlemi. İlgi ile İhlal Arasında.",
+        "09 — LIFESTYLE & FASHION: El Alem Ne Giyer? Bir Parçanın Peşinden Gitmek. “Aesthetic” Hayatlar. Skincare: Cilt Bakımı mı, Cilt Takıntısı mı. Parfüm: Bir Takıntının Kokusu. Dijital Takıntı. Takıntıdan Dönüşen Stil: Streetwear.",
+        "10 — YAZAR KÖŞESİ: “P.S.”: Takıntının Trajedisi: Zihnin Zahir'le İmtihanı. Takıntı: Kar Tanesi ve Zihnin Sonsuz Fraktalı. Susamayan Zihinlerin Yankısı.",
+        "11 — EĞLENCE & DEDİKODU: Başarı Takıntısı Grubun Önüne Geçer mi? Çay Koy Yeniden Başlayalım: Bir Fincandaki Gizli Şifa. Hangi Takıntılı Karaktersin? QUIZ!",
+      ].join("\n\n"),
+      areas: [],
+    },
+    {
+      key: "anma",
+      source: "POSTSCRIPT 01.ai",
+      sourcePage: 5,
+      printedNumber: null,
+      role: "page",
+      title: "Hayatı yarım bırakılanlar için",
+      contents: "Hayatı Yarım Bırakılanlar İçin",
+      alt: "Siyah zeminde kırmızı yazılarla bir anma metni; altında iki kadın sembolünün içinde kalkmış yumruk.",
+      // The page prints the text twice, one copy over the other; read once
+      transcript: [
+        "BU SAYFA HAYATI YARIM BIRAKILANLAR İÇİN.",
+        "Çünkü burada olması gereken sözleri onların yazması gerekiyordu.",
+        "Hikâyesini anlatamayan, yazısını tamamlayamayan, sesini duyuramayan, adı bir haberde birkaç satıra sığdırılan kız kardeşlerimiz için bu sayfayı boş bırakıyoruz.",
+      ].join("\n\n"),
+      areas: [],
+    },
+    opener("bilim-acilis", "POSTSCRIPT bilim.ai", 5, 4, "Bilim & Teknoloji", "halkalı gezegen, roket ve yıldızlarla çevrili hilal içinde bölüm adı"),
+    article("bilim-karadelik-05", "POSTSCRIPT bilim.ai", 6, 5, "Ya bir karadeliğe değil, bir ilişkiye çekiliyorsanız?",
+      "Çekimin Saplantılı Hali: Karadelikler ve Toksik İlişkiler",
+      "Bilim & Teknoloji yazısı “Ya bir karadeliğe değil, bir ilişkiye çekiliyorsanız?”: solda başlık ve metin, sağ üstte bordo yarım daire içinde yazının girişi, altta iki sütun metin."),
+    article("bilim-takinti-basari-06", "POSTSCRIPT bilim.ai", 1, 6, "Takıntı, başarının sırrı olabilir mi?",
+      "Bilim İnsanları ve Obsesyon",
+      "Bilim & Teknoloji yazısı “Takıntı, başarının sırrı olabilir mi?”: sol üstte bordo yarım daire içinde yazının girişi, sağda başlık, iki sütun metin."),
+    article("bilim-bir-hap-07", "POSTSCRIPT bilim.ai", 2, 7, "Bir hap ne zaman fazla?",
+      "Reçetenin Öteki Yüzü: İlacın Tedaviden Bağımlılığa Uzanan Sessiz Yolu",
+      "Önceki yazının sonu ve “Bir hap ne zaman fazla?” yazısının başlangıcı: iki sütun metin, sağ altta yere dökülmüş hap şişesi çizimi."),
+    article("bilim-bir-hap-08", "POSTSCRIPT bilim.ai", 3, 8, "Bir hap ne zaman fazla? (devam)", null,
+      "“Bir hap ne zaman fazla?” yazısının devamı: sol üstte bordo yarım daire içinde yazının girişi, iki sütun metin ve iki vurgulu soru satırı."),
+    article("bilim-volkswagen-09", "POSTSCRIPT bilim.ai", 4, 9, "Volkswagen Almanya için sadece bir otomobil mi?",
+      "Almanya'nın Volkswagen Takıntısı",
+      "Bilim & Teknoloji yazısı “Volkswagen Almanya için sadece bir otomobil mi?”: sağ üstte bordo yarım daire içinde yazının girişi, küçük puntoyla iki sütun metin."),
+    // Printed numbers below are what the page says (04, 07, 08), not where it stands (10–15)
+    opener("psikoloji-acilis", "POSTSCRIPT psikoloj.ai", 5, 4, "Psikoloji ve İlişkiler", "karalama çizgilerden oluşan bir kadın başı profili ve yanında düğümlenmiş bir kalp"),
+    article("psikoloji-iyilesmek-11", "POSTSCRIPT psikoloj.ai", 6, 7, "İyileşmek ne zaman yeni bir baskıya dönüştü?",
+      "İyileşmek Öyle Değil, Böyle Olur!",
+      "Psikoloji yazısı “İyileşmek ne zaman yeni bir baskıya dönüştü?”: solda başlık, sağ üstte bordo yarım daire içinde yazının girişi, iki sütun metin."),
+    article("psikoloji-dusunmemeye-12", "POSTSCRIPT psikoloj.ai", 1, 8, "Düşünmemeye çalıştıkça neden daha çok düşünüyoruz?",
+      "Düşünmemeye Çalıştıkça Neden Daha Çok Düşünürüz?",
+      "Psikoloji yazısı “Düşünmemeye çalıştıkça neden daha çok düşünüyoruz?”: sol üstte bordo yarım daire içinde yazının girişi, sağda başlık, iki sütun metin."),
+    article("psikoloji-dusunmemeye-13", "POSTSCRIPT psikoloj.ai", 2, 7, "Düşünmemeye çalıştıkça… (devam) / Büyük dansa karşı koymak",
+      "Büyük Dansa Karşı Koymak",
+      "Önceki yazının sonu ve kaynakları; ardından “Ya kontrol takıntısı, kontrolünü kaybetmenin ta kendisiyse?” başlıklı öykünün başlangıcı."),
+    article("psikoloji-buyuk-dans-14", "POSTSCRIPT psikoloj.ai", 3, 8, "Büyük dansa karşı koymak (devam)", null,
+      "“Büyük Dansa Karşı Koymak” öyküsünün devamı: sol üstte bordo yarım daire içinde öykünün girişi, iki sütun metin."),
+    article("psikoloji-buyuk-dans-15", "POSTSCRIPT psikoloj.ai", 4, 7, "Büyük dansa karşı koymak (son)", null,
+      "“Büyük Dansa Karşı Koymak” öyküsünün sonu: sağ üstte bordo yarım daire, iki sütun metin."),
+    ...section("film-dizi-kitap", "POSTSCRIPT film dizi kitap.ai", 16, "Film, Dizi & Kitap", "FİLM, DİZİ & KİTAP", "altın rengi süslü bir çerçevenin içinde eski bir televizyon ve üst üste kitaplar"),
+    // Page 23 shows a sliver of the opener's open book at its left edge: the
+    // picture runs over the artboard in the file, drawn as delivered
+    ...section("sanat-edebiyat", "POSTSCRIPT sanat edebiyat.ai", 22, "Sanat & Edebiyat", "SANAT & EDEBİYAT", "açık bir kitabın üzerinde boya kutuları, tüpler, uçuşan harfler ve kırmızı bir heykel figürü"),
+    ...section("pop-culture", "POSTSCRIPT pop culture.ai", 28, "Pop Culture", "POP CULTURE", "topuzlu, inci kolyeli bir kadın sakız balonu şişiriyor; çevresinde plaklar, “On Air” tabelası ve damalı şerit"),
+    ...section("tarih-dunya", "tarih dünya.ai", 34, "Tarih & Dünya", "TARİH & DÜNYA", "eski bir dünya haritası dairesinin içinde Kolezyum, cep saati ve bir asker figürü"),
+    ...section("sosyal-feminizm", "sosyal feminizm.ai", 40, "Sosyal & Feminizm", "SOSYAL & FEMİNİZM", "yan yana duran kadınlar “Women” ve “Break the silence, end violence!” yazılı pankartlar taşıyor, üstte kalkmış bir yumruk"),
+    ...section("sosyoloji-dusunce", "POSTSCRIPT sosyoloji düşünce.ai", 46, "Sosyoloji & Düşünce", "SOSYOLOJİ & DÜŞÜNCE", "dalgalanan bir bayrağın üzerinde Düşünen Adam heykeli ve konuşma balonu"),
+    ...section("fashion-lifestyle", "POSTSCRIPT fashion.ai", 52, "Fashion & Lifestyle", "FASHION & LİFESTYLE", "kabarık etekli bir terzi mankeni silüetinin içinde askıda kırmızı elbise ve alışveriş çantaları"),
+    ...section("yazar-kosesi", "yazar köşesi.ai", 58, "Yazar Köşesi: PostScript", "YAZAR KÖŞESİ: “P.S.”", "bir kadın başı silüetinin içinde eski bir daktilo; kâğıtta “Yazar Köşesi: PostScript” yazıyor"),
+    // The quiz is the page after the opener (`quizPages`), not a hidden area on it (D-309)
+    ...section("eglence-dedikodu", "eğlence dedikodu.ai", 64, "Eğlence & Dedikodu", "EĞLENCE & DEDİKODU", "büyük bir yıldızın önünde eski tip bir telefon ve “Have Fun” yazısı"),
     {
       key: "arka-kapak",
       source: "POSTSCRIPT 01.ai",
@@ -133,8 +201,8 @@ export const ISSUE_01_DESIGN: DesignManifest = {
       role: "back_cover",
       title: "Arka kapak",
       contents: null,
-      alt: "Arka kapak: kırmızı bir koltukta telefonun başında bir kadın, duvarda notlarla dolu bir pano, önde buruşuk kâğıtlarla dolu çöp kutusu. Altta “The things left unsaid”.",
-      transcript: "Kapak Çizerleri: Tua ve Aysalita. The things left unsaid",
+      alt: "Arka kapak: kırmızı tişörtlü, dağınık koyu saçlı bir genç dehşet içinde bağırıyor; arkasındaki duvarda kırmızı iplerle birbirine bağlanmış notlar ve fotoğraflar. Altta “The things left unsaid”.",
+      transcript: "The things left unsaid. Kapak Çizeri: Tuanna Demir",
       areas: [],
     },
   ],
@@ -150,45 +218,65 @@ export const ISSUE_01_DESIGN: DesignManifest = {
       quizTitle: OBSESSION_QUIZ_TITLE,
     },
   ],
-  excluded: [
-    { source: "POSTSCRIPT 01.ai", pages: [3, 4, 5, 6], reason: "Tamamen boş beyaz sayfa." },
-    {
-      source: "POSTSCRIPT bilim.ai",
-      pages: [2, 3, 4],
-      reason: "Boş şablon (07/08/09): yalnızca üst başlık, kırmızı yay ve sayfa numarası.",
-    },
-    ...[
-      "POSTSCRIPT fashion.ai",
-      "POSTSCRIPT film dizi kitap.ai",
-      "POSTSCRIPT pop culture.ai",
-      "POSTSCRIPT psikoloj.ai",
-      "POSTSCRIPT sanat edebiyat.ai",
-      "POSTSCRIPT sosyoloji düşünce.ai",
-      "eğlence dedikodu.ai",
-      "sosyal feminizm.ai",
-      "tarih dünya.ai",
-      "yazar köşesi.ai",
-    ].map((source) => ({
-      source,
-      pages: [1, 2, 3, 4, 6],
-      reason:
-        "Bilim dosyasındaki boş şablonun piksel piksel aynısı (07/08, “BİLİM & TEKNOLOJİ” başlıklı, içerik yok).",
-    })),
-  ],
+  // Every page of the twelve delivered files is used (D-323)
+  excluded: [],
 };
 
-/** A section opener: page 5 of its file, printed number 04 in every file. */
-function opener(key: string, source: string, section: string, picture: string): DesignManifest["pages"][number] {
+/** A section opener: the 5th artboard of its file. */
+function opener(key: string, source: string, sourcePage: number, printed: number, section: string, picture: string): Page {
   return {
     key,
     source,
-    sourcePage: 5,
-    printedNumber: 4,
+    sourcePage,
+    printedNumber: printed,
     role: "page",
     title: `${section} açılışı`,
     contents: section,
     alt: `${section} bölüm açılışı: koyu zemin üzerinde ${picture}.`,
-    transcript: `POSTSCRIPT. ${section}. 04`,
+    transcript: `POSTSCRIPT. ${section}. ${pad(printed)}`,
     areas: [],
   };
+}
+
+/** A written page; its text is in `issue-01-transcripts.ts` under the same key. */
+function article(
+  key: string,
+  source: string,
+  sourcePage: number,
+  printed: number,
+  title: string,
+  contents: string | null,
+  alt: string,
+): Page {
+  const transcript = ISSUE_01_TRANSCRIPTS[key];
+  if (!transcript) throw new Error(`"${key}" sayfasının metni issue-01-transcripts.ts içinde yok.`);
+  return { key, source, sourcePage, printedNumber: printed, role: "page", title, contents, alt, transcript, areas: [] };
+}
+
+/**
+ * A section still to be written: its opener (printed number `first`) and five
+ * numbered blank pages. In every one of these files the opener is the 5th
+ * artboard, the page after it the 6th, and the four after that the 1st–4th.
+ */
+function section(prefix: string, source: string, first: number, name: string, header: string, picture: string): Page[] {
+  const blanks = [6, 1, 2, 3, 4].map((sourcePage, index): Page => {
+    const printed = first + 1 + index;
+    return {
+      key: `${prefix}-${pad(printed)}`,
+      source,
+      sourcePage,
+      printedNumber: printed,
+      role: "page",
+      title: `${name} · boş sayfa ${pad(printed)}`,
+      contents: null,
+      alt: `${name} bölümünün ${pad(printed)} numaralı sayfası, henüz boş: üstte bölüm adı, köşede bordo yarım daire, altta sayfa numarası.`,
+      transcript: `${header}. ${pad(printed)}`,
+      areas: [],
+    };
+  });
+  return [opener(`${prefix}-acilis`, source, 5, first, name, picture), ...blanks];
+}
+
+function pad(number: number): string {
+  return String(number).padStart(2, "0");
 }

@@ -152,23 +152,32 @@ describe("issue 01 as shipped", () => {
     expect(issue.pages.at(-1)!.role).toBe("back_cover");
   });
 
-  it("keeps the science section in printed order 04 → 05 → 06", () => {
+  it("keeps the science section in printed order 04 → 09", () => {
     const science = issue.pages.filter((entry) => entry.source === "POSTSCRIPT bilim.ai").map((entry) => entry.printedNumber);
-    expect(science).toEqual([4, 5, 6]);
+    expect(science).toEqual([4, 5, 6, 7, 8, 9]);
   });
 
-  it("never lists an excluded page as a page", () => {
-    for (const gap of issue.excluded) {
-      for (const number of gap.pages) {
-        expect(issue.pages.some((entry) => entry.source === gap.source && entry.sourcePage === number)).toBe(false);
-      }
+  it("puts the numbered sections in printed order, 16 to 69 without a gap (D-323)", () => {
+    const from = issue.pages.findIndex((entry) => entry.key === "film-dizi-kitap-acilis");
+    const numbers = issue.pages.slice(from, -1).map((entry) => entry.printedNumber);
+    expect(numbers).toEqual(Array.from({ length: 54 }, (_, index) => 16 + index));
+  });
+
+  it("gives every written page its text", () => {
+    for (const entry of issue.pages.filter((page) => /^(bilim|psikoloji)-/.test(page.key))) {
+      expect(entry.transcript?.length ?? 0).toBeGreaterThan(20);
     }
   });
 
-  it("accounts for every page of the twelve delivered files", () => {
-    const used = issue.pages.length;
-    const left = issue.excluded.reduce((sum, gap) => sum + gap.pages.length, 0);
-    expect(used + left).toBe(72);
+  it("uses every page of the twelve delivered files, the empty ones too (D-323)", () => {
+    expect(issue.excluded).toEqual([]);
+    expect(issue.pages).toHaveLength(72);
+    const files = new Set(issue.pages.map((entry) => entry.source));
+    expect(files.size).toBe(12);
+    for (const file of files) {
+      const pages = issue.pages.filter((entry) => entry.source === file).map((entry) => entry.sourcePage);
+      expect(pages.sort((x, y) => x - y)).toEqual([1, 2, 3, 4, 5, 6]);
+    }
   });
 
   it("ships every picture, the same bytes renders.json names, one shape, under the upload limit", () => {

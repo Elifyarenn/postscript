@@ -12678,3 +12678,57 @@ eski katkı verenlerin doğrulanmış ve karşı imzalı belgeleri orada kalır
 
 **Doğrulama:** Kapı: typecheck, lint, test. Canlıda Elif Eylül Çekim, Elif
 Yetim ve Ceren Boztepe iki listede de görünmez.
+
+## D-323 — Sayı 01: teslim edilen 12 dosyanın 72 sayfasının hepsi, boş sayfalar dahil
+
+**İstek (ürün sahibi):** "deneme'deki tüm sayfaları işle, kategorilerde boş
+sayfa olsa bile."
+
+**Durum:** `deneme/` klasöründeki 12 `.ai` dosyası 2026-10-05'te yenilendi.
+D-274'te 72 sayfanın 15'i alınmış, 57'si boş şablon diye dışarıda kalmıştı.
+Yeni dosyalarda: kapaklar yeni çizim; `01.ai`'de sunuş yazısı, iki sayfa
+içindekiler ve bir anma sayfası; Bilim (04–09) ve Psikoloji'de yazılar;
+diğer dokuz bölümde açılış + basılı numaralı beş boş sayfa.
+
+**Karar:** Manifestte 72 sayfanın hepsi var, `excluded` boş. Boş sayfalar
+`<bölüm>-<numara>` anahtarıyla (ör. `film-dizi-kitap-17`), içindekiler
+listesinde görünmeden okuyucuya girer; yazısı gelince aynı anahtarın görseli
+yeniden çizilir.
+
+**Sıra:** Basılı numaralar 04–69 ve iki içindekiler sayfası bölüm sırasında
+birbirini tutuyor; ikisi de belirleyici. Dosya içinde çizim alanları sayfa
+sırasında değil (açılış 5., ardından 6., sonra 1–4.); basılı numara kazanır.
+Ön kısım (kapak, sunuş, içindekiler 1–2, anma) numarasız: bu sıra önizleme
+sırasıdır, manifestte değiştirilebilir. Arka kapak sonda. Test sayfası
+D-309'daki gibi Eğlence & Dedikodu açılışının ardında kaldı (içindekiler onu
+bölümün sonunda sayar; aradaki beş boş sayfa testi bulunmaz yapardı).
+
+**Ekran okuyucu metni:** Yazı sayfalarının metni `.ai`'nin metin katmanından,
+okuma sırasına elle dizilerek `src/lib/issue-design/issue-01-transcripts.ts`'e
+yazıldı (dosya metin çerçevelerini oluşturulma sırasında saklıyor; sütunlar
+iki yana yaslı ve ortalı olduğundan konuma göre sıralama da tutmuyor).
+Karakter haritası olmayan yazı tipindeki alt başlıklar görselden yazıldı.
+
+**Tasarımda görülen, dokunulmayan (tasarımcıya iletilmeli):**
+- Psikoloji bölümünün numaraları güncellenmemiş: açılış "04", sayfalar
+  "07/08" ve üst başlık "BİLİM & TEKNOLOJİ". Bölüm 10–15 aralığına,
+  içindekiler sırasına göre kondu; `printedNumber` sayfada yazanı tutar.
+- Volkswagen yazısının alt başlığı karadelik yazısınınkinin kopyası
+  ("Çekimin Saplantılı Hali…"); içindekiler "Almanya'nın Volkswagen Takıntısı" diyor.
+- Anma sayfasında metin iki kez, üst üste basılmış.
+- Sanat & Edebiyat 23. sayfanın sol kenarında açılıştaki kitabın bir parçası görünüyor.
+- Kapakta "OBSESSSION" (üç S) duruyor.
+
+**Kenarlar:** Aynı `trim` (12/17 px) korundu; çizimden sonra her sayfanın
+dört kenarı içerisiyle karşılaştırıldı, beyaz/siyah şerit kalmadı.
+Görseller 72 × (asıl + 720 + 1280) = 216 dosya, 23 MB; yalnızca
+`/editor/issues/**` işlevine giriyor.
+
+**Canlıya etkisi:** Kod gelince hiçbir şey değişmez. Admin, Sayı 1'in
+sayfalar ekranında "Tasarım sayfalarını içe aktar / güncelle"ye bastığında
+59 yeni sayfa eklenir, anahtarı aynı kalan 13 sayfanın (kapaklar, 11 açılış) görseli değiştiği için yeni anahtarla yüklenir, eski
+`bilim-bir-hap-05/06` anahtarları sayıdan çıkar (yedekle). Aktarım yalnızca
+"yalnızca yöneticiler" işaretli sayıda çalışır (D-274); sayı yayımlandıysa
+(D-316) düğme reddeder. Migration yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test.
