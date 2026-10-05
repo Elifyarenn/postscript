@@ -75,7 +75,7 @@ export default async function RegisterPage() {
       </PanelForm>
 
       <p className="mt-5 text-sm">
-        <Link href="/login" className="text-accent hover:underline">
+        <Link href="/login" className="inline-block py-2 text-accent hover:underline">
           Zaten hesabım var
         </Link>
       </p>

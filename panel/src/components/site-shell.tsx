@@ -98,7 +98,9 @@ export async function SiteShell({
           <div className="topbar-actions">
             {user ? (
               <>
-                <Link href="/social/settings" className="topbar-cell">
+                {/* On a phone the member menu carries Ayarlar, so the strip leaves it out
+                    when there is one (D-319) */}
+                <Link href="/social/settings" className={cn("topbar-cell", memberItems && "topbar-in-menu")}>
                   <Settings aria-hidden />
                   Ayarlar
                 </Link>

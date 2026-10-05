@@ -68,7 +68,7 @@ export default async function LoginPage({
       </PanelForm>
 
       <div className="mt-5 flex items-center justify-between text-sm">
-        <Link href="/forgot-password" className="text-muted hover:text-ink">
+        <Link href="/forgot-password" className="inline-block py-2 text-muted hover:text-ink">
           Şifremi unuttum
         </Link>
       </div>

@@ -201,7 +201,7 @@ export async function PanelShell({
             {/* The sidebar wordmark also leads home, but few people read a logo as a button */}
             <Link
               href="/"
-              className="inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs text-muted transition-colors hover:bg-paper hover:text-ink"
+              className="inline-flex min-h-10 items-center gap-1 rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs text-muted transition-colors hover:bg-paper hover:text-ink sm:min-h-0"
               title="Derginin ana sayfasına git"
             >
               <House className="size-3.5" />
@@ -235,13 +235,13 @@ export async function PanelShell({
             className="mb-2 flex flex-wrap justify-center gap-x-4 gap-y-1"
             aria-label="Yasal sayfalar"
           >
-            <Link href="/kunye" className="hover:text-ink">
+            <Link href="/kunye" className="inline-block py-2 hover:text-ink sm:py-0">
               Künye
             </Link>
-            <Link href="/kullanim-sartlari" className="hover:text-ink">
+            <Link href="/kullanim-sartlari" className="inline-block py-2 hover:text-ink sm:py-0">
               Kullanım şartları
             </Link>
-            <Link href="/kvkk" className="hover:text-ink">
+            <Link href="/kvkk" className="inline-block py-2 hover:text-ink sm:py-0">
               KVKK aydınlatma metni
             </Link>
           </nav>

@@ -625,11 +625,11 @@ export function TwoFactorCard({
             className="mx-auto mb-3 h-44 w-44 rounded bg-white p-2"
           />
         ) : null}
-        <p className="mb-1 text-[10px] font-semibold tracking-[0.18em] text-muted uppercase">
+        <p className="mb-1 text-xs font-semibold tracking-[0.18em] text-muted uppercase">
           Taratamıyorsanız girebileceğiniz bağlantı
         </p>
         <p className="break-all font-mono text-xs text-ink">{pendingUri}</p>
-        <p className="mt-3 mb-1 text-[10px] font-semibold tracking-[0.18em] text-muted uppercase">
+        <p className="mt-3 mb-1 text-xs font-semibold tracking-[0.18em] text-muted uppercase">
           Gizli anahtar (elle girmek isterseniz)
         </p>
         <p className="break-all font-mono text-xs text-ink">{pendingSecret}</p>

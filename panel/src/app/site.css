@@ -6267,3 +6267,133 @@ html:has(.profile-editor[open]) {
     }
   }
 }
+
+/* ════════════════ Phones (D-319) ════════════════
+   The designs have no phone version (D-158). Below 640px the unit floor and
+   the one-line rule (D-157) left the strip, the footer and the tab rows at
+   9–11px and many controls under 30px tall. These rules only make crowded
+   lines shorter and small things larger on a phone; the desktop is untouched,
+   and nothing that fits is restyled. */
+@media (max-width: 639px) {
+  /* The top strip: icons give way to words, Ayarlar is in the member menu */
+  .ps-site .site-topbar {
+    letter-spacing: 0.04em;
+  }
+
+  .ps-site .site-topbar-inner {
+    min-height: 2.5rem;
+    gap: 0;
+    padding-inline: 0.25rem;
+  }
+
+  .ps-site .topbar-cell {
+    padding: 0 0.55rem;
+  }
+
+  .ps-site .topbar-cell > svg:not(.site-stars) {
+    display: none;
+  }
+
+  .ps-site .topbar-in-menu {
+    display: none;
+  }
+
+  .ps-site .site-tagline {
+    font-size: 0.8rem;
+  }
+
+  /* "SAYI 01 · BIRAKAMADIKLARIMIZ": sized so its longest word fits a 360px
+     screen instead of being cut in the middle */
+  .ps-site .site-banner-subtitle {
+    font-size: min(calc(34 * var(--du)), 5.2vw);
+    letter-spacing: 0.02em;
+  }
+
+  /* Tab rows keep one line (D-157) with less to shrink */
+  .ps-site .site-tabs a {
+    padding-inline: 0.7rem;
+    letter-spacing: 0.01em;
+  }
+
+  /* Footer: readable words and links tall enough to tap */
+  .ps-site .footer-brand p {
+    font-size: 0.85rem;
+  }
+
+  .ps-site .footer-links {
+    font-size: 0.9rem;
+  }
+
+  .ps-site .footer-links a {
+    display: inline-block;
+    padding-block: 0.3rem;
+  }
+
+  /* Controls in the page body: at least 40px to tap */
+  .ps-site .site-main :is(button, input[type="submit"], .profile-link, .settings-edit):not(.fit-line *) {
+    min-height: 2.5rem;
+  }
+
+  .ps-site .profile-actions a[href^="/social/report"] {
+    display: inline-flex;
+    min-height: 2.5rem;
+    align-items: center;
+    font-size: 0.85rem;
+  }
+
+  /* Small print stays readable: the design's 0.75rem is 10.5px here */
+  /* Kept weaker than the design's own classes (e.g. the follow button's size) */
+  .ps-site :where(.site-main .text-xs) {
+    font-size: 0.85rem;
+  }
+
+  .ps-site .reader-issue {
+    font-size: 0.8rem;
+  }
+
+  .ps-site .reader-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .ps-site .site-topbar {
+    font-size: 0.8rem;
+  }
+
+  .ps-site .site-credit {
+    font-size: 0.8rem;
+  }
+
+  .ps-site .footer-links a {
+    padding-block: 0.45rem;
+  }
+
+  /* Links that stand alone under a heading or in a list: tall enough to tap */
+  .ps-site :is(.site-more, .hero-categories a, .contact-ways a) {
+    display: inline-flex;
+    min-height: 2.5rem;
+    align-items: center;
+  }
+
+  /* Tab rows of four or five: at 360px one line shrank them to 8px. On a phone
+     they become a grid of equal cells, three to a row, at a readable size
+     (D-319: the one-line rule of D-157 gives way here, on phones only) */
+  .ps-site :is(.notice-bar .site-tabs, .settings-tabs, .profile-tabs) {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
+    overflow: visible;
+    white-space: normal;
+  }
+
+  .ps-site :is(.notice-bar .site-tabs, .settings-tabs, .profile-tabs) a {
+    display: flex;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0.4rem 0.3rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.02em;
+    text-align: center;
+  }
+}

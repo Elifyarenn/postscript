@@ -21,7 +21,7 @@ export function BackButton() {
           router.push("/");
         }
       }}
-      className="inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs text-muted transition-colors hover:bg-paper hover:text-ink"
+      className="inline-flex min-h-10 items-center gap-1 rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs text-muted transition-colors hover:bg-paper hover:text-ink sm:min-h-0"
       title="Önceki sayfaya dön"
     >
       <ChevronLeft className="size-3.5" />

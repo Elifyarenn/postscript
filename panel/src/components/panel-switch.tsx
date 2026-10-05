@@ -27,7 +27,7 @@ export function PanelModeSwitch({ user }: { user: SessionUser }) {
 
   const buttonClass = (active: boolean) =>
     cn(
-      "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+      "inline-flex min-h-10 items-center rounded-md px-3 py-1.5 text-xs font-medium transition-colors sm:min-h-0",
       active ? "bg-accent text-white" : "bg-paper text-muted hover:text-ink",
     );
 

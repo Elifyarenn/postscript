@@ -31,7 +31,8 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-md border px-3.5 py-2 text-sm font-medium",
+        // At least 40px tall on a phone, where it is tapped (D-319); the desktop size is unchanged
+        "inline-flex min-h-10 items-center justify-center gap-2 rounded-md border px-3.5 py-2 text-sm font-medium sm:min-h-0",
         "transition-colors disabled:cursor-not-allowed disabled:opacity-50",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
         BUTTON_VARIANTS[variant],

@@ -12569,3 +12569,63 @@ Aydınlatma metni değişmedi.
 `tests/unit/article-status.test.ts`, `tests/unit/article-history.test.ts`,
 `tests/integration/editor-categories.test.ts`: gerekçesiz ret 409 ve e-posta
 yok; gerekçeli ret taslağa döner, yazara gerekçeli e-posta gider.
+
+## D-319 — Telefon görünümü: okunur yazı, rahat dokunma alanı, tek satırda sıkışan sekmeler
+
+**İstek (ürün sahibi):** "Sitenin mobil görünümünü baştan sona incele ve düzenle.
+Üst üste binen öğeleri, taşmaları, gereksiz boşlukları, kalabalık menüleri ve
+hizalama sorunlarını düzelt … yazılar okunur, dokunma alanları rahat olsun.
+PostScript'in mevcut tasarımını ve işlevlerini koru. 360, 390 ve 412 px
+genişliklerde doğrula."
+
+**Ölçüm:** Yerel üretim derlemesi + örnek veri (Sayı 1 içe aktarılmış ve
+yayımlanmış, test hesapları) üzerinde ziyaretçi, okur, yazar, editör ve admin
+olarak 73 sayfa × 3 genişlik (360/390/412) Playwright ile tarandı: yatay
+taşma, ekrandan çıkan öğe, üst üste binen denetimler, dokunma alanı (WCAG
+2.5.8; metin içi bağlantılar hariç) ve ekranda çizilen yazı boyutu
+(`fit-line`'ın `zoom`'u dahil). Ekran görüntüleri tek tek incelendi.
+
+| | Önce | Sonra |
+|---|---|---|
+| Yatay taşma / ekrandan çıkan / üst üste binen | 0 | 0 |
+| En küçük okunan yazı | 8,3 px (profil sekmeleri), 8,7 px (ayar sekmeleri), 9,8 px (okuyucu) | 11,5 px (üst şerit) |
+| Site: 360'ta küçük dokunma alanı (sayfa toplamı) | 395 | 47 |
+| Panel: aynı ölçü | 34 | 12 |
+
+**Bulunan ve düzeltilenler** (hepsi `max-width: 639px` içinde ya da Tailwind'de
+`… sm:min-h-0`; masaüstü değişmedi):
+
+- **Sözcük ortasından bölünen başlık:** Sayı sayfasında "SAYI 01 ·
+  BIRAKAMADIKLARIMIZ" 360 px'te "BIRAKAMADIKLARI / MIZ" diye bölünüyordu
+  (`overflow-wrap: anywhere`, D-253). Alt başlık telefonda `5.2vw` ile sınırlı;
+  en uzun sözcük satıra sığıyor.
+- **Kalabalık üst şerit:** Yazar/admin için "Yeni sayı · Ayarlar · Blog · Panel
+  · Çıkış" ve simgeler tek satıra 10 px'e sıkışıyordu. Telefonda simgeler
+  gizli, aralıklar dar; üye menüsü olan hesapta "Ayarlar" şeritten çıkar —
+  hamburger menüde zaten var (banlı hesapta üye menüsü yok, onda kalır). Yazı
+  11,5 px, şerit 40 px.
+- **Dört-beş sekmelik satırlar:** Bildirimler, Ayarlar ve profil sekmeleri tek
+  satır kuralıyla (D-157) 8 px'e küçülüyordu. Telefonda eşit hücreli ızgara,
+  satırda üç sekme, 11,5 px, 44 px yükseklik. **D-157'nin "asla ikinci satıra
+  geçmez" kuralı telefonda bu üç sekme satırı için gevşedi**; üç sekmelik
+  topluluk sekmesi ve diğer `fit-line`'lar aynı.
+- **Dokunma alanları:** Altbilgi bağlantıları, "Tümünü gör / Tüm sayılar"
+  bağlantıları, ana sayfa kategori bağlantıları, iletişim bağlantıları, profil
+  "Bildir"/"Mesaj"/"Engelle", sayfa gövdesindeki düğmeler, okuyucu simgeleri,
+  panel üst çubuğu (Geri, Ana sayfa, Yazar/Yönetim Paneli), paylaşılan `Button`
+  ve panel/yasal sayfa/giriş sayfası bağlantıları telefonda en az 40 px.
+- **Küçük yazılar:** Slogan, altbilgi, "Designed by" satırı, `text-xs` küçük
+  açıklamalar (sayfa gövdesinde, tasarım sınıflarından zayıf seçiciyle), okuyucu
+  "Sayı" etiketi ve iki adımlı doğrulama kurulumundaki 10 px etiketler büyüdü.
+
+**Bırakılanlar:** Panel tabloları dar ekranda kendi kutusunda yana kayar
+(tablo için olağan desen). Kart kaydırıcısının noktaları ve çalma listesi
+çalarının simgeleri küçük kaldı (kaydırma/çalar zaten dokunmayla kullanılıyor;
+görünümlerini değiştirmek tasarıma dokunur). 10–11 px kalan yazılar yalnızca
+admin sözleşme sayfasındaki teknik özet/yer tutucu adları.
+
+**Hukuk:** Değişiklik yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test (tek süreç). Yerel ölçüm betiği ve
+ekran görüntüleri: 360, 390, 412 px; canlıda yayından sonra herkese açık
+sayfalarda aynı ölçüm.

@@ -33,7 +33,7 @@ export function LegalPage({
   return (
     <main className="mx-auto max-w-3xl px-4 py-12">
       {/* Without a back link the page was a dead end: no header, no way home (D-253) */}
-      <Link href={back?.href ?? "/"} className="text-sm text-muted hover:text-ink">
+      <Link href={back?.href ?? "/"} className="inline-block py-2 text-sm text-muted hover:text-ink">
         ← {back?.label ?? "Ana sayfa"}
       </Link>
 
@@ -50,7 +50,7 @@ export function LegalPage({
           link.href === current ? (
             <span key={link.href}>{link.label}</span>
           ) : (
-            <Link key={link.href} href={link.href} className="hover:text-ink">
+            <Link key={link.href} href={link.href} className="inline-block py-2 hover:text-ink">
               {link.label}
             </Link>
           ),
