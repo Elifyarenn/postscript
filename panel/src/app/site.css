@@ -6385,6 +6385,28 @@ html:has(.profile-editor[open]) {
     align-items: center;
   }
 
+  /* The hero's four areas sit in one row (D-321): four equal cells, each name
+     breaking only between words, so "Sanat & / Edebiyat" takes two lines
+     instead of the list wrapping into three rows. "Ve dahası…" goes below */
+  .ps-site .hero-categories {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.25rem 0.6rem;
+    font-size: min(0.8rem, 2.95vw);
+    letter-spacing: 0.02em;
+    line-height: 1.25;
+  }
+
+  .ps-site .hero-categories li {
+    overflow-wrap: normal;
+    hyphens: none;
+  }
+
+  .ps-site .hero-categories li:nth-child(n + 5) {
+    grid-column: 1 / -1;
+  }
+
   /* Tab rows of four or five: at 360px one line shrank them to 8px. On a phone
      they become a grid of equal cells, three to a row, at a readable size
      (D-319: the one-line rule of D-157 gives way here, on phones only) */

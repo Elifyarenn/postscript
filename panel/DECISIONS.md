@@ -12643,3 +12643,19 @@ kaydırılarak da gezildiği için noktalar dokunma hedefi kuralının dışınd
 
 **Doğrulama:** Kapı: typecheck, lint, test. Canlıda 360/390/412 px'te noktanın
 genişliği ve yüksekliği eşit ve küçük.
+
+## D-321 — Ana sayfa başlığındaki dört alan telefonda tek sırada
+
+**İstek (ürün sahibi):** "Ana giriş header'ında kategorilerin yazdığı dört
+yazıyı küçült, hepsi tek sıra gözüksün mobilde."
+
+**Durum:** Telefonda dört alan adı ve "Ve dahası…" 13,9 px'te üç satıra
+dağılıyordu (2–1–2). Dördünün tek satıra sığması 360 px'te yaklaşık 6 px
+yazı gerektirir; okunmaz. **Karar:** Telefonda (`max-width: 639px`) dört eşit
+hücreli tek sıra; her ad yalnızca sözcük arasından bölünür ("Sanat & /
+Edebiyat" iki satır), yazı `min(0.8rem, 2.95vw)` (360'ta 10,6 px, 390–412'de
+11,5 px). "Ve dahası…" altta kendi satırında. Bağlantılar 40 px dokunma
+yüksekliğini korur. Masaüstü ve 640–760 px aralığı değişmedi.
+
+**Doğrulama:** Kapı: typecheck, lint, test (tek süreç). Canlıda 360/390/412 px:
+dört alan aynı satırda, her biri iki satır, yatay taşma yok.
