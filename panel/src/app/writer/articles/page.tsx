@@ -1,9 +1,13 @@
 import Link from "next/link";
-import { eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
-import { articleComments, articles, issues, users } from "@/db/schema";
+import { articleComments, issues, users } from "@/db/schema";
 import { guardWriterInnerPages } from "@/lib/auth/guard";
-import { listArticlesForWriter } from "@/services/articles";
+import { issueIdsWithArticlesBy, listArticlesForWriter } from "@/services/articles";
+import { getActiveIssue } from "@/services/active-issue";
+import { pickListIssue } from "@/lib/active-issue";
+import { formatWordCount } from "@/lib/word-count";
+import { IssuePicker } from "@/components/issue-picker";
 import { Card, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
 
@@ -15,9 +19,27 @@ export const metadata = { title: "Yazılarım" };
  * notes on it. Drafts and revision requests are editable; once in review only
  * the reviewers touch the text.
  */
-export default async function WriterArticlesPage() {
+export default async function WriterArticlesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ issueId?: string }>;
+}) {
   const { user } = await guardWriterInnerPages();
-  const assigned = await listArticlesForWriter({ ...user });
+  const { issueId } = await searchParams;
+
+  // The issues this writer has articles in, plus the active one (D-330)
+  const [ownIssueIds, activeIssue] = await Promise.all([issueIdsWithArticlesBy(user.id), getActiveIssue()]);
+  const pickable = [...new Set([...ownIssueIds, ...(activeIssue ? [activeIssue.id] : [])])];
+  const issueRows =
+    pickable.length > 0
+      ? await db
+          .select({ id: issues.id, number: issues.number, title: issues.title })
+          .from(issues)
+          .where(and(inArray(issues.id, pickable), isNull(issues.deletedAt)))
+          .orderBy(desc(issues.number))
+      : [];
+  const selected = pickListIssue(issueRows, issueId, activeIssue?.id ?? null);
+  const assigned = selected ? await listArticlesForWriter({ ...user }, selected.id) : [];
 
   const ids = assigned.map((article) => article.id);
   const comments =
@@ -34,15 +56,6 @@ export default async function WriterArticlesPage() {
           .from(articleComments)
           .leftJoin(users, eq(articleComments.authorId, users.id))
           .where(inArray(articleComments.articleId, ids))
-      : [];
-
-  const issueRows =
-    ids.length > 0
-      ? await db
-          .select({ id: issues.id, number: issues.number, title: issues.title })
-          .from(issues)
-          .innerJoin(articles, eq(articles.issueId, issues.id))
-          .where(inArray(articles.id, ids))
       : [];
 
   const issueById = new Map(issueRows.map((row) => [row.id, row]));
@@ -63,8 +76,20 @@ export default async function WriterArticlesPage() {
         }
       />
 
+      {selected && (
+        <Card className="mb-5">
+          <IssuePicker issues={issueRows} selectedId={selected.id} activeId={activeIssue?.id ?? null} />
+          <p className="mt-3 text-xs text-muted">
+            Bu sayıda {assigned.length} yazınız var
+            {assigned.length > 0 &&
+              `, toplam ${formatWordCount(assigned.reduce((sum, article) => sum + article.wordCount, 0))}`}
+            .
+          </p>
+        </Card>
+      )}
+
       {assigned.length === 0 ? (
-        <EmptyState>Henüz yazınız yok. &ldquo;Yeni yazı&rdquo; ile başlayın.</EmptyState>
+        <EmptyState>Bu sayıda yazınız yok. &ldquo;Yeni yazı&rdquo; ile başlayın.</EmptyState>
       ) : (
         <div className="space-y-5">
           {assigned.map((article) => {
@@ -90,6 +115,7 @@ export default async function WriterArticlesPage() {
                     <p className="mt-1 text-xs text-muted">
                       {issue ? `Sayı ${issue.number} · ${issue.title}` : "Sayıya atanmadı"}
                       {article.category && ` · ${article.category}`}
+                      {` · ${formatWordCount(article.wordCount)}`}
                       {article.dueDate && ` · Teslim: ${formatDate(article.dueDate)}`}
                       {article.publishedAt && ` · Yayın: ${formatDate(article.publishedAt)}`}
                     </p>

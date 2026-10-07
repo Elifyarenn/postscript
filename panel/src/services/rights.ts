@@ -359,12 +359,13 @@ async function findWriter(userId: string): Promise<User> {
 }
 
 /** Everything the approval screen needs for one writer (§7.2). */
-export async function listApprovalsForWriter(actor: Actor) {
+export async function listApprovalsForWriter(actor: Actor, issueId?: string) {
   return db
     .select({
       id: rightsGrants.id,
       status: rightsGrants.status,
       articleId: rightsGrants.articleId,
+      issueId: articles.issueId,
       articleTitle: articles.title,
       articleBody: articles.bodyMarkdown,
       bylineChoice: rightsGrants.bylineChoice,
@@ -379,12 +380,13 @@ export async function listApprovalsForWriter(actor: Actor) {
     .from(rightsGrants)
     .innerJoin(articles, eq(rightsGrants.articleId, articles.id))
     .leftJoin(agreementVersions, eq(rightsGrants.agreementVersionId, agreementVersions.id))
-    .where(eq(rightsGrants.grantorId, actor.id))
+    // One issue at a time when asked (D-330)
+    .where(and(eq(rightsGrants.grantorId, actor.id), issueId ? eq(articles.issueId, issueId) : undefined))
     .orderBy(desc(rightsGrants.createdAt));
 }
 
 /** Editor view: which approvals are still waiting, and for how long (§9). */
-export async function listPendingApprovals(actor: Actor) {
+export async function listPendingApprovals(actor: Actor, issueId?: string) {
   if (!canAccessEditorPanel(actor)) throw forbidden();
 
   return db
@@ -402,7 +404,8 @@ export async function listPendingApprovals(actor: Actor) {
     .from(rightsGrants)
     .innerJoin(articles, eq(rightsGrants.articleId, articles.id))
     .innerJoin(users, eq(rightsGrants.grantorId, users.id))
-    .where(eq(rightsGrants.status, "pending"))
+    // One issue at a time when asked (D-330)
+    .where(and(eq(rightsGrants.status, "pending"), issueId ? eq(articles.issueId, issueId) : undefined))
     .orderBy(rightsGrants.createdAt);
 }
 

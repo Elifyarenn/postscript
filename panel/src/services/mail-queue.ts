@@ -21,7 +21,7 @@ import "server-only";
 import { and, asc, count, desc, eq, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { contributorDocuments, mailJobs, type MailJob, type MailJobStatus, type StoredMailAttachment } from "@/db/schema";
+import { contributorDocuments, mailJobs, users, type MailJob, type MailJobStatus, type StoredMailAttachment } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import { canManageMailQueue, type Actor } from "@/lib/auth/rbac";
 import { runInBackground } from "@/lib/background";
@@ -417,8 +417,30 @@ export async function pruneMailJobs(now: Date = new Date()): Promise<number> {
 
 export type MailQueueFilter = "attention" | "sent" | "all";
 
+/**
+ * The main editor runs the outbox too (D-330). Their mark is read from the
+ * account here rather than through `getEditorAssignment`, whose module
+ * imports this one.
+ */
+async function assertMailQueueAccess(actor: Actor): Promise<void> {
+  const [row] = actor.role === "editor"
+    ? await db.select({ isMainEditor: users.isMainEditor }).from(users).where(eq(users.id, actor.id)).limit(1)
+    : [];
+  if (!canManageMailQueue(actor, row ?? null)) throw forbidden();
+}
+
+/** Whether this person may open the outbox, for the panel's menu and pages. */
+export async function mayManageMailQueue(actor: Actor): Promise<boolean> {
+  try {
+    await assertMailQueueAccess(actor);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function mailQueueOverview(actor: Actor, filter: MailQueueFilter = "attention") {
-  if (!canManageMailQueue(actor)) throw forbidden();
+  await assertMailQueueAccess(actor);
 
   const counts = await db
     .select({ status: mailJobs.status, total: count() })
@@ -457,7 +479,7 @@ export async function mailQueueOverview(actor: Actor, filter: MailQueueFilter = 
 
 /** Puts a failed job back at the front of the queue with a fresh set of attempts. */
 export async function retryMailJob(actor: Actor, jobId: string, meta: RequestMeta): Promise<void> {
-  if (!canManageMailQueue(actor)) throw forbidden();
+  await assertMailQueueAccess(actor);
   if (!z.uuid().safeParse(jobId).success) throw badRequest("Geçersiz e-posta kaydı.");
 
   const [job] = await db.select().from(mailJobs).where(eq(mailJobs.id, jobId)).limit(1);
@@ -491,7 +513,7 @@ export async function retryMailJob(actor: Actor, jobId: string, meta: RequestMet
 
 /** The admin's "process now": runs in the request so the result can be shown. */
 export async function processMailQueueAsAdmin(actor: Actor): Promise<ProcessResult> {
-  if (!canManageMailQueue(actor)) throw forbidden();
+  await assertMailQueueAccess(actor);
   return processMailQueue({ budgetMs: 240_000, limit: 500 });
 }
 
@@ -501,7 +523,7 @@ export async function processMailQueueAsAdmin(actor: Actor): Promise<ProcessResu
 
 /** The messages still waiting to be sent, counted by template. */
 export async function pendingMailDrafts(actor: Actor): Promise<{ kind: string; total: number; oldest: Date }[]> {
-  if (!canManageMailQueue(actor)) throw forbidden();
+  await assertMailQueueAccess(actor);
   const rows = await db
     .select({ kind: mailJobs.kind, total: count(), oldest: sql<Date>`min(${mailJobs.createdAt})` })
     .from(mailJobs)
@@ -532,7 +554,7 @@ export type MailJobPreview = {
  * shown: its link would work for whoever reads it.
  */
 export async function previewMailJob(actor: Actor, jobId: string): Promise<MailJobPreview> {
-  if (!canManageMailQueue(actor)) throw forbidden();
+  await assertMailQueueAccess(actor);
   if (!z.uuid().safeParse(jobId).success) throw notFound("E-posta kaydı bulunamadı.");
   const [job] = await db.select().from(mailJobs).where(eq(mailJobs.id, jobId)).limit(1);
   if (!job) throw notFound("E-posta kaydı bulunamadı.");

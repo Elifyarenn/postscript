@@ -10,6 +10,7 @@ import { issues, topicProposalEvents, topicProposals, users, type User } from "@
 import { isAppError } from "@/lib/errors";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import { createIssue, updateIssue } from "@/services/issues";
+import { setActiveIssue } from "@/services/active-issue";
 import { createArticle, createArticleAsWriter, transitionArticle } from "@/services/articles";
 import {
   decideTopicProposal,
@@ -535,7 +536,9 @@ describe("the article for a topic", () => {
   });
 
   it("keeps the old flow in an issue without windows (issue 1)", async () => {
-    const { writer } = await acceptedTopic();
+    const { writer, admin } = await acceptedTopic();
+    // New articles go into the active issue only (D-330)
+    await setActiveIssue(actorOf(admin), await testIssueId(), noMeta);
     const article = await createArticleAsWriter(
       actorOf(writer),
       { title: "Eski akış", category: "Sanat & Edebiyat", issueId: await testIssueId() },

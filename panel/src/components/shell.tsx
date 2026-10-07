@@ -91,6 +91,7 @@ export const ADMIN_NAV: NavGroup[] = [
       { href: "/editor/articles", label: "Makaleler & yayın kuyruğu" },
       { href: "/editor/issues", label: "Sayılar" },
       { href: "/editor/topics", label: "Konu önerileri" },
+      { href: "/editor/gecici-alan", label: "Geçici alan" },
       { href: "/editor/approvals", label: "Eser Onayı takibi" },
       { href: "/editor/media", label: "Medya kütüphanesi" },
     ],
@@ -113,7 +114,7 @@ export const ADMIN_NAV: NavGroup[] = [
  * Issue planning, announcements, work approvals and writer applications are
  * the admin's business and do not appear here.
  */
-export function editorNav(reviewsTopics: boolean, contactsTeam = false): NavGroup[] {
+export function editorNav(reviewsTopics: boolean, contactsTeam = false, mainEditorTools = false): NavGroup[] {
   return [
     {
       label: "Genel",
@@ -131,6 +132,18 @@ export function editorNav(reviewsTopics: boolean, contactsTeam = false): NavGrou
     // The team's phone numbers are the main editor's too (D-267)
     ...(contactsTeam
       ? [{ label: "Ekip", items: [{ href: "/editor/team", label: "Ekip iletişimi" }] }]
+      : []),
+    // Temporary areas and the outbox are the main editor's as well (D-330)
+    ...(mainEditorTools
+      ? [
+          {
+            label: "Ana editör",
+            items: [
+              { href: "/editor/gecici-alan", label: "Geçici alan" },
+              { href: "/editor/mail", label: "E-posta kuyruğu" },
+            ],
+          },
+        ]
       : []),
   ];
 }

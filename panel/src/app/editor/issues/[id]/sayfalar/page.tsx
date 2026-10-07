@@ -54,7 +54,8 @@ export default async function IssuePagesPage({ params }: { params: Promise<{ id:
     listIssuePages(actor, issue.id),
     readCsrfToken(),
     listMedia(actor, 200),
-    listArticles(actor, { limit: 200 }),
+    // Only this issue's own articles: two issues never share a list (D-330)
+    listArticles(actor, { issueId: id, limit: 200 }).then((list) => list.items),
     listAllWriterAreasWithQuota(),
     design ? pendingSnapshot(issue.id) : null,
   ]);

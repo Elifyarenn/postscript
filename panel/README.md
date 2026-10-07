@@ -513,8 +513,21 @@ Servisler e-postayı doğrudan göndermez. `sendMail` ve `queueMails`
 (`src/services/mail-queue.ts`) iletiyi önce `mail_jobs` tablosuna yazar, sonra
 yanıttan sonra (`after()`) gönderir. Gönderilemeyen ileti 1 dk, 5 dk, 30 dk,
 2 sa ve 8 sa arayla yeniden denenir; altıncı başarısızlıkta `failed` olur ve
-`/admin/mail` ekranında görünür. Kuyruk ayrıca günlük cron'da, yöneticinin
-"Kuyruğu şimdi işle" düğmesiyle ve `GET /api/cron/mail` ile işlenir.
+`/admin/mail` ekranında görünür (ana editör için aynı ekran `/editor/mail`,
+D-330). Kuyruk ayrıca günlük cron'da, yöneticinin ya da ana editörün "Kuyruğu
+şimdi işle" düğmesiyle ve `GET /api/cron/mail` ile işlenir.
+
+### Aktif sayı ve kelime sayısı (D-330)
+
+Aktif sayı `site_settings` içindeki tek `active_issue_id` satırıdır; admin
+`/editor/issues` ekranındaki "Aktif sayı" kartından değiştirir. Satır yoksa ya
+da gösterdiği sayı yayımlandıysa yayımlanmamış en küçük numaralı sayı aktiftir
+(`src/lib/active-issue.ts`). Yazarın yeni yazısı yalnızca aktif sayıya bağlanır;
+yayımlanmış ya da arşivlenmiş bir sayıya yazı eklenmez, taşınmaz, teslim edilmez.
+Yazı listeleri (kuyruk, Yazılarım, eser onayları, konu önerileri, geçici alan,
+genel bakış sayaçları) her zaman tek sayı gösterir, "Tümü" seçeneği yoktur.
+Kelime sayısı her yerde `countWords` (`src/lib/word-count.ts`) ile hesaplanır;
+saklanmaz, gövdeden okunurken sayılır.
 
 Hobby planında cron günde bir kez çalışır. Binlerce alıcılı bir toplu gönderimin
 aynı saatte bitmesi gerekiyorsa `/api/cron/mail` dışarıdaki bir zamanlayıcıyla

@@ -4,6 +4,8 @@ import { guardPanel } from "@/lib/auth/guard";
 import { pendingAcknowledgements } from "@/services/announcements";
 import { listApprovalsForWriter } from "@/services/rights";
 import { listArticlesForWriter } from "@/services/articles";
+import { getActiveIssue } from "@/services/active-issue";
+import { formatWordCount } from "@/lib/word-count";
 import { getCurrentAgreement, hasAcceptedCurrentAgreement } from "@/services/agreements";
 import { Alert, Card, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
 import { formatDate } from "@/lib/utils";
@@ -22,10 +24,12 @@ export default async function WriterDashboard() {
   // The Hobby cron runs once a day; a panel visit is what sends this on time (D-270)
   await announceOpenedSubmissionWindowsSoon();
 
+  // The delivery list is the active issue's; older issues are under "Yazılarım" (D-330)
+  const activeIssue = await getActiveIssue();
   const [pending, approvals, articles, current, agreementAccepted, issueEntries, calendar] = await Promise.all([
     pendingAcknowledgements({ ...user }),
-    listApprovalsForWriter({ ...user }),
-    listArticlesForWriter({ ...user }),
+    activeIssue ? listApprovalsForWriter({ ...user }, activeIssue.id) : Promise.resolve([]),
+    activeIssue ? listArticlesForWriter({ ...user }, activeIssue.id) : Promise.resolve([]),
     getCurrentAgreement(),
     // A verified signed contract, not a checkbox (D-275)
     hasAcceptedCurrentAgreement(user.id),
@@ -171,15 +175,18 @@ export default async function WriterDashboard() {
         </div>
 
         <Card>
-          <h2 className="mb-3 font-serif text-lg">Teslim takvimi</h2>
+          <h2 className="mb-3 font-serif text-lg">
+            Teslim takvimi{activeIssue ? ` · Sayı ${activeIssue.number}` : ""}
+          </h2>
           {articles.length === 0 ? (
-            <EmptyState>Size atanmış makale yok.</EmptyState>
+            <EmptyState>Aktif sayıda yazınız yok.</EmptyState>
           ) : (
             <ul className="divide-y divide-line text-sm">
               {articles.map((article) => (
                 <li key={article.id} className="flex items-center justify-between gap-3 py-2.5">
                   <span className="min-w-0 truncate">{article.title}</span>
                   <span className="flex shrink-0 items-center gap-3">
+                    <span className="text-xs text-muted">{formatWordCount(article.wordCount)}</span>
                     {article.dueDate && (
                       <span className="text-xs text-muted">
                         Teslim: {formatDate(article.dueDate)}

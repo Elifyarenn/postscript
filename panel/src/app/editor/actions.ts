@@ -42,6 +42,8 @@ import { badRequest } from "@/lib/errors";
 import { parseTurkeyLocalDateTime } from "@/lib/utils";
 import { parsePeriod } from "@/lib/issue-periods";
 import { decideTopicProposal } from "@/services/topics";
+import { setActiveIssue } from "@/services/active-issue";
+import { grantIssueArea, revokeIssueArea } from "@/services/issue-area-grants";
 import type { LicenseType } from "@/db/schema";
 
 /* ------------------------------------------------------------------ */
@@ -568,5 +570,53 @@ export async function decideTopicAction(
             ? "Yazardan değişiklik istendi."
             : "Konu reddedildi.",
     };
+  });
+}
+
+/** The admin makes an open issue the active one (D-330). */
+export async function setActiveIssueAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const issue = await setActiveIssue({ ...user }, text(formData, "issueId"), await requestMetadata());
+    revalidatePath("/editor/issues");
+    return { success: `Aktif sayı artık Sayı ${issue.number}.` };
+  });
+}
+
+/**
+ * A temporary area from the editor panel (D-306, D-330). The editor role is
+ * the first gate; the service lets only the main editor and the admins on.
+ */
+export async function grantTemporaryAreaAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("editor");
+    await grantIssueArea(
+      { ...user },
+      { issueId: text(formData, "issueId"), userId: text(formData, "userId"), areaId: text(formData, "areaId") },
+      await requestMetadata(),
+    );
+    revalidatePath("/editor/gecici-alan");
+    return { success: "Geçici alan verildi; yazara e-posta gönderildi." };
+  });
+}
+
+export async function revokeTemporaryAreaAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("editor");
+    await revokeIssueArea({ ...user }, text(formData, "grantId"), await requestMetadata());
+    revalidatePath("/editor/gecici-alan");
+    return { success: "Geçici alan geri alındı." };
   });
 }

@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { guardAdminWithinEditor } from "@/lib/auth/guard";
 import { listPendingApprovals, LICENCE_TERMS } from "@/services/rights";
+import { listIssues } from "@/services/issues";
+import { getActiveIssue } from "@/services/active-issue";
+import { pickListIssue } from "@/lib/active-issue";
+import { IssuePicker } from "@/components/issue-picker";
 import { getCurrentAgreement } from "@/services/agreements";
 import { readCsrfToken } from "@/lib/csrf";
 import { PanelForm } from "@/components/form";
@@ -10,11 +14,18 @@ import { sendRemindersAction } from "../actions";
 
 export const metadata = { title: "Eser Onayı takibi" };
 
-export default async function EditorApprovalsPage() {
+export default async function EditorApprovalsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ issueId?: string }>;
+}) {
   const { user } = await guardAdminWithinEditor();
   const csrfToken = (await readCsrfToken()) ?? "";
 
-  const pending = await listPendingApprovals({ ...user });
+  // One issue's approvals, the active issue's unless another is chosen (D-330)
+  const [issues, activeIssue] = await Promise.all([listIssues({ ...user }), getActiveIssue()]);
+  const selected = pickListIssue(issues, (await searchParams).issueId, activeIssue?.id ?? null);
+  const pending = selected ? await listPendingApprovals({ ...user }, selected.id) : [];
   const agreement = await getCurrentAgreement();
 
   return (
@@ -25,6 +36,12 @@ export default async function EditorApprovalsPage() {
       />
 
       <div className="space-y-6">
+        {selected && (
+          <Card>
+            <IssuePicker issues={issues} selectedId={selected.id} activeId={activeIssue?.id ?? null} />
+          </Card>
+        )}
+
         <Card>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-serif text-lg">Bekleyen onaylar ({pending.length})</h2>

@@ -12952,3 +12952,64 @@ Volkswagen Takıntısı" (D-323'te karadelik yazısınınkinin kopyasıydı).
 "Tasarım sayfalarını içe aktar / güncelle"ye basmalı (D-316). Migration yok.
 
 **Doğrulama:** Kapı: typecheck, lint, test.
+
+## D-330 — Aktif sayı, sayıya göre listeler, kelime sayısı, ana editöre mail kuyruğu ve geçici alan
+
+**İstek (ürün sahibi, 2026-10-07):** 1. sayı yayımlandı, aktif sayı 2. sayı;
+yazarlar 1. sayıya yazı gönderemesin ya da taşıyamasın, yeni yazılar kendiliğinden
+aktif sayıya bağlansın. Farklı sayıların yazıları hiçbir listede birlikte
+görünmesin; varsayılan aktif sayı, "Tümü" yok; arama, sıralama, sayfalama ve
+sayaçlar seçilen sayıya göre. Kelime sayısı giriş/düzenleme panellerinde, kuyrukta,
+geçici alanda ve yazı detaylarında; HTML ve biçim işaretleri sayılmasın. Ana
+editör mail kuyruğunu yönetsin ve geçici alan atayabilsin.
+
+**Karar:**
+- **Aktif sayı tek yerde:** `site_settings.active_issue_id` (anahtar/değer tablosu,
+  migration gerekmedi). Satır yoksa ya da gösterdiği sayı yayımlanmış/arşivlenmişse
+  yayımlanmamış en küçük numaralı sayı aktif sayılır; böylece 1. sayı
+  `published` olunca 2. sayı kimse ayar yapmadan aktif olur. Admin
+  `/editor/issues` → "Aktif sayı" kartından açık bir sayıyı seçebilir
+  (`issue.active_set` denetim kaydı). Muhafazakâr seçim: üretim veritabanını
+  okuyamadığım için satır yazılmadı; 1. sayının durumu `published` değilse admin
+  kartta 2. sayıyı seçmeli.
+- **Sunucu kuralları:** yazarın yeni yazısı (konulu ya da konusuz) yalnızca aktif
+  sayıya açılır, sayı gönderilmezse aktif sayı kullanılır (409 aksi hâlde).
+  Yayımlanmış/arşivlenmiş sayıya editör de yazı oluşturamaz ya da taşıyamaz;
+  `scheduled`/`published`/`archived`/`withdrawn` bir yazı başka sayıya
+  taşınmaz. Kapanmış sayıdaki taslak teslim edilemez (`draft → in_review` 409);
+  editör onu açık bir sayıya taşıyabilir. 1. sayının mevcut içeriği değişmedi.
+- **Tek sayılık listeler:** `listArticles` artık `issueId` zorunlu alır, başlıkta
+  arama (`ilike`, joker karakterler kaçışlı), sıralama (son güncellenen, başlık,
+  durum, ilk eklenen), 50'lik sayfalama ve toplam döndürür;
+  `countArticlesByStatus` aynı kapsamla sayar. Ortak `IssuePicker` bileşeninde
+  "Tümü" yok. Uygulanan ekranlar: makale kuyruğu, editör genel bakış sayaçları,
+  Yazılarım, yazar genel bakış teslim listesi ve eser onayları, editör ve yazar
+  eser onayı ekranları, konu önerileri, geçici alan, sayının sayfa ekranındaki
+  bağlanabilir yazılar. Yazarın seçebildiği sayılar: yazısı olan sayılar + aktif
+  sayı.
+- **Kelime sayısı:** `countWords` (`src/lib/word-count.ts`) tek fonksiyon; HTML
+  etiketleri, yorumlar, varlıklar, kod blokları, görseller, bağlantı adresleri,
+  markdown işaretleri ve numaralı liste başları sayılmaz, tireli kelime tek
+  kelimedir. Ruhsat formundaki `wordCount` artık bunun takma adı (D-276'nın sayımı
+  tireli kelimelerde değişti; hazırlanmış belgeler saklı metin olduğu için
+  etkilenmez). Değer saklanmıyor: gövde okunurken hesaplanıyor, bu yüzden mevcut
+  yazılar için de hemen geçerli. Gövde alanı yazarken canlı sayar.
+- **Ana editör:** `canManageMailQueue(actor, assignment)` ve yeni
+  `canManageIssueAreaGrants` admin ya da ana editör (dondurulmuş/yasaklı değil)
+  için doğru. Servisler ana editör işaretini hesaptan okuyor (`getEditorAssignment`
+  modülü bu modülleri içe aktardığı için döngü kurulmadı). Ekranlar:
+  `/editor/mail`, `/editor/mail/[id]` (admin ekranıyla ortak görünüm) ve
+  `/editor/gecici-alan` (seçili sayının geçici alanları, altında yazılan yazılar
+  ve kelime sayıları, verme/geri alma). Kategori editörü menüde görmez, adrese
+  giderse 404, server action 403. Admin ekranları ve diğer rollerin yetkileri
+  aynı.
+
+**KVKK:** yeni kişisel veri, amaç ya da alıcı yok; ana editörün kuyrukta gördüğü
+alıcı adresleri ekip içi erişim, aydınlatma metni değişmedi.
+
+**Canlıya etkisi:** Migration yok. Push sonrası `/editor/issues` "Aktif sayı"
+kartında Sayı 2'nin göründüğü kontrol edilmeli.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Yeni testler:
+`tests/integration/active-issue.test.ts`, `tests/unit/word-count.test.ts`,
+`tests/unit/active-issue.test.ts`, `rbac` ek durumları.

@@ -13,6 +13,7 @@ import { readCsrfToken } from "@/lib/csrf";
 import { renderMarkdown } from "@/lib/markdown";
 import { PanelForm } from "@/components/form";
 import { ArticleBodyTextarea } from "@/components/article-body-textarea";
+import { countWords, formatWordCount } from "@/lib/word-count";
 import { Alert, Card, EmptyState, Field, Input, PageHeader, Select, StatusBadge, Table, Td, Th } from "@/components/ui";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { submitArticleAction, updateArticleAsWriterAction } from "../../actions";
@@ -57,7 +58,8 @@ export default async function WriterArticleDetailPage({
     <>
       <PageHeader
         title={article.title}
-        description={`/${article.slug}`}
+        // The stored body's count; the form below counts live while typing (D-330)
+        description={`/${article.slug} · ${formatWordCount(countWords(article.bodyMarkdown))}`}
         actions={<StatusBadge status={article.status} />}
       />
 

@@ -11,6 +11,7 @@ import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import { createArticleAsWriter } from "@/services/articles";
 import { selectableWriterCategories } from "@/services/editor-categories";
 import { createIssue } from "@/services/issues";
+import { setActiveIssue } from "@/services/active-issue";
 import { grantIssueArea, listIssueAreaGrantsForUser, revokeIssueArea } from "@/services/issue-area-grants";
 import { listWriterIssues, submitTopicProposal } from "@/services/topics";
 import { resetTables, seedDefaultWriterAreas, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
@@ -82,6 +83,8 @@ describe("a temporary area for one issue", () => {
       noMeta,
     );
     expect(article.category).toBe(extra);
+    // The second issue made active, so the area, not the issue, is what is refused (D-330)
+    await setActiveIssue(actorOf(admin), second.id, noMeta);
     expect(
       await statusOf(createArticleAsWriter(actorOf(writer), { title: "Başka Sayıda", category: extra, issueId: second.id }, noMeta)),
     ).toBe(400);

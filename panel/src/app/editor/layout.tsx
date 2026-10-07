@@ -1,7 +1,12 @@
 ﻿import type { ReactNode } from "react";
 import { NO_INDEX } from "@/lib/seo";
 import { guardPanel } from "@/lib/auth/guard";
-import { canContactTeam, canReviewTopicProposals } from "@/lib/auth/rbac";
+import {
+  canContactTeam,
+  canManageIssueAreaGrants,
+  canManageMailQueue,
+  canReviewTopicProposals,
+} from "@/lib/auth/rbac";
 import { getEditorAssignment } from "@/services/editor-categories";
 import { ADMIN_NAV, editorNav, PanelShell } from "@/components/shell";
 
@@ -18,12 +23,14 @@ export default async function EditorLayout({ children }: { children: ReactNode }
   const assignment = adminView ? null : await getEditorAssignment(user.id);
   const reviewsTopics = assignment !== null && canReviewTopicProposals(user, assignment);
   const contactsTeam = assignment !== null && canContactTeam(user, assignment);
+  const mainEditorTools =
+    assignment !== null && canManageMailQueue(user, assignment) && canManageIssueAreaGrants(user, assignment);
 
   return (
     <PanelShell
       user={user}
       area={adminView ? "yönetim" : "editör paneli"}
-      groups={adminView ? ADMIN_NAV : editorNav(reviewsTopics, contactsTeam)}
+      groups={adminView ? ADMIN_NAV : editorNav(reviewsTopics, contactsTeam, mainEditorTools)}
     >
       {children}
     </PanelShell>

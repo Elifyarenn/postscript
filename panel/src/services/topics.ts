@@ -9,6 +9,7 @@
  * of the request; the pages only mirror it.
  */
 import "server-only";
+import { isIssueClosed } from "@/lib/active-issue";
 import { and, asc, count, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
@@ -488,6 +489,11 @@ export async function assertArticleDeliveryAllowed(
   const rows = await db.select().from(issues).where(eq(issues.id, article.issueId)).limit(1);
   const issue = rows[0];
   if (!issue || issue.deletedAt) throw conflict("Yazının sayısı bulunamadı.");
+  // A draft left in a published issue is not handed in there (D-330); the
+  // editor may move it to an open issue first
+  if (isIssueClosed(issue)) {
+    throw conflict(`Sayı ${issue.number} yayımlandı; bu sayıya yazı gönderilemez.`);
+  }
   if (!usesIssueWindows(issue)) return;
 
   const state = periodState(submissionPeriod(issue), now);

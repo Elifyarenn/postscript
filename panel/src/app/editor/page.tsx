@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { announceOpenedSubmissionWindowsSoon } from "@/services/issue-mail";
 import { guardPanel } from "@/lib/auth/guard";
-import { listArticles } from "@/services/articles";
+import { countArticlesByStatus } from "@/services/articles";
+import { getActiveIssue } from "@/services/active-issue";
+import { pickListIssue } from "@/lib/active-issue";
+import { IssuePicker } from "@/components/issue-picker";
 import { listIssues } from "@/services/issues";
 import { listPendingApprovals } from "@/services/rights";
 import { getEditorAssignment } from "@/services/editor-categories";
@@ -19,8 +22,13 @@ export const metadata = { title: "Editör paneli" };
  * areas, a main editor adds the second review stage, and an admin sees the
  * publication queues (`ready_for_publishing`, `awaiting_rights`, `scheduled`).
  */
-export default async function EditorDashboard() {
+export default async function EditorDashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ issueId?: string }>;
+}) {
   const { user } = await guardPanel("editor");
+  const { issueId } = await searchParams;
   // The Hobby cron runs once a day; a panel visit is what sends this on time (D-270)
   await announceOpenedSubmissionWindowsSoon();
   const actor = { ...user };
@@ -45,10 +53,12 @@ export default async function EditorDashboard() {
         ];
 
   const now = new Date();
-  const [articles, issues, pendingGrants, calendar] = await Promise.all([
-    listArticles(actor, { limit: 200 }),
-    isAdmin ? listIssues(actor) : Promise.resolve([]),
-    isAdmin ? listPendingApprovals(actor) : Promise.resolve([]),
+  // The counters belong to one issue, the active one unless another is chosen (D-330)
+  const [issues, activeIssue] = await Promise.all([listIssues(actor), getActiveIssue()]);
+  const selected = pickListIssue(issues, issueId, activeIssue?.id ?? null);
+  const [counts, pendingGrants, calendar] = await Promise.all([
+    selected ? countArticlesByStatus(actor, { issueId: selected.id }) : Promise.resolve(new Map<ArticleStatus, number>()),
+    isAdmin && selected ? listPendingApprovals(actor, selected.id) : Promise.resolve([]),
     listIssueCalendar(actor, now),
   ]);
 
@@ -81,13 +91,19 @@ export default async function EditorDashboard() {
           </Alert>
         )}
 
+        {selected && (
+          <Card>
+            <IssuePicker issues={issues} selectedId={selected.id} activeId={activeIssue?.id ?? null} />
+          </Card>
+        )}
+
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {queues.map((queue) => {
-            const count = articles.filter((article) => article.status === queue.status).length;
+            const count = counts.get(queue.status) ?? 0;
             return (
               <Link
                 key={queue.status}
-                href={`/editor/articles?status=${queue.status}`}
+                href={`/editor/articles?status=${queue.status}${selected ? `&issueId=${selected.id}` : ""}`}
                 className="rounded-lg border border-line bg-surface p-4 hover:border-accent"
               >
                 <p className="font-serif text-3xl">{count}</p>

@@ -7,6 +7,7 @@
  * reason, and nobody guesses a birth date, a byline or a licence period.
  */
 import type { Role } from "@/db/schema";
+import { countWords } from "./word-count";
 
 /** The licence form as delivered (contracts/eser-bazli-kullanim-ruhsati-formu.md). */
 export const LICENCE_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu.md";
@@ -43,15 +44,8 @@ export function contributionRoleLabel(input: {
   return labels.length > 0 ? labels.join(" ve ") : null;
 }
 
-/** Words in a markdown body, for the form's technical description. */
-export function wordCount(markdown: string): number {
-  const text = markdown
-    .replace(/```[\s\S]*?```/g, " ")
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/[#>*_`~|-]/g, " ");
-  return text.split(/\s+/).filter((word) => /[\p{L}\p{N}]/u.test(word)).length;
-}
+/** Words in a markdown body, for the form's technical description: the panels' count (D-330). */
+export const wordCount = countWords;
 
 /**
  * The licence scope as the code fixes it today (`LICENCE_TERMS`, rights.ts).

@@ -7,6 +7,8 @@ import { formatDateTime } from "@/lib/utils";
 import { getEditorAssignment } from "@/services/editor-categories";
 import { listIssues } from "@/services/issues";
 import { listTopicProposals } from "@/services/topics";
+import { getActiveIssue } from "@/services/active-issue";
+import { pickListIssue } from "@/lib/active-issue";
 import { PanelForm } from "@/components/form";
 import { IssueWindows } from "@/components/issue-windows";
 import { Card, EmptyState, Field, PageHeader, Select, StatusBadge, Textarea } from "@/components/ui";
@@ -45,11 +47,14 @@ export default async function TopicProposalsPage({
   if (!canReviewTopicProposals(actor, await getEditorAssignment(user.id))) forbidden();
 
   const params = await searchParams;
-  const [issues, csrfToken] = await Promise.all([listIssues(actor), readCsrfToken()]);
-  const issue = issues.find((row) => String(row.number) === params.sayi) ?? null;
+  const [issues, csrfToken, activeIssue] = await Promise.all([listIssues(actor), readCsrfToken(), getActiveIssue()]);
+  // One issue at a time, the active one unless another is chosen (D-330)
+  const issue =
+    issues.find((row) => String(row.number) === params.sayi) ??
+    pickListIssue(issues, null, activeIssue?.id ?? null);
   const status = STATUSES.find((row) => row.value === params.durum)?.value;
 
-  const proposals = await listTopicProposals(actor, { issueId: issue?.id, status });
+  const proposals = issue ? await listTopicProposals(actor, { issueId: issue.id, status }) : [];
   const now = new Date();
 
   return (
@@ -64,11 +69,11 @@ export default async function TopicProposalsPage({
           {/* A plain GET form: filtering changes nothing */}
           <form method="get" className="grid gap-3 sm:grid-cols-3">
             <Field label="Sayı" htmlFor="sayi">
-              <Select id="sayi" name="sayi" defaultValue={params.sayi ?? ""}>
-                <option value="">Tüm sayılar</option>
+              <Select id="sayi" name="sayi" defaultValue={issue ? String(issue.number) : ""}>
                 {issues.map((row) => (
                   <option key={row.id} value={row.number}>
                     Sayı {row.number} · {row.title}
+                    {row.id === activeIssue?.id ? " (aktif sayı)" : ""}
                   </option>
                 ))}
               </Select>

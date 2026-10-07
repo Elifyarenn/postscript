@@ -72,9 +72,13 @@ export function canAccessAdminPanel(actor: Actor): boolean {
   return isOperational(actor) && hasRole(actor.role, "admin");
 }
 
-/** The e-mail outbox holds addresses and message subjects, so only admins see it (D-269). */
-export function canManageMailQueue(actor: Actor): boolean {
-  return canAccessAdminPanel(actor);
+/**
+ * The e-mail outbox holds addresses and message subjects: the admins and the
+ * main editor see and run it (D-269, D-330). A plain category editor does not.
+ */
+export function canManageMailQueue(actor: Actor, assignment?: Pick<EditorAssignment, "isMainEditor"> | null): boolean {
+  if (canAccessAdminPanel(actor)) return true;
+  return canAccessEditorPanel(actor) && assignment?.isMainEditor === true;
 }
 
 /**
@@ -193,6 +197,15 @@ export function communityBadge(person: TagPerson): string | null {
   if (person.role === "admin") return "community_admin";
   // The community carries no Tasarımcı mark: a plain member stays untagged there
   return person.role === "user" ? null : roleBadge(person);
+}
+
+/**
+ * Temporary areas for one issue (D-306): the admins, and the main editor who
+ * hands out the issue's work (D-330). A plain category editor does not.
+ */
+export function canManageIssueAreaGrants(actor: Actor, assignment?: Pick<EditorAssignment, "isMainEditor"> | null): boolean {
+  if (canAccessAdminPanel(actor)) return true;
+  return canAccessEditorPanel(actor) && assignment?.isMainEditor === true;
 }
 
 /** The writing areas are managed from the admin panel (D-055). */

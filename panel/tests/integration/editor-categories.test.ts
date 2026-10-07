@@ -399,11 +399,11 @@ describe("the staged review chain", () => {
       noMeta,
     );
 
-    const mine = await listArticles(actorOf(categoryEditor), { limit: 20 });
+    const { items: mine } = await listArticles(actorOf(categoryEditor), { issueId: await testIssueId(), limit: 20 });
     expect(mine.map((article) => article.category)).not.toContain("Bilim & Teknoloji");
     expect(mine.map((article) => article.category)).toContain("Sanat & Edebiyat");
 
-    const others = await listArticles(actorOf(otherEditor), { limit: 20 });
+    const { items: others } = await listArticles(actorOf(otherEditor), { issueId: await testIssueId(), limit: 20 });
     expect(others.map((article) => article.category)).not.toContain("Sanat & Edebiyat");
     expect(others.map((article) => article.category)).toContain("Bilim & Teknoloji");
   });

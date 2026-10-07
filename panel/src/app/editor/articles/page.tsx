@@ -3,8 +3,17 @@ import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import { guardPanel } from "@/lib/auth/guard";
-import { listArticles } from "@/services/articles";
+import {
+  ARTICLE_SORTS,
+  countArticlesByStatus,
+  listArticles,
+  parseArticleSort,
+} from "@/services/articles";
 import { listIssues } from "@/services/issues";
+import { getActiveIssue } from "@/services/active-issue";
+import { isIssueClosed, pickListIssue } from "@/lib/active-issue";
+import { formatWordCount } from "@/lib/word-count";
+import { IssuePicker, issueLabel } from "@/components/issue-picker";
 import {
   getEditorAssignment,
   getMainEditor,
@@ -33,6 +42,8 @@ import { articleStatusEnum, type ArticleStatus } from "@/db/schema";
 import { createArticleAction } from "../actions";
 
 export const metadata = { title: "Kategoriye düşen yazılar" };
+
+const PAGE_SIZE = 50;
 
 /**
  * The "Editör" cell: whose desk the article is on right now (D-152). The
@@ -71,7 +82,14 @@ function EditorCell({ routed, canOpenAccounts }: { routed: ArticleEditor; canOpe
 export default async function EditorArticlesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; issueId?: string; authorId?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    issueId?: string;
+    authorId?: string;
+    q?: string;
+    sort?: string;
+    page?: string;
+  }>;
 }) {
   const { user } = await guardPanel("editor");
   const actor = { ...user };
@@ -84,16 +102,21 @@ export default async function EditorArticlesPage({
     ? (filters.status as ArticleStatus)
     : undefined;
 
-  const [articles, issues, writers, areas, mainEditor] = await Promise.all([
-    listArticles(actor, {
-      status,
-      issueId: filters.issueId,
-      authorId: filters.authorId,
-      limit: 200,
-    }),
-    // Every editor filters and files by issue (D-261); the admins' working
-    // issue is still left out for them by `listIssues`
-    listIssues(actor),
+  // Every editor filters and files by issue (D-261); the admins' working
+  // issue is still left out for them by `listIssues`. One issue at a time,
+  // the active one unless another is asked for (D-330)
+  const [issues, activeIssue] = await Promise.all([listIssues(actor), getActiveIssue()]);
+  const selected = pickListIssue(issues, filters.issueId, activeIssue?.id ?? null);
+  const sort = parseArticleSort(filters.sort);
+  const q = filters.q?.trim() || undefined;
+  const page = Math.max(1, Number.parseInt(filters.page ?? "1", 10) || 1);
+  const listFilters = { issueId: selected?.id ?? "", authorId: filters.authorId || undefined, q };
+
+  const [list, statusCounts, writers, areas, mainEditor] = await Promise.all([
+    selected
+      ? listArticles(actor, { ...listFilters, status, sort, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE })
+      : Promise.resolve({ items: [], total: 0 }),
+    selected ? countArticlesByStatus(actor, listFilters) : Promise.resolve(new Map<ArticleStatus, number>()),
     db
       .select({ id: users.id, displayName: users.displayName, penName: users.penName })
       .from(users)
@@ -103,7 +126,24 @@ export default async function EditorArticlesPage({
     listEditorAreasWithHolders(),
     getMainEditor(),
   ]);
-  const issueNumbers = new Map(issues.map((issue) => [issue.id, issue.number]));
+  const articles = list.items;
+  const pageCount = Math.max(1, Math.ceil(list.total / PAGE_SIZE));
+  const inIssue = [...statusCounts.values()].reduce((sum, value) => sum + value, 0);
+  const openIssues = issues.filter((issue) => !isIssueClosed(issue));
+  // Every filter but the page, so the page links keep them
+  const keep = {
+    issueId: selected?.id,
+    status,
+    authorId: filters.authorId || undefined,
+    q,
+    sort: sort === "updated" ? undefined : sort,
+  };
+  const pageHref = (target: number) => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(keep)) if (value) params.set(key, value);
+    if (target > 1) params.set("page", String(target));
+    return `/editor/articles?${params.toString()}`;
+  };
 
   return (
     <>
@@ -122,53 +162,58 @@ export default async function EditorArticlesPage({
         <Card>
           <h2 className="mb-4 font-serif text-lg">Filtrele</h2>
 
-          <form method="get" className="grid gap-3 sm:grid-cols-2">
-            <Field label="Durum" htmlFor="status">
-              <Select id="status" name="status" defaultValue={filters.status ?? ""}>
-                <option value="">Tümü</option>
-                {articleStatusEnum.enumValues.map((value) => (
-                  <option key={value} value={value}>
-                    {STATUS_LABELS[value] ?? value}
-                  </option>
-                ))}
-              </Select>
-            </Field>
+          {selected ? (
+            <IssuePicker issues={issues} selectedId={selected.id} activeId={activeIssue?.id ?? null}>
+              <Field label="Ara" htmlFor="q" hint="Başlıkta geçen kelime">
+                <Input id="q" name="q" type="search" maxLength={100} defaultValue={q ?? ""} />
+              </Field>
 
-            <Field label="Yazar" htmlFor="authorId">
-              <Select id="authorId" name="authorId" defaultValue={filters.authorId ?? ""}>
-                <option value="">Tümü</option>
-                {writers.map((writer) => (
-                  <option key={writer.id} value={writer.id}>
-                    {writer.penName ?? writer.displayName}
-                  </option>
-                ))}
-              </Select>
-            </Field>
+              <Field label="Durum" htmlFor="status">
+                <Select id="status" name="status" defaultValue={status ?? ""}>
+                  <option value="">Tüm durumlar</option>
+                  {articleStatusEnum.enumValues.map((value) => (
+                    <option key={value} value={value}>
+                      {STATUS_LABELS[value] ?? value} ({statusCounts.get(value) ?? 0})
+                    </option>
+                  ))}
+                </Select>
+              </Field>
 
-            <Field label="Sayı" htmlFor="issueId">
-              <Select id="issueId" name="issueId" defaultValue={filters.issueId ?? ""}>
-                <option value="">Tümü</option>
-                {issues.map((issue) => (
-                  <option key={issue.id} value={issue.id}>
-                    Sayı {issue.number} · {issue.title}
-                  </option>
-                ))}
-              </Select>
-            </Field>
+              <Field label="Yazar" htmlFor="authorId">
+                <Select id="authorId" name="authorId" defaultValue={filters.authorId ?? ""}>
+                  <option value="">Tüm yazarlar</option>
+                  {writers.map((writer) => (
+                    <option key={writer.id} value={writer.id}>
+                      {writer.penName ?? writer.displayName}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
 
-            <div className="flex items-end">
-              <button
-                type="submit"
-                className="rounded-md border border-line bg-surface px-3.5 py-2 text-sm hover:bg-paper"
-              >
-                Uygula
-              </button>
-            </div>
-          </form>
+              <Field label="Sıralama" htmlFor="sort">
+                <Select id="sort" name="sort" defaultValue={sort}>
+                  {Object.entries(ARTICLE_SORTS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </IssuePicker>
+          ) : (
+            <EmptyState>Henüz sayı yok.</EmptyState>
+          )}
         </Card>
 
         <Card>
-          <h2 className="mb-4 font-serif text-lg">{articles.length} makale</h2>
+          <h2 className="mb-1 font-serif text-lg">
+            {selected ? `Sayı ${selected.number}: ` : ""}
+            {list.total} makale
+          </h2>
+          <p className="mb-4 text-xs text-muted">
+            Bu sayıda kapsamınıza giren toplam {inIssue} yazı
+            {pageCount > 1 ? ` · sayfa ${Math.min(page, pageCount)} / ${pageCount}` : ""}
+          </p>
 
           {articles.length === 0 ? (
             <EmptyState>
@@ -182,8 +227,8 @@ export default async function EditorArticlesPage({
                 <tr>
                   <Th>Başlık</Th>
                   <Th>Yazar</Th>
-                  <Th>Sayı</Th>
                   <Th>Kategori</Th>
+                  <Th>Kelime</Th>
                   <Th>Editör</Th>
                   <Th>Durum</Th>
                   <Th>Güncelleme</Th>
@@ -210,12 +255,8 @@ export default async function EditorArticlesPage({
                         name={article.authorName}
                       />
                     </Td>
-                    <Td className="text-xs whitespace-nowrap">
-                      {issueNumbers.get(article.issueId) !== undefined
-                        ? `Sayı ${issueNumbers.get(article.issueId)}`
-                        : "—"}
-                    </Td>
                     <Td className="text-xs">{article.category ?? "—"}</Td>
+                    <Td className="text-xs whitespace-nowrap">{formatWordCount(article.wordCount)}</Td>
                     <Td className="text-xs">
                       <EditorCell routed={editorForArticle(article, areas, mainEditor)} canOpenAccounts={isAdmin} />
                     </Td>
@@ -227,6 +268,23 @@ export default async function EditorArticlesPage({
                 ))}
               </tbody>
             </Table>
+          )}
+
+          {pageCount > 1 && (
+            <nav className="mt-4 flex items-center justify-between text-sm" aria-label="Sayfalar">
+              {page > 1 ? (
+                <Link href={pageHref(page - 1)} className="text-accent underline">
+                  ← Önceki
+                </Link>
+              ) : (
+                <span />
+              )}
+              {page < pageCount && (
+                <Link href={pageHref(page + 1)} className="text-accent underline">
+                  Sonraki →
+                </Link>
+              )}
+            </nav>
           )}
         </Card>
 
@@ -257,13 +315,14 @@ export default async function EditorArticlesPage({
 
                 {/* Every article belongs to an issue (D-261) */}
                 <Field label="Sayı" htmlFor="newIssueId">
-                    <Select id="newIssueId" name="issueId" required defaultValue="">
+                    <Select id="newIssueId" name="issueId" required defaultValue={activeIssue?.id ?? ""}>
                       <option value="" disabled>
                         Sayı seçin…
                       </option>
-                      {issues.map((issue) => (
+                      {/* A published issue takes no new article (D-330) */}
+                      {openIssues.map((issue) => (
                         <option key={issue.id} value={issue.id}>
-                          Sayı {issue.number} · {issue.title}
+                          {issueLabel(issue, activeIssue?.id ?? null)}
                         </option>
                       ))}
                     </Select>

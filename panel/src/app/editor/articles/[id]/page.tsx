@@ -18,6 +18,8 @@ import { readCsrfToken } from "@/lib/csrf";
 import { renderMarkdown } from "@/lib/markdown";
 import { ActionButton, PanelForm } from "@/components/form";
 import { ArticleBodyTextarea } from "@/components/article-body-textarea";
+import { countWords, formatWordCount } from "@/lib/word-count";
+import { isIssueClosed } from "@/lib/active-issue";
 import {
   Alert,
   Card,
@@ -86,7 +88,8 @@ export default async function EditorArticleDetailPage({
     <>
       <PageHeader
         title={article.title}
-        description={`/${article.slug}`}
+        // The stored body's count; the form below counts live while typing (D-330)
+        description={`/${article.slug} · ${formatWordCount(countWords(article.bodyMarkdown))}`}
         actions={<StatusBadge status={article.status} />}
       />
 
@@ -154,7 +157,10 @@ export default async function EditorArticleDetailPage({
                     <Field label="Sayı" htmlFor="issueId">
                       <Select id="issueId" name="issueId" defaultValue={article.issueId ?? ""}>
                         <option value="">Atanmadı</option>
-                        {issues.map((issue) => (
+                        {/* A published issue takes no moved article; its own stays listed (D-330) */}
+                        {issues
+                          .filter((issue) => issue.id === article.issueId || !isIssueClosed(issue))
+                          .map((issue) => (
                           <option key={issue.id} value={issue.id}>
                             Sayı {issue.number} · {issue.title}
                           </option>

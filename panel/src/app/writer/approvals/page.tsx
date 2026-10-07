@@ -6,19 +6,42 @@ import { readCsrfToken } from "@/lib/csrf";
 import { Alert, Card, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { ApprovalRow } from "./approval-row";
+import { and, desc, inArray, isNull } from "drizzle-orm";
+import { db } from "@/db/client";
+import { issues } from "@/db/schema";
+import { getActiveIssue } from "@/services/active-issue";
+import { pickListIssue } from "@/lib/active-issue";
+import { IssuePicker } from "@/components/issue-picker";
 import { approveWorkAction, declineWorkAction } from "../actions";
 
 export const metadata = { title: "Eser Onayları" };
 
-export default async function WriterApprovalsPage() {
+export default async function WriterApprovalsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ issueId?: string }>;
+}) {
   const { user } = await guardPanel("writer");
   const csrfToken = (await readCsrfToken()) ?? "";
 
-  const [approvals, current, acceptances] = await Promise.all([
+  const [allApprovals, current, acceptances, activeIssue] = await Promise.all([
     listApprovalsForWriter({ ...user }),
     getCurrentAgreement(),
     listAcceptancesForUser(user.id),
+    getActiveIssue(),
   ]);
+  // One issue at a time (D-330): the issues the writer has approvals in, and the active one
+  const pickable = [...new Set([...allApprovals.map((row) => row.issueId), ...(activeIssue ? [activeIssue.id] : [])])];
+  const issueRows =
+    pickable.length > 0
+      ? await db
+          .select({ id: issues.id, number: issues.number, title: issues.title })
+          .from(issues)
+          .where(and(inArray(issues.id, pickable), isNull(issues.deletedAt)))
+          .orderBy(desc(issues.number))
+      : [];
+  const selected = pickListIssue(issueRows, (await searchParams).issueId, activeIssue?.id ?? null);
+  const approvals = allApprovals.filter((row) => row.issueId === selected?.id);
 
   // §6.4: a pending contract version blocks approvals until it is accepted
   const contractCurrent =
@@ -36,6 +59,12 @@ export default async function WriterApprovalsPage() {
       />
 
       <div className="space-y-6">
+        {selected && (
+          <Card>
+            <IssuePicker issues={issueRows} selectedId={selected.id} activeId={activeIssue?.id ?? null} />
+          </Card>
+        )}
+
         {locked && (
           <Alert tone="warning" title="Onay veremezsiniz">
             {user.writerStatus === "suspended"

@@ -12,6 +12,8 @@ import {
   canAccessWriterPanel,
   canFinalizePublication,
   canManageUsers,
+  canManageIssueAreaGrants,
+  canManageMailQueue,
   canModerateCommunity,
   communityBadge,
   panelRoleBadges,
@@ -361,5 +363,27 @@ describe("role tags (D-312)", () => {
     ]);
     expect(panelRoleBadges({ role: "editor", isMainEditor: true, writerStatus: null })).toEqual(["main_editor"]);
     expect(panelRoleBadges({ role: "writer", isMainEditor: false, writerStatus: "active" })).toEqual(["writer"]);
+  });
+});
+
+describe("the main editor's outbox and temporary areas (D-330)", () => {
+  const main = { isMainEditor: true };
+  const plain = { isMainEditor: false };
+
+  it("opens both to the admins and the main editor only", () => {
+    for (const check of [canManageMailQueue, canManageIssueAreaGrants]) {
+      expect(check(actor({ role: "admin" }))).toBe(true);
+      expect(check(actor({ role: "editor", editorStatus: "active" }), main)).toBe(true);
+      expect(check(actor({ role: "editor", editorStatus: "active" }), plain)).toBe(false);
+      expect(check(actor({ role: "editor", editorStatus: "active" }))).toBe(false);
+      expect(check(actor({ role: "writer", writerStatus: "active" }), main)).toBe(false);
+    }
+  });
+
+  it("closes both to a frozen or banned main editor", () => {
+    for (const check of [canManageMailQueue, canManageIssueAreaGrants]) {
+      expect(check(actor({ role: "editor", editorStatus: "suspended" }), main)).toBe(false);
+      expect(check(actor({ role: "editor", editorStatus: "active", isBanned: true }), main)).toBe(false);
+    }
   });
 });

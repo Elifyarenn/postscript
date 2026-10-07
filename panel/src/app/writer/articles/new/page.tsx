@@ -4,6 +4,7 @@ import { canProposeTopics, canWriteInAnyArea } from "@/lib/auth/rbac";
 import { selectableWriterCategories } from "@/services/editor-categories";
 import { temporaryAreasByIssue } from "@/services/issue-area-grants";
 import { listIssuesWithoutWindows, listWriterIssues } from "@/services/topics";
+import { getActiveIssue } from "@/services/active-issue";
 import { readCsrfToken } from "@/lib/csrf";
 import { PanelForm } from "@/components/form";
 import { ArticleBodyTextarea } from "@/components/article-body-textarea";
@@ -16,6 +17,8 @@ export const metadata = { title: "Yeni yazı" };
  * A new article starts from an accepted topic (D-261), which also decides its
  * issue. An issue without windows (issue 1) may still be written into
  * directly, as before. `?konu=` preselects the topic the writer came from.
+ * Either way only the active issue is offered (D-330): the server refuses
+ * the rest, so the form does not show them.
  */
 export default async function WriterNewArticlePage({
   searchParams,
@@ -29,12 +32,15 @@ export default async function WriterNewArticlePage({
   // An admin holds no area: every area and their own working issue are open (D-304)
   const anyArea = canWriteInAnyArea(actor);
 
-  const [categories, entries, openIssues, temporary] = await Promise.all([
+  const [categories, allEntries, allOpenIssues, temporary, activeIssue] = await Promise.all([
     selectableWriterCategories(actor),
     canProposeTopics(actor) ? listWriterIssues(actor) : Promise.resolve([]),
     listIssuesWithoutWindows(user.id, anyArea),
     temporaryAreasByIssue(user.id),
+    getActiveIssue(),
   ]);
+  const entries = allEntries.filter(({ issue }) => issue.id === activeIssue?.id);
+  const openIssues = allOpenIssues.filter((issue) => issue.id === activeIssue?.id);
 
   // Areas given for one issue only (D-306): offered with that issue's number;
   // the server checks the area against the issue the article goes into
@@ -60,6 +66,7 @@ export default async function WriterNewArticlePage({
       <>
         <PageHeader title="Yeni yazı" />
         <EmptyState>
+          {activeIssue ? `Yeni yazılar aktif sayıya (Sayı ${activeIssue.number}) açılır. ` : "Şu an yazı kabul eden açık bir sayı yok. "}
           Yazı, kabul edilmiş bir konudan başlar.{" "}
           <Link href="/writer/topics" className="text-accent underline">
             Sayılar ve konular
@@ -82,7 +89,7 @@ export default async function WriterNewArticlePage({
           <Field
             label="Konu"
             htmlFor="target"
-            hint="Yazı, seçtiğiniz konunun sayısına bağlanır; sonradan başka sayıya taşınmaz."
+            hint={`Yazı aktif sayıya (Sayı ${activeIssue?.number ?? "—"}) bağlanır; sonradan başka sayıya taşınmaz.`}
           >
             <Select id="target" name="target" required defaultValue={chosen ? `topic:${chosen.proposal.id}` : ""}>
               <option value="" disabled>

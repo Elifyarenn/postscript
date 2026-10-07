@@ -7,7 +7,7 @@
  * no other write path for `articles.status`.
  */
 import "server-only";
-import { and, asc, desc, eq, inArray, isNull, lte, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, isNull, lte, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
 import {
@@ -49,6 +49,9 @@ import { hasAcceptedCurrentAgreement } from "./agreements";
 import { getEditorAssignment, selectableWriterCategories } from "./editor-categories";
 import { acceptedTopicForNewArticle, assertArticleDeliveryAllowed } from "./topics";
 import { usesIssueWindows } from "@/lib/issue-periods";
+import { isIssueClosed } from "@/lib/active-issue";
+import { countWords } from "@/lib/word-count";
+import { assertActiveIssueForNewArticle, getActiveIssue } from "./active-issue";
 import { hasIssueGrant } from "./issue-grants";
 import {
   declineWork,
@@ -125,23 +128,61 @@ export async function findArticleById(articleId: string): Promise<Article> {
   return row;
 }
 
+/** How a list may be ordered (D-330); anything else falls back to the first. */
+export const ARTICLE_SORTS = {
+  updated: "Son güncellenen",
+  title: "Başlık (A–Z)",
+  status: "Duruma göre",
+  created: "İlk eklenen",
+} as const;
+export type ArticleSort = keyof typeof ARTICLE_SORTS;
+
+export function parseArticleSort(value: unknown): ArticleSort {
+  return typeof value === "string" && value in ARTICLE_SORTS ? (value as ArticleSort) : "updated";
+}
+
+function articleOrder(sort: ArticleSort): SQL[] {
+  switch (sort) {
+    case "title":
+      return [asc(articles.title), desc(articles.updatedAt)];
+    case "status":
+      return [asc(articles.status), desc(articles.updatedAt)];
+    case "created":
+      return [asc(articles.createdAt)];
+    default:
+      return [desc(articles.updatedAt)];
+  }
+}
+
+/** A title search: `%` and `_` the reader types are letters, not wildcards. */
+function titleSearch(q: string | undefined): SQL | null {
+  const term = q?.trim().slice(0, 100);
+  if (!term) return null;
+  return ilike(articles.title, `%${term.replace(/[\%_]/g, (c) => `\${c}`)}%`);
+}
+
+/**
+ * One issue's articles (D-330). `issueId` is required: no list mixes two
+ * issues, so search, order, page and total are all inside the chosen one.
+ */
 export type ArticleFilters = {
+  issueId: string;
   status?: ArticleStatus;
-  issueId?: string;
   authorId?: string;
+  q?: string;
+  sort?: ArticleSort;
   limit?: number;
   offset?: number;
 };
 
-export async function listArticles(actor: Actor, filters: ArticleFilters = {}) {
-  if (!canAccessEditorPanel(actor)) throw forbidden();
-
+/** The editor's scope plus the filters, shared by the list and its counts. */
+async function editorListConditions(actor: Actor, filters: Omit<ArticleFilters, "status">): Promise<SQL[]> {
   const assignment = await getEditorAssignment(actor.id);
 
-  const conditions: SQL[] = [isNull(articles.deletedAt)];
-  if (filters.status) conditions.push(eq(articles.status, filters.status));
-  if (filters.issueId) conditions.push(eq(articles.issueId, filters.issueId));
+  const conditions: SQL[] = [isNull(articles.deletedAt), eq(articles.issueId, filters.issueId)];
   if (filters.authorId) conditions.push(eq(articles.authorId, filters.authorId));
+  const search = titleSearch(filters.q);
+  if (search) conditions.push(search);
 
   // A plain category editor only sees the articles that fall into their own
   // areas ("Kategoriye Düşen Yazılar"). Main editors and admins read every
@@ -153,38 +194,78 @@ export async function listArticles(actor: Actor, filters: ArticleFilters = {}) {
       conditions.push(inArray(articles.category, assignment.assignedAreas));
     }
   }
-
-  return db
-    .select({
-      id: articles.id,
-      title: articles.title,
-      slug: articles.slug,
-      status: articles.status,
-      category: articles.category,
-      issueId: articles.issueId,
-      authorId: articles.authorId,
-      authorName: users.displayName,
-      // So the panel can link the name to the person (D-209)
-      authorPenName: users.penName,
-      authorPenNameSlug: users.penNameSlug,
-      authorUsername: users.username,
-      dueDate: articles.dueDate,
-      scheduledAt: articles.scheduledAt,
-      publishedAt: articles.publishedAt,
-      plagiarismCheckStatus: articles.plagiarismCheckStatus,
-      updatedAt: articles.updatedAt,
-    })
-    .from(articles)
-    .leftJoin(users, eq(articles.authorId, users.id))
-    .where(and(...conditions))
-    .orderBy(desc(articles.updatedAt))
-    .limit(filters.limit ?? 50)
-    .offset(filters.offset ?? 0);
+  return conditions;
 }
 
-/** A writer's own assignments, read-only (§9.1). */
-export async function listArticlesForWriter(actor: Actor) {
-  return db
+export async function listArticles(actor: Actor, filters: ArticleFilters) {
+  if (!canAccessEditorPanel(actor)) throw forbidden();
+
+  const conditions = await editorListConditions(actor, filters);
+  if (filters.status) conditions.push(eq(articles.status, filters.status));
+
+  const [rows, [counted]] = await Promise.all([
+    db
+      .select({
+        id: articles.id,
+        title: articles.title,
+        slug: articles.slug,
+        status: articles.status,
+        category: articles.category,
+        issueId: articles.issueId,
+        authorId: articles.authorId,
+        authorName: users.displayName,
+        // So the panel can link the name to the person (D-209)
+        authorPenName: users.penName,
+        authorPenNameSlug: users.penNameSlug,
+        authorUsername: users.username,
+        bodyMarkdown: articles.bodyMarkdown,
+        dueDate: articles.dueDate,
+        scheduledAt: articles.scheduledAt,
+        publishedAt: articles.publishedAt,
+        plagiarismCheckStatus: articles.plagiarismCheckStatus,
+        updatedAt: articles.updatedAt,
+      })
+      .from(articles)
+      .leftJoin(users, eq(articles.authorId, users.id))
+      .where(and(...conditions))
+      .orderBy(...articleOrder(filters.sort ?? "updated"))
+      .limit(filters.limit ?? 50)
+      .offset(filters.offset ?? 0),
+    db.select({ total: count() }).from(articles).where(and(...conditions)),
+  ]);
+
+  // The body is read only to be counted; the list never carries it on
+  const items = rows.map(({ bodyMarkdown, ...row }) => ({ ...row, wordCount: countWords(bodyMarkdown) }));
+  return { items, total: counted?.total ?? 0 };
+}
+
+/** How many of one issue's articles in the editor's scope sit in each status (D-330). */
+export async function countArticlesByStatus(
+  actor: Actor,
+  filters: Omit<ArticleFilters, "status" | "sort" | "limit" | "offset">,
+): Promise<Map<ArticleStatus, number>> {
+  if (!canAccessEditorPanel(actor)) throw forbidden();
+  const conditions = await editorListConditions(actor, filters);
+  const rows = await db
+    .select({ status: articles.status, total: count() })
+    .from(articles)
+    .where(and(...conditions))
+    .groupBy(articles.status);
+  return new Map(rows.map((row) => [row.status, row.total]));
+}
+
+/** The issues a writer has articles in, for their list's issue picker (D-330). */
+export async function issueIdsWithArticlesBy(authorId: string): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ issueId: articles.issueId })
+    .from(articles)
+    .where(and(isNull(articles.deletedAt), eq(articles.authorId, authorId)));
+  return rows.map((row) => row.issueId);
+}
+
+/** A writer's own articles in one issue, read-only (§9.1, D-330). */
+export async function listArticlesForWriter(actor: Actor, issueId: string) {
+  const rows = await db
     .select({
       id: articles.id,
       title: articles.title,
@@ -192,12 +273,14 @@ export async function listArticlesForWriter(actor: Actor) {
       category: articles.category,
       dueDate: articles.dueDate,
       issueId: articles.issueId,
+      bodyMarkdown: articles.bodyMarkdown,
       publishedAt: articles.publishedAt,
       updatedAt: articles.updatedAt,
     })
     .from(articles)
-    .where(and(isNull(articles.deletedAt), eq(articles.authorId, actor.id)))
+    .where(and(isNull(articles.deletedAt), eq(articles.authorId, actor.id), eq(articles.issueId, issueId)))
     .orderBy(desc(articles.updatedAt));
+  return rows.map(({ bodyMarkdown, ...row }) => ({ ...row, wordCount: countWords(bodyMarkdown) }));
 }
 
 /**
@@ -320,13 +403,22 @@ export async function createArticle(
   return article!;
 }
 
+/**
+ * An issue an article may be filed into or moved to: it exists and is not
+ * published or archived. A published issue's contents stay as they were
+ * published (D-330).
+ */
 async function assertLiveIssue(issueId: string): Promise<void> {
   const rows = await db
-    .select({ id: issues.id })
+    .select({ id: issues.id, number: issues.number, status: issues.status })
     .from(issues)
     .where(and(eq(issues.id, issueId), isNull(issues.deletedAt)))
     .limit(1);
-  if (rows.length === 0) throw badRequest("Sayı bulunamadı.", { issueId: ["Sayı bulunamadı."] });
+  const issue = rows[0];
+  if (!issue) throw badRequest("Sayı bulunamadı.", { issueId: ["Sayı bulunamadı."] });
+  if (isIssueClosed(issue)) {
+    throw conflict(`Sayı ${issue.number} yayımlandı; bu sayıya yazı eklenemez ya da taşınamaz.`);
+  }
 }
 
 /**
@@ -342,14 +434,21 @@ async function writerTargetIssue(
 ): Promise<{ issueId: string; topic: { id: string; category: string | null } | null }> {
   if (input.topicProposalId) {
     const topic = await acceptedTopicForNewArticle(actor, input.topicProposalId);
+    // A topic of any other issue, including a published one, is refused (D-330)
+    await assertActiveIssueForNewArticle(topic.issueId);
     return { issueId: topic.issueId, topic: { id: topic.id, category: topic.category } };
   }
-  if (!input.issueId) throw badRequest("Yazının konusunu seçin.", { topicProposalId: ["Konu seçilmeli."] });
+  // Without a topic the article goes into the active issue on its own (D-330);
+  // an issue the form sent is only accepted when it is that one
+  const active = await getActiveIssue();
+  if (!active) throw conflict("Şu an yazı kabul eden açık bir sayı yok.");
+  const issueId = input.issueId ?? active.id;
+  await assertActiveIssueForNewArticle(issueId);
 
   const rows = await db
     .select()
     .from(issues)
-    .where(and(eq(issues.id, input.issueId), isNull(issues.deletedAt)))
+    .where(and(eq(issues.id, issueId), isNull(issues.deletedAt)))
     .limit(1);
   const issue = rows[0];
   // The admins' working issue is not there for a writer, unless it was opened
@@ -565,6 +664,9 @@ export async function updateArticleAsWriter(
   return updated!;
 }
 
+/** Statuses whose article is part of an issue's published record (D-330). */
+const MOVE_LOCKED_STATUSES: readonly ArticleStatus[] = ["scheduled", "published", "archived", "withdrawn"];
+
 export async function updateArticle(
   actor: Actor,
   articleId: string,
@@ -593,6 +695,9 @@ export async function updateArticle(
   // would mix one issue's work into another's (D-261)
   if (input.issueId && input.issueId !== existing.issueId) {
     await assertLiveIssue(input.issueId);
+    if (MOVE_LOCKED_STATUSES.includes(existing.status)) {
+      throw conflict("Yayına çıkmış ya da planlanmış bir yazı başka sayıya taşınamaz.");
+    }
     const topic = await db
       .select({ id: topicProposals.id })
       .from(topicProposals)

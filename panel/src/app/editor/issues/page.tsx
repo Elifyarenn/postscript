@@ -2,6 +2,8 @@ import Link from "next/link";
 import { guardAdminWithinEditor } from "@/lib/auth/guard";
 import { listIssueArticles, listIssues } from "@/services/issues";
 import { listMedia } from "@/services/media";
+import { activeIssueSource, getActiveIssue } from "@/services/active-issue";
+import { isIssueClosed } from "@/lib/active-issue";
 import { readCsrfToken } from "@/lib/csrf";
 import { PanelForm } from "@/components/form";
 import {
@@ -22,6 +24,7 @@ import { IssueOrder } from "./issue-order";
 import {
   createIssueAction,
   reorderIssueArticlesAction,
+  setActiveIssueAction,
   setIssueStatusAction,
   updateIssueAction,
 } from "../actions";
@@ -39,6 +42,9 @@ export default async function EditorIssuesPage() {
     issues.map(async (issue) => ({ issue, articles: await listIssueArticles(issue.id) })),
   );
 
+  const [activeIssue, activeSource] = await Promise.all([getActiveIssue(), activeIssueSource()]);
+  const openIssues = issues.filter((issue) => !isIssueClosed(issue));
+
   const nextNumber = (issues[0]?.number ?? 0) + 1;
   const now = new Date();
 
@@ -50,6 +56,33 @@ export default async function EditorIssuesPage() {
       />
 
       <div className="space-y-6">
+        {/* The one place the active issue is set (D-330) */}
+        <Card>
+          <h2 className="mb-1 font-serif text-lg">Aktif sayı</h2>
+          <p className="mb-4 text-sm text-muted">
+            {activeIssue
+              ? `Şu an Sayı ${activeIssue.number} · ${activeIssue.title}${activeSource === "automatic" ? " (yayımlanmamış en küçük numaralı sayı olarak kendiliğinden seçildi)" : ""}. `
+              : "Açık sayı yok. "}
+            Yazarların yeni yazıları yalnızca aktif sayıya bağlanır; yazı listeleri de bu sayıyla açılır.
+            Yayımlanmış bir sayıya yazı eklenemez ve taşınamaz.
+          </p>
+          {openIssues.length === 0 ? (
+            <EmptyState>Aktif yapılabilecek açık sayı yok.</EmptyState>
+          ) : (
+            <PanelForm action={setActiveIssueAction} csrfToken={csrfToken} submitLabel="Aktif sayı yap" submitVariant="secondary">
+              <Field label="Sayı" htmlFor="active-issue">
+                <Select id="active-issue" name="issueId" required defaultValue={activeIssue?.id ?? ""}>
+                  {openIssues.map((issue) => (
+                    <option key={issue.id} value={issue.id}>
+                      Sayı {issue.number} · {issue.title}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </PanelForm>
+          )}
+        </Card>
+
         <Card>
           <h2 className="mb-4 font-serif text-lg">Yeni sayı</h2>
 
