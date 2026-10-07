@@ -21,7 +21,8 @@ describe("allowed edges", () => {
   it("matches the staged review chain in the specification (D-059, D-066)", () => {
     expect(allowedTargets("draft")).toEqual(["in_review", "archived"]);
     expect(allowedTargets("in_review")).toEqual(["pending_admin_approval", "revision_requested", "draft"]);
-    expect(allowedTargets("pending_admin_approval")).toEqual(["ready_for_publishing", "revision_requested", "draft"]);
+    // `in_review` from here is the revision request to the category editor (D-331)
+    expect(allowedTargets("pending_admin_approval")).toEqual(["ready_for_publishing", "revision_requested", "in_review", "draft"]);
     expect(allowedTargets("ready_for_publishing")).toEqual(["accepted", "revision_requested", "draft"]);
     expect(allowedTargets("revision_requested")).toEqual(["in_review", "draft"]);
     expect(allowedTargets("accepted")).toEqual(["awaiting_rights", "draft"]);

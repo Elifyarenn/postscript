@@ -105,7 +105,7 @@ describe("listArticleHistory for editorial staff", () => {
     expect(labels).not.toContain("Eser Onayı yazara açıldı");
     expect(labels.at(-1)).toBe("Durum değişti");
 
-    const transitions = steps.filter((step) => step.label === "Durum değişti");
+    const transitions = steps.filter((step) => step.action === "article.status_changed");
     expect(transitions.map((step) => step.toStatus)).toEqual([
       "in_review",
       "revision_requested",
@@ -157,7 +157,7 @@ describe("listArticleHistory for the author", () => {
     expect(authorView.map((step) => step.label)).not.toContain("İntihal kontrolü: temiz");
     expect(authorView).toHaveLength(staffView.length - 1);
 
-    const transitions = authorView.filter((step) => step.label === "Durum değişti");
+    const transitions = authorView.filter((step) => step.action === "article.status_changed");
     expect(transitions.find((step) => step.toStatus === "revision_requested")?.note).toBe("Girişi kısaltın.");
     expect(transitions.find((step) => step.toStatus === "pending_admin_approval")?.note).toBe(
       "Giriş paragrafı güçlü.",

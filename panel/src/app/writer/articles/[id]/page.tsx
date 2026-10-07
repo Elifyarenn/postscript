@@ -14,6 +14,7 @@ import { renderMarkdown } from "@/lib/markdown";
 import { PanelForm } from "@/components/form";
 import { ArticleBodyTextarea } from "@/components/article-body-textarea";
 import { countWords, formatWordCount } from "@/lib/word-count";
+import { categoryBudgetForForm } from "@/services/category-budget";
 import { Alert, Card, EmptyState, Field, Input, PageHeader, Select, StatusBadge, Table, Td, Th } from "@/components/ui";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { submitArticleAction, updateArticleAsWriterAction } from "../../actions";
@@ -53,6 +54,15 @@ export default async function WriterArticleDetailPage({
   ]);
 
   const preview = await renderMarkdown(article.bodyMarkdown);
+  // The category's total in this issue, shown live under the body (D-331)
+  const budgetData = await categoryBudgetForForm(article.issueId, article.id);
+  const budget = budgetData
+    ? {
+        ...budgetData,
+        categoryFieldId: "category",
+        stored: { words: countWords(article.bodyMarkdown), category: article.category },
+      }
+    : undefined;
 
   return (
     <>
@@ -121,6 +131,7 @@ export default async function WriterArticleDetailPage({
                       name="bodyMarkdown"
                       rows={16}
                       defaultValue={article.bodyMarkdown}
+                      budget={budget}
                     />
                   </Field>
 

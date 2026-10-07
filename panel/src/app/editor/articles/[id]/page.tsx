@@ -19,6 +19,7 @@ import { renderMarkdown } from "@/lib/markdown";
 import { ActionButton, PanelForm } from "@/components/form";
 import { ArticleBodyTextarea } from "@/components/article-body-textarea";
 import { countWords, formatWordCount } from "@/lib/word-count";
+import { categoryBudgetForForm } from "@/services/category-budget";
 import { isIssueClosed } from "@/lib/active-issue";
 import {
   Alert,
@@ -83,6 +84,25 @@ export default async function EditorArticleDetailPage({
     ]);
 
   const preview = await renderMarkdown(article.bodyMarkdown);
+  // The category's total in this issue, shown live under the body (D-331)
+  const budgetData = await categoryBudgetForForm(article.issueId, article.id);
+  const budget = budgetData
+    ? {
+        ...budgetData,
+        categoryFieldId: "category",
+        stored: { words: countWords(article.bodyMarkdown), category: article.category },
+      }
+    : undefined;
+
+  // The main editor's open request to the category editor: the last status
+  // change, while the article is still on the category editor's desk (D-331)
+  const lastChange = [...history].reverse().find((step) => step.toStatus !== null);
+  const editorRequest =
+    article.status === "in_review" &&
+    lastChange?.fromStatus === "pending_admin_approval" &&
+    lastChange.toStatus === "in_review"
+      ? lastChange
+      : null;
 
   return (
     <>
@@ -94,6 +114,17 @@ export default async function EditorArticleDetailPage({
       />
 
       <div className="space-y-6">
+        {editorRequest && (
+          <Alert tone="warning" title="Ana editör kategori editöründen revizyon istedi">
+            <p className="whitespace-pre-wrap">{editorRequest.note ?? "—"}</p>
+            <p className="mt-1 text-xs">
+              {editorRequest.actor} · {formatDateTime(editorRequest.at)} · Talep kategori editörüne
+              yöneltildi; yazar bilgilendirilmedi. Metni düzenleyip yeniden &ldquo;Onayla ve Ana Editöre
+              Gönder&rdquo; ile ya da yazardan revizyon isteyerek ilerleyebilirsiniz.
+            </p>
+          </Alert>
+        )}
+
         <Card>
           <h2 className="mb-4 font-serif text-lg">Durum</h2>
 
@@ -189,6 +220,7 @@ export default async function EditorArticleDetailPage({
                     name="bodyMarkdown"
                     rows={16}
                     defaultValue={article.bodyMarkdown}
+                    budget={budget}
                   />
                 </Field>
 

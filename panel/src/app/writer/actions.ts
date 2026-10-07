@@ -5,6 +5,8 @@
  * contract (D-275), signing or declining a rights grant, and the author's own
  * article writing (step 1 of the review chain, D-059).
  */
+import { countWords, formatWordCount } from "@/lib/word-count";
+import { ARTICLE_WORD_WARNING } from "@/lib/category-budget";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { acknowledge, markRead } from "@/services/announcements";
@@ -182,7 +184,7 @@ export async function updateArticleAsWriterAction(
     const meta = await requestMetadata();
 
     const articleId = text(formData, "articleId");
-    await updateArticleAsWriter(
+    const saved = await updateArticleAsWriter(
       { ...user },
       articleId,
       {
@@ -198,7 +200,14 @@ export async function updateArticleAsWriterAction(
 
     revalidatePath(`/writer/articles/${articleId}`);
     revalidatePath("/writer/articles");
-    return { success: "Yazı kaydedildi." };
+    // Over 500 words is a warning, never a refusal (D-331)
+    const words = countWords(saved.bodyMarkdown);
+    return {
+      success:
+        words > ARTICLE_WORD_WARNING
+          ? `Yazı kaydedildi. Uyarı: yazı ${formatWordCount(words)}, önerilen üst sınır ${ARTICLE_WORD_WARNING} kelime.`
+          : "Yazı kaydedildi.",
+    };
   });
 }
 

@@ -5,6 +5,7 @@ import { selectableWriterCategories } from "@/services/editor-categories";
 import { temporaryAreasByIssue } from "@/services/issue-area-grants";
 import { listIssuesWithoutWindows, listWriterIssues } from "@/services/topics";
 import { getActiveIssue } from "@/services/active-issue";
+import { categoryBudgetForForm } from "@/services/category-budget";
 import { readCsrfToken } from "@/lib/csrf";
 import { PanelForm } from "@/components/form";
 import { ArticleBodyTextarea } from "@/components/article-body-textarea";
@@ -39,6 +40,8 @@ export default async function WriterNewArticlePage({
     temporaryAreasByIssue(user.id),
     getActiveIssue(),
   ]);
+  // The category totals of the issue the article will go into (D-331)
+  const budgetData = activeIssue ? await categoryBudgetForForm(activeIssue.id) : null;
   const entries = allEntries.filter(({ issue }) => issue.id === activeIssue?.id);
   const openIssues = allOpenIssues.filter((issue) => issue.id === activeIssue?.id);
 
@@ -149,7 +152,12 @@ export default async function WriterNewArticlePage({
           </Field>
 
           <Field label="Gövde (markdown)" htmlFor="bodyMarkdown">
-            <ArticleBodyTextarea id="bodyMarkdown" name="bodyMarkdown" rows={18} />
+            <ArticleBodyTextarea
+              id="bodyMarkdown"
+              name="bodyMarkdown"
+              rows={18}
+              budget={budgetData ? { ...budgetData, categoryFieldId: "category" } : undefined}
+            />
           </Field>
         </>
       </PanelForm>

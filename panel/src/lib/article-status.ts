@@ -16,7 +16,9 @@ const TRANSITIONS: Record<ArticleStatus, readonly ArticleStatus[]> = {
   // accepts the article into the publication flow. Each reviewer can also
   // send it back.
   in_review: ["pending_admin_approval", "revision_requested", "draft"],
-  pending_admin_approval: ["ready_for_publishing", "revision_requested", "draft"],
+  // `in_review` from here is the main editor asking the category editor for a
+  // revision (D-331); `revision_requested` still asks the author
+  pending_admin_approval: ["ready_for_publishing", "revision_requested", "in_review", "draft"],
   ready_for_publishing: ["accepted", "revision_requested", "draft"],
   revision_requested: ["in_review", "draft"],
   accepted: ["awaiting_rights", "draft"],
@@ -51,6 +53,22 @@ export function allowedTargets(from: ArticleStatus): readonly ArticleStatus[] {
  */
 export function isRejection(from: ArticleStatus, to: ArticleStatus): boolean {
   return from === "pending_admin_approval" && to === "draft";
+}
+
+/**
+ * The main editor's revision request to the category editor (D-331): the
+ * article goes back one stage, to the category editor's desk, not to the
+ * author. Read from the edge, so the history needs no extra column.
+ */
+export function isEditorRevisionRequest(from: ArticleStatus, to: ArticleStatus): boolean {
+  return from === "pending_admin_approval" && to === "in_review";
+}
+
+/** Who a revision request is addressed to, read from the edge (D-331). */
+export function revisionTarget(from: ArticleStatus, to: ArticleStatus): "author" | "category_editor" | null {
+  if (to === "revision_requested") return "author";
+  if (isEditorRevisionRequest(from, to)) return "category_editor";
+  return null;
 }
 
 export function isKnownTransition(from: ArticleStatus, to: ArticleStatus): boolean {
@@ -102,6 +120,11 @@ export function checkTransition(
 
   if (to === "withdrawn" && !context.withdrawnReason?.trim()) {
     return { ok: false, reason: "Geri çekme gerekçesi zorunludur." };
+  }
+
+  // The category editor is told what to change; an empty request tells nothing
+  if (isEditorRevisionRequest(from, to) && !context.note?.trim()) {
+    return { ok: false, reason: "Kategori editöründen revizyon isterken açıklama zorunludur." };
   }
 
   // A rejection without a reason leaves the author nothing to act on

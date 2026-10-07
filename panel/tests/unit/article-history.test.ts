@@ -28,7 +28,8 @@ describe("describeStep", () => {
   it("reads a status change with the note the reviewer left", () => {
     expect(transition("in_review", "revision_requested", "Giriş paragrafını kısaltın.")).toMatchObject({
       action: "article.status_changed",
-      label: "Durum değişti",
+      // A revision request names its addressee (D-331)
+      label: "Yazardan revizyon istendi",
       fromStatus: "in_review",
       toStatus: "revision_requested",
       note: "Giriş paragrafını kısaltın.",

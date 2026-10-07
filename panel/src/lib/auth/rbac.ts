@@ -361,6 +361,9 @@ export function canPerformTransition(
     // The writer submits their draft or resubmits a revised text; editors can
     // do the same on anyone's draft.
     case "in_review":
+      // From the main editor's stage this is their revision request to the
+      // category editor (D-331), not a submission
+      if (article.status === "pending_admin_approval") return canReviewMainStage(actor, assignment);
       return canEditDraft(actor, article);
 
     // First review stage: the category editor (or main editor/admin fallback)

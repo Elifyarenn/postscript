@@ -12,7 +12,7 @@ import { Alert, Button, Field, Input, Textarea, STATUS_LABELS } from "@/componen
 import { ActionForm, useActionForm, useSubmitPending } from "@/components/form";
 import type { ServerAction } from "@/components/form";
 import type { ArticleStatus } from "@/db/schema";
-import { isRejection } from "@/lib/article-status";
+import { isEditorRevisionRequest, isRejection } from "@/lib/article-status";
 
 /**
  * The wording of the transition buttons, in the product's own words (D-059,
@@ -63,8 +63,17 @@ export function StatusPanel({
   // At the main editor's stage the way back to draft is their rejection (D-318)
   const rejects = (target: string) =>
     isRejection(currentStatus as ArticleStatus, target as ArticleStatus);
+  // From the main editor's stage there are two revision requests (D-331)
+  const asksEditor = (target: string) =>
+    isEditorRevisionRequest(currentStatus as ArticleStatus, target as ArticleStatus);
   const labelFor = (target: string) =>
-    rejects(target) ? "Reddet" : (TRANSITION_LABELS[target] ?? STATUS_LABELS[target] ?? target);
+    rejects(target)
+      ? "Reddet"
+      : asksEditor(target)
+        ? "Kategori editöründen revizyon iste"
+        : target === "revision_requested" && currentStatus === "pending_admin_approval"
+          ? "Yazardan revizyon iste"
+          : (TRANSITION_LABELS[target] ?? STATUS_LABELS[target] ?? target);
 
   if (targets.length === 0) {
     return (
@@ -122,8 +131,18 @@ export function StatusPanel({
           )}
 
           {selected === "revision_requested" && (
-            <Field label="Yazara iletilecek not" htmlFor="note">
+            <Field label="Yazara iletilecek not" htmlFor="note" hint="Talep yazara gider; yazı yazara döner.">
               <Textarea id="note" name="note" />
+            </Field>
+          )}
+
+          {asksEditor(selected) && (
+            <Field
+              label="Kategori editörüne iletilecek açıklama"
+              htmlFor="note"
+              hint="Zorunludur. Talep kategori editörüne gider; yazı kategori incelemesine döner, yazara gitmez."
+            >
+              <Textarea id="note" name="note" required minLength={3} />
             </Field>
           )}
 
@@ -138,7 +157,13 @@ export function StatusPanel({
           )}
 
           <Submit
-            label={rejects(selected) ? "Yazıyı reddet" : `"${labelFor(selected)}" durumuna geç`}
+            label={
+              rejects(selected)
+                ? "Yazıyı reddet"
+                : asksEditor(selected) || selected === "revision_requested"
+                  ? labelFor(selected)
+                  : `"${labelFor(selected)}" durumuna geç`
+            }
           />
         </ActionForm>
       )}

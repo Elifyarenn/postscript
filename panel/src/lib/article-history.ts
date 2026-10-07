@@ -7,7 +7,7 @@
  * the Turkish status labels.
  */
 import type { ArticleStatus } from "@/db/schema";
-import { isRejection } from "@/lib/article-status";
+import { isRejection, revisionTarget } from "@/lib/article-status";
 
 export type AuditRow = {
   id: string;
@@ -84,9 +84,17 @@ export function describeStep(row: AuditRow): HistoryStep {
       const toStatus = field(row.after, "status");
       // The rejection is read from the edge itself, so older rows read the same (D-318)
       const rejected = isRejection(fromStatus as ArticleStatus, toStatus as ArticleStatus);
+      // Whom a revision request went to, also from the edge (D-331)
+      const target = revisionTarget(fromStatus as ArticleStatus, toStatus as ArticleStatus);
       return {
         ...base,
-        label: rejected ? "Ana editör reddetti" : "Durum değişti",
+        label: rejected
+          ? "Ana editör reddetti"
+          : target === "category_editor"
+            ? "Ana editör kategori editöründen revizyon istedi"
+            : target === "author"
+              ? "Yazardan revizyon istendi"
+              : "Durum değişti",
         fromStatus,
         toStatus,
         note: field(row.after, "note"),

@@ -14,10 +14,13 @@ import {
   articleComments,
   articles,
   articleVersions,
+  auditLog,
+  editorCategories,
   issues,
   notifications,
   topicProposals,
   users,
+  writerAreas,
   type Article,
   type ArticleStatus,
 } from "@/db/schema";
@@ -25,7 +28,9 @@ import {
   allowedTargets,
   autoTransitionAfter,
   checkTransition,
+  isEditorRevisionRequest,
   isRejection,
+  revisionTarget,
 } from "@/lib/article-status";
 import { AUTHOR_TOLD_STATUSES } from "@/lib/article-history";
 import { writeAudit } from "@/lib/audit";
@@ -52,6 +57,8 @@ import { usesIssueWindows } from "@/lib/issue-periods";
 import { isIssueClosed } from "@/lib/active-issue";
 import { countWords } from "@/lib/word-count";
 import { assertActiveIssueForNewArticle, getActiveIssue } from "./active-issue";
+import { assertCategoryBudget } from "./category-budget";
+import { notify } from "./notifications";
 import { hasIssueGrant } from "./issue-grants";
 import {
   declineWork,
@@ -235,8 +242,43 @@ export async function listArticles(actor: Actor, filters: ArticleFilters) {
   ]);
 
   // The body is read only to be counted; the list never carries it on
-  const items = rows.map(({ bodyMarkdown, ...row }) => ({ ...row, wordCount: countWords(bodyMarkdown) }));
+  const requested = await openEditorRevisionRequests(rows.filter((row) => row.status === "in_review").map((row) => row.id));
+  const items = rows.map(({ bodyMarkdown, ...row }) => ({
+    ...row,
+    wordCount: countWords(bodyMarkdown),
+    editorRevisionRequested: requested.has(row.id),
+  }));
   return { items, total: counted?.total ?? 0 };
+}
+
+/**
+ * Of these `in_review` articles, the ones whose last status change was the
+ * main editor's request to the category editor (D-331), read from the audit
+ * log like the history is.
+ */
+async function openEditorRevisionRequests(articleIds: string[]): Promise<Set<string>> {
+  if (articleIds.length === 0) return new Set();
+  const rows = await db
+    .select({ entityId: auditLog.entityId, before: auditLog.before, after: auditLog.after })
+    .from(auditLog)
+    .where(
+      and(
+        eq(auditLog.entityType, "articles"),
+        eq(auditLog.action, "article.status_changed"),
+        inArray(auditLog.entityId, articleIds),
+      ),
+    )
+    .orderBy(desc(auditLog.createdAt), desc(auditLog.id));
+  const seen = new Set<string>();
+  const open = new Set<string>();
+  for (const row of rows) {
+    if (!row.entityId || seen.has(row.entityId)) continue;
+    seen.add(row.entityId);
+    const from = (row.before as { status?: ArticleStatus } | null)?.status;
+    const to = (row.after as { status?: ArticleStatus } | null)?.status;
+    if (from && to && isEditorRevisionRequest(from, to)) open.add(row.entityId);
+  }
+  return open;
 }
 
 /** How many of one issue's articles in the editor's scope sit in each status (D-330). */
@@ -374,20 +416,29 @@ export async function createArticle(
 
   const slug = await uniqueSlug(input.title, (candidate) => slugExists(candidate));
 
-  const [article] = await db
-    .insert(articles)
-    .values({
-      title: input.title,
-      slug,
-      summary: input.summary ?? null,
-      bodyMarkdown: input.bodyMarkdown ?? "",
-      authorId: input.authorId ?? null,
-      issueId: input.issueId,
+  // The category's 1600 words are checked under the issue's lock (D-331)
+  const article = await db.transaction(async (tx) => {
+    await assertCategoryBudget(tx, {
+      issueId: input.issueId!,
       category: input.category ?? null,
-      dueDate: input.dueDate ?? null,
-      status: "draft",
-    })
-    .returning();
+      body: input.bodyMarkdown ?? "",
+    });
+    const [row] = await tx
+      .insert(articles)
+      .values({
+        title: input.title,
+        slug,
+        summary: input.summary ?? null,
+        bodyMarkdown: input.bodyMarkdown ?? "",
+        authorId: input.authorId ?? null,
+        issueId: input.issueId!,
+        category: input.category ?? null,
+        dueDate: input.dueDate ?? null,
+        status: "draft",
+      })
+      .returning();
+    return row;
+  });
 
   await snapshotVersion(article!, actor.id, input.changeNote ?? "İlk sürüm");
 
@@ -498,6 +549,8 @@ export async function createArticleAsWriter(
   const slug = await resolveSlug(input.slug, input.title);
 
   const article = await db.transaction(async (tx) => {
+    // The category's 1600 words are checked under the issue's lock (D-331)
+    await assertCategoryBudget(tx, { issueId: target.issueId, category, body: input.bodyMarkdown ?? "" });
     const [row] = await tx
       .insert(articles)
       .values({
@@ -625,18 +678,28 @@ export async function updateArticleAsWriter(
         ? await uniqueSlug(input.title, (candidate) => slugExists(candidate, articleId))
         : existing.slug;
 
-  const [updated] = await db
-    .update(articles)
-    .set({
-      title: input.title,
-      slug,
-      summary: input.summary ?? null,
-      bodyMarkdown: input.bodyMarkdown ?? existing.bodyMarkdown,
+  // The old count of this article is left out of the total, not added twice (D-331)
+  const updated = await db.transaction(async (tx) => {
+    await assertCategoryBudget(tx, {
+      issueId: existing.issueId,
       category,
-      updatedAt: new Date(),
-    })
-    .where(eq(articles.id, articleId))
-    .returning();
+      body: input.bodyMarkdown ?? existing.bodyMarkdown,
+      existing,
+    });
+    const [row] = await tx
+      .update(articles)
+      .set({
+        title: input.title,
+        slug,
+        summary: input.summary ?? null,
+        bodyMarkdown: input.bodyMarkdown ?? existing.bodyMarkdown,
+        category,
+        updatedAt: new Date(),
+      })
+      .where(eq(articles.id, articleId))
+      .returning();
+    return row;
+  });
 
   if (input.bodyMarkdown !== undefined && input.bodyMarkdown !== existing.bodyMarkdown) {
     // The author's own note, when they left one (D-242). An author rewriting
@@ -736,21 +799,31 @@ export async function updateArticle(
   // A field the form did not send keeps its stored value. `category` and
   // `dueDate` used to fall back to null instead, so a partial update silently
   // wiped them while `issueId` next to them was preserved.
-  const [updated] = await db
-    .update(articles)
-    .set({
-      title: input.title,
-      slug,
-      summary: input.summary ?? null,
-      bodyMarkdown: input.bodyMarkdown ?? existing.bodyMarkdown,
-      authorId: input.authorId ?? existing.authorId,
+  // Checked where the article lands: a move counts it in full there (D-331)
+  const updated = await db.transaction(async (tx) => {
+    await assertCategoryBudget(tx, {
       issueId: input.issueId ?? existing.issueId,
       category: nextCategory,
-      dueDate: input.dueDate === undefined ? existing.dueDate : (input.dueDate ?? null),
-      updatedAt: new Date(),
-    })
-    .where(eq(articles.id, articleId))
-    .returning();
+      body: input.bodyMarkdown ?? existing.bodyMarkdown,
+      existing,
+    });
+    const [row] = await tx
+      .update(articles)
+      .set({
+        title: input.title,
+        slug,
+        summary: input.summary ?? null,
+        bodyMarkdown: input.bodyMarkdown ?? existing.bodyMarkdown,
+        authorId: input.authorId ?? existing.authorId,
+        issueId: input.issueId ?? existing.issueId,
+        category: nextCategory,
+        dueDate: input.dueDate === undefined ? existing.dueDate : (input.dueDate ?? null),
+        updatedAt: new Date(),
+      })
+      .where(eq(articles.id, articleId))
+      .returning();
+    return row;
+  });
 
   if (bodyChanged) {
     await snapshotVersion(updated!, actor.id, input.changeNote ?? null, false, changeKind);
@@ -1017,8 +1090,13 @@ export async function transitionArticle(
 
   // Sending one's own work to the editors is the licence declaration for that
   // work (D-238). An editor moving the same article along the chain is not.
-  if (to === "in_review" && article.authorId === actor.id) {
+  if (to === "in_review" && article.authorId === actor.id && !isEditorRevisionRequest(article.status, to)) {
     await recordSubmissionDeclaration(updated, actor, meta);
+  }
+
+  // The category editor hears about a request addressed to them (D-331)
+  if (isEditorRevisionRequest(article.status, to)) {
+    await notifyCategoryEditors(updated, options.note ?? "");
   }
 
   // `accepted` immediately becomes `awaiting_rights` and opens the form (§7.2)
@@ -1029,6 +1107,26 @@ export async function transitionArticle(
   }
 
   return updated;
+}
+
+/** The editors who hold the article's area: the addressees of a revision request (D-331). */
+async function notifyCategoryEditors(article: Article, note: string): Promise<void> {
+  if (!article.category) return;
+  const holders = await db
+    .select({ editorId: editorCategories.editorId })
+    .from(editorCategories)
+    .innerJoin(writerAreas, eq(editorCategories.areaId, writerAreas.id))
+    .innerJoin(users, eq(editorCategories.editorId, users.id))
+    .where(and(eq(writerAreas.name, article.category), isNull(users.deletedAt), eq(users.role, "editor")));
+  for (const { editorId } of holders) {
+    await notify({
+      userId: editorId,
+      kind: "article.editor_revision_requested",
+      title: `Ana editör revizyon istedi: ${article.title}`,
+      body: note.slice(0, 500),
+      href: `/editor/articles/${article.id}`,
+    });
+  }
 }
 
 /** Writes the new status plus its side effects. Assumes the check already passed. */
@@ -1066,7 +1164,8 @@ async function applyStatus(
     entityType: "articles",
     entityId: article.id,
     before: { status: article.status },
-    after: { status: to, note: options.note ?? null },
+    // Whom a revision request was addressed to, so the history can say (D-331)
+    after: { status: to, note: options.note ?? null, target: revisionTarget(article.status, to) },
     ip: meta.ip,
   });
 

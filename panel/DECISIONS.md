@@ -13013,3 +13013,46 @@ kartında Sayı 2'nin göründüğü kontrol edilmeli.
 **Doğrulama:** Kapı: typecheck, lint, test. Yeni testler:
 `tests/integration/active-issue.test.ts`, `tests/unit/word-count.test.ts`,
 `tests/unit/active-issue.test.ts`, `rbac` ek durumları.
+
+## D-331 — Kategori editöründen revizyon isteme, kategori başına 1600 kelime, 500 kelime uyarısı
+
+**İstek (ürün sahibi, 2026-10-07):** Ana editör yazara ek olarak kategori
+editöründen de revizyon isteyebilsin, talebin kime gittiği görünsün. Aynı sayı ve
+aynı kategorideki tüm yazıların toplamı en fazla 1600 kelime olsun (sayılar
+birbirini etkilemesin, düzenlenen yazı iki kez sayılmasın, eşzamanlı işlemler
+aşamasın, mevcut içerik kısaltılmasın). Yazı 500 kelimeyi aşınca yalnızca uyarı.
+
+**Karar:**
+- **Kategori editörüne revizyon:** durum makinesine `pending_admin_approval →
+  in_review` kenarı eklendi; bu kenar ana editörün kategori editöründen revizyon
+  talebidir (`isEditorRevisionRequest`). Açıklama zorunlu (409), yalnızca ana
+  editör ya da admin çekebilir (403). Enum ya da tablo eklenmedi: talep ve hedef
+  (`target: "author" | "category_editor"`) denetim kaydının `after` alanında, geçmiş
+  kenardan okur ("Ana editör kategori editöründen revizyon istedi" / "Yazardan
+  revizyon istendi"). Yazara e-posta gitmez, gönderim beyanı yazılmaz; alanın
+  kategori editörlerine panel bildirimi gider. Yazı sayfasında talep ve açıklama
+  uyarı kutusunda, kuyrukta "Ana editör revizyon istedi" işareti var. Kategori
+  editörü mevcut yetkileriyle (düzenle, yeniden onayla, yazardan revizyon iste)
+  devam eder. Durum panelinde ana editör aşamasında iki ayrı düğme: "Yazardan
+  revizyon iste" ve "Kategori editöründen revizyon iste".
+- **1600 kelime:** `checkCategoryBudget` (saf, `src/lib/category-budget.ts`) ve
+  `assertCategoryBudget` (`src/services/category-budget.ts`). Sayım `countWords`
+  ile; geri çekilmiş ve silinmiş yazılar dışında her durum (taslak dahil) sayılır;
+  kategorisiz yazı sayılmaz. Düzenlemede yazının kendi eski sayısı toplamdan
+  çıkarılır; kategori/sayı değişikliğinde yazı varış kovasında tam sayılır. Bir
+  işlem yalnızca toplamı 1600'ün üstüne çıkarıyor **ve büyütüyorsa** reddedilir:
+  sınırı zaten aşmış eski bir kategori kısaltılabilir, hiçbir içerik kesilmez.
+  Dört yazma yolunda (editör/yazar oluşturma ve düzenleme) kontrol yazmayla aynı
+  işlemde, sayı satırı `SELECT … FOR UPDATE` ile kilitlenerek yapılır; aynı
+  sayıya eşzamanlı kayıtlar sıralanır. Formlarda canlı satır: kategori toplamı,
+  kalan hak ve aşınca neden.
+- **500 kelime:** yalnızca uyarı (`ARTICLE_WORD_WARNING`); gövde alanında canlı,
+  yazarın kaydetme mesajında da. Kaydı ya da gönderimi engellemez.
+
+**Not (D-078):** yeni SQL yalnızca `SELECT … FOR UPDATE`; upsert, `sql` şablonu ya da
+ham tip parametresi yok, iki sürücüde aynı çalışan standart sözdizimi.
+
+**KVKK:** yeni kişisel veri yok; aydınlatma metni değişmedi. Migration yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Yeni testler:
+`tests/integration/category-budget.test.ts`, `tests/unit/category-budget.test.ts`.
