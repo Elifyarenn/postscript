@@ -5,6 +5,7 @@
  * server, and no role ever changes without a `role_changes` row.
  */
 import "server-only";
+import { TEST_WRITER_EMAILS } from "@/lib/test-accounts";
 import {
   and,
   asc,
@@ -17,6 +18,7 @@ import {
   isNull,
   or,
   sql,
+  notInArray,
   type SQL,
 } from "drizzle-orm";
 import { z } from "zod";
@@ -151,9 +153,10 @@ export type UserListFilters = {
 function segmentCondition(segment: UserSegment): SQL | undefined {
   switch (segment) {
     case "writers":
-      return or(
-        eq(users.role, "writer"),
-        and(eq(users.role, "editor"), isNotNull(users.writerStatus)),
+      return and(
+        or(eq(users.role, "writer"), and(eq(users.role, "editor"), isNotNull(users.writerStatus))),
+        // A test writer is not one of the magazine's writers (D-333)
+        notInArray(users.email, [...TEST_WRITER_EMAILS]),
       );
     case "editors":
       return eq(users.role, "editor");

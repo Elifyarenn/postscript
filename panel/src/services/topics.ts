@@ -9,8 +9,9 @@
  * of the request; the pages only mirror it.
  */
 import "server-only";
+import { TEST_WRITER_EMAILS } from "@/lib/test-accounts";
 import { isIssueClosed } from "@/lib/active-issue";
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, ne, or, sql, notInArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
 import {
@@ -723,6 +724,8 @@ export async function issueProcessSummaries(actor: Actor, now: Date = new Date()
         isNull(users.deletedAt),
         isNull(users.anonymizedAt),
         isNotNull(users.emailVerifiedAt),
+        // A test writer is not counted as missing a topic (D-333)
+        notInArray(users.email, [...TEST_WRITER_EMAILS]),
       ),
     )
     .orderBy(asc(users.displayName));

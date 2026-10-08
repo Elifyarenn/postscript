@@ -16,7 +16,8 @@
  * the Hobby cron runs once a day.
  */
 import "server-only";
-import { and, eq, gt, gte, inArray, isNotNull, isNull, lte, ne } from "drizzle-orm";
+import { TEST_WRITER_EMAILS } from "@/lib/test-accounts";
+import { and, eq, gt, gte, inArray, isNotNull, isNull, lte, ne, notInArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { issues, siteSettings, topicProposals, users, type Issue } from "@/db/schema";
 import { runInBackground } from "@/lib/background";
@@ -117,6 +118,8 @@ async function activeWriters() {
         isNull(users.deletedAt),
         isNull(users.anonymizedAt),
         isNotNull(users.emailVerifiedAt),
+        // A test writer is not mailed with the roster (D-333)
+        notInArray(users.email, [...TEST_WRITER_EMAILS]),
       ),
     );
 }

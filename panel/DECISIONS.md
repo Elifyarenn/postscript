@@ -13071,3 +13071,22 @@ alanı" hatası artık gerçekten çakışan alanın adını söylüyor (öncede
 alanı yazıyordu).
 
 **Doğrulama:** Kapı: typecheck, lint, test (üç alan ve tekrar eden alan testi).
+
+## D-333 — semrailhan@outlook.com test yazarı: yazar listesinden çıkarıldı
+
+**İstek (ürün sahibi, 2026-10-08):** "semrailhan@outlook.com ı normal yazar
+kuyruğundan çıkar o test yazarı".
+
+**Karar:** Kodda tek liste `TEST_WRITER_EMAILS` (`src/lib/test-accounts.ts`). Bu
+adresteki hesap yazar listesine (roster) girmez: admin "Yazarlar" listesinde
+görünmez (hesap "Tüm kullanıcılar"da durur), sayının konu/yazı dönemi açıldı
+e-postaları gitmez, sayının "konu bekleyen yazarlar" sayımına girmez, geçici alan
+verilebilecek yazarlar arasında çıkmaz.
+
+**Muhafazakâr kapsam:** veriye dokunulmadı. Hesabın rolü, yazar durumu, yazıları,
+`/oyun` önizleme izni (D-263) ve sözleşme/katkı belgeleri (Sayı 1 testinin yazarı
+olarak, D-300) olduğu gibi kaldı; hukuki belge akışından çıkarmak ayrı bir karar.
+Yazıları varsa editör kuyruğunda ve kategori toplamında (D-331) sayılmaya devam
+eder. Migration yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test (`tests/integration/test-writer.test.ts`).

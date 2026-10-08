@@ -9,7 +9,8 @@
  * as usual.
  */
 import "server-only";
-import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
+import { TEST_WRITER_EMAILS } from "@/lib/test-accounts";
+import { and, asc, desc, eq, inArray, isNull, notInArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { articles, type Article, issueAreaGrants, issues, users, writerAreas, type Issue } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
@@ -177,7 +178,15 @@ export async function listTemporaryAreaCandidates(actor: Actor) {
       writerArea2: users.writerArea2,
     })
     .from(users)
-    .where(and(isNull(users.deletedAt), eq(users.writerStatus, "active"), inArray(users.role, ["writer", "editor"])))
+    .where(
+      and(
+        isNull(users.deletedAt),
+        eq(users.writerStatus, "active"),
+        inArray(users.role, ["writer", "editor"]),
+        // Not offered to a test writer (D-333)
+        notInArray(users.email, [...TEST_WRITER_EMAILS]),
+      ),
+    )
     .orderBy(asc(users.displayName));
   return rows;
 }
