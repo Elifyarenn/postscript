@@ -13056,3 +13056,18 @@ ham tip parametresi yok, iki sürücüde aynı çalışan standart sözdizimi.
 
 **Doğrulama:** Kapı: typecheck, lint, test. Yeni testler:
 `tests/integration/category-budget.test.ts`, `tests/unit/category-budget.test.ts`.
+
+## D-332 — Editörlerin alan sayısı üçe çıktı
+
+**İstek (ürün sahibi, 2026-10-08):** "editörlerin alanlarını 3 alana çıkar 3 alan
+girebileyim".
+
+**Karar:** Editör görev formunda 1., 2. ve 3. alan seçilir; `setEditorDuties`
+`areaId3`'ü (isteğe bağlı) kabul eder ve 3. yuvaya yazar. Seçilen alanlar
+birbirinden farklı olmalı (400); bir alanın tek editörü kuralı (benzersiz indeks)
+aynı. `editor_categories.slot` için veritabanında sınır yoktu, migration
+gerekmedi. Yazarların alan sayısı (iki) değişmedi. Bu arada "başka editörün
+alanı" hatası artık gerçekten çakışan alanın adını söylüyor (önceden ilk seçilen
+alanı yazıyordu).
+
+**Doğrulama:** Kapı: typecheck, lint, test (üç alan ve tekrar eden alan testi).

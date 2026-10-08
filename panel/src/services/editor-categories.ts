@@ -1,8 +1,8 @@
 /**
  * Editor area assignments (D-059).
  *
- * An editor is responsible for at most two of the magazine's areas ("1. alan"
- * and "2. alan"), and one area belongs to exactly one editor. The first rule
+ * An editor is responsible for at most three of the magazine's areas ("1. alan",
+ * "2. alan", "3. alan"; three since D-332), and one area belongs to exactly one editor. The first rule
  * is enforced here (the database cannot count rows for a unique index), the
  * second one is a database unique index on `editor_categories.area_id` — the
  * service pre-checks it anyway so the admin gets a readable conflict instead
@@ -120,9 +120,11 @@ export async function listEditorCategories(editorId: string): Promise<EditorCate
 /* ------------------------------------------------------------------ */
 
 export type EditorDutiesInput = {
-  /** Area ids for slot 1 and 2; null clears the slot. */
+  /** Area ids for slot 1, 2 and 3; null clears the slot. */
   areaId: string | null;
   areaId2: string | null;
+  /** The third slot (D-332); optional so older callers keep two. */
+  areaId3?: string | null;
   /** A main editor reviews every category and approves the second stage. */
   isMainEditor: boolean;
 };
@@ -131,10 +133,10 @@ export type EditorDutiesInput = {
  * (Re)assigns an editor's duties in one step: their first and second area and
  * whether they are the main editor. Only the admin panel reaches this.
  *
- * Rules: the target must be an editor, the two areas must differ, an area
+ * Rules: the target must be an editor, the areas must differ, an area
  * cannot be given to a second editor (unique index + readable pre-check), and
- * the editor holds at most two slots — which this form enforces by replacing
- * the rows rather than appending.
+ * the editor holds at most three slots (D-332) — which this form enforces by
+ * replacing the rows rather than appending.
  */
 export async function setEditorDuties(
   actor: Actor,
@@ -153,9 +155,10 @@ export async function setEditorDuties(
   if (!target) throw notFound("Kullanıcı bulunamadı.");
   if (target.role !== "editor") throw conflict("Alan ataması yalnızca editörlere yapılır.");
 
-  const areaIds = [input.areaId, input.areaId2].filter((value): value is string => value !== null);
-  if (input.areaId && input.areaId === input.areaId2) {
-    throw badRequest("İki alan birbirinden farklı olmalı.");
+  const slotted = [input.areaId, input.areaId2, input.areaId3 ?? null];
+  const areaIds = slotted.filter((value): value is string => value !== null);
+  if (new Set(areaIds).size !== areaIds.length) {
+    throw badRequest("Seçilen alanlar birbirinden farklı olmalı.");
   }
 
   const knownRows = areaIds.length
@@ -175,13 +178,13 @@ export async function setEditorDuties(
   // an area another editor holds may not be handed over here.
   const held = areaIds.length
     ? await db
-        .select({ editorId: editorCategories.editorId })
+        .select({ editorId: editorCategories.editorId, areaId: editorCategories.areaId })
         .from(editorCategories)
         .where(inArray(editorCategories.areaId, areaIds))
     : [];
   const heldByOther = held.find((row) => row.editorId !== target.id);
   if (heldByOther) {
-    const area = knownById.get(areaIds.find((id) => id !== null)!)!;
+    const area = knownById.get(heldByOther.areaId)!;
     throw conflict(
       `"${area.name}" alanı başka bir editöre atanmış. Her alanın tek bir editörü olabilir.`,
     );
@@ -196,6 +199,7 @@ export async function setEditorDuties(
     const slots: Array<{ slot: number; areaId: string | null }> = [
       { slot: 1, areaId: input.areaId },
       { slot: 2, areaId: input.areaId2 },
+      { slot: 3, areaId: input.areaId3 ?? null },
     ];
     for (const slot of slots) {
       if (!slot.areaId) continue;

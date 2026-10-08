@@ -510,7 +510,7 @@ export default async function AdminUserDetailPage({
           <Card>
             <h2 className="mb-1 font-serif text-lg">Editör görevleri</h2>
             <p className="mb-4 text-sm text-muted">
-              Bir editör en fazla iki alandan sorumlu olabilir (1. alan ve 2.
+              Bir editör en fazla üç alandan sorumlu olabilir (1., 2. ve 3.
               alan); bir alanın yalnızca bir editörü olur. Başka bir editörün
               sahiplendiği alan seçilemez. Ana editör tüm kategorileri okur ve
               ikinci onay aşamasını yürütür.
@@ -524,62 +524,40 @@ export default async function AdminUserDetailPage({
             >
               <>
                 <input type="hidden" name="userId" value={target.id} />
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label="1. alan" htmlFor="editorAreaId">
-                    <Select
-                      id="editorAreaId"
-                      name="areaId"
-                      defaultValue={areaIdBySlot.get(1) ?? ""}
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {/* Three slots since D-332; the server checks the same */}
+                  {([
+                    { slot: 1, name: "areaId", id: "editorAreaId" },
+                    { slot: 2, name: "areaId2", id: "editorAreaId2" },
+                    { slot: 3, name: "areaId3", id: "editorAreaId3" },
+                  ] as const).map(({ slot, name, id }) => (
+                    <Field
+                      key={slot}
+                      label={`${slot}. alan`}
+                      htmlFor={id}
+                      hint={slot === 1 ? undefined : "İsteğe bağlı; boş bırakılabilir."}
                     >
-                      <option value="">Yok</option>
-                      {editorAreas.map((area) => (
-                        <option
-                          key={area.id}
-                          value={area.id}
-                          disabled={
-                            area.holderEditorId !== null && area.holderEditorId !== target.id
-                          }
-                        >
-                          {area.name}
-                          {area.holderEditorName
-                            ? ` (${area.holderEditorName})`
-                            : area.isActive
-                              ? ""
-                              : " — devre dışı"}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-
-                  <Field
-                    label="2. alan"
-                    htmlFor="editorAreaId2"
-                    hint="Boş bırakılırsa editör tek alanda kalır."
-                  >
-                    <Select
-                      id="editorAreaId2"
-                      name="areaId2"
-                      defaultValue={areaIdBySlot.get(2) ?? ""}
-                    >
-                      <option value="">Yok</option>
-                      {editorAreas.map((area) => (
-                        <option
-                          key={area.id}
-                          value={area.id}
-                          disabled={
-                            area.holderEditorId !== null && area.holderEditorId !== target.id
-                          }
-                        >
-                          {area.name}
-                          {area.holderEditorName
-                            ? ` (${area.holderEditorName})`
-                            : area.isActive
-                              ? ""
-                              : " — devre dışı"}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
+                      <Select id={id} name={name} defaultValue={areaIdBySlot.get(slot) ?? ""}>
+                        <option value="">Yok</option>
+                        {editorAreas.map((area) => (
+                          <option
+                            key={area.id}
+                            value={area.id}
+                            disabled={
+                              area.holderEditorId !== null && area.holderEditorId !== target.id
+                            }
+                          >
+                            {area.name}
+                            {area.holderEditorName
+                              ? ` (${area.holderEditorName})`
+                              : area.isActive
+                                ? ""
+                                : " — devre dışı"}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                  ))}
                 </div>
 
                 <label className="flex cursor-pointer items-start gap-2 text-sm">

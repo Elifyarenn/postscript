@@ -928,9 +928,9 @@ export async function setWriterAreasAction(
 }
 
 /**
- * Admin-only: (re)assign an editor's areas (at most two, each unique to one
- * editor) and the main-editor flag in one step (D-059). The unique per-area
- * rule and the two-slot limit are enforced in the service.
+ * Admin-only: (re)assign an editor's areas (at most three since D-332, each
+ * unique to one editor) and the main-editor flag in one step (D-059). The
+ * unique per-area rule and the slot limit are enforced in the service.
  */
 export async function setEditorDutiesAction(
   _state: ActionState,
@@ -948,6 +948,7 @@ export async function setEditorDutiesAction(
       {
         areaId: optionalText(formData, "areaId") || null,
         areaId2: optionalText(formData, "areaId2") || null,
+        areaId3: optionalText(formData, "areaId3") || null,
         isMainEditor: checkbox(formData, "isMainEditor"),
       },
       meta,

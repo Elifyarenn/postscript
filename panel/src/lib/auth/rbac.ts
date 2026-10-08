@@ -254,7 +254,7 @@ export function needsAuthorAgreement(actor: Pick<Actor, "role">): boolean {
 export type EditorAssignment = {
   /** A main editor reads every category and approves the second review stage. */
   isMainEditor: boolean;
-  /** The area names the editor holds in `editor_categories` (slots 1 and 2). */
+  /** The area names the editor holds in `editor_categories` (slots 1 to 3, D-332). */
   assignedAreas: readonly string[];
 };
 

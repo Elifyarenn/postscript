@@ -2,7 +2,7 @@
  * Editor area assignments and the staged review chain (D-059, D-060).
  *
  * The rules that matter: one area belongs to exactly one editor, an editor
- * holds at most two areas, the category editor only sees and approves their
+ * holds at most three areas (D-332), the category editor only sees and approves their
  * own areas, the main editor runs the second stage, and the admin accepts the
  * article into the publication flow. A hybrid editor is simultaneously a
  * writer and can author articles.
@@ -71,6 +71,38 @@ async function areaIdByName(name: string) {
 }
 
 describe("editor area assignments", () => {
+  it("assigns an editor a third area, and refuses the same area twice (D-332)", async () => {
+    const admin = await createUser({ role: "admin" });
+    const editor = await createUser({ role: "editor" });
+    const sanat = await areaIdByName("Sanat & Edebiyat");
+    const psikoloji = await areaIdByName("Psikoloji & İlişkiler");
+    const tarih = await areaIdByName("Tarih & Dünya");
+
+    await setEditorDuties(
+      actorOf(admin),
+      editor.id,
+      { areaId: sanat, areaId2: psikoloji, areaId3: tarih, isMainEditor: false },
+      noMeta,
+    );
+    const duties = await db
+      .select()
+      .from(editorCategories)
+      .where(eq(editorCategories.editorId, editor.id))
+      .orderBy(editorCategories.slot);
+    expect(duties.map((duty) => duty.slot)).toEqual([1, 2, 3]);
+
+    const { getEditorAssignment } = await import("@/services/editor-categories");
+    expect((await getEditorAssignment(editor.id)).assignedAreas).toEqual([
+      "Sanat & Edebiyat",
+      "Psikoloji & İlişkiler",
+      "Tarih & Dünya",
+    ]);
+
+    await expect(
+      setEditorDuties(actorOf(admin), editor.id, { areaId: sanat, areaId2: null, areaId3: sanat, isMainEditor: false }, noMeta),
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
   it("assigns an editor two areas and a main-editor flag", async () => {
     const admin = await createUser({ role: "admin" });
     const editor = await createUser({ role: "editor" });

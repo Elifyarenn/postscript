@@ -628,7 +628,7 @@ export const editorCategories = pgTable(
     areaId: uuid("area_id")
       .notNull()
       .references(() => writerAreas.id, { onDelete: "restrict" }),
-    /** 1 or 2; "1. alan" and "2. alan" as the product calls them. */
+    /** 1, 2 or 3; "1. alan" … "3. alan" as the product calls them (D-332). */
     slot: integer("slot").notNull(),
     createdAt: createdAt(),
     updatedAt: updatedAt(),
