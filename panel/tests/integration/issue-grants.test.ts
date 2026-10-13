@@ -16,7 +16,7 @@ import {
   revokeIssueSubmission,
 } from "@/services/issue-grants";
 import { selectableWriterCategories } from "@/services/editor-categories";
-import { listIssuesWithoutWindows } from "@/services/topics";
+import { listIssuesOpenWithoutTopic } from "@/services/topics";
 import { DEFAULT_WRITER_AREAS } from "@/lib/writer-areas";
 import { resetTables, seedDefaultWriterAreas, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
 import { actorOf, createUser, noMeta } from "../helpers/factories";
@@ -69,7 +69,7 @@ async function scenario() {
 describe("an issue closed to new articles", () => {
   it("is not there for a writer until an admin opens it to them", async () => {
     const { issue, writer, input } = await scenario();
-    expect((await listIssuesWithoutWindows(writer.id)).map((row) => row.id)).not.toContain(issue.id);
+    expect((await listIssuesOpenWithoutTopic(writer.id)).map((row) => row.id)).not.toContain(issue.id);
     expect(await statusOf(createArticleAsWriter(actorOf(writer), input, noMeta))).toBe(400);
   });
 
@@ -82,14 +82,14 @@ describe("an issue closed to new articles", () => {
     expect(mailbox.outbox[0]!.subject).toBe("postscript · Sayı 1 · Obsession için yazı göndermeniz açıldı");
     expect(mailbox.outbox[0]!.text).toContain("/writer/articles/new");
 
-    expect((await listIssuesWithoutWindows(writer.id)).map((row) => row.id)).toContain(issue.id);
+    expect((await listIssuesOpenWithoutTopic(writer.id)).map((row) => row.id)).toContain(issue.id);
     const article = await createArticleAsWriter(actorOf(writer), input, noMeta);
     expect(article.issueId).toBe(issue.id);
     expect(article.status).toBe("draft");
     await assertCanReadArticle(actorOf(writer), article);
 
     // The door is this writer's alone
-    expect((await listIssuesWithoutWindows(other.id)).map((row) => row.id)).not.toContain(issue.id);
+    expect((await listIssuesOpenWithoutTopic(other.id)).map((row) => row.id)).not.toContain(issue.id);
     expect(await statusOf(createArticleAsWriter(actorOf(other), { ...input, title: "Başkası" }, noMeta))).toBe(400);
     expect((await listIssueGrantsForUser(actorOf(admin), writer.id)).map((row) => row.issueNumber)).toEqual([1]);
   });
@@ -141,7 +141,7 @@ describe("an admin writing their own article (D-304)", () => {
     const areas = await selectableWriterCategories(actorOf(admin));
     expect(areas).toEqual([...DEFAULT_WRITER_AREAS]);
 
-    expect((await listIssuesWithoutWindows(admin.id, true)).map((row) => row.id)).toContain(issue.id);
+    expect((await listIssuesOpenWithoutTopic(admin.id, true)).map((row) => row.id)).toContain(issue.id);
     const article = await createArticleAsWriter(
       actorOf(admin),
       { title: "Editörden", category: areas[areas.length - 1], issueId: issue.id },

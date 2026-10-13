@@ -13,7 +13,7 @@ import { PanelForm } from "@/components/form";
 import { IssueWindows } from "@/components/issue-windows";
 import { Card, EmptyState, Field, PageHeader, Select, StatusBadge, Textarea } from "@/components/ui";
 import type { TopicProposalStatus } from "@/db/schema";
-import { decideTopicAction } from "../actions";
+import { decideTopicAction, reopenTopicAction } from "../actions";
 
 export const metadata = { title: "Konu önerileri" };
 
@@ -184,6 +184,29 @@ export default async function TopicProposalsPage({
                     </PanelForm>
                   </div>
                 ))}
+              {/* Only an admin takes back a rejection (D-337) */}
+              {proposal.status === "rejected" && user.role === "admin" && proposal.authorId !== user.id && (
+                <details className="mt-4 border-t border-line pt-4 text-sm">
+                  <summary className="cursor-pointer text-accent underline">Konuyu yeniden aç</summary>
+                  <div className="mt-3">
+                    <PanelForm
+                      action={reopenTopicAction}
+                      csrfToken={csrfToken ?? ""}
+                      submitLabel="Yeniden aç ve kabul et"
+                    >
+                      <input type="hidden" name="proposalId" value={proposal.id} />
+                      <input type="hidden" name="version" value={proposal.version} />
+                      <Field
+                        label="Yazara not"
+                        htmlFor={`reopen-note-${proposal.id}`}
+                        hint="İsteğe bağlı; yazar kabul e-postasında bu notu görür. Ret geçmişte kalır."
+                      >
+                        <Textarea id={`reopen-note-${proposal.id}`} name="note" rows={2} maxLength={2000} />
+                      </Field>
+                    </PanelForm>
+                  </div>
+                </details>
+              )}
             </Card>
           ))
         )}

@@ -92,7 +92,8 @@ export const issueStatusEnum = pgEnum("issue_status", [
 
 /**
  * A writer's topic for an issue (D-261): sent, sent back for changes, taken
- * or turned down. A turned-down topic is final for that issue.
+ * or turned down. A turned-down topic is final for that issue, unless an
+ * admin reopens it as accepted (D-337).
  */
 export const topicProposalStatusEnum = pgEnum("topic_proposal_status", [
   "submitted",

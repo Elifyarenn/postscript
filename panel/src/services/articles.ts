@@ -51,7 +51,7 @@ import { slugify, uniqueSlug } from "@/lib/slug";
 import * as templates from "@emails/templates";
 import { allMediaLicensed } from "./media";
 import { hasAcceptedCurrentAgreement } from "./agreements";
-import { getEditorAssignment, selectableWriterCategories } from "./editor-categories";
+import { getEditorAssignment, getMainEditor, selectableWriterCategories } from "./editor-categories";
 import { acceptedTopicForNewArticle, assertArticleDeliveryAllowed } from "./topics";
 import { editorEditClosesAt, formatPeriodMoment, isEditorEditingOpen, usesIssueWindows } from "@/lib/issue-periods";
 import { isIssueClosed } from "@/lib/active-issue";
@@ -504,9 +504,8 @@ async function assertLiveIssue(issueId: string): Promise<void> {
 /**
  * The issue a writer's new article goes into (D-261). With a topic: the
  * topic's issue, and the topic must be the writer's own, accepted and still
- * without an article. Without one: only an issue that has no windows, where
- * the old flow goes on (issue 1). An issue with windows is entered through a
- * topic only.
+ * without an article. Without one: the active issue, windows or not (D-338);
+ * the main editor hears of it when the article is handed in.
  */
 async function writerTargetIssue(
   actor: Actor,
@@ -535,9 +534,6 @@ async function writerTargetIssue(
   // to them (D-296); an admin writes into it as their own (D-304)
   if (!issue || (issue.adminOnly && !canAccessAdminPanel(actor) && !(await hasIssueGrant(actor.id, issue.id)))) {
     throw badRequest("Sayı bulunamadı.", { issueId: ["Sayı bulunamadı."] });
-  }
-  if (usesIssueWindows(issue)) {
-    throw conflict("Bu sayıda yazı, kabul edilmiş bir konudan başlatılır.");
   }
   return { issueId: issue.id, topic: null };
 }
@@ -1089,8 +1085,9 @@ export async function transitionArticle(
   // Handing in one's own draft is bound to the issue's delivery window and
   // accepted topic (D-261). A text sent back for revision may come back after
   // the window: that is the editor's request, not a new delivery.
+  let withoutTopic = false;
   if (to === "in_review" && article.authorId === actor.id && article.status === "draft") {
-    await assertArticleDeliveryAllowed(article);
+    ({ withoutTopic } = await assertArticleDeliveryAllowed(article));
   }
 
   // The declaration rests on the contract, so there is nothing to declare until
@@ -1124,6 +1121,11 @@ export async function transitionArticle(
     await recordSubmissionDeclaration(updated, actor, meta);
   }
 
+  // Handed in without an accepted topic: allowed, but the main editor is told (D-338)
+  if (withoutTopic) {
+    await notifyMainEditorWithoutTopic(updated, actor.id);
+  }
+
   // The category editor hears about a request addressed to them (D-331)
   if (isEditorRevisionRequest(article.status, to)) {
     await notifyCategoryEditors(updated, options.note ?? "");
@@ -1137,6 +1139,39 @@ export async function transitionArticle(
   }
 
   return updated;
+}
+
+/**
+ * The main editor, or the admins while nobody carries the flag, hears of an
+ * article handed in without an accepted topic (D-338). The author is never
+ * told about their own.
+ */
+async function notifyMainEditorWithoutTopic(article: Article, authorId: string): Promise<void> {
+  const mainEditor = await getMainEditor();
+  const recipients = mainEditor
+    ? [mainEditor.id]
+    : (
+        await db
+          .select({ id: users.id })
+          .from(users)
+          .where(and(eq(users.role, "admin"), isNull(users.deletedAt)))
+      ).map((row) => row.id);
+  const [author] = await db
+    .select({ displayName: users.displayName, penName: users.penName })
+    .from(users)
+    .where(eq(users.id, authorId))
+    .limit(1);
+  const who = author?.penName ?? author?.displayName ?? "Yazar";
+  for (const userId of recipients) {
+    if (userId === authorId) continue;
+    await notify({
+      userId,
+      kind: "article.submitted_without_topic",
+      title: `Konusu kabul edilmemiş yazı gönderildi: ${article.title}`,
+      body: `${who}${article.category ? ` · ${article.category}` : ""} — bu yazı için kabul edilmiş bir konu önerisi yok.`,
+      href: `/editor/articles/${article.id}`,
+    });
+  }
 }
 
 /** The editors who hold the article's area: the addressees of a revision request (D-331). */

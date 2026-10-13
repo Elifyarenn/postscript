@@ -14,6 +14,7 @@ import {
 import { listIssues } from "@/services/issues";
 import { findLiveApproval } from "@/services/rights";
 import { listArticleHistory } from "@/services/article-history";
+import { isArticleWithoutTopic } from "@/services/topics";
 import { allMediaLicensed } from "@/services/media";
 import { readCsrfToken } from "@/lib/csrf";
 import { renderMarkdown } from "@/lib/markdown";
@@ -88,6 +89,7 @@ export default async function EditorArticleDetailPage({
     ]);
 
   const preview = await renderMarkdown(article.bodyMarkdown);
+  const withoutTopic = await isArticleWithoutTopic(article);
   // The category's total in this issue, shown live under the body (D-331)
   const budgetData = await categoryBudgetForForm(article.issueId, article.id);
   const budget = budgetData
@@ -118,6 +120,11 @@ export default async function EditorArticleDetailPage({
       />
 
       <div className="space-y-6">
+        {withoutTopic && (
+          <Alert tone="warning" title="Konusu kabul edilmemiş yazı">
+            Bu yazı için kabul edilmiş bir konu önerisi yok; yazar konusuz yazdı (D-338).
+          </Alert>
+        )}
         {editorRequest && (
           <Alert tone="warning" title="Ana editör kategori editöründen revizyon istedi">
             <p className="whitespace-pre-wrap">{editorRequest.note ?? "—"}</p>

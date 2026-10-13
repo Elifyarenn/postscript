@@ -41,7 +41,7 @@ import {
 import { badRequest } from "@/lib/errors";
 import { parseTurkeyLocalDateTime } from "@/lib/utils";
 import { parsePeriod } from "@/lib/issue-periods";
-import { decideTopicProposal } from "@/services/topics";
+import { decideTopicProposal, reopenRejectedTopic } from "@/services/topics";
 import { setActiveIssue } from "@/services/active-issue";
 import { grantIssueArea, revokeIssueArea } from "@/services/issue-area-grants";
 import type { LicenseType } from "@/db/schema";
@@ -536,6 +536,26 @@ export async function editorRejectApplicationAction(
 /* ------------------------------------------------------------------ */
 /* Topic proposals (D-261)                                             */
 /* ------------------------------------------------------------------ */
+
+export async function reopenTopicAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const meta = await requestMetadata();
+    await reopenRejectedTopic(
+      { ...user },
+      text(formData, "proposalId"),
+      { note: optionalText(formData, "note"), expectedVersion: numberField(formData, "version") ?? 0 },
+      meta,
+    );
+    revalidatePath("/editor/topics");
+    revalidatePath("/admin");
+    return { success: "Konu yeniden açıldı ve kabul edildi; yazara bildirildi." };
+  });
+}
 
 export async function decideTopicAction(
   _state: ActionState,

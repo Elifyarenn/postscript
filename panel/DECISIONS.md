@@ -13184,3 +13184,45 @@ Yeni kişisel veri, amaç ya da sağlayıcı yok; KVKK metni değişmedi. Migrat
 (sınırlar dahil), `editor-categories.test.ts` (2 gün içinde izin, sonra 409, ana
 editör/admin serbest), `submission-last-day.test.ts` (alıcılar, tek gönderim,
 24 saat penceresi, admin sayısı).
+
+## D-337 — Admin reddedilen konuyu yeniden açar
+
+**İstek (ürün sahibi):** milerza (Sıla Çorak) Sayı 2'de Bilim alanına yazı
+başlatamıyordu: Bilim konusu ana editörce reddedilmişti ("Bilim kategorisinde 4
+yazi oluyor") ve ret kesindi. "Reddedilen konuyu açabileyim."
+
+**Karar:** `/editor/topics`'te reddedilen her konunun altında, yalnızca adminin
+gördüğü "Konuyu yeniden aç" (isteğe bağlı yazara not). `reopenRejectedTopic`
+(`src/services/topics.ts`): yalnızca admin (`canAccessAdminPanel`; ana editör
+değil, ret onun kararıydı), yalnızca `rejected` konu, kendi konusu değil, sayısı
+yayımlanmamış; sürüm kontrolüyle `accepted` olur. Geçmişe `accepted` olayı eklenir
+(ret satırı kalır; yeni enum değeri yok, migration yok), denetim kaydı
+`topic.reopened`. Yazar kabul bildirimini ve e-postasını alır (D-273 şablonu).
+Kategori toplamı (1600 kelime, D-331) her zamanki gibi geçerli.
+
+## D-338 — Konusu kabul edilmemiş yazı da gönderilebilir; ana editöre bildirilir
+
+**İstek (ürün sahibi):** "Direkt konu göndermeyenler de yazı gönderebilsin ama
+konu kabulü olmadığı ana editöre bildirilsin."
+
+**Karar:**
+- Dönemli sayıda (Sayı 2 ve sonrası) yazar, kabul edilmiş konu olmadan da aktif
+  sayıya taslak açar: "Yeni yazı" formunda aktif sayı "(konusuz; ana editöre
+  bildirilir)" seçeneğiyle gelir (`listIssuesOpenWithoutTopic`, eski adı
+  `listIssuesWithoutWindows`). Konusu reddedilen yazar da buna dahildir.
+- Değişmeyenler: yazı yalnızca kendi alanlarında (ya da geçici alanında) açılır,
+  yalnızca aktif sayıya, teslim dönemi açıkken gönderilir, kategori bütçesi ve
+  sözleşme kapısı aynen. Kabul edilmiş konudan başlatma akışı aynı.
+- `assertArticleDeliveryAllowed` artık konusuz yazıyı reddetmez,
+  `{ withoutTopic }` döndürür. Yazar kendi taslağını incelemeye gönderdiğinde
+  konusuzsa ana editöre (ana editör yoksa adminlere) panel bildirimi gider:
+  "Konusu kabul edilmemiş yazı gönderildi: …" (`article.submitted_without_topic`).
+  E-posta gönderilmez (yeni şablon yok; muhafazakâr).
+- Editörün yazı sayfasında konusuz yazıya "Konusu kabul edilmemiş yazı" uyarısı
+  (`isArticleWithoutTopic`).
+- Veri, migration, KVKK metni değişmedi.
+
+**Doğrulama:** Kapı: typecheck, lint, test. `tests/integration/topics.test.ts`:
+yeniden açma (yetki, durum, sürüm, geçmiş, e-posta, ardından yazı başlatma);
+konusuz yazı açılır ve gönderilir, bildirim yalnızca ana editöre; teslim dönemi
+kapalıyken 409; konulu yazıda bildirim yok.

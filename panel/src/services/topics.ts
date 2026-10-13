@@ -474,19 +474,110 @@ export async function decideTopicProposal(
 }
 
 /* ------------------------------------------------------------------ */
+/* Admin: reopen a rejected topic (D-337)                              */
+/* ------------------------------------------------------------------ */
+
+export const topicReopenSchema = z.strictObject({
+  note: z.string().trim().max(2000, "Not en fazla 2000 karakter olabilir.").optional().nullable(),
+  expectedVersion: z.number().int().positive(),
+});
+
+/**
+ * An admin takes back a rejection: the topic becomes accepted, so its writer
+ * can start the article. The rejection stays in the history; the step is
+ * recorded as an "accepted" event and audited as `topic.reopened`.
+ */
+export async function reopenRejectedTopic(
+  actor: Actor,
+  proposalId: string,
+  rawInput: unknown,
+  meta: RequestMeta,
+): Promise<TopicProposal> {
+  if (!canAccessAdminPanel(actor)) throw forbidden("Reddedilen konuyu yalnızca yöneticiler yeniden açar.");
+
+  const parsed = topicReopenSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    throw badRequest("Geçersiz istek.", z.flattenError(parsed.error).fieldErrors);
+  }
+  const { expectedVersion } = parsed.data;
+  const note = parsed.data.note?.trim() || null;
+
+  const proposal = await findProposal(proposalId);
+  if (proposal.authorId === actor.id) throw forbidden("Kendi konu önerinizi değerlendiremezsiniz.");
+  if (proposal.status !== "rejected") throw conflict("Yalnızca reddedilmiş bir konu yeniden açılabilir.");
+  const [issue] = await db.select().from(issues).where(eq(issues.id, proposal.issueId)).limit(1);
+  if (!issue || issue.deletedAt || isIssueClosed(issue)) {
+    throw conflict("Konunun sayısı yayımlandı ya da yok; konu yeniden açılamaz.");
+  }
+
+  const now = new Date();
+  const updated = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(topicProposals)
+      .set({
+        status: "accepted",
+        editorNote: note,
+        decidedBy: actor.id,
+        decidedAt: now,
+        version: sql`${topicProposals.version} + 1`,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(topicProposals.id, proposalId),
+          eq(topicProposals.version, expectedVersion),
+          eq(topicProposals.status, "rejected"),
+        ),
+      )
+      .returning();
+    if (!row) return null;
+    await tx.insert(topicProposalEvents).values({
+      proposalId: row.id,
+      kind: "accepted",
+      version: row.version,
+      title: row.title,
+      description: row.description,
+      category: row.category,
+      note,
+      actorId: actor.id,
+    });
+    return row;
+  });
+  if (!updated) {
+    throw conflict("Bu öneri başka bir sekmede güncellendi; sayfayı yenileyin.");
+  }
+
+  await writeAudit({
+    actorId: actor.id,
+    action: "topic.reopened",
+    entityType: "topic_proposals",
+    entityId: proposalId,
+    before: { status: proposal.status, version: proposal.version },
+    after: { status: "accepted", version: updated.version },
+    ip: meta.ip,
+  });
+
+  await notifyAuthor(updated, `Konunuz kabul edildi: ${updated.title}`, note);
+  await mailAuthor(updated, "accept", note);
+
+  return updated;
+}
+
+/* ------------------------------------------------------------------ */
 /* Delivery: the article's side                                        */
 /* ------------------------------------------------------------------ */
 
 /**
  * Called by `transitionArticle` when an author hands in a draft
  * (`draft → in_review`). In an issue with windows the delivery window must
- * be open and the article must be the one written for the author's accepted
- * topic. An issue without windows keeps the old flow (issue 1).
+ * be open. An article without an accepted topic is let through (D-338); the
+ * caller tells the main editor. An issue without windows keeps the old flow
+ * (issue 1).
  */
 export async function assertArticleDeliveryAllowed(
   article: Pick<Article, "id" | "issueId" | "authorId">,
   now: Date = new Date(),
-): Promise<void> {
+): Promise<{ withoutTopic: boolean }> {
   const rows = await db.select().from(issues).where(eq(issues.id, article.issueId)).limit(1);
   const issue = rows[0];
   if (!issue || issue.deletedAt) throw conflict("Yazının sayısı bulunamadı.");
@@ -495,28 +586,37 @@ export async function assertArticleDeliveryAllowed(
   if (isIssueClosed(issue)) {
     throw conflict(`Sayı ${issue.number} yayımlandı; bu sayıya yazı gönderilemez.`);
   }
-  if (!usesIssueWindows(issue)) return;
+  if (!usesIssueWindows(issue)) return { withoutTopic: false };
 
   const state = periodState(submissionPeriod(issue), now);
   if (state !== "open") {
     throw conflict(windowMessage(SUBMISSION_PERIOD_TEXT, state, formatPeriod(submissionPeriod(issue))));
   }
 
+  return { withoutTopic: !(await hasAcceptedTopic(article.id, issue.id)) };
+}
+
+async function hasAcceptedTopic(articleId: string, issueId: string): Promise<boolean> {
   const topic = await db
     .select({ id: topicProposals.id })
     .from(topicProposals)
     .where(
       and(
-        eq(topicProposals.articleId, article.id),
-        eq(topicProposals.issueId, issue.id),
+        eq(topicProposals.articleId, articleId),
+        eq(topicProposals.issueId, issueId),
         eq(topicProposals.status, "accepted"),
         isNull(topicProposals.deletedAt),
       ),
     )
     .limit(1);
-  if (topic.length === 0) {
-    throw conflict("Bu yazının kabul edilmiş bir konusu yok; önce konunuzun onaylanması gerekiyor.");
-  }
+  return topic.length > 0;
+}
+
+/** True for an article in an issue with windows that has no accepted topic (D-338). */
+export async function isArticleWithoutTopic(article: Pick<Article, "id" | "issueId">): Promise<boolean> {
+  const [issue] = await db.select().from(issues).where(eq(issues.id, article.issueId)).limit(1);
+  if (!issue || !usesIssueWindows(issue)) return false;
+  return !(await hasAcceptedTopic(article.id, issue.id));
 }
 
 /**
@@ -533,12 +633,12 @@ export async function acceptedTopicForNewArticle(actor: Actor, proposalId: strin
 }
 
 /**
- * Issues a writer may still start an article in without a topic: those
- * without windows that are open to everyone, and any without windows an admin
- * opened to this writer alone (D-296). An admin writing their own article
- * also sees the admins' working issue (D-304).
+ * Issues a writer may start an article in without a topic: every live issue
+ * open to everyone, windows or not (D-338), and any an admin opened to this
+ * writer alone (D-296). An admin writing their own article also sees the
+ * admins' working issue (D-304).
  */
-export async function listIssuesWithoutWindows(writerId?: string, includeAdminOnly = false): Promise<Issue[]> {
+export async function listIssuesOpenWithoutTopic(writerId?: string, includeAdminOnly = false): Promise<Issue[]> {
   const granted = writerId ? await grantedIssueIds(writerId) : [];
   const live = inArray(issues.status, ["planning", "in_production"]);
   const openToAll = includeAdminOnly ? live : and(eq(issues.adminOnly, false), live);
@@ -548,8 +648,6 @@ export async function listIssuesWithoutWindows(writerId?: string, includeAdminOn
     .where(
       and(
         isNull(issues.deletedAt),
-        isNull(issues.topicOpensAt),
-        isNull(issues.submissionOpensAt),
         granted.length > 0 ? or(openToAll, inArray(issues.id, granted)) : openToAll,
       ),
     )

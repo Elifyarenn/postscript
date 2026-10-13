@@ -3,7 +3,7 @@ import { guardWriterInnerPages } from "@/lib/auth/guard";
 import { canProposeTopics, canWriteInAnyArea } from "@/lib/auth/rbac";
 import { selectableWriterCategories } from "@/services/editor-categories";
 import { temporaryAreasByIssue } from "@/services/issue-area-grants";
-import { listIssuesWithoutWindows, listWriterIssues } from "@/services/topics";
+import { listIssuesOpenWithoutTopic, listWriterIssues } from "@/services/topics";
 import { getActiveIssue } from "@/services/active-issue";
 import { categoryBudgetForForm } from "@/services/category-budget";
 import { readCsrfToken } from "@/lib/csrf";
@@ -16,8 +16,8 @@ export const metadata = { title: "Yeni yazı" };
 
 /**
  * A new article starts from an accepted topic (D-261), which also decides its
- * issue. An issue without windows (issue 1) may still be written into
- * directly, as before. `?konu=` preselects the topic the writer came from.
+ * issue, or goes into the active issue without one (D-338): the main editor
+ * is told when it is handed in. `?konu=` preselects the topic the writer came from.
  * Either way only the active issue is offered (D-330): the server refuses
  * the rest, so the form does not show them.
  */
@@ -36,7 +36,7 @@ export default async function WriterNewArticlePage({
   const [categories, allEntries, allOpenIssues, temporary, activeIssue] = await Promise.all([
     selectableWriterCategories(actor),
     canProposeTopics(actor) ? listWriterIssues(actor) : Promise.resolve([]),
-    listIssuesWithoutWindows(user.id, anyArea),
+    listIssuesOpenWithoutTopic(user.id, anyArea),
     temporaryAreasByIssue(user.id),
     getActiveIssue(),
   ]);
@@ -105,7 +105,7 @@ export default async function WriterNewArticlePage({
               ))}
               {openIssues.map((issue) => (
                 <option key={issue.id} value={`issue:${issue.id}`}>
-                  Sayı {issue.number} · {issue.title} (konusuz)
+                  Sayı {issue.number} · {issue.title} (konusuz; ana editöre bildirilir)
                 </option>
               ))}
             </Select>

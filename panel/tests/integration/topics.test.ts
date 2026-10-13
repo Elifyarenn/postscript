@@ -6,7 +6,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
-import { issues, topicProposalEvents, topicProposals, users, type User } from "@/db/schema";
+import { issues, notifications, topicProposalEvents, topicProposals, users, type User } from "@/db/schema";
 import { isAppError } from "@/lib/errors";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import { createIssue, updateIssue } from "@/services/issues";
@@ -14,11 +14,13 @@ import { setActiveIssue } from "@/services/active-issue";
 import { createArticle, createArticleAsWriter, transitionArticle } from "@/services/articles";
 import {
   decideTopicProposal,
+  isArticleWithoutTopic,
   isIssueInProgress,
   issueProcessSummaries,
   listIssueCalendar,
   listTopicProposals,
   listWriterIssues,
+  reopenRejectedTopic,
   reviseTopicProposal,
   submitTopicProposal,
 } from "@/services/topics";
@@ -509,30 +511,59 @@ describe("the article for a topic", () => {
     expect(handedIn.status).toBe("in_review");
   });
 
-  it("is not handed in without an accepted topic in an issue with windows", async () => {
-    const { admin, writer, issue } = await acceptedTopic();
+  it("is written and handed in without a topic, and the main editor is told (D-338)", async () => {
+    const { admin, mainEditor, writer, issue } = await acceptedTopic();
+    await setActiveIssue(actorOf(admin), issue.id, noMeta);
     const now = Date.now();
     await db
       .update(issues)
       .set({ submissionOpensAt: new Date(now - 86_400_000), submissionClosesAt: new Date(now + 86_400_000) })
       .where(eq(issues.id, issue.id));
-    // An editor filed a draft under the writer's name, bypassing topics
-    const draft = await createArticle(
-      actorOf(admin),
-      { issueId: issue.id, title: "Konusuz yazı", bodyMarkdown: "Gövde.", authorId: writer.id },
+
+    const draft = await createArticleAsWriter(
+      actorOf(writer),
+      { title: "Konusuz", category: "Sanat & Edebiyat", issueId: issue.id, bodyMarkdown: "Gövde." },
       noMeta,
     );
-    await expectStatus(transitionArticle(actorOf(writer), draft.id, "in_review", noMeta), 409);
+    expect(draft.issueId).toBe(issue.id);
+    expect(await isArticleWithoutTopic(draft)).toBe(true);
 
-    // And the writer cannot start one there without a topic either
-    await expectStatus(
-      createArticleAsWriter(
-        actorOf(writer),
-        { title: "Konusuz", category: "Sanat & Edebiyat", issueId: issue.id },
-        noMeta,
-      ),
-      409,
+    const handedIn = await transitionArticle(actorOf(writer), draft.id, "in_review", noMeta);
+    expect(handedIn.status).toBe("in_review");
+
+    const told = await db.select().from(notifications).where(eq(notifications.kind, "article.submitted_without_topic"));
+    expect(told.map((row) => row.userId)).toEqual([mainEditor.id]);
+    expect(told[0]!.href).toBe(`/editor/articles/${draft.id}`);
+
+    // The delivery window still holds
+    await db
+      .update(issues)
+      .set({ submissionOpensAt: new Date(now + 86_400_000), submissionClosesAt: new Date(now + 2 * 86_400_000) })
+      .where(eq(issues.id, issue.id));
+    const late = await createArticleAsWriter(
+      actorOf(writer),
+      { title: "Geç", category: "Sanat & Edebiyat", issueId: issue.id },
+      noMeta,
     );
+    await expectStatus(transitionArticle(actorOf(writer), late.id, "in_review", noMeta), 409);
+  });
+
+  it("does not tell the main editor about an article written for an accepted topic", async () => {
+    const { mainEditor, writer, proposal } = await acceptedTopic();
+    await decideTopicProposal(actorOf(mainEditor), proposal.id, { decision: "accept", expectedVersion: 1 }, noMeta);
+    const article = await createArticleAsWriter(
+      actorOf(writer),
+      { title: "Takıntının anatomisi", category: "Sanat & Edebiyat", topicProposalId: proposal.id },
+      noMeta,
+    );
+    expect(await isArticleWithoutTopic(article)).toBe(false);
+    const now = Date.now();
+    await db
+      .update(issues)
+      .set({ submissionOpensAt: new Date(now - 86_400_000), submissionClosesAt: new Date(now + 86_400_000) })
+      .where(eq(issues.id, proposal.issueId));
+    await transitionArticle(actorOf(writer), article.id, "in_review", noMeta);
+    expect(await db.select().from(notifications).where(eq(notifications.kind, "article.submitted_without_topic"))).toEqual([]);
   });
 
   it("keeps the old flow in an issue without windows (issue 1)", async () => {
@@ -642,5 +673,51 @@ describe("the issue calendar on the writer's and editor's panels (D-264)", () =>
     expect(await numbers(admin)).toEqual([issue.number, 7]);
 
     await expectStatus(listIssueCalendar(actorOf(await createUser({ role: "user" })), DURING_TOPIC), 403);
+  });
+});
+
+describe("an admin reopens a rejected topic (D-337)", () => {
+  it("only an admin, only a rejected topic; the writer can then start the article", async () => {
+    const { admin, mainEditor, writer, issue } = await scenario();
+    await publishContract(actorOf(admin));
+    await acceptCurrentContract(writer);
+    const proposal = await submitTopicProposal(actorOf(writer), issue.id, TOPIC, noMeta, DURING_TOPIC);
+    const input = { title: "Takıntının anatomisi", category: "Sanat & Edebiyat", topicProposalId: proposal.id };
+
+    // Not rejected yet: nothing to reopen
+    await expectStatus(reopenRejectedTopic(actorOf(admin), proposal.id, { expectedVersion: 1 }, noMeta), 409);
+
+    const rejected = await decideTopicProposal(
+      actorOf(mainEditor),
+      proposal.id,
+      { decision: "reject", note: "Bu alanda yer kalmadı.", expectedVersion: 1 },
+      noMeta,
+    );
+    await expectStatus(createArticleAsWriter(actorOf(writer), input, noMeta), 409);
+
+    // The main editor and the writer may not take a rejection back
+    await expectStatus(reopenRejectedTopic(actorOf(mainEditor), proposal.id, { expectedVersion: rejected.version }, noMeta), 403);
+    await expectStatus(reopenRejectedTopic(actorOf(writer), proposal.id, { expectedVersion: rejected.version }, noMeta), 403);
+    // A stale page loses
+    await expectStatus(reopenRejectedTopic(actorOf(admin), proposal.id, { expectedVersion: 1 }, noMeta), 409);
+
+    mailbox.clear();
+    const reopened = await reopenRejectedTopic(
+      actorOf(admin),
+      proposal.id,
+      { note: "Bilim alanına yer açıldı.", expectedVersion: rejected.version },
+      noMeta,
+    );
+    expect(reopened.status).toBe("accepted");
+    expect(reopened.decidedBy).toBe(admin.id);
+
+    // The rejection stays in the history, the reopening follows it
+    const events = await db.select().from(topicProposalEvents).where(eq(topicProposalEvents.proposalId, proposal.id));
+    expect(events.map((event) => event.kind)).toEqual(["submitted", "rejected", "accepted"]);
+    expect(events[2]!.note).toBe("Bilim alanına yer açıldı.");
+    expect(mailbox.lastTo(writer.email)).toBeTruthy();
+
+    const article = await createArticleAsWriter(actorOf(writer), input, noMeta);
+    expect(article.issueId).toBe(issue.id);
   });
 });
