@@ -13145,3 +13145,42 @@ sayılmazlar. Veri, migration, KVKK metni değişmedi.
 **Doğrulama:** Kapı: typecheck, lint, test. `signed-contracts.test.ts` (bekleyen
 sayısı, `former` bayrağı) ve `contributor-documents.test.ts` (ayrılanların
 imzalamadığı belgeler).
+
+## D-336 — Kategori editörü teslimden 2 gün sonrasına kadar düzenler; yazara son gün hatırlatması
+
+**İstek (ürün sahibi):** "Yazarların yazı gönderme süresi dolduktan iki gün
+sonraya kadar editörlere düzenleme izni ver ve yazarlara son gün hatırlatması
+gönder maille." (Mesajdaki "yazarlara 1 gün" parçaları, son cümledeki "son gün
+hatırlatması" olarak okundu: yazara ek süre verilmedi.)
+
+**Karar:**
+
+1. **Editör düzenleme süresi.** Teslim penceresi olan bir sayıda kategori
+   editörü yazıları `submission_closes_at + 2 gün`e kadar (dahil) düzenleyebilir
+   (`EDITOR_EDIT_GRACE_MS`, `editorEditClosesAt`, `isEditorEditingOpen` —
+   `src/lib/issue-periods.ts`). Sonrasında `updateArticle` 409 döner, metin
+   değişmez. Önceden editörün düzenlemesinde süre sınırı yoktu; bu kural onu
+   sınırlıyor. **Ana editör ve adminler bu sınıra tabi değil** (muhafazakâr
+   seçim: sayıyı yayına onlar tamamlıyor, kilitlenirlerse hata düzeltilemez).
+   Penceresiz sayıda (Sayı 1) sınır yok. Yalnızca metin düzenleme sınırlandı;
+   durum geçişleri (onay, revizyon isteme), not ve intihal işareti etkilenmedi.
+   Editörün makale sayfasında kalan süre ya da sürenin bittiği gösterilir.
+2. **Son gün hatırlatması.** Teslim penceresinin son 24 saatinde
+   (`isSubmissionLastDay`) kabul edilmiş konusu olup yazısını henüz başlatmamış
+   ya da yazısı hâlâ `draft` olan her aktif yazara bir kez e-posta
+   (`submissionLastDay` şablonu, kuyruk üzerinden) ve zil bildirimi
+   (`issue.submission_last_day`). Konusu olmayan yazar teslim edemeyeceği için,
+   yazısı incelemede olan yazar da teslim etmiş olduğu için mail almaz. Adminlerin
+   çalışma sayısı (`admin_only`) hariç. Talep `site_settings` anahtarıyla
+   (`announced.submission_last_day.<sayı>.<bitiş>`) bir kez alınır; teslim tarihi
+   değişirse yeni bitiş için yeniden gider. Pencere açılış duyurularıyla aynı
+   yoldan çalışır (günlük cron, `/api/cron/mail`, panel ana sayfaları).
+   Hobby cron günde bir çalıştığı için gönderim, son 24 saat içinde ilk panel
+   görüntülemesinde gerçekleşir.
+
+Yeni kişisel veri, amaç ya da sağlayıcı yok; KVKK metni değişmedi. Migration yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test. `tests/unit/editor-edit-window.test.ts`
+(sınırlar dahil), `editor-categories.test.ts` (2 gün içinde izin, sonra 409, ana
+editör/admin serbest), `submission-last-day.test.ts` (alıcılar, tek gönderim,
+24 saat penceresi, admin sayısı).

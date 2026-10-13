@@ -53,7 +53,7 @@ import { allMediaLicensed } from "./media";
 import { hasAcceptedCurrentAgreement } from "./agreements";
 import { getEditorAssignment, selectableWriterCategories } from "./editor-categories";
 import { acceptedTopicForNewArticle, assertArticleDeliveryAllowed } from "./topics";
-import { usesIssueWindows } from "@/lib/issue-periods";
+import { editorEditClosesAt, formatPeriodMoment, isEditorEditingOpen, usesIssueWindows } from "@/lib/issue-periods";
 import { isIssueClosed } from "@/lib/active-issue";
 import { countWords } from "@/lib/word-count";
 import { assertActiveIssueForNewArticle, getActiveIssue } from "./active-issue";
@@ -357,6 +357,35 @@ async function assertEditorCoversArticle(
   if (assignment.isMainEditor) return;
   if (article.category !== null && assignment.assignedAreas.includes(article.category)) return;
   throw forbidden("Bu makale sizin sorumlu olduğunuz alanlara düşmüyor.");
+}
+
+/**
+ * A category editor edits an issue's texts until two days after its delivery
+ * deadline (D-336). The main editor and the admins finish the issue after
+ * that, so they are not held to it; an issue without windows has no deadline.
+ */
+export async function editorEditWindow(
+  actor: Actor,
+  article: Pick<Article, "issueId">,
+  now: Date = new Date(),
+): Promise<{ issueNumber: number; closesAt: Date; open: boolean } | null> {
+  if (actor.role === "admin") return null;
+  const assignment = await getEditorAssignment(actor.id);
+  if (assignment.isMainEditor) return null;
+  const rows = await db.select().from(issues).where(eq(issues.id, article.issueId)).limit(1);
+  const issue = rows[0];
+  const closesAt = issue ? editorEditClosesAt(issue) : null;
+  if (!issue || !closesAt) return null;
+  return { issueNumber: issue.number, closesAt, open: isEditorEditingOpen(issue, now) };
+}
+
+async function assertEditorEditingOpen(actor: Actor, article: Pick<Article, "issueId">): Promise<void> {
+  const window = await editorEditWindow(actor, article);
+  if (!window || window.open) return;
+  throw conflict(
+    `Sayı ${window.issueNumber} için editör düzenleme süresi ${formatPeriodMoment(window.closesAt)} ` +
+      "itibarıyla sona erdi. Değişiklik için ana editöre ya da yöneticiye başvurun.",
+  );
 }
 
 /**
@@ -748,6 +777,7 @@ export async function updateArticle(
   // A plain category editor may only rewrite what falls into their own areas,
   // exactly as on the read side (D-071)
   await assertEditorCoversArticle(actor, existing);
+  await assertEditorEditingOpen(actor, existing);
 
   const authorChanged = Boolean(input.authorId) && input.authorId !== existing.authorId;
   if (authorChanged) {

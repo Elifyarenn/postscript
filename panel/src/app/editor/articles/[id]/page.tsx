@@ -6,6 +6,7 @@ import { guardPanel } from "@/lib/auth/guard";
 import {
   allowedTargetsForActor,
   assertCanReadArticle,
+  editorEditWindow,
   findArticleById,
   listArticleVersions,
   listComments,
@@ -21,6 +22,7 @@ import { ArticleBodyTextarea } from "@/components/article-body-textarea";
 import { countWords, formatWordCount } from "@/lib/word-count";
 import { categoryBudgetForForm } from "@/services/category-budget";
 import { isIssueClosed } from "@/lib/active-issue";
+import { formatPeriodMoment } from "@/lib/issue-periods";
 import {
   Alert,
   Card,
@@ -63,6 +65,8 @@ export default async function EditorArticleDetailPage({
   // A category editor may only open articles in their own areas (D-059)
   await assertCanReadArticle(actor, article);
   const targets = await allowedTargetsForActor(actor, article);
+  // Only a category editor has a deadline; null for the main editor and admins (D-336)
+  const editWindow = await editorEditWindow(actor, article);
 
   // The media card is gone from this page (D-080), but the licence check stays:
   // media attached earlier still blocks publishing until it is licensed.
@@ -159,6 +163,23 @@ export default async function EditorArticleDetailPage({
 
         <Card>
           <h2 className="mb-4 font-serif text-lg">Makale</h2>
+
+          {editWindow && (
+            <div className="mb-4">
+              {editWindow.open ? (
+                <Alert tone="info">
+                  Kategori editörü olarak bu yazıyı {formatPeriodMoment(editWindow.closesAt)} tarihine
+                  kadar düzenleyebilirsiniz (yazı teslim süresinin bitiminden 2 gün sonrası).
+                </Alert>
+              ) : (
+                <Alert tone="warning">
+                  Sayı {editWindow.issueNumber} için editör düzenleme süresi{" "}
+                  {formatPeriodMoment(editWindow.closesAt)} itibarıyla sona erdi. Değişiklik için ana
+                  editöre ya da yöneticiye başvurun.
+                </Alert>
+              )}
+            </div>
+          )}
 
           <PanelForm action={updateArticleAction} csrfToken={csrfToken} submitLabel="Kaydet">
               <>

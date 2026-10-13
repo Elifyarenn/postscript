@@ -630,6 +630,37 @@ export function submissionWindowOpened(input: {
   });
 }
 
+/** The last 24 hours of the delivery window, to a writer who has not handed in yet (D-336). */
+export function submissionLastDay(input: {
+  displayName: string;
+  issueLabel: string;
+  closesAt: string;
+  topics: string;
+  url: string;
+}): Template {
+  return renderMail({
+    kind: "submission_last_day",
+    subject: `postscript · ${input.issueLabel} için yazı tesliminde son gün`,
+    heading: "Yazı tesliminde son gün",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "paragraph",
+        text: `${input.issueLabel} için yazı kabul dönemi yakında sona eriyor. Yazınız henüz incelemeye gönderilmedi.`,
+      },
+      { type: "details", rows: [["Son teslim", input.closesAt]] },
+      { type: "note", label: "Kabul edilen konunuz:", text: input.topics },
+      {
+        type: "action",
+        lead: "Süre dolmadan yazınızı tamamlayıp “İncelemeye gönder” ile teslim edebilirsiniz:",
+        url: input.url,
+        label: "Yazımı teslim et",
+      },
+      { type: "paragraph", text: "Saatler Türkiye saatidir." },
+    ],
+  });
+}
+
 /**
  * The contributor's prepared documents, sent only when an admin asks (D-285).
  * The PDFs travel as attachments; the link leads to the same copies in the panel.

@@ -88,3 +88,8 @@ MAIL_SAMPLES.issueAreaGranted = [
   },
 ];
 ADDED_AFTER_LAYOUT.add("issueAreaGranted");
+
+MAIL_SAMPLES.submissionLastDay = [
+  { displayName: "Ada", issueLabel: "Sayı 2 · Gotizm", closesAt: "14 Ekim 18:00", topics: "Karanlık <mimari>", url: "https://example.com/writer/topics" },
+];
+ADDED_AFTER_LAYOUT.add("submissionLastDay");

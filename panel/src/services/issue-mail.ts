@@ -1,6 +1,6 @@
 /**
- * Mail that follows an issue's calendar: the topic window opening (D-272) and
- * the delivery window opening (D-270).
+ * Mail that follows an issue's calendar: the topic window opening (D-272),
+ * the delivery window opening (D-270) and its last day (D-336).
  *
  * Nothing is scheduled ahead: every run asks "which windows have opened and
  * not yet been announced?", so a date the admin moves is simply picked up at
@@ -17,12 +17,12 @@
  */
 import "server-only";
 import { TEST_WRITER_EMAILS } from "@/lib/test-accounts";
-import { and, eq, gt, gte, inArray, isNotNull, isNull, lte, ne, notInArray } from "drizzle-orm";
+import { and, eq, gt, gte, inArray, isNotNull, isNull, lte, ne, notInArray, or } from "drizzle-orm";
 import { db } from "@/db/client";
-import { issues, siteSettings, topicProposals, users, type Issue } from "@/db/schema";
+import { articles, issues, siteSettings, topicProposals, users, type Issue } from "@/db/schema";
 import { runInBackground } from "@/lib/background";
 import { env } from "@/lib/env";
-import { formatPeriodMoment } from "@/lib/issue-periods";
+import { LAST_DAY_REMINDER_MS, formatPeriodMoment, isSubmissionLastDay } from "@/lib/issue-periods";
 import { queueMails } from "@/services/mail-queue";
 import { notify } from "@/services/notifications";
 import * as templates from "@emails/templates";
@@ -90,9 +90,109 @@ export async function announceOpenedSubmissionWindows(now: Date = new Date()): P
   return announce("submission", now);
 }
 
-/** Both windows, for the cron and the dashboards. */
+/** Both windows and the last-day reminder, for the cron and the dashboards. */
 export async function announceOpenedIssueWindows(now: Date = new Date()): Promise<number> {
-  return (await announceOpenedTopicWindows(now)) + (await announceOpenedSubmissionWindows(now));
+  return (
+    (await announceOpenedTopicWindows(now)) +
+    (await announceOpenedSubmissionWindows(now)) +
+    (await remindSubmissionLastDay(now))
+  );
+}
+
+/** Claimed per deadline like the openings: a moved deadline is a new reminder (D-336). */
+export function lastDayReminderKey(issueId: string, closesAt: Date): string {
+  return `announced.submission_last_day.${issueId}.${closesAt.getTime()}`;
+}
+
+/**
+ * In the last 24 hours of a delivery window, mails each active writer whose
+ * accepted topic has no article yet or only a draft (D-336). Someone without
+ * an accepted topic cannot hand in anything, so they are not mailed.
+ */
+export async function remindSubmissionLastDay(now: Date = new Date()): Promise<number> {
+  const candidates = await db
+    .select()
+    .from(issues)
+    .where(
+      and(
+        isNull(issues.deletedAt),
+        eq(issues.adminOnly, false),
+        isNotNull(issues.submissionClosesAt),
+        gt(issues.submissionClosesAt, now),
+        lte(issues.submissionClosesAt, new Date(now.getTime() + LAST_DAY_REMINDER_MS)),
+      ),
+    );
+
+  let sent = 0;
+  for (const issue of candidates) {
+    if (!isSubmissionLastDay(issue, now)) continue;
+    const claimed = await db
+      .insert(siteSettings)
+      .values({ key: lastDayReminderKey(issue.id, issue.submissionClosesAt!), value: now.toISOString() })
+      .onConflictDoNothing()
+      .returning({ key: siteSettings.key });
+    if (claimed.length === 0) continue;
+
+    sent += await mailSubmissionLastDay(issue);
+  }
+  return sent;
+}
+
+async function mailSubmissionLastDay(issue: Issue): Promise<number> {
+  const writers = await activeWriters();
+  if (writers.length === 0) return 0;
+
+  const pending = await db
+    .select({ authorId: topicProposals.authorId, title: topicProposals.title })
+    .from(topicProposals)
+    .leftJoin(articles, eq(topicProposals.articleId, articles.id))
+    .where(
+      and(
+        eq(topicProposals.issueId, issue.id),
+        eq(topicProposals.status, "accepted"),
+        isNull(topicProposals.deletedAt),
+        inArray(
+          topicProposals.authorId,
+          writers.map((writer) => writer.id),
+        ),
+        // Not started, or started and still a draft; a deleted article counts as not started
+        or(isNull(topicProposals.articleId), isNotNull(articles.deletedAt), eq(articles.status, "draft")),
+      ),
+    );
+  const waiting = writers.filter((writer) => pending.some((row) => row.authorId === writer.id));
+  if (waiting.length === 0) return 0;
+
+  const label = issueLabel(issue);
+  const closesAt = formatPeriodMoment(issue.submissionClosesAt!);
+  const url = `${env().APP_URL}/writer/topics`;
+
+  for (const writer of waiting) {
+    await notify({
+      userId: writer.id,
+      kind: "issue.submission_last_day",
+      title: `${label}: yazı tesliminde son gün`,
+      body: `Son teslim: ${closesAt}`,
+      href: "/writer/topics",
+    });
+  }
+
+  const closesKey = issue.submissionClosesAt!.getTime();
+  return queueMails(
+    waiting.map((writer) => ({
+      to: writer.email,
+      ...templates.submissionLastDay({
+        displayName: writer.displayName,
+        issueLabel: label,
+        closesAt,
+        topics: pending
+          .filter((row) => row.authorId === writer.id)
+          .map((row) => row.title)
+          .join(", "),
+        url,
+      }),
+      dedupeKey: `submission-last-day:${issue.id}:${closesKey}:${writer.id}`,
+    })),
+  );
 }
 
 /**

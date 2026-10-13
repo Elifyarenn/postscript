@@ -10,7 +10,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
-import { articles, editorCategories, users } from "@/db/schema";
+import { articles, editorCategories, issues, users } from "@/db/schema";
 import { setEditorDuties } from "@/services/editor-categories";
 import {
   addComment,
@@ -647,5 +647,65 @@ describe("a category editor's area scope on writes (D-071)", () => {
     expect(updated.title).toBe("Yeni Başlık");
     expect(updated.category).toBe("Tarih & Dünya");
     expect(updated.dueDate).toBe("2026-12-31");
+  });
+});
+
+/**
+ * D-336: a category editor edits an issue's texts until two days after its
+ * delivery deadline; the main editor and the admins are not held to it.
+ */
+describe("the category editor's editing deadline (D-336)", () => {
+  const DAY = 86_400_000;
+
+  async function deadlineScenario(closedMsAgo: number) {
+    const admin = await createUser({ role: "admin" });
+    const editor = await createUser({ role: "editor" });
+    const mainEditor = await createUser({ role: "editor" });
+    await setEditorDuties(
+      actorOf(admin),
+      editor.id,
+      { areaId: await areaIdByName("Sanat & Edebiyat"), areaId2: null, isMainEditor: false },
+      noMeta,
+    );
+    await setEditorDuties(actorOf(admin), mainEditor.id, { areaId: null, areaId2: null, isMainEditor: true }, noMeta);
+
+    const issueId = await testIssueId();
+    const article = await createArticle(
+      actorOf(admin),
+      { issueId, title: "Teslim Sonrası", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
+      noMeta,
+    );
+    const closesAt = Date.now() - closedMsAgo;
+    await db
+      .update(issues)
+      .set({ submissionOpensAt: new Date(closesAt - 14 * DAY), submissionClosesAt: new Date(closesAt) })
+      .where(eq(issues.id, issueId));
+
+    return { admin: actorOf(admin), editor: actorOf(editor), mainEditor: actorOf(mainEditor), article };
+  }
+
+  it("lets the category editor edit within two days of the deadline", async () => {
+    const { editor, article } = await deadlineScenario(2 * DAY - 60_000);
+
+    const updated = await updateArticle(editor, article.id, { title: "Son Dakika Düzeltmesi" }, noMeta);
+    expect(updated.title).toBe("Son Dakika Düzeltmesi");
+  });
+
+  it("refuses the category editor after the two days, and leaves the text as it was", async () => {
+    const { editor, article } = await deadlineScenario(2 * DAY + 60_000);
+
+    const error = await captureError(updateArticle(editor, article.id, { title: "Geç Kaldı" }, noMeta));
+    expect(error.status).toBe(409);
+    expect(error.message).toContain("editör düzenleme süresi");
+
+    const unchanged = await db.select().from(articles).where(eq(articles.id, article.id));
+    expect(unchanged[0]!.title).toBe("Teslim Sonrası");
+  });
+
+  it("does not hold the main editor or the admin to it", async () => {
+    const { admin, mainEditor, article } = await deadlineScenario(10 * DAY);
+
+    expect((await updateArticle(mainEditor, article.id, { title: "Ana Editör" }, noMeta)).title).toBe("Ana Editör");
+    expect((await updateArticle(admin, article.id, { title: "Yönetici" }, noMeta)).title).toBe("Yönetici");
   });
 });
