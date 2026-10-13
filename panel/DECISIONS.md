@@ -13115,3 +13115,33 @@ adımın eksik olduğunu söylüyordu.
 **Doğrulama:** Kapı: typecheck, lint, test. `tests/integration/signed-contracts.test.ts`
 içine yeni senaryo: doğrulanmış, iki tarafça imzalı kopyası olmayan sözleşme
 `hasAcceptedCurrentAgreement`'ten geçer.
+
+## D-335 — İmzalı sözleşme arşivinde herkesin durumu: imzalamayan, inceleniyor, dergi imzası eksik, iki tarafça imzalı, ayrılan
+
+**İstek (ürün sahibi):** "PDF imzalayanlar, dergi tarafından imzalananlar,
+imzalanmayanlar, dergiden ayrılanlar hepsini net şekilde görmemi ayarla; dergi
+imzalı yüklenmeyen belgeleri göster."
+
+**Karar:** `/admin/agreements/imza` baştan sona gruplandı; üstte her gruba
+bağlanan beş sayaç:
+
+1. **İmzalamayanlar** — eski "Belge yüklemesi bekleyenler" (hatırlatma ve "Kişi
+   adına yükle" aynen).
+2. **Doğrulama bekleyenler** — yüklenmiş, doğrulanmamış belge sayısı
+   (`countPendingVerifications`); doğrulama yeri değişmedi (`/admin/agreements`).
+3. **Dergi imzalı yüklenmeyen belgeler** — doğrulanmış, iki tarafça imzalı kopyası
+   olmayan belgeler; yükleme formu ve ZIP burada. Sözleşme zaten onaylı (D-334).
+4. **İki tarafça imzalı belgeler** — dergi imzalı kopyası yüklenmiş olanlar.
+5. **Dergiden ayrılanlar** — artık katkı vermeyenler (ölçüt yine tek yerde,
+   `stillContributing()`, D-322): doğrulanmış belgeleri (dergi imzası yüklenmiş
+   ya da yüklenmemiş, yükleme formu açık) ve imzalamadıkları belgeler (reddedilen,
+   incelenen işaretli). Hatırlatma ve üstteki listelere girmezler.
+
+`listForCountersign` her satıra `former` döndürür; `listAwaitingUploads`'a
+`{ former: true }` seçeneği eklendi (varsayılan davranış ve hatırlatmalar aynı).
+"Dondurulmuş" yazarlar eskisi gibi imzalamayanlar listesinde değil; ayrılan
+sayılmazlar. Veri, migration, KVKK metni değişmedi.
+
+**Doğrulama:** Kapı: typecheck, lint, test. `signed-contracts.test.ts` (bekleyen
+sayısı, `former` bayrağı) ve `contributor-documents.test.ts` (ayrılanların
+imzalamadığı belgeler).

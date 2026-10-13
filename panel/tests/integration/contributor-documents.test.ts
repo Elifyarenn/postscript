@@ -571,6 +571,10 @@ describe("waiting for signed copies (D-291)", () => {
 
     await db.update(users).set({ role: "user", writerStatus: null }).where(eq(users.id, s.complete.id));
     expect(await listed()).toBe(false);
+    // …and shows up among those who left, with what they never signed (D-335)
+    const formerList = await listAwaitingUploads(actorOf(s.admin), { former: true });
+    expect(formerList.map((entry) => entry.userId)).toEqual([s.complete.id]);
+    expect(formerList[0]!.documents.length).toBeGreaterThan(0);
 
     // An approved applicant still owes the contract that finishes their application
     const { writerApplications } = await import("@/db/schema");

@@ -988,8 +988,11 @@ async function syncDocumentMails(): Promise<void> {
 export type AwaitingUpload = {
   userId: string;
   userName: string;
-  /** The prepared documents with no signed copy under review or verified. */
-  documents: { id: string; label: string; rejected: boolean }[];
+  /**
+   * The prepared documents with no verified signed copy. One under review is
+   * left out, except in the former contributors' list, where it is marked.
+   */
+  documents: { id: string; label: string; rejected: boolean; pending: boolean }[];
   /** When a reminder was last queued for this person, if ever. */
   lastReminderAt: Date | null;
 };
@@ -1007,7 +1010,10 @@ function documentLabel(kind: ContributorDocumentKind, articleTitle: string | nul
  * documents were never mailed is not asked for a signature (D-316).
  * A frozen writer is left out (D-299).
  */
-export async function listAwaitingUploads(actor: Actor): Promise<AwaitingUpload[]> {
+export async function listAwaitingUploads(
+  actor: Actor,
+  { former = false }: { former?: boolean } = {},
+): Promise<AwaitingUpload[]> {
   if (!canManageAgreements(actor)) throw forbidden();
   await syncDocumentMails();
 
@@ -1029,7 +1035,8 @@ export async function listAwaitingUploads(actor: Actor): Promise<AwaitingUpload[
         eq(contributorDocuments.status, "prepared"),
         isNull(users.deletedAt),
         notFrozen(),
-        stillContributing(),
+        // Those who left are shown apart, so the admin sees what they never signed (D-335)
+        former ? not(stillContributing()!) : stillContributing(),
         or(sql`${contributorDocuments.mailedAt} is not null`, not(withoutSignedCopy)),
       ),
     )
@@ -1048,9 +1055,14 @@ export async function listAwaitingUploads(actor: Actor): Promise<AwaitingUpload[
   const byUser = new Map<string, AwaitingUpload & { email: string }>();
   for (const row of rows) {
     const status = latest.get(row.id);
-    if (status === "pending" || status === "approved") continue;
+    if (status === "approved" || (status === "pending" && !former)) continue;
     const entry = byUser.get(row.userId) ?? { userId: row.userId, userName: row.userName, email: row.email, documents: [], lastReminderAt: null };
-    entry.documents.push({ id: row.id, label: documentLabel(row.kind, row.articleTitle), rejected: status === "rejected" });
+    entry.documents.push({
+      id: row.id,
+      label: documentLabel(row.kind, row.articleTitle),
+      rejected: status === "rejected",
+      pending: status === "pending",
+    });
     byUser.set(row.userId, entry);
   }
   if (byUser.size === 0) return [];

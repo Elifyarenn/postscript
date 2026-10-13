@@ -460,6 +460,8 @@ export type CountersignItem = {
   countersignedMediaId: string | null;
   countersignedAt: Date | null;
   countersignerName: string | null;
+  /** No longer contributing (D-322): shown under "Dergiden ayrılanlar" (D-335). */
+  former: boolean;
 };
 
 const countersigners = alias(users, "countersigners");
@@ -487,6 +489,7 @@ export async function listForCountersign(
       countersignerName: countersigners.displayName,
       documentKind: signedDocuments.kind,
       articleTitle: signedWorkTitle,
+      former: sql<boolean>`not (${stillContributing()})`.mapWith(Boolean),
     })
     .from(signedContracts)
     .innerJoin(users, eq(signedContracts.userId, users.id))
@@ -499,6 +502,17 @@ export async function listForCountersign(
     .orderBy(users.displayName, signedContracts.reviewedAt);
   const items = rows.map(({ documentKind, ...row }) => ({ ...row, isContract: documentKind !== "work_licence" }));
   return [...items.filter((row) => !row.countersignedMediaId), ...items.filter((row) => row.countersignedMediaId)];
+}
+
+/** Uploads from people still contributing that wait for an admin's verification (D-335). */
+export async function countPendingVerifications(actor: Actor): Promise<number> {
+  if (!canManageAgreements(actor)) throw forbidden();
+  const [row] = await db
+    .select({ count: sql<number>`count(*)`.mapWith(Number) })
+    .from(signedContracts)
+    .innerJoin(users, eq(signedContracts.userId, users.id))
+    .where(and(eq(signedContracts.status, "pending"), stillContributing()));
+  return row?.count ?? 0;
 }
 
 /** A file name a person can read in the ZIP: who, and which document. */

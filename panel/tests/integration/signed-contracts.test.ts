@@ -416,6 +416,21 @@ describe("the magazine's signature (D-290)", () => {
     return { admin, writer, id };
   }
 
+  it("counts uploads waiting for verification from people still contributing (D-335)", async () => {
+    const { admin, writer } = await setup();
+    const { countPendingVerifications, listForCountersign } = await import("@/services/signed-contracts");
+    expect(await countPendingVerifications(actorOf(admin))).toBe(0);
+    const { id } = await uploadSignedContract(actorOf(writer), pdf, noMeta);
+    expect(await countPendingVerifications(actorOf(admin))).toBe(1);
+    await db.update(users).set({ role: "user", writerStatus: null }).where(eq(users.id, writer.id));
+    expect(await countPendingVerifications(actorOf(admin))).toBe(0);
+    await db.update(users).set({ role: "writer", writerStatus: "active" }).where(eq(users.id, writer.id));
+    await approveSignedContract(actorOf(admin), id, noMeta);
+    expect(await countPendingVerifications(actorOf(admin))).toBe(0);
+    expect((await listForCountersign(actorOf(admin)))[0]!.former).toBe(false);
+    await expect(countPendingVerifications(actorOf(writer))).rejects.toThrow();
+  });
+
   it("counts the contract once verified, with no copy signed by both sides (D-334)", async () => {
     const { writer } = await verified();
     const [row] = await db.select().from(signedContracts).where(eq(signedContracts.userId, writer.id));
@@ -491,6 +506,8 @@ describe("the magazine's signature (D-290)", () => {
     expect((await countersignZipEntries(actorOf(admin), "waiting")).count).toBe(0);
     expect((await countersignZipEntries(actorOf(admin), "all")).count).toBe(1);
     expect((await listForCountersign(actorOf(admin), { includeFormer: true })).map((row) => row.id)).toEqual([id]);
+    // The archive page puts them under "Dergiden ayrılanlar" (D-335)
+    expect((await listForCountersign(actorOf(admin), { includeFormer: true }))[0]!.former).toBe(true);
 
     // A designer is still contributing
     await db.update(users).set({ isIllustrator: true }).where(eq(users.id, writer.id));
