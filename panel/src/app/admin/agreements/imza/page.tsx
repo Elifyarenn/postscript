@@ -9,7 +9,7 @@ import { ActionButton } from "@/components/form";
 import { SignedContractUploadForm } from "@/components/signed-contract";
 import { queueUploadRemindersAction, uploadCountersignedAction, uploadSignedContractForMemberAction } from "../../actions";
 
-export const metadata = { title: "İmzalanacak sözleşmeler" };
+export const metadata = { title: "İmzalı sözleşme arşivi" };
 
 // Verifications and signatures change from minute to minute
 export const dynamic = "force-dynamic";
@@ -18,7 +18,8 @@ export const dynamic = "force-dynamic";
  * The magazine's side of the signature (D-290): every contract and licence
  * form a contributor signed and an admin verified, in one place. Download
  * them one by one or all at once, sign, and upload the copy signed by both
- * sides on the same row.
+ * sides on the same row. That copy is for the archive only: the admin's
+ * verification alone makes the contract count (D-334).
  */
 export default async function CountersignPage() {
   const { user } = await guardPanel("admin");
@@ -29,8 +30,8 @@ export default async function CountersignPage() {
   return (
     <>
       <PageHeader
-        title="İmzalanacak sözleşmeler"
-        description="Katkı sağlayanın imzaladığı ve doğrulanan sözleşme ve ruhsat formları. İndirin, Dergi adına imzalayın, iki tarafça imzalı hâlini aynı satırdan yükleyin."
+        title="İmzalı sözleşme arşivi"
+        description="Katkı sağlayanın imzaladığı ve doğrulanan sözleşme ve ruhsat formları. Doğruladığınız sözleşme onaylanmış sayılır; iki tarafça imzalı PDF yalnızca arşiv içindir, yüklenmemesi hiçbir işlemi engellemez."
         actions={
           <Link href="/admin/agreements" className="text-sm text-accent underline">
             Sözleşme sürümleri
@@ -125,11 +126,11 @@ export default async function CountersignPage() {
         <h2 className="mb-3 font-serif text-lg">Doğrulanan imzalı belgeler</h2>
         <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
           <span>
-            {items.length} doğrulanmış belge · <strong>{waiting}</strong> Dergi imzası bekliyor
+            {items.length} doğrulanmış belge · <strong>{waiting}</strong> belgenin arşiv kopyası yok
           </span>
           {waiting > 0 && (
             <a href="/api/admin/signed-contracts/zip" className="rounded-md border border-line px-3 py-1.5 text-accent underline">
-              İmza bekleyenlerin hepsini indir (ZIP)
+              Arşiv kopyası olmayanları indir (ZIP)
             </a>
           )}
           {items.length > 0 && (
@@ -148,7 +149,7 @@ export default async function CountersignPage() {
                 <Th>Katkı sağlayan</Th>
                 <Th>Belge</Th>
                 <Th>Katkı sağlayanın imzası</Th>
-                <Th>Dergi imzası</Th>
+                <Th>Arşiv kopyası (iki tarafça imzalı)</Th>
               </tr>
             </thead>
             <tbody>
@@ -171,7 +172,7 @@ export default async function CountersignPage() {
                   <Td className="min-w-[16rem] text-xs">
                     {row.countersignedMediaId && (
                       <p className="mb-2">
-                        <span className="text-accent">İmzalandı</span> · {row.countersignerName ?? "—"} ·{" "}
+                        <span className="text-accent">Arşivde</span> · {row.countersignerName ?? "—"} ·{" "}
                         {row.countersignedAt && formatDateTime(row.countersignedAt)} ·{" "}
                         <a href={`/api/media/${row.countersignedMediaId}`} className="text-accent underline">
                           iki tarafça imzalı PDF

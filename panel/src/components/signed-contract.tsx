@@ -13,7 +13,7 @@ import type { OwnSignedContract } from "@/services/signed-contracts";
 
 export const SIGNED_CONTRACT_STATUS_LABELS = {
   pending: "İnceleniyor",
-  approved: "Doğrulandı",
+  approved: "Onaylandı",
   rejected: "Reddedildi",
 } as const;
 

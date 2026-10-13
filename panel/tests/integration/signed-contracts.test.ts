@@ -416,6 +416,13 @@ describe("the magazine's signature (D-290)", () => {
     return { admin, writer, id };
   }
 
+  it("counts the contract once verified, with no copy signed by both sides (D-334)", async () => {
+    const { writer } = await verified();
+    const [row] = await db.select().from(signedContracts).where(eq(signedContracts.userId, writer.id));
+    expect(row!.countersignedMediaId).toBeNull();
+    expect(await hasAcceptedCurrentAgreement(writer.id)).toBe(true);
+  });
+
   it("gathers the verified uploads in one list and one ZIP, waiting ones first", async () => {
     const { admin, writer, id } = await verified();
     // A pending one is not there yet

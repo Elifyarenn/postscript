@@ -13090,3 +13090,28 @@ Yazıları varsa editör kuyruğunda ve kategori toplamında (D-331) sayılmaya 
 eder. Migration yok.
 
 **Doğrulama:** Kapı: typecheck, lint, test (`tests/integration/test-writer.test.ts`).
+
+## D-334 — Doğrulanan sözleşme onaylanmış sayılır; iki tarafça imzalı PDF yalnızca arşiv
+
+**İstek (ürün sahibi):** "Sözleşmesini onayladığım yazarların sözleşmesi
+onaylanmış kabul edilsin; çift taraflı imzalı sözleşme yüklemek sadece arşiv için var."
+
+**Durum:** Kod zaten böyleydi. `hasAcceptedCurrentAgreement` yalnızca güncel
+sürüm için `approved` bir `signed_contracts` satırına bakar (D-275, D-289);
+`countersigned_*` kolonları (D-290) hiçbir kapıda okunmaz. Canlıda doğrulanmış ama
+iki tarafça imzalı kopyası olmayan genel sözleşmeler (4 kişi) kapıdan zaten geçiyor.
+Yanıltan şey arayüzdü: "İmzalanacak sözleşmeler", "Dergi imzası bekliyor" bir
+adımın eksik olduğunu söylüyordu.
+
+**Karar:**
+- Admin sayfası `/admin/agreements/imza` ve menü bağlantısı "İmzalı sözleşme
+  arşivi" oldu. Açıklama, doğrulamanın sözleşmeyi onaylanmış saydığını ve iki
+  tarafça imzalı PDF'in yalnızca arşiv olduğunu söyler. Sayaç "N belgenin arşiv
+  kopyası yok", sütun "Arşiv kopyası (iki tarafça imzalı)", yüklenmişse "Arşivde".
+- Üyenin gördüğü durum etiketi "Doğrulandı" → "Onaylandı".
+- Yükleme, ZIP ve üyenin iki tarafça imzalı kopyayı görmesi aynen duruyor. Adres
+  değişmedi. Veri, migration, KVKK metni değişmedi (işlenen veri aynı).
+
+**Doğrulama:** Kapı: typecheck, lint, test. `tests/integration/signed-contracts.test.ts`
+içine yeni senaryo: doğrulanmış, iki tarafça imzalı kopyası olmayan sözleşme
+`hasAcceptedCurrentAgreement`'ten geçer.

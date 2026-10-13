@@ -5,7 +5,8 @@
  * This is the only thing that now counts as a member having a contract:
  * `hasAcceptedCurrentAgreement` in `agreements.ts` reads this table. The
  * checkbox acceptances in `agreement_acceptances` are kept untouched as
- * history and count for nothing.
+ * history and count for nothing. The copy signed by both sides
+ * (`countersigned_*`, D-290) is archive only and gates nothing (D-334).
  *
  *   pending ──approve──▶ approved
  *      └─────reject───▶ rejected   (reason required; the member uploads again)

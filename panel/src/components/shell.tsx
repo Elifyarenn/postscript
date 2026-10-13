@@ -100,7 +100,7 @@ export const ADMIN_NAV: NavGroup[] = [
     label: "Yasal & Sistem",
     items: [
       { href: "/admin/agreements", label: "Sözleşme sürümleri" },
-      { href: "/admin/agreements/imza", label: "İmzalanacak sözleşmeler" },
+      { href: "/admin/agreements/imza", label: "İmzalı sözleşme arşivi" },
       { href: "/admin/audit", label: "Denetim kaydı" },
       { href: "/admin/mail", label: "E-posta kuyruğu" },
       { href: "/admin/settings", label: "Sistem" },
