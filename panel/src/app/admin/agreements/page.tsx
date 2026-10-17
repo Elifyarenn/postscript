@@ -2,7 +2,12 @@ import { guardPanel } from "@/lib/auth/guard";
 import { roleBadge } from "@/lib/auth/rbac";
 import { acceptanceReport, listAgreementVersions } from "@/services/agreements";
 import { listSignedContracts } from "@/services/signed-contracts";
-import { listContributorDocuments, type ContributorDocumentItem, type DocumentMailState } from "@/services/contributor-documents";
+import {
+  listContributorDocuments,
+  listLicenceScopeOptions,
+  type ContributorDocumentItem,
+  type DocumentMailState,
+} from "@/services/contributor-documents";
 import { listUnlicensedFormerWriterWorks } from "@/services/unlicensed-works";
 import { DOCUMENT_KIND_LABELS, DOCUMENT_STATUS_LABELS } from "@/lib/contributor-documents";
 import { documentPdfHref } from "@/components/contributor-documents";
@@ -12,7 +17,7 @@ import { extractPlaceholders } from "@/lib/agreement/render";
 import { readCsrfToken } from "@/lib/csrf";
 import { ActionButton, PanelForm } from "@/components/form";
 import Link from "next/link";
-import { Alert, Card, EmptyState, Field, PageHeader, StatusBadge, Table, Td, Textarea, Th } from "@/components/ui";
+import { Alert, Card, EmptyState, Field, PageHeader, Select, StatusBadge, Table, Td, Textarea, Th } from "@/components/ui";
 import { SIGNED_CONTRACT_STATUS_LABELS } from "@/components/signed-contract";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import {
@@ -22,6 +27,7 @@ import {
   queueAllContributorDocumentsAction,
   createVersionFromTemplateAction,
   prepareContributorDocumentsAction,
+  prepareIssueLicencesAction,
   publishAgreementAction,
   rejectSignedContractAction,
   removeUnlicensedFormerWriterWorksAction,
@@ -74,6 +80,7 @@ export default async function AdminAgreementsPage() {
   const signed = await listSignedContracts(actor);
   const documents = await listContributorDocuments(actor);
   const unlicensed = await listUnlicensedFormerWriterWorks(actor);
+  const licenceScopes = await listLicenceScopeOptions(actor);
   const reviewCount = documents.filter((row) => row.status === "needs_review").length;
   // Mailed documents are their owners' now: listed apart, never sent or cleared again (D-314)
   const sentDocuments = documents.filter((row) => row.mailState === "sent");
@@ -388,7 +395,9 @@ export default async function AdminAgreementsPage() {
           <h2 className="mb-1 font-serif text-lg">Katkı sağlayan belgeleri</h2>
           <p className="mb-4 text-sm text-muted">
             Güncel sürümün Genel Katkı Sağlayan Sözleşmesi her katkı sağlayana, Eser Bazlı Kullanım
-            Ruhsatı Formu her esere (eserin yazarının hesabına) hazırlanır. Kayıtlarda olmayan ya da
+            Ruhsatı Formu her esere (eserin yazarının hesabına) hazırlanır. Bir yazarın aynı sayıda birden
+            fazla eseri varsa hepsi tek ruhsat formunda toplanır; gönderilmiş ya da imzalanmış formlar
+            olduğu gibi kalır. Kayıtlarda olmayan ya da
             şüpheli bir bilgi tahminle doldurulmaz; belge &ldquo;İnceleme gerekiyor&rdquo; olarak nedeniyle
             kalır. Tekrar çalıştırmak yalnızca eksikleri ekler ve incelemedekileri yeniden dener; hazır
             belgelere dokunmaz. Hazırlamak e-posta göndermez; hazır belgeler yalnızca kişinin satırındaki
@@ -421,6 +430,47 @@ export default async function AdminAgreementsPage() {
               />
             )}
           </div>
+
+          {licenceScopes.issues.length > 0 && (
+            <div className="mb-4 rounded border border-line p-3">
+              <h3 className="mb-1 font-serif text-base">Bir sayının ruhsat formlarını hazırla</h3>
+              <p className="mb-3 text-xs text-muted">
+                Yalnızca seçilen sayıdaki eserlerin ruhsat formları (ve yazarlarının eksik genel sözleşmesi)
+                hazırlanır; kişi seçilirse yalnızca onunkiler. E-posta gönderilmez.
+              </p>
+              <PanelForm
+                action={prepareIssueLicencesAction}
+                csrfToken={csrfToken}
+                submitLabel="Ruhsat formlarını hazırla"
+                submitVariant="secondary"
+              >
+                <>
+                  <Field label="Sayı" htmlFor="licence-issue">
+                    <Select id="licence-issue" name="issueId" required defaultValue="">
+                      <option value="" disabled>
+                        Seçin…
+                      </option>
+                      {licenceScopes.issues.map((issue) => (
+                        <option key={issue.id} value={issue.id}>
+                          Sayı {issue.number} · {issue.title || "(başlıksız)"}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field label="Kişi" htmlFor="licence-user">
+                    <Select id="licence-user" name="userId" defaultValue="">
+                      <option value="">Sayıdaki herkes</option>
+                      {licenceScopes.authors.map((author) => (
+                        <option key={author.id} value={author.id}>
+                          {author.displayName} · {author.email}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                </>
+              </PanelForm>
+            </div>
+          )}
 
           {documents.length === 0 ? (
             <EmptyState>Henüz hazırlanmış belge yok.</EmptyState>

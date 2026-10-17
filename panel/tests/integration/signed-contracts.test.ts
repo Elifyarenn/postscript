@@ -321,13 +321,14 @@ describe("one signed copy per document sent (D-289)", () => {
 
   it("takes as many uploads as documents, one waiting per document", async () => {
     const { writer, documents } = await withDocuments();
-    expect(documents).toHaveLength(3);
+    // The contract, and one licence form for both works of the issue (D-339)
+    expect(documents).toHaveLength(2);
 
     for (const document of documents) {
       await uploadSignedContract(actorOf(writer), { ...pdf, documentId: document.id }, noMeta);
     }
     const rows = await db.select().from(signedContracts);
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(2);
     expect(new Set(rows.map((row) => row.contributorDocumentId))).toEqual(new Set(documents.map((row) => row.id)));
 
     // A second file for a document still under review waits its turn

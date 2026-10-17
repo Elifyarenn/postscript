@@ -3,7 +3,8 @@
  * Genel Katkı Sağlayan Sözleşmesi of the current version for every
  * contributor, and an Eser Bazlı Kullanım Ruhsatı Formu for every work, on
  * the account of the work's own author. A work is an article, or an issue's
- * quiz whose author the admin has named (D-300).
+ * quiz whose author the admin has named (D-300). An author's works in one
+ * issue share one form when there are more than one (D-339).
  *
  * Preparing is all this does. Nothing is sent (mail goes out only when an
  * admin asks for it per person, `mailContributorDocuments`, D-285), no
@@ -27,6 +28,7 @@ import {
   articles,
   auditLog,
   contributorDocuments,
+  contributorDocumentWorks,
   issueQuizzes,
   issues,
   mailJobs,
@@ -56,6 +58,8 @@ import {
   DOCUMENT_KIND_LABELS,
   LICENCE_FORM_FILE,
   LICENCE_FORM_TEMPLATE_VERSION,
+  LICENCE_GROUP_FORM_FILE,
+  LICENCE_GROUP_TEMPLATE_VERSION,
   licenceFormValues,
   reasonForPlaceholder,
   wordCount,
@@ -179,8 +183,34 @@ async function workOf(row: ContributorDocument): Promise<LicensedWork | null> {
   return article ? articleWork(article) : null;
 }
 
-/** The title a list shows for a document's work, article or quiz. */
-const workTitle = sql<string | null>`coalesce(${articles.title}, ${issueQuizzes.title})`;
+/** The works an issue form names, as they stand now, in the form's order (D-339). */
+async function groupWorksOf(documentId: string): Promise<GroupWork[]> {
+  const rows = await db
+    .select({ article: articles, quiz: issueQuizzes })
+    .from(contributorDocumentWorks)
+    .leftJoin(articles, eq(contributorDocumentWorks.articleId, articles.id))
+    .leftJoin(issueQuizzes, eq(contributorDocumentWorks.quizId, issueQuizzes.id))
+    .where(eq(contributorDocumentWorks.documentId, documentId))
+    .orderBy(contributorDocumentWorks.position);
+  const works: GroupWork[] = [];
+  for (const { article, quiz } of rows) {
+    if (quiz) {
+      works.push({ ...quizWork(quiz), articleId: null, quizId: quiz.id, bylineChoice: null });
+    } else if (article) {
+      const [grant] = await db
+        .select({ bylineChoice: rightsGrants.bylineChoice })
+        .from(rightsGrants)
+        .where(and(eq(rightsGrants.articleId, article.id), eq(rightsGrants.status, "signed")))
+        .orderBy(desc(rightsGrants.signedAt))
+        .limit(1);
+      works.push({ ...articleWork(article), articleId: article.id, quizId: null, bylineChoice: grant?.bylineChoice ?? null });
+    }
+  }
+  return works;
+}
+
+/** The title a list shows for a document's work, article or quiz, or an issue form's works (D-339). */
+const workTitle = sql<string | null>`coalesce(${articles.title}, ${issueQuizzes.title}, ${contributorDocuments.worksLabel})`;
 
 /** The licence form for one work, filled from the work and its author's records. */
 async function draftLicence(
@@ -247,11 +277,123 @@ async function licenceValues(
   return { values, words, contentHash };
 }
 
+/** One work of an issue form (D-339), with the byline its author chose for it. */
+type GroupWork = LicensedWork & {
+  articleId: string | null;
+  quizId: string | null;
+  bylineChoice: "real_name" | "pen_name" | null;
+};
+
+/** What the lists call an issue form: the issue and its works' titles. */
+function groupLabel(issueNumber: number, works: readonly GroupWork[]): string {
+  return `Sayı ${issueNumber}: ${works.map((work) => work.title.trim() || "(başlıksız)").join("; ")}`;
+}
+
 /**
- * Prepares every missing document. Admin only; sends nothing.
+ * The issue form's values (D-339): section 1 lists every work with the facts
+ * the single form gives one, and its own byline. A fact a work lacks is a
+ * reason for review; `gap` marks it in place for the admin's preview.
  */
-export async function prepareContributorDocuments(actor: Actor, meta: RequestMeta): Promise<PreparationSummary> {
+async function groupLicenceValues(
+  version: AgreementVersion,
+  works: readonly GroupWork[],
+  author: User,
+  issueNumber: number | null,
+  formId: string,
+  now: Date,
+  gap: ((reason: string) => string) | null,
+) {
+  const reasons: string[] = [];
+  const contentHashes: (string | null)[] = [];
+  const missing = (reason: string) => {
+    reasons.push(reason);
+    return gap ? gap(reason) : "";
+  };
+
+  const entries = works.map((work, index) => {
+    const words = wordCount(work.body);
+    const contentHash = work.body.trim() ? articleHash(work.body) : null;
+    contentHashes.push(contentHash);
+    const byline = licenceFormValues({
+      terms: LICENCE_TERMS,
+      bylineChoice: work.bylineChoice,
+      displayName: escapeForTemplate(author.displayName),
+      penName: author.penName ? escapeForTemplate(author.penName) : null,
+    })["form.byline_label"];
+    return [
+      `### Eser ${index + 1}`,
+      `Başlık\n${work.title.trim() ? escapeForTemplate(work.title) : missing("Eser başlığı boş")}`,
+      `Tür\n${work.typeLabel}`,
+      `Eser tanımı / teknik bilgi\n${words > 0 ? work.describe(words) : missing("Eser metni boş")}`,
+      `Ruhsata konu dosya/metin özeti (SHA-256)\n${contentHash ?? missing("Eser metni boş")}`,
+      `Panel kaydı\n${work.id}`,
+      `Yayın adı\n${byline ?? missing(reasonForPlaceholder("form.byline_label"))}`,
+    ].join("\n\n");
+  });
+
+  const context = await buildAgreementContext(version, { ...author, contributionRole: "Yazar" });
+  const values: Record<string, string | null> = {
+    ...buildPlaceholders(context),
+    ...licenceFormValues({
+      terms: LICENCE_TERMS,
+      bylineChoice: null,
+      displayName: escapeForTemplate(author.displayName),
+      penName: author.penName ? escapeForTemplate(author.penName) : null,
+    }),
+    "sayi.ad": issueNumber === null ? null : `Sayı ${issueNumber}`,
+    "eserler.sayisi": String(works.length),
+    "eserler.liste": entries.join("\n\n"),
+    "form.id": formId,
+    "form.template_version": LICENCE_GROUP_TEMPLATE_VERSION,
+    "form.created_at": formatContractDate(now),
+    // Filled after the fact: the hash covers the text with this field unfilled
+    "form.text_hash": "{{form.text_hash}}",
+  };
+  return { values, reasons: [...new Set(reasons)], contentHashes };
+}
+
+/** The issue form for an author's works in one issue (D-339). */
+async function draftGroupLicence(
+  version: AgreementVersion,
+  works: readonly GroupWork[],
+  author: User,
+  issueNumber: number | null,
+  formId: string,
+  now: Date,
+  versionReason: string | null,
+): Promise<Draft & { contentHashes: (string | null)[] }> {
+  const { values, reasons, contentHashes } = await groupLicenceValues(version, works, author, issueNumber, formId, now, null);
+  if (versionReason) reasons.unshift(versionReason);
+
+  let rendered: { markdown: string; hash: string } | null = null;
+  try {
+    const filled = fillTemplate(readContract(LICENCE_GROUP_FORM_FILE), values);
+    const hash = hashDocument(filled.markdown);
+    rendered = { markdown: filled.markdown.replace("{{form.text_hash}}", hash), hash };
+  } catch (error) {
+    reasons.push(...reasonsOf(error));
+  }
+  return { ...draft([...new Set(reasons)], rendered), contentHashes };
+}
+
+/** Which works to prepare licence forms for; everything when left out. */
+export type LicenceScope = { issueId?: string; userId?: string };
+
+/**
+ * Prepares every missing document. Admin only; sends nothing. With a scope,
+ * only the licence forms of that issue's (or that person's) works, and the
+ * contracts of their authors (D-339).
+ */
+export async function prepareContributorDocuments(
+  actor: Actor,
+  meta: RequestMeta,
+  scope: LicenceScope = {},
+): Promise<PreparationSummary> {
   if (!canManageAgreements(actor)) throw forbidden();
+  if ((scope.issueId && !UUID.test(scope.issueId)) || (scope.userId && !UUID.test(scope.userId))) {
+    throw notFound("Sayı ya da kişi bulunamadı.");
+  }
+  const scoped = Boolean(scope.issueId || scope.userId);
 
   const version = await getCurrentAgreement();
   if (!version) throw conflict("Yayınlanmış bir sözleşme sürümü yok; önce bir sürüm yayınlayın.");
@@ -285,14 +427,32 @@ export async function prepareContributorDocuments(actor: Actor, meta: RequestMet
   const now = new Date();
 
   /* ---- Works, and who wrote them ---- */
-  const works = await db.select().from(articles).where(isNull(articles.deletedAt));
+  const works = await db
+    .select()
+    .from(articles)
+    .where(
+      and(
+        isNull(articles.deletedAt),
+        scope.issueId ? eq(articles.issueId, scope.issueId) : undefined,
+        scope.userId ? eq(articles.authorId, scope.userId) : undefined,
+      ),
+    )
+    // An issue form lists the works in the order they were begun
+    .orderBy(articles.createdAt, articles.id);
   // Quizzes count as works once the admin has said who wrote them (D-300)
   const quizzes = (
     await db
       .select({ quiz: issueQuizzes })
       .from(issueQuizzes)
       .innerJoin(issues, eq(issueQuizzes.issueId, issues.id))
-      .where(isNull(issues.deletedAt))
+      .where(
+        and(
+          isNull(issues.deletedAt),
+          scope.issueId ? eq(issueQuizzes.issueId, scope.issueId) : undefined,
+          scope.userId ? eq(issueQuizzes.authorId, scope.userId) : undefined,
+        ),
+      )
+      .orderBy(issueQuizzes.createdAt, issueQuizzes.id)
   ).flatMap(({ quiz }) => (quiz.authorId ? [quiz] : []));
   const authorIds = new Set([
     ...works.flatMap((work) => (work.authorId ? [work.authorId] : [])),
@@ -300,13 +460,14 @@ export async function prepareContributorDocuments(actor: Actor, meta: RequestMet
   ]);
 
   /* ---- Contributors: writers, çizerler, and anyone who wrote a work ---- */
+  // A scoped run is about the works in scope: only their authors' contracts
   const people = await db
     .select()
     .from(users)
     .where(
       or(
-        eq(users.role, "writer"),
-        eq(users.isIllustrator, true),
+        scoped ? undefined : eq(users.role, "writer"),
+        scoped ? undefined : eq(users.isIllustrator, true),
         authorIds.size ? inArray(users.id, [...authorIds]) : sql`false`,
       ),
     );
@@ -408,6 +569,9 @@ export async function prepareContributorDocuments(actor: Actor, meta: RequestMet
   const bylineOf = new Map<string, "real_name" | "pen_name" | null>();
   for (const row of signedChoices) if (!bylineOf.has(row.articleId)) bylineOf.set(row.articleId, row.bylineChoice);
 
+  /* ---- Licence forms: one per work, or one per author and issue (D-339) ---- */
+  type Candidate = { work: GroupWork; author: User; issueId: string };
+  const candidates: Candidate[] = [];
   for (const work of works) {
     const author = work.authorId ? byId.get(work.authorId) : undefined;
     if (!author) {
@@ -422,21 +586,9 @@ export async function prepareContributorDocuments(actor: Actor, meta: RequestMet
       skip(ADMIN_SKIP);
       continue;
     }
-    const current = licenceOf.get(work.id);
-    if (current?.status === "prepared") {
-      summary.alreadyPrepared.licence += 1;
-      continue;
-    }
-    const formId = current?.id ?? randomUUID();
-    const result = await draftLicence(version, articleWork(work), author, bylineOf.get(work.id) ?? null, formId, now, versionReason);
-    await save(
-      "work_licence",
-      current,
-      { id: formId, userId: author.id, articleId: work.id, templateVersion: LICENCE_FORM_TEMPLATE_VERSION, contentHash: result.contentHash },
-      result,
-    );
+    const bylineChoice = bylineOf.get(work.id) ?? null;
+    candidates.push({ work: { ...articleWork(work), articleId: work.id, quizId: null, bylineChoice }, author, issueId: work.issueId });
   }
-
   for (const quiz of quizzes) {
     const author = byId.get(quiz.authorId!);
     if (!author || author.deletedAt) {
@@ -447,20 +599,153 @@ export async function prepareContributorDocuments(actor: Actor, meta: RequestMet
       skip(ADMIN_SKIP);
       continue;
     }
-    const current = quizLicenceOf.get(quiz.id);
+    // A quiz carries no byline choice: the form names its author (D-284)
+    candidates.push({ work: { ...quizWork(quiz), articleId: null, quizId: quiz.id, bylineChoice: null }, author, issueId: quiz.issueId });
+  }
+
+  // A work an issue form names is on that form, whatever the form's state
+  const grouped = await db
+    .select({
+      documentId: contributorDocumentWorks.documentId,
+      articleId: contributorDocumentWorks.articleId,
+      quizId: contributorDocumentWorks.quizId,
+    })
+    .from(contributorDocumentWorks)
+    .orderBy(contributorDocumentWorks.position);
+  const onGroup = new Set(grouped.flatMap((row) => [row.articleId, row.quizId]).filter((id): id is string => Boolean(id)));
+  // A single form nobody holds yet (not mailed, not queued, no signed copy)
+  // gives way to the issue form; one its owner holds keeps its work (D-314)
+  const free = new Set(
+    (
+      await db
+        .select({ id: contributorDocuments.id })
+        .from(contributorDocuments)
+        .where(and(eq(contributorDocuments.kind, "work_licence"), isNull(contributorDocuments.issueId), withoutSignedCopy, notMailed))
+    ).map((row) => row.id),
+  );
+  const singleOf = (work: GroupWork) => (work.quizId ? quizLicenceOf.get(work.quizId) : licenceOf.get(work.articleId));
+  const issueForms = existing.filter(
+    (row) => row.kind === "work_licence" && row.issueId && row.templateVersion === LICENCE_GROUP_TEMPLATE_VERSION,
+  );
+
+  const byKey = new Map<string, Candidate[]>();
+  for (const candidate of candidates) {
+    const key = `${candidate.author.id}:${candidate.issueId}`;
+    byKey.set(key, [...(byKey.get(key) ?? []), candidate]);
+  }
+  const issueRows = byKey.size
+    ? await db
+        .select({ id: issues.id, number: issues.number })
+        .from(issues)
+        .where(inArray(issues.id, [...new Set(candidates.map((candidate) => candidate.issueId))]))
+    : [];
+  const issueNumber = new Map(issueRows.map((row) => [row.id, row.number]));
+
+  /** The single form of one work, as before D-339. */
+  const saveSingle = async ({ work, author }: Candidate) => {
+    const current = singleOf(work);
     if (current?.status === "prepared") {
       summary.alreadyPrepared.licence += 1;
-      continue;
+      return;
     }
     const formId = current?.id ?? randomUUID();
-    // A quiz carries no byline choice: the form names its author (D-284)
-    const result = await draftLicence(version, quizWork(quiz), author, null, formId, now, versionReason);
+    const result = await draftLicence(version, work, author, work.bylineChoice, formId, now, versionReason);
     await save(
       "work_licence",
       current,
-      { id: formId, userId: author.id, articleId: null, quizId: quiz.id, templateVersion: LICENCE_FORM_TEMPLATE_VERSION, contentHash: result.contentHash },
+      {
+        id: formId,
+        userId: author.id,
+        articleId: work.articleId,
+        quizId: work.quizId,
+        templateVersion: LICENCE_FORM_TEMPLATE_VERSION,
+        contentHash: result.contentHash,
+      },
       result,
     );
+  };
+
+  for (const [key, group] of byKey) {
+    const [userId, issueId] = key.split(":") as [string, string];
+    const author = group[0]!.author;
+    const forms = issueForms.filter((row) => row.userId === userId && row.issueId === issueId);
+    summary.alreadyPrepared.licence += forms.filter((row) => row.status === "prepared").length;
+    // A work whose single form its owner already holds stays on that form
+    const held = group.filter(({ work }) => {
+      const single = singleOf(work);
+      return single !== undefined && !free.has(single.id);
+    });
+    for (const candidate of held) await saveSingle(candidate);
+    const open = group.filter((candidate) => !held.includes(candidate) && !onGroup.has(candidate.work.id));
+
+    // An issue form under review takes the new works in and is drawn again;
+    // a prepared one is never rewritten (someone may have signed its PDF)
+    const review = forms.find((row) => row.status === "needs_review");
+    // Its works keep their places; the new ones follow
+    const reviewWorks = review
+      ? grouped
+          .filter((row) => row.documentId === review.id)
+          .flatMap((row) => group.filter(({ work }) => work.id === (row.articleId ?? row.quizId)))
+      : [];
+    if (!review && open.length < 2) {
+      // One work alone keeps the single form
+      for (const candidate of open) await saveSingle(candidate);
+      continue;
+    }
+    const members = [...reviewWorks, ...open].map(({ work }) => work);
+    if (members.length === 0) continue;
+
+    const formId = review?.id ?? randomUUID();
+    const number = issueNumber.get(issueId) ?? null;
+    const result = await draftGroupLicence(version, members, author, number, formId, now, versionReason);
+    count(result);
+    const fields = {
+      status: result.status,
+      reviewReasons: result.reasons,
+      renderedMarkdown: result.markdown,
+      textHash: result.hash,
+      worksLabel: number === null ? null : groupLabel(number, members),
+      updatedAt: now,
+    };
+    const replaced = members.flatMap((work) => {
+      const single = singleOf(work);
+      return single && free.has(single.id) ? [single.id] : [];
+    });
+    await db.transaction(async (tx) => {
+      // The single drafts the issue form replaces: still unsent and unsigned
+      if (replaced.length) {
+        await tx.delete(contributorDocuments).where(and(inArray(contributorDocuments.id, replaced), withoutSignedCopy, notMailed));
+      }
+      if (review) {
+        await tx
+          .update(contributorDocuments)
+          .set(fields)
+          .where(and(eq(contributorDocuments.id, review.id), eq(contributorDocuments.status, "needs_review")));
+        await tx.delete(contributorDocumentWorks).where(eq(contributorDocumentWorks.documentId, review.id));
+      } else {
+        await tx.insert(contributorDocuments).values({
+          id: formId,
+          kind: "work_licence",
+          userId: author.id,
+          agreementVersionId: version.id,
+          issueId,
+          templateVersion: LICENCE_GROUP_TEMPLATE_VERSION,
+          createdBy: actor.id,
+          ...fields,
+        });
+      }
+      await tx.insert(contributorDocumentWorks).values(
+        members.map((work, index) => ({
+          documentId: formId,
+          position: index + 1,
+          articleId: work.articleId,
+          quizId: work.quizId,
+          contentHash: result.contentHashes[index] ?? null,
+        })),
+      );
+    });
+    if (!review) summary.licenceCreated += 1;
+    else if (result.status === "prepared") summary.resolved += 1;
   }
 
   await writeAudit({
@@ -473,6 +758,7 @@ export async function prepareContributorDocuments(actor: Actor, meta: RequestMet
       licenceCreated: summary.licenceCreated,
       needsReview: summary.needsReview.total,
       resolved: summary.resolved,
+      ...(scoped ? { scope } : {}),
     },
     ip: meta.ip,
   });
@@ -649,6 +935,20 @@ export async function viewContributorDocument(actor: Actor, id: string): Promise
       .limit(1);
     const values = await generalValues(version, owner!, Boolean(authored ?? quizzed));
     return { ...base, markdown: previewTemplate(version.bodyMarkdown, values, OPTIONAL, gap).markdown, isPreview: true, unavailable: null };
+  }
+
+  if (row.issueId) {
+    const works = await groupWorksOf(row.id);
+    if (works.length === 0) return { ...base, markdown: null, isPreview: true, unavailable: "Belgenin eserleri artık kayıtlı değil." };
+    const [issue] = await db.select({ number: issues.number }).from(issues).where(eq(issues.id, row.issueId)).limit(1);
+    const { values } = await groupLicenceValues(version, works, owner!, issue?.number ?? null, row.id, row.updatedAt, (reason) => `**[EKSİK: ${reason}]**`);
+    values["form.text_hash"] = "(belge hazır olunca hesaplanır)";
+    return {
+      ...base,
+      markdown: previewTemplate(readContract(LICENCE_GROUP_FORM_FILE), values, new Set(), gap).markdown,
+      isPreview: true,
+      unavailable: null,
+    };
   }
 
   const work = await workOf(row);
@@ -1119,4 +1419,39 @@ export async function queueUploadReminders(
     ip: meta.ip,
   });
   return { queued: ids.length };
+}
+
+/* ------------------------------------------------------------------ */
+/* Preparing one issue's licence forms (D-339)                         */
+/* ------------------------------------------------------------------ */
+
+export type LicenceScopeOptions = {
+  issues: { id: string; number: number; title: string }[];
+  /** Everyone with a work, who could be asked for a licence form. */
+  authors: { id: string; displayName: string; email: string }[];
+};
+
+/** What the admin may narrow "prepare licence forms" to. */
+export async function listLicenceScopeOptions(actor: Actor): Promise<LicenceScopeOptions> {
+  if (!canManageAgreements(actor)) throw forbidden();
+  const issueRows = await db
+    .select({ id: issues.id, number: issues.number, title: issues.title })
+    .from(issues)
+    .where(isNull(issues.deletedAt))
+    .orderBy(issues.number);
+  const authors = await db
+    .select({ id: users.id, displayName: users.displayName, email: users.email })
+    .from(users)
+    .where(
+      and(
+        isNull(users.deletedAt),
+        ne(users.role, "admin"),
+        or(
+          sql`exists (select 1 from ${articles} where ${articles.authorId} = ${users.id} and ${articles.deletedAt} is null)`,
+          sql`exists (select 1 from ${issueQuizzes} where ${issueQuizzes.authorId} = ${users.id})`,
+        ),
+      ),
+    )
+    .orderBy(users.displayName);
+  return { issues: issueRows, authors };
 }

@@ -10,7 +10,9 @@ import {
   agreementVersions,
   articles,
   auditLog,
+  contributorDocumentWorks,
   contributorDocuments,
+  issues,
   mailJobs,
   rightsGrants,
   users,
@@ -79,10 +81,10 @@ async function captureError(promise: Promise<unknown>) {
 
 const BODY = "Birinci paragraf, yazarın kendi cümleleriyle.\n\nİkinci paragraf da öyle.";
 
-async function work(author: User, status: (typeof articles.$inferInsert)["status"], title: string) {
+async function work(author: User, status: (typeof articles.$inferInsert)["status"], title: string, issueId?: string) {
   const [row] = await db
     .insert(articles)
-    .values({ issueId: await testIssueId(), title, slug: title.toLowerCase().replace(/\W+/g, "-"), status, authorId: author.id, bodyMarkdown: BODY })
+    .values({ issueId: issueId ?? (await testIssueId()), title, slug: title.toLowerCase().replace(/\W+/g, "-"), status, authorId: author.id, bodyMarkdown: BODY })
     .returning();
   return row!;
 }
@@ -101,7 +103,9 @@ async function scenario() {
   await db.update(users).set({ deletedAt: new Date() }).where(eq(users.id, gone.id));
 
   const published = await work(complete, "published", "Yayımlanmış Yazı");
-  const draft = await work(complete, "draft", "Taslak Yazı");
+  // In an issue of its own: one work per author and issue keeps the single form (D-339)
+  const [otherIssue] = await db.insert(issues).values({ number: 9998, title: "Öteki sayı", status: "planning" }).returning();
+  const draft = await work(complete, "draft", "Taslak Yazı", otherIssue!.id);
   const accepted = await work(noBirthDate, "accepted", "Kabul Edilmiş Yazı");
   const orphan = await work(gone, "published", "Silinmiş Hesabın Yazısı");
   await db.insert(rightsGrants).values({
@@ -593,7 +597,6 @@ describe("waiting for signed copies (D-291)", () => {
 describe("a quiz as a work (D-300)", () => {
   async function quizScenario() {
     const s = await scenario();
-    const { issues } = await import("@/db/schema");
     const { createQuiz, setQuizAuthor, listQuizzes } = await import("@/services/issue-quizzes");
     const { OBSESSION_QUIZ } = await import("@/lib/issue-design/issue-01-quizzes");
     const [issue] = await db.insert(issues).values({ number: 41, title: "Obsession", status: "planning", adminOnly: true }).returning();
@@ -809,3 +812,147 @@ describe("release fixes for the document lists (D-316)", () => {
   });
 });
 
+
+describe("one licence form per author and issue (D-339)", () => {
+  async function issueScenario() {
+    const s = await scenario();
+    const issueId = await testIssueId();
+    // Tam Kayıt already has "Yayımlanmış Yazı" in this issue; two more make three
+    const second = await work(s.complete, "in_review", "İkinci Yazı");
+    const third = await work(s.complete, "draft", "Üçüncü Yazı");
+    return { ...s, issueId, second, third };
+  }
+
+  const formsOf = async (userId: string) =>
+    (await db.select().from(contributorDocuments)).filter((row) => row.kind === "work_licence" && row.userId === userId);
+  const worksOf = async (documentId: string) =>
+    db
+      .select()
+      .from(contributorDocumentWorks)
+      .where(eq(contributorDocumentWorks.documentId, documentId))
+      .orderBy(contributorDocumentWorks.position);
+
+  it("puts every work an author gave one issue on one form, and leaves a lone work its single form", async () => {
+    const s = await issueScenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+
+    const forms = await formsOf(s.complete.id);
+    const group = forms.find((row) => row.issueId === s.issueId)!;
+    expect(group.templateVersion).toBe("2");
+    expect(group.status).toBe("prepared");
+    expect(group.articleId).toBeNull();
+    expect(group.worksLabel).toBe("Sayı 9999: Yayımlanmış Yazı; İkinci Yazı; Üçüncü Yazı");
+    const works = await worksOf(group.id);
+    expect(works.map((row) => row.articleId)).toEqual([s.published.id, s.second.id, s.third.id]);
+    expect(works.every((row) => row.contentHash === articleHash(BODY))).toBe(true);
+
+    const text = group.renderedMarkdown!;
+    expect(text).toContain("## 1. Eserler");
+    expect(text).toContain("Sayı 9999 için Katkı Sağlayan tarafından Dergi'ye sunulan aşağıdaki 3 eseri kapsar");
+    for (const title of ["Yayımlanmış Yazı", "İkinci Yazı", "Üçüncü Yazı"]) expect(text).toContain(title);
+    for (const id of [s.published.id, s.second.id, s.third.id]) expect(text).toContain(id);
+    // Each work keeps its own byline: the signed choice, else the author's name (D-284)
+    expect(text).toContain("Mahlasıyla (Mahlas)");
+    expect(text).toContain("Gerçek adıyla (Tam Kayıt)");
+    expect(text).toContain(LICENCE_DURATION_TEXT);
+    expect(text).not.toMatch(/\{\{/);
+    expect(text).toContain(`Form özeti (SHA-256): ${group.textHash}`);
+
+    // The draft in the other issue is alone there: the single form, as before
+    const single = forms.find((row) => row.articleId === s.draft.id)!;
+    expect(single.templateVersion).toBe("1");
+    expect(forms).toHaveLength(2);
+
+    // The lists name the form by its works; its PDF opens for the author
+    const own = await listOwnContributorDocuments(actorOf(s.complete));
+    expect(own.find((row) => row.id === group.id)!.articleTitle).toBe(group.worksLabel);
+    expect((await contributorDocumentPdf(actorOf(s.complete), group.id)).body.subarray(0, 4).toString()).toBe("%PDF");
+
+    // Preparing again makes nothing new
+    const again = await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    expect(again.licenceCreated).toBe(0);
+    expect(await formsOf(s.complete.id)).toHaveLength(2);
+  });
+
+  it("prepares only the chosen issue and person when asked to", async () => {
+    const s = await issueScenario();
+    await work(s.noBirthDate, "draft", "Başka Yazarın İkinci Yazısı");
+    const summary = await prepareContributorDocuments(actorOf(s.admin), noMeta, { issueId: s.issueId, userId: s.complete.id });
+
+    expect(summary.licenceCreated).toBe(1);
+    const rows = await db.select().from(contributorDocuments);
+    // Only Tam Kayıt's issue form and their missing contract
+    expect(rows.map((row) => `${row.userId}:${row.kind}`).sort()).toEqual(
+      [`${s.complete.id}:general_agreement`, `${s.complete.id}:work_licence`].sort(),
+    );
+    expect(rows.find((row) => row.kind === "work_licence")!.issueId).toBe(s.issueId);
+
+    // The whole issue, everyone in it
+    await prepareContributorDocuments(actorOf(s.admin), noMeta, { issueId: s.issueId });
+    const issueForms = (await db.select().from(contributorDocuments)).filter((row) => row.issueId === s.issueId);
+    expect(issueForms.map((row) => row.userId).sort()).toEqual([s.complete.id, s.noBirthDate.id].sort());
+    // The other issue was not touched
+    expect((await db.select().from(contributorDocuments)).some((row) => row.articleId === s.draft.id)).toBe(false);
+
+    expect((await captureError(prepareContributorDocuments(actorOf(s.complete), noMeta, { issueId: s.issueId })))?.status).toBe(403);
+    expect((await captureError(prepareContributorDocuments(actorOf(s.admin), noMeta, { issueId: "yok" })))?.status).toBe(404);
+  });
+
+  it("replaces an unsent single form, but never one its owner holds", async () => {
+    const s = await scenario();
+    // Prepared before D-339: one single form each
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const before = await formsOf(s.complete.id);
+    const publishedForm = before.find((row) => row.articleId === s.published.id)!;
+    const draftForm = before.find((row) => row.articleId === s.draft.id)!;
+    // The published work's form was mailed; the draft's was not
+    const mailedAt = new Date();
+    await db.update(contributorDocuments).set({ mailedAt }).where(eq(contributorDocuments.id, publishedForm.id));
+
+    const second = await work(s.complete, "draft", "İkinci Yazı");
+    const otherSecond = await work(s.complete, "draft", "Öteki Sayıda İkinci", s.draft.issueId);
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+
+    const after = await formsOf(s.complete.id);
+    // The mailed form stays as it was; the new work alone beside it gets a single form
+    expect(after.find((row) => row.id === publishedForm.id)).toEqual({ ...publishedForm, mailedAt });
+    expect(after.find((row) => row.articleId === second.id)!.templateVersion).toBe("1");
+    // The unsent draft form gave way to the other issue's form for both works
+    expect(after.some((row) => row.id === draftForm.id)).toBe(false);
+    const group = after.find((row) => row.issueId === s.draft.issueId)!;
+    expect((await worksOf(group.id)).map((row) => row.articleId)).toEqual([s.draft.id, otherSecond.id]);
+    expect(after).toHaveLength(3);
+  });
+
+  it("draws a form under review again with the works added since; a prepared one is never rewritten", async () => {
+    const s = await scenario();
+    const second = await work(s.noBirthDate, "draft", "İkinci");
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const [form] = (await formsOf(s.noBirthDate.id)).filter((row) => row.issueId);
+    expect(form!.status).toBe("needs_review");
+    expect(form!.reviewReasons).toEqual(["Doğum tarihi kayıtlı değil"]);
+
+    // The admin's preview marks the gap and lists the works
+    const view = await viewContributorDocument(actorOf(s.admin), form!.id);
+    expect(view.isPreview).toBe(true);
+    expect(view.markdown).toContain("[EKSİK: Doğum tarihi kayıtlı değil]");
+    expect(view.markdown).toContain("Kabul Edilmiş Yazı");
+    expect(view.markdown).toContain("İkinci");
+
+    const third = await work(s.noBirthDate, "draft", "Üçüncü");
+    await db.update(users).set({ birthDate: "1990-01-01" }).where(eq(users.id, s.noBirthDate.id));
+    const fixed = await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    expect(fixed.licenceCreated).toBe(0);
+    const [resolved] = (await formsOf(s.noBirthDate.id)).filter((row) => row.issueId);
+    expect(resolved!.id).toBe(form!.id);
+    expect(resolved!.status).toBe("prepared");
+    expect((await worksOf(form!.id)).map((row) => row.articleId)).toEqual([s.accepted.id, second.id, third.id]);
+
+    // Prepared now: a later work gets its own form, this one stays as it is
+    const fourth = await work(s.noBirthDate, "draft", "Dördüncü");
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const [unchanged] = await db.select().from(contributorDocuments).where(eq(contributorDocuments.id, form!.id));
+    expect(unchanged).toEqual(resolved);
+    expect((await formsOf(s.noBirthDate.id)).find((row) => row.articleId === fourth.id)!.templateVersion).toBe("1");
+  });
+});

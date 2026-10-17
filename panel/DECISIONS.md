@@ -13226,3 +13226,56 @@ konu kabulü olmadığı ana editöre bildirilsin."
 yeniden açma (yetki, durum, sürüm, geçmiş, e-posta, ardından yazı başlatma);
 konusuz yazı açılır ve gönderilir, bildirim yalnızca ana editöre; teslim dönemi
 kapalıyken 409; konulu yazıda bildirim yok.
+
+## D-339 — Bir yazarın aynı sayıdaki eserleri tek ruhsat formunda; sayıya göre ruhsat hazırlama
+
+**İstek (ürün sahibi, 2026-10-17):** "Semra Nur İlhan'ın testi için 2. sayıya
+ruhsat oluştur ve artık ruhsatları bir yazarın birden fazla eseri varsa hepsini
+tek sözleşmede topla."
+
+**Karar:**
+- **Gruplama sayı başına.** Bir yazarın aynı sayıda iki ya da daha fazla eseri
+  (yazı ve yazarı belirtilmiş test, D-300) varsa Eser Bazlı Kullanım Ruhsatı
+  Formu tek belge olur: şablon `contracts/eser-bazli-kullanim-ruhsati-formu-v2.md`,
+  şablon sürümü `2`. Farklı sayılar ayrı formdur: Sayı 1'in formları gönderildi ve
+  imzalanıyor; sayılar arası toplama o imzalı belgeleri yeniden açmak olurdu.
+  Sayıda tek eseri olan yazar eskisi gibi tek eserlik formu (sürüm 1) alır.
+- **Şablon farkı yalnızca eser bölümü:** Madde 1 "Eserler" oldu; her eser için
+  başlık, tür, teknik tanım, içerik özeti (SHA-256), panel kaydı ve **yayın adı**
+  (eserin kendi tercihi, D-284) ayrı ayrı yazılır; "formun her hükmü her eser
+  için ayrı ayrı geçerlidir" cümlesi eklendi. 8.1 her eserin Madde 1'deki yayın
+  adına bağlandı; 9. maddede "bu eser" ifadeleri "her eser" oldu. Ruhsat kapsamı,
+  süre, mecralar, bedel, imza ve şekil maddeleri harfiyen aynı. **Hukukçu görüşü
+  gerekiyor:** birden çok eseri tek formda toplamanın FSEK m. 52 yazılılık ve
+  eser belirliliği bakımından yeterli olduğu varsayıldı; danışman metni
+  değiştirirse şablon sürümü yükseltilir.
+- **Veri (migration `0062`, yalnızca ekleyici):** `contributor_documents.issue_id`
+  ve `works_label` ("Sayı 2: A; B", listelerde ve e-postada eser adı yerine);
+  yeni `contributor_document_works` tablosu (form, sıra, yazı ya da test, içerik
+  özeti). Bir eser yalnızca bir sayı formunda yer alır (kısmi benzersiz indeks).
+- **Var olan formlar:** gönderilmiş, kuyrukta ya da imzalı kopyası yüklenmiş tek
+  eserlik form olduğu gibi kalır ve eseri ondadır (D-314). Hiç gönderilmemiş ve
+  imzalanmamış tek eserlik taslak, sayı formu hazırlanırken silinir ve eser sayı
+  formuna girer (D-281'deki "gönderilmemişleri sil" ile aynı sınır).
+- **Tekrar hazırlama:** incelemedeki sayı formu sonradan eklenen eserleri alır ve
+  aynı satırda yeniden çizilir; hazır sayı formu asla yeniden yazılmaz (PDF'i
+  imzalanmış olabilir). Hazır formdan sonra gelen eser kendi formunu alır (tek
+  eserse sürüm 1, birden çoksa yeni sayı formu).
+- **Sayıya göre hazırlama:** `/admin/agreements` → "Bir sayının ruhsat formlarını
+  hazırla": sayı (zorunlu) ve kişi (isteğe bağlı) seçilir; yalnızca o eserlerin
+  formları ve yazarlarının eksik genel sözleşmesi hazırlanır. E-posta gönderilmez.
+  `prepareContributorDocuments(actor, meta, { issueId, userId })`, yalnızca admin.
+- **Semra Nur İlhan'ın testi:** canlı veritabanını okuma ve canlıda düğmeye basma
+  izni yok. Migration 0062 uygulanıp kod yayına alınınca admin bu formdan "Sayı 2"
+  ve Semra Nur İlhan'ı seçip hazırlar; sayıda tek eseri varsa form sürüm 1 çıkar.
+  Test yazarı olması (D-333) belge akışını etkilemez.
+- Yazarlıktan çıkarılanların eserleri kaldırılırken (D-279) o eserleri içeren
+  gönderilmemiş sayı formu da silinir; sonraki hazırlamada kalanlarla yeniden
+  çizilir. KVKK metni değişmedi: yeni veri kategorisi yok, form aynı kayıtlardan
+  doluyor.
+
+**Doğrulama:** Kapı: typecheck, lint, test. `tests/integration/contributor-documents.test.ts`
+(D-339 bloğu): üç eser tek formda (sıra, özetler, eser başına yayın adı, PDF,
+liste adı, tekrar yok), tek eser tek form; yalnızca seçilen sayı/kişi, yetki 403,
+geçersiz kimlik 404; gönderilmiş tek form kalır, gönderilmemiş olan sayı formuna
+yer verir; incelemedeki form yeni eseri alır ve çözülür, hazır form değişmez.

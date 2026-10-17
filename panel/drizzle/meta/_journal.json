@@ -428,6 +428,13 @@
       "when": 1791129921523,
       "tag": "0061_chemical_spot",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1792235486100,
+      "tag": "0062_thick_killmonger",
+      "breakpoints": true
     }
   ]
 }

@@ -567,6 +567,30 @@ export async function prepareContributorDocumentsAction(
   });
 }
 
+/** Prepares one issue's licence forms, for one person or everyone in it (D-339). Sends nothing. */
+export async function prepareIssueLicencesAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const issueId = text(formData, "issueId");
+    if (!issueId) return { error: "Bir sayı seçin." };
+    const userId = text(formData, "userId") || undefined;
+
+    const summary = await prepareContributorDocuments({ ...user }, await requestMetadata(), { issueId, userId });
+
+    revalidatePath("/admin/agreements");
+    return {
+      success:
+        `Ruhsat formu: ${summary.licenceCreated} yeni · Genel sözleşme: ${summary.generalCreated} yeni · ` +
+        `İnceleme gerekiyor: ${summary.needsReview.total} · Önceden hazır: ${summary.alreadyPrepared.general + summary.alreadyPrepared.licence}. ` +
+        `E-posta gönderilmedi.`,
+    };
+  });
+}
+
 /** Makes the template's text the current version's text, keeping its number (D-283). */
 export async function replaceCurrentVersionTextAction(
   _state: ActionState,

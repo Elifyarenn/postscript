@@ -96,8 +96,8 @@ export type OwnSignedContract = {
 const signedDocuments = alias(contributorDocuments, "signed_documents");
 const signedWorks = alias(articles, "signed_works");
 const signedQuizzes = alias(issueQuizzes, "signed_quizzes");
-/** The licensed work's title: an article's, or a quiz's (D-300). */
-const signedWorkTitle = sql<string | null>`coalesce(${signedWorks.title}, ${signedQuizzes.title})`;
+/** The licensed work's title: an article's, a quiz's (D-300), or an issue form's works (D-339). */
+const signedWorkTitle = sql<string | null>`coalesce(${signedWorks.title}, ${signedQuizzes.title}, ${signedDocuments.worksLabel})`;
 
 /** The member's own uploads, newest first. Nobody else's. */
 export async function listOwnSignedContracts(actor: Pick<Actor, "id">): Promise<OwnSignedContract[]> {

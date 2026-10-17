@@ -13,6 +13,14 @@ import { countWords } from "./word-count";
 export const LICENCE_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu.md";
 export const LICENCE_FORM_TEMPLATE_VERSION = "1";
 
+/**
+ * The same form for every work an author gave one issue (D-339): section 1
+ * lists the works, the rest of the text applies to each of them. Used when an
+ * author has more than one work in the issue; a single work keeps the form above.
+ */
+export const LICENCE_GROUP_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu-v2.md";
+export const LICENCE_GROUP_TEMPLATE_VERSION = "2";
+
 /** The contributor contract as delivered; the current version must be this text. */
 export const CONTRIBUTOR_AGREEMENT_FILE = "genel-katki-saglayan-sozlesmesi.md";
 
@@ -130,6 +138,7 @@ const PLACEHOLDER_REASONS: Record<string, string> = {
   "form.duration_label": "Ruhsat süresi sistemde tanımlı değil",
   "form.adaptation_scope": "İşleme hakkının yazılı kapsamı sistemde tanımlı değil",
   "form.byline_label": "Bu eser için yayın adı tercihi (gerçek ad / mahlas) kayıtlı değil",
+  "sayi.ad": "Eserlerin sayısı kayıtlı değil",
   "form.grant_type_label": "Ruhsat türü tanınmadı",
   "form.territory_label": "Ruhsat yeri tanınmadı",
   "form.exclusivity_label": "Tam ruhsat için münhasırlık süresi kayıtlı değil",

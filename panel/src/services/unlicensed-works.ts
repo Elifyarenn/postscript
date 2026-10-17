@@ -14,9 +14,9 @@
  * them: they were never sent, and they describe a licence that will not be.
  */
 import "server-only";
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { articles, contributorDocuments, roleChanges, users } from "@/db/schema";
+import { articles, contributorDocumentWorks, contributorDocuments, roleChanges, users } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import { canManageAgreements, type Actor } from "@/lib/auth/rbac";
 import { forbidden } from "@/lib/errors";
@@ -86,7 +86,22 @@ export async function removeUnlicensedFormerWriterWorks(
       .delete(contributorDocuments)
       .where(
         // A licence its owner was mailed stays: it is what they hold (D-314, D-316)
-        and(eq(contributorDocuments.kind, "work_licence"), inArray(contributorDocuments.articleId, ids), withoutSignedCopy, notMailed),
+        and(
+          eq(contributorDocuments.kind, "work_licence"),
+          or(
+            inArray(contributorDocuments.articleId, ids),
+            // An issue form naming one of them goes too; it is drawn again without it (D-339)
+            inArray(
+              contributorDocuments.id,
+              tx
+                .select({ id: contributorDocumentWorks.documentId })
+                .from(contributorDocumentWorks)
+                .where(inArray(contributorDocumentWorks.articleId, ids)),
+            ),
+          ),
+          withoutSignedCopy,
+          notMailed,
+        ),
       )
       .returning({ id: contributorDocuments.id });
 
