@@ -38,6 +38,7 @@ import {
   prepareContributorDocuments,
   queueAllContributorDocuments,
   queueUploadReminders,
+  setLicenceCommercialUse,
 } from "@/services/contributor-documents";
 import { removeUnlicensedFormerWriterWorks } from "@/services/unlicensed-works";
 import { createAnnouncement, publishAnnouncement } from "@/services/announcements";
@@ -562,7 +563,9 @@ export async function prepareContributorDocumentsAction(
       success:
         `Genel sözleşme: ${summary.generalCreated} yeni · Ruhsat formu: ${summary.licenceCreated} yeni · ` +
         `İnceleme gerekiyor: ${summary.needsReview.total} · Önceden hazır: ${summary.alreadyPrepared.general + summary.alreadyPrepared.licence} · ` +
-        `Atlanan kayıt: ${skipped}. E-posta gönderilmedi.`,
+        `Atlanan kayıt: ${skipped}` +
+        (summary.redrawn ? ` · Eski metinle hazırlanmış, gönderilmemiş form yeni metinle yeniden çizildi: ${summary.redrawn}` : "") +
+        `. E-posta gönderilmedi.`,
     };
   });
 }
@@ -585,8 +588,31 @@ export async function prepareIssueLicencesAction(
     return {
       success:
         `Ruhsat formu: ${summary.licenceCreated} yeni · Genel sözleşme: ${summary.generalCreated} yeni · ` +
-        `İnceleme gerekiyor: ${summary.needsReview.total} · Önceden hazır: ${summary.alreadyPrepared.general + summary.alreadyPrepared.licence}. ` +
-        `E-posta gönderilmedi.`,
+        `İnceleme gerekiyor: ${summary.needsReview.total} · Önceden hazır: ${summary.alreadyPrepared.general + summary.alreadyPrepared.licence}` +
+        (summary.redrawn ? ` · Eski metinle hazırlanmış, gönderilmemiş form yeni metinle yeniden çizildi: ${summary.redrawn}` : "") +
+        `. E-posta gönderilmedi.`,
+    };
+  });
+}
+
+/** Whether licence forms prepared from now on include commercial use (D-340). */
+export async function setLicenceCommercialUseAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const choice = text(formData, "commercialUse");
+    if (choice !== "included" && choice !== "excluded") return { error: "Dahil ya da Hariç seçin." };
+
+    await setLicenceCommercialUse({ ...user }, choice === "included", await requestMetadata());
+
+    revalidatePath("/admin/agreements");
+    return {
+      success:
+        `Bundan sonra hazırlanan ruhsat formlarında ticari kullanım: ${choice === "included" ? "Dahil" : "Hariç"}. ` +
+        "Hazırlanmış formlar değişmedi.",
     };
   });
 }

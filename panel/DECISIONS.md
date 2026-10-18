@@ -13279,3 +13279,70 @@ tek sözleşmede topla."
 liste adı, tekrar yok), tek eser tek form; yalnızca seçilen sayı/kişi, yetki 403,
 geçersiz kimlik 404; gönderilmiş tek form kalır, gönderilmemiş olan sayı formuna
 yer verir; incelemedeki form yeni eseri alır ve çözülür, hazır form değişmez.
+
+## D-340 — Ruhsat formunda ticari kullanım ve imzayla yürürlük
+
+**İstek (ürün sahibi, 2026-10-18):** Ticari kullanım ücretli basılı/dijital dergiyi,
+aboneliği, reklam gelirini ve sponsorluğu destekleyecek biçimde düzenlensin; dahil/hariç
+seçimi kalsın; bedelsiz ruhsatla çelişmesin, yazara telif veya gelir payı doğurmasın;
+FSEK'teki hakların ayrı ayrı gösterilmesi ve yazılı şekil kalsın. Ruhsat tarafların
+imzasıyla yürürlüğe girsin; panel onayı veya başka bir idari işlem yürürlük şartı
+olmasın; imzalı belgenin yüklenmesi yalnızca arşiv ve doğrulama olsun; 12. madde ve
+ilgili hükümler buna göre değişsin.
+
+**Karar:**
+- **Yeni şablon sürümleri:** tek eser `contracts/eser-bazli-kullanim-ruhsati-formu-v3.md`
+  (sürüm `3`), sayı formu `...-v4.md` (sürüm `4`, D-339'un v2'si üzerine). Teslim edilen
+  metin (v1) PDF'le birebir karşılaştırma için dosyada kalır, form artık ondan çizilmez.
+  v2'nin dosyası kayıt için kalır.
+- **Değişen maddeler (yalnızca bunlar):** giriş paragrafı (mecralar ve ticari kullanımlar
+  da ayrı ayrı gösterilir); Madde 3 çoğaltma/yayma/umuma iletim kapsamına "Madde 7'de
+  ticari kullanım Dahil ise" basılı sayı, satış ve ücretli dijital erişim eklendi (her hak
+  ayrı satırında kalır, FSEK m. 52); Madde 4'e "Basılı Sayı" ve "Ücretli dijital Sayı,
+  tekil satın alma ve abonelik" mecraları (yalnızca Dahil ise Evet); Madde 5 ve 8.3 basılı
+  ve satılmış kopyaları da kapsar; Madde 6 "Dahil olsa da bedelsizdir"; Madde 7 yeniden
+  yazıldı: 7.1 Dahil ise izin verilen dört faaliyet (a) ücretli basılı dergi, (b) ücretli
+  dijital dergi ve abonelik, (c) reklam gelirleri, (d) sponsorluk; hepsi yalnızca Dergi'nin
+  kendi yayınları içinde; 7.2 Dahil olsa da kapsam dışı olanlar (eserin tek başına satışı,
+  alt ruhsat, sponsorun/reklamverenin ürün reklamında kullanım, kitap/antoloji/ürün);
+  7.3 Hariç'in eski anlamı; 7.4 ticari izin bedelsizliği değiştirmez, gelirler Dergi'nindir,
+  telif/gelir payı/kâr payı doğurmaz; 7.5 Genel Sözleşme m. 1.3 (mecra sınırı) ve m. 6.1
+  (kâr amacı gütmeme) karşısında bu madde o eser için özel hükümdür. Madde 12 "Şekil, İmza
+  ve Yürürlük": yazılı şekil ve ıslak imza; ruhsat iki tarafın (Katkı Sağlayan ve Dergi
+  adına Fatma Tuanna Demir) imzasıyla, farklı tarihlerde ise son imza tarihinde yürürlüğe
+  girer; yönetici onayı, panel durumu veya inceleme yürürlük şartı değildir; yükleme
+  yalnızca arşiv ve metinle aynılık kontrolüdür; panel durumları süreci gösterir, geçerliliği
+  belirlemez; yalnızca tıklama imza yerine geçmez. Diğer maddeler harfiyen aynı (birim test).
+- **Dahil/Hariç seçimi:** `site_settings.licence_commercial_use` ("included"/"excluded"),
+  `/admin/agreements` → "Ruhsat formlarında ticari kullanım", yalnızca admin, denetim kaydı
+  `contributor_documents.commercial_use_set`. Kayıt yoksa **Hariç** (muhafazakâr: kimse
+  imzalamadan ücretli kullanıma izin yazılmaz). Hazır form seçime göre yeniden yazılmaz.
+  Eski model `rights_grants` (`LICENCE_TERMS.commercialUseIncluded = false`) değişmedi.
+- **Eski şablonla çizilmiş formlar:** gönderilmemiş, kuyrukta olmayan ve imzalı kopyası
+  yüklenmemiş formlar "Belgeleri hazırla"da silinip güncel metinle yeniden çizilir (kapsam
+  seçiliyse yalnızca kapsamdakiler); gönderilmiş ya da imzalı olanlar eski metniyle kalır ve
+  o metne göre geçerlidir. Formlar artık sürüm numarasıyla değil sayı formu olup
+  olmadıklarıyla (issue_id) eşleştirilir; incelemedeki form yeniden çizilince sürümü de güncellenir.
+- **Panel durumları:** ruhsat formu yüklemeleri artık "Onaylandı/Reddedildi" değil
+  "Yüklendi · arşiv kontrolü bekliyor", "Yüklendi · arşivde doğrulandı", "Kopya kabul
+  edilmedi · yeniden yükleyin" olarak gösterilir; Belgelerim'de ruhsatın iki imzayla
+  yürürlüğe girdiği yazar. Hiçbir yayın kontrolü ruhsat yüklemesinin doğrulanmasına bağlı
+  değildi, bağlanmadı. Genel sözleşmenin etiketleri ve m. 14.2'deki doğrulamayla yürürlük
+  hükmü **değişmedi**: istek ruhsat formu içindi ve sözleşmeyi değiştirmek herkesin yeniden
+  imzalamasını (m. 12.2, işlevlerin askıya alınması) gerektirir.
+- **Hukukçu görüşü gerekiyor:** (1) Genel Sözleşme m. 1.3 mecraları ücretsiz PDF ile sınırlıyor
+  ve m. 6.1 kâr amacı gütmemeyi söylüyor; ticari kullanım "Dahil" formun bunlarla çelişmemesi
+  formdaki 7.5 özel hüküm cümlesine dayanıyor. Danışman sözleşmenin de değiştirilmesini
+  isteyebilir. (2) Bedelsiz ruhsatla ticari gelir arasında FSEK ve TBK bakımından (ör. aşırı
+  yararlanma) emredici hükümler saklıdır (m. 8.4). (3) İmzayla yürürlük ve iki imzanın farklı
+  tarihlerde atılması. Muhafazakâr olan uygulandı: varsayılan Hariç, gönderilmiş/imzalı
+  formlara dokunulmadı. Ödeme, abonelik ve basılı sayı ürünün kapsamında değil (CLAUDE.md
+  "Yapılmayacaklar"); bu metin yalnızca hakkı verir, panel bunları yapmaz.
+- Migration yok; KVKK metni değişmedi (yeni kişisel veri yok).
+
+**Doğrulama:** Kapı: typecheck, lint, test. Birim: v3/v4'te dört ticari faaliyet, kapsam
+dışı liste, bedelsizlik ve gelir payı cümlesi, 12.2–12.4; teslim metninin değişmeyen
+maddeleri aynı; basılı/ücretli mecralar yalnızca Dahil ise Evet. Entegrasyon: varsayılan
+Hariç, yalnızca admin ayarlar (403), denetim kaydı, yeni form Dahil, hazır form değişmez;
+eski şablonla gönderilmemiş form yeniden çizilir, gönderilmiş kalır, ikinci çalıştırmada
+yeniden çizim yok.

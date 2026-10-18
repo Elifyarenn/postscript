@@ -3,6 +3,7 @@ import { roleBadge } from "@/lib/auth/rbac";
 import { acceptanceReport, listAgreementVersions } from "@/services/agreements";
 import { listSignedContracts } from "@/services/signed-contracts";
 import {
+  licenceCommercialUse,
   listContributorDocuments,
   listLicenceScopeOptions,
   type ContributorDocumentItem,
@@ -18,7 +19,7 @@ import { readCsrfToken } from "@/lib/csrf";
 import { ActionButton, PanelForm } from "@/components/form";
 import Link from "next/link";
 import { Alert, Card, EmptyState, Field, PageHeader, Select, StatusBadge, Table, Td, Textarea, Th } from "@/components/ui";
-import { SIGNED_CONTRACT_STATUS_LABELS } from "@/components/signed-contract";
+import { signedUploadStatusLabel } from "@/components/signed-contract";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import {
   approveSignedContractAction,
@@ -32,6 +33,7 @@ import {
   rejectSignedContractAction,
   removeUnlicensedFormerWriterWorksAction,
   replaceCurrentVersionTextAction,
+  setLicenceCommercialUseAction,
 } from "../actions";
 
 export const metadata = { title: "Sözleşme sürümleri" };
@@ -81,6 +83,7 @@ export default async function AdminAgreementsPage() {
   const documents = await listContributorDocuments(actor);
   const unlicensed = await listUnlicensedFormerWriterWorks(actor);
   const licenceScopes = await listLicenceScopeOptions(actor);
+  const commercialUse = await licenceCommercialUse();
   const reviewCount = documents.filter((row) => row.status === "needs_review").length;
   // Mailed documents are their owners' now: listed apart, never sent or cleared again (D-314)
   const sentDocuments = documents.filter((row) => row.mailState === "sent");
@@ -402,8 +405,33 @@ export default async function AdminAgreementsPage() {
             kalır. Tekrar çalıştırmak yalnızca eksikleri ekler ve incelemedekileri yeniden dener; hazır
             belgelere dokunmaz. Hazırlamak e-posta göndermez; hazır belgeler yalnızca kişinin satırındaki
             &ldquo;Belgelerini mail gönder&rdquo; ile PDF ekiyle gönderilir. E-postayla gönderilmiş belgeler
-            ayrı listelenir; yeniden gönderilmez ve silinmez.
+            ayrı listelenir; yeniden gönderilmez ve silinmez. Eski şablonla hazırlanmış ama hiç
+            gönderilmemiş ve imzalı kopyası yüklenmemiş ruhsat formları, hazırlarken güncel metinle
+            yeniden çizilir.
           </p>
+          <div className="mb-4 rounded border border-line p-3">
+            <h3 className="mb-1 font-serif text-base">Ruhsat formlarında ticari kullanım</h3>
+            <p className="mb-3 text-xs text-muted">
+              Şu an: <strong>{commercialUse ? "Dahil" : "Hariç"}</strong>. &ldquo;Dahil&rdquo; seçilirse bundan
+              sonra hazırlanan formlar ücretli basılı ve dijital sayıya, aboneliğe, reklam gelirine ve
+              sponsorluğa izin verir (formun 7. maddesi); ruhsat yine bedelsizdir, yazara gelir payı
+              doğurmaz. Hazırlanmış formlar değişmez: seçimi değiştirdikten sonra gönderilmemiş formları
+              yeni seçimle almak için önce silip yeniden hazırlayın.
+            </p>
+            <PanelForm
+              action={setLicenceCommercialUseAction}
+              csrfToken={csrfToken}
+              submitLabel="Kaydet"
+              submitVariant="secondary"
+            >
+              <Field label="Ticari kullanım" htmlFor="licence-commercial">
+                <Select id="licence-commercial" name="commercialUse" defaultValue={commercialUse ? "included" : "excluded"}>
+                  <option value="excluded">Hariç (yalnızca ücretsiz mecralar)</option>
+                  <option value="included">Dahil (ücretli dergi, abonelik, reklam, sponsorluk)</option>
+                </Select>
+              </Field>
+            </PanelForm>
+          </div>
           <div className="mb-4 flex flex-wrap gap-2">
             <ActionButton
               action={prepareContributorDocumentsAction}
@@ -540,7 +568,7 @@ export default async function AdminAgreementsPage() {
                       {!row.isCurrentVersion && <span className="text-muted"> (eski sürüm)</span>}
                     </Td>
                     <Td className="text-xs">
-                      {SIGNED_CONTRACT_STATUS_LABELS[row.status]}
+                      {signedUploadStatusLabel(row.status, row.isContract)}
                       {row.reviewedAt && (
                         <span className="block text-muted">
                           {row.reviewerName ?? "—"} · {formatDateTime(row.reviewedAt)}

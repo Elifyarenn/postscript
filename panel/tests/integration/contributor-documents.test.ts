@@ -15,6 +15,7 @@ import {
   issues,
   mailJobs,
   rightsGrants,
+  siteSettings,
   users,
   type User,
 } from "@/db/schema";
@@ -26,16 +27,24 @@ import { getCurrentAgreement, publishAgreementVersion } from "@/services/agreeme
 import {
   clearContributorDocuments,
   contributorDocumentPdf,
+  licenceCommercialUse,
   listContributorDocuments,
   listOwnContributorDocuments,
   mailContributorDocuments,
   prepareContributorDocuments,
   queueAllContributorDocuments,
+  setLicenceCommercialUse,
   viewContributorDocument,
 } from "@/services/contributor-documents";
 import { articleHash } from "@/services/rights";
 import { processMailQueue } from "@/services/mail-queue";
-import { ADAPTATION_SCOPE_TEXT, LICENCE_DURATION_TEXT } from "@/lib/contributor-documents";
+import {
+  ADAPTATION_SCOPE_TEXT,
+  LICENCE_COMMERCIAL_SETTING,
+  LICENCE_DURATION_TEXT,
+  LICENCE_FORM_TEMPLATE_VERSION,
+  LICENCE_GROUP_TEMPLATE_VERSION,
+} from "@/lib/contributor-documents";
 import { GET as getPdfRoute } from "@/app/api/contributor-documents/[id]/pdf/route";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
 import { actorOf, createUser, noMeta, publishContract, testIssueId } from "../helpers/factories";
@@ -838,7 +847,7 @@ describe("one licence form per author and issue (D-339)", () => {
 
     const forms = await formsOf(s.complete.id);
     const group = forms.find((row) => row.issueId === s.issueId)!;
-    expect(group.templateVersion).toBe("2");
+    expect(group.templateVersion).toBe(LICENCE_GROUP_TEMPLATE_VERSION);
     expect(group.status).toBe("prepared");
     expect(group.articleId).toBeNull();
     expect(group.worksLabel).toBe("Sayı 9999: Yayımlanmış Yazı; İkinci Yazı; Üçüncü Yazı");
@@ -860,7 +869,7 @@ describe("one licence form per author and issue (D-339)", () => {
 
     // The draft in the other issue is alone there: the single form, as before
     const single = forms.find((row) => row.articleId === s.draft.id)!;
-    expect(single.templateVersion).toBe("1");
+    expect(single.templateVersion).toBe(LICENCE_FORM_TEMPLATE_VERSION);
     expect(forms).toHaveLength(2);
 
     // The lists name the form by its works; its PDF opens for the author
@@ -916,7 +925,7 @@ describe("one licence form per author and issue (D-339)", () => {
     const after = await formsOf(s.complete.id);
     // The mailed form stays as it was; the new work alone beside it gets a single form
     expect(after.find((row) => row.id === publishedForm.id)).toEqual({ ...publishedForm, mailedAt });
-    expect(after.find((row) => row.articleId === second.id)!.templateVersion).toBe("1");
+    expect(after.find((row) => row.articleId === second.id)!.templateVersion).toBe(LICENCE_FORM_TEMPLATE_VERSION);
     // The unsent draft form gave way to the other issue's form for both works
     expect(after.some((row) => row.id === draftForm.id)).toBe(false);
     const group = after.find((row) => row.issueId === s.draft.issueId)!;
@@ -953,6 +962,67 @@ describe("one licence form per author and issue (D-339)", () => {
     await prepareContributorDocuments(actorOf(s.admin), noMeta);
     const [unchanged] = await db.select().from(contributorDocuments).where(eq(contributorDocuments.id, form!.id));
     expect(unchanged).toEqual(resolved);
-    expect((await formsOf(s.noBirthDate.id)).find((row) => row.articleId === fourth.id)!.templateVersion).toBe("1");
+    expect((await formsOf(s.noBirthDate.id)).find((row) => row.articleId === fourth.id)!.templateVersion).toBe(LICENCE_FORM_TEMPLATE_VERSION);
+  });
+});
+
+describe("commercial use and older templates (D-340)", () => {
+  const licencesOf = async (userId: string) =>
+    (await db.select().from(contributorDocuments)).filter((row) => row.kind === "work_licence" && row.userId === userId);
+
+  it("draws forms with the admin's commercial-use choice; only an admin sets it", async () => {
+    const s = await scenario();
+    expect(await licenceCommercialUse()).toBe(false);
+    await prepareContributorDocuments(actorOf(s.admin), noMeta, { userId: s.complete.id });
+    const excluded = (await licencesOf(s.complete.id)).find((row) => row.articleId === s.published.id)!;
+    expect(excluded.templateVersion).toBe(LICENCE_FORM_TEMPLATE_VERSION);
+    expect(excluded.renderedMarkdown).toContain("Ticari kullanım\nHariç");
+    expect(excluded.renderedMarkdown).toContain("Basılı Sayı (ücretli veya ücretsiz) · Hayır");
+    expect(excluded.renderedMarkdown).toContain("12.2. Ruhsat, bu formun Katkı Sağlayan ve PostScript Dergisi adına Fatma Tuanna Demir tarafından imzalanmasıyla yürürlüğe girer.");
+
+    expect((await captureError(setLicenceCommercialUse(actorOf(s.complete), true, noMeta)))?.status).toBe(403);
+    await setLicenceCommercialUse(actorOf(s.admin), true, noMeta);
+    expect(await licenceCommercialUse()).toBe(true);
+    const [setting] = await db.select().from(siteSettings).where(eq(siteSettings.key, LICENCE_COMMERCIAL_SETTING));
+    expect(setting!.value).toBe("included");
+    const [entry] = await db.select().from(auditLog).where(eq(auditLog.action, "contributor_documents.commercial_use_set"));
+    expect(entry!.after).toEqual({ commercialUseIncluded: true });
+
+    // A prepared form keeps its text; a new one carries the choice
+    await prepareContributorDocuments(actorOf(s.admin), noMeta, { userId: s.noBirthDate.id });
+    await db.update(users).set({ birthDate: "1990-01-01" }).where(eq(users.id, s.noBirthDate.id));
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const [included] = await licencesOf(s.noBirthDate.id);
+    expect(included!.status).toBe("prepared");
+    expect(included!.renderedMarkdown).toContain("Ticari kullanım\nDahil");
+    expect(included!.renderedMarkdown).toContain("Basılı Sayı (ücretli veya ücretsiz) · Evet");
+    expect(included!.renderedMarkdown).toContain("Ücretli dijital Sayı, tekil satın alma ve abonelik · Evet");
+    expect(included!.renderedMarkdown).not.toMatch(/\{\{/);
+    const [unchanged] = await db.select().from(contributorDocuments).where(eq(contributorDocuments.id, excluded.id));
+    expect(unchanged).toEqual(excluded);
+  });
+
+  it("draws an unsent form of an earlier template again; a mailed one stays", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const before = await licencesOf(s.complete.id);
+    const mailed = before.find((row) => row.articleId === s.published.id)!;
+    const unsent = before.find((row) => row.articleId === s.draft.id)!;
+    // Both as the D-339 code drew them; only one went out
+    await db.update(contributorDocuments).set({ templateVersion: "1" }).where(eq(contributorDocuments.kind, "work_licence"));
+    await db.update(contributorDocuments).set({ mailedAt: new Date() }).where(eq(contributorDocuments.id, mailed.id));
+
+    const summary = await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    // The two unsent ones: Tam Kayıt's draft and the writer without a birth date
+    expect(summary.redrawn).toBe(2);
+    const after = await licencesOf(s.complete.id);
+    expect(after.find((row) => row.id === mailed.id)!.templateVersion).toBe("1");
+    expect(after.some((row) => row.id === unsent.id)).toBe(false);
+    const redrawn = after.find((row) => row.articleId === s.draft.id)!;
+    expect(redrawn.templateVersion).toBe(LICENCE_FORM_TEMPLATE_VERSION);
+    expect(redrawn.renderedMarkdown).toContain("## 12. Şekil, İmza ve Yürürlük");
+
+    // Nothing more to draw again
+    expect((await prepareContributorDocuments(actorOf(s.admin), noMeta)).redrawn).toBe(0);
   });
 });

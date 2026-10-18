@@ -11,7 +11,9 @@ import {
   ADAPTATION_SCOPE_TEXT,
   CONTRIBUTOR_AGREEMENT_FILE,
   contributionRoleLabel,
+  DELIVERED_LICENCE_FORM_FILE,
   LICENCE_FORM_FILE,
+  LICENCE_GROUP_FORM_FILE,
   licenceFormValues,
   reasonForPlaceholder,
   wordCount,
@@ -66,13 +68,13 @@ function withPartyChange(pdf: string): string {
 describe("the templates are the delivered documents", () => {
   it.each([
     [CONTRIBUTOR_AGREEMENT_FILE, "01-genel-katki-saglayan-sozlesmesi-ISLAK-IMZA-DIJITAL.pdf"],
-    [LICENCE_FORM_FILE, "02-eser-bazli-kullanim-ruhsati-formu-DIJITAL-GUNCEL.pdf"],
+    [DELIVERED_LICENCE_FORM_FILE, "02-eser-bazli-kullanim-ruhsati-formu-DIJITAL-GUNCEL.pdf"],
   ])("%s says word for word what the PDF says, but for the party change of D-280", (template, pdf) => {
     expect(comparable(readFileSync(contracts(template), "utf8"))).toBe(withPartyChange(pdfText(pdf)));
   });
 
   it("keeps both signature blocks: the contributor and the magazine", () => {
-    for (const file of [CONTRIBUTOR_AGREEMENT_FILE, LICENCE_FORM_FILE]) {
+    for (const file of [CONTRIBUTOR_AGREEMENT_FILE, DELIVERED_LICENCE_FORM_FILE, LICENCE_FORM_FILE, LICENCE_GROUP_FORM_FILE]) {
       const text = readFileSync(contracts(file), "utf8");
       expect(text).toMatch(/PostScript Dergisi adına\)?\n\nAd Soyad: Fatma Tuanna Demir/);
       expect(text).toMatch(/Katkı Sağlayan \/ Eser Sahibi/);
@@ -80,10 +82,57 @@ describe("the templates are the delivered documents", () => {
   });
 
   it("names Fatma Tuanna Demir for the magazine, with no partnership wording left", () => {
-    for (const file of [CONTRIBUTOR_AGREEMENT_FILE, LICENCE_FORM_FILE]) {
+    for (const file of [CONTRIBUTOR_AGREEMENT_FILE, DELIVERED_LICENCE_FORM_FILE, LICENCE_FORM_FILE, LICENCE_GROUP_FORM_FILE]) {
       const text = readFileSync(contracts(file), "utf8");
       expect(text).toMatch(/: PostScript Dergisi adına Fatma Tuanna Demir\n/);
       expect(text).not.toMatch(/adi ortaklık|ortaklar:|Ortaklardan|tek başına temsil|dergi\.ortak_/);
+    }
+  });
+});
+
+describe("the licence forms in use (D-340)", () => {
+  const forms = [LICENCE_FORM_FILE, LICENCE_GROUP_FORM_FILE].map((file) => readFileSync(contracts(file), "utf8"));
+  /** The delivered text's articles by number, for what D-340 left alone. */
+  const articles = (text: string) =>
+    Object.fromEntries(text.split(/\n(?=## )/).map((part) => [part.split("\n")[0], comparable(part)]));
+
+  it("names each commercial use it allows, and what stays outside", () => {
+    for (const text of forms) {
+      expect(text).toContain("(a) Ücretli basılı dergi:");
+      expect(text).toContain("(b) Ücretli dijital dergi ve abonelik:");
+      expect(text).toContain("(c) Reklam gelirleri:");
+      expect(text).toContain("(d) Sponsorluk:");
+      expect(text).toContain("7.2. \"Dahil\" olsa da şunlar bu formun kapsamı dışındadır");
+      expect(text).toContain("Ticari kullanım\n{{form.commercial_use_label}}");
+      expect(text).toContain("Basılı Sayı (ücretli veya ücretsiz) · {{form.channel_print}}");
+      expect(text).toContain("Ücretli dijital Sayı, tekil satın alma ve abonelik · {{form.channel_paid_digital}}");
+    }
+  });
+
+  it("keeps the licence free even with commercial use, with no share of the income", () => {
+    for (const text of forms) {
+      expect(text).toContain("Ruhsat, Madde 7'de ticari kullanım \"Dahil\" olarak gösterildiğinde de bedelsizdir.");
+      expect(text).toMatch(/telif ücreti, gelir payı, kâr payı veya başka bir ödeme hakkı doğurmaz ve bu yönde yorumlanamaz/);
+    }
+  });
+
+  it("is in force on both signatures; the panel only archives and checks", () => {
+    for (const text of forms) {
+      expect(text).toContain("## 12. Şekil, İmza ve Yürürlük");
+      expect(text).toMatch(/12\.2\. Ruhsat, bu formun Katkı Sağlayan ve PostScript Dergisi adına Fatma Tuanna Demir tarafından imzalanmasıyla yürürlüğe girer/);
+      expect(text).toMatch(/12\.3\. Dergi yöneticisinin onayı, Panel'de bir durumun değiştirilmesi.* yürürlük şartı değildir/);
+      expect(text).toMatch(/12\.4\. İmzalı formun taranmış kopyasının Panel'e yüklenmesi yalnızca arşivleme ve .* doğrulanması amacını taşır/);
+      expect(text).not.toMatch(/"imzalandı" olarak işaretlediğinde/);
+    }
+  });
+
+  it("leaves every other article of the delivered form as it was", () => {
+    const delivered = articles(readFileSync(contracts(DELIVERED_LICENCE_FORM_FILE), "utf8"));
+    const current = articles(forms[0]!);
+    const changed = ["## 3. Ruhsat Kapsamındaki Mali Haklar", "## 4. Mecralar", "## 5. Süre ve Yer", "## 6. Bedel", "## 7. Ticari Kullanım", "## 8. Ad Gösterimi ve Ruhsatın Devamı", "## 12. Şekil"];
+    for (const [heading, text] of Object.entries(delivered)) {
+      if (heading.startsWith("# POSTSCRIPT") || changed.includes(heading)) continue;
+      expect(current[heading], heading).toBe(text);
     }
   });
 });
@@ -116,7 +165,16 @@ describe("licenceFormValues", () => {
     expect(values["form.grant_type_label"]).toBe("Basit ruhsat (FSEK m. 56/1)");
     expect(values["form.channel_newsletter"]).toBe("Evet");
     expect(values["form.commercial_use_label"]).toBe("Hariç");
+    expect(values["form.channel_print"]).toBe("Hayır");
+    expect(values["form.channel_paid_digital"]).toBe("Hayır");
     expect(values["form.byline_label"]).toBe("Mahlasıyla (Mahlas)");
+  });
+
+  it("opens the print and paid channels only with commercial use (D-340)", () => {
+    const values = licenceFormValues({ terms: { ...terms, commercialUseIncluded: true }, bylineChoice: null, displayName: "Ad Soyad", penName: null });
+    expect(values["form.commercial_use_label"]).toBe("Dahil");
+    expect(values["form.channel_print"]).toBe("Evet");
+    expect(values["form.channel_paid_digital"]).toBe("Evet");
   });
 
   it("fills the magazine's fixed period and adaptation limit", () => {

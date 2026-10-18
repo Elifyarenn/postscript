@@ -14,7 +14,10 @@
  *
  * Running it again adds only what is missing. A prepared document is never
  * rewritten (someone may already have signed its PDF); a document waiting for
- * review is tried again, in place, so fixing the data resolves it.
+ * review is tried again, in place, so fixing the data resolves it. A licence
+ * form drawn from an earlier template that nobody holds yet (not mailed, not
+ * queued, no signed copy) is deleted and drawn again from the current one
+ * (D-340); one its owner holds stays as it was.
  */
 import "server-only";
 import { randomUUID } from "node:crypto";
@@ -34,6 +37,7 @@ import {
   mailJobs,
   rightsGrants,
   signedContracts,
+  siteSettings,
   users,
   writerApplications,
   type AgreementVersion,
@@ -56,6 +60,7 @@ import {
   CONTRIBUTOR_AGREEMENT_FILE,
   contributionRoleLabel,
   DOCUMENT_KIND_LABELS,
+  LICENCE_COMMERCIAL_SETTING,
   LICENCE_FORM_FILE,
   LICENCE_FORM_TEMPLATE_VERSION,
   LICENCE_GROUP_FORM_FILE,
@@ -64,6 +69,7 @@ import {
   reasonForPlaceholder,
   wordCount,
   type ContributorDocumentKind,
+  type LicenceTerms,
 } from "@/lib/contributor-documents";
 import { conflict, forbidden, notFound } from "@/lib/errors";
 import { parseOutcomes, parseQuestions, quizWorkText } from "@/lib/issue-quiz";
@@ -77,6 +83,47 @@ import type { RequestMeta } from "./auth";
 
 function readContract(file: string): string {
   return readFileSync(path.join(process.cwd(), "contracts", file), "utf8");
+}
+
+/** Whether new licence forms include commercial use (D-340); "Hariç" until an admin says so. */
+export async function licenceCommercialUse(): Promise<boolean> {
+  const [row] = await db
+    .select({ value: siteSettings.value })
+    .from(siteSettings)
+    .where(eq(siteSettings.key, LICENCE_COMMERCIAL_SETTING))
+    .limit(1);
+  return row?.value === "included";
+}
+
+/** The fixed licence scope, with the admin's commercial-use choice (D-340). */
+async function currentLicenceTerms(): Promise<LicenceTerms> {
+  return { ...LICENCE_TERMS, commercialUseIncluded: await licenceCommercialUse() };
+}
+
+/**
+ * The admin sets whether forms prepared from now on include commercial use
+ * (D-340). Forms already prepared keep the text they were drawn with.
+ */
+export async function setLicenceCommercialUse(actor: Actor, included: boolean, meta: RequestMeta): Promise<void> {
+  if (!canManageAgreements(actor)) throw forbidden();
+  const before = await licenceCommercialUse();
+  const value = included ? "included" : "excluded";
+  await db
+    .insert(siteSettings)
+    .values({ key: LICENCE_COMMERCIAL_SETTING, value, updatedBy: actor.id })
+    .onConflictDoUpdate({
+      target: siteSettings.key,
+      set: { value, updatedBy: actor.id, updatedAt: new Date() },
+    });
+  await writeAudit({
+    actorId: actor.id,
+    action: "contributor_documents.commercial_use_set",
+    entityType: "site_settings",
+    entityId: null,
+    before: { commercialUseIncluded: before },
+    after: { commercialUseIncluded: included },
+    ip: meta.ip,
+  });
 }
 
 /** What a render left unfilled, as reasons a person can act on. */
@@ -96,6 +143,8 @@ export type PreparationSummary = {
   alreadyPrepared: { general: number; licence: number };
   /** Records no document could be attached to. */
   skipped: { reason: string; count: number }[];
+  /** Unsent forms from an earlier licence template, deleted to be drawn again (D-340). */
+  redrawn: number;
 };
 
 type Draft = {
@@ -215,6 +264,7 @@ const workTitle = sql<string | null>`coalesce(${articles.title}, ${issueQuizzes.
 /** The licence form for one work, filled from the work and its author's records. */
 async function draftLicence(
   version: AgreementVersion,
+  terms: LicenceTerms,
   work: LicensedWork,
   author: User,
   bylineChoice: "real_name" | "pen_name" | null,
@@ -226,7 +276,7 @@ async function draftLicence(
   if (versionReason) reasons.push(versionReason);
   // The work's status is not a condition: every listed work gets its form (D-287)
 
-  const { values, words, contentHash } = await licenceValues(version, work, author, bylineChoice, formId, now);
+  const { values, words, contentHash } = await licenceValues(version, terms, work, author, bylineChoice, formId, now);
   if (words === 0) reasons.push("Eser metni boş");
 
   let rendered: { markdown: string; hash: string } | null = null;
@@ -243,6 +293,7 @@ async function draftLicence(
 /** The form's values for one work; the draft and the preview share them. */
 async function licenceValues(
   version: AgreementVersion,
+  terms: LicenceTerms,
   work: LicensedWork,
   author: User,
   bylineChoice: "real_name" | "pen_name" | null,
@@ -266,7 +317,7 @@ async function licenceValues(
     "form.template_version": LICENCE_FORM_TEMPLATE_VERSION,
     "form.created_at": formatContractDate(now),
     ...licenceFormValues({
-      terms: LICENCE_TERMS,
+      terms,
       bylineChoice,
       displayName: escapeForTemplate(author.displayName),
       penName: author.penName ? escapeForTemplate(author.penName) : null,
@@ -296,6 +347,7 @@ function groupLabel(issueNumber: number, works: readonly GroupWork[]): string {
  */
 async function groupLicenceValues(
   version: AgreementVersion,
+  terms: LicenceTerms,
   works: readonly GroupWork[],
   author: User,
   issueNumber: number | null,
@@ -315,7 +367,7 @@ async function groupLicenceValues(
     const contentHash = work.body.trim() ? articleHash(work.body) : null;
     contentHashes.push(contentHash);
     const byline = licenceFormValues({
-      terms: LICENCE_TERMS,
+      terms,
       bylineChoice: work.bylineChoice,
       displayName: escapeForTemplate(author.displayName),
       penName: author.penName ? escapeForTemplate(author.penName) : null,
@@ -335,7 +387,7 @@ async function groupLicenceValues(
   const values: Record<string, string | null> = {
     ...buildPlaceholders(context),
     ...licenceFormValues({
-      terms: LICENCE_TERMS,
+      terms,
       bylineChoice: null,
       displayName: escapeForTemplate(author.displayName),
       penName: author.penName ? escapeForTemplate(author.penName) : null,
@@ -355,6 +407,7 @@ async function groupLicenceValues(
 /** The issue form for an author's works in one issue (D-339). */
 async function draftGroupLicence(
   version: AgreementVersion,
+  terms: LicenceTerms,
   works: readonly GroupWork[],
   author: User,
   issueNumber: number | null,
@@ -362,7 +415,7 @@ async function draftGroupLicence(
   now: Date,
   versionReason: string | null,
 ): Promise<Draft & { contentHashes: (string | null)[] }> {
-  const { values, reasons, contentHashes } = await groupLicenceValues(version, works, author, issueNumber, formId, now, null);
+  const { values, reasons, contentHashes } = await groupLicenceValues(version, terms, works, author, issueNumber, formId, now, null);
   if (versionReason) reasons.unshift(versionReason);
 
   let rendered: { markdown: string; hash: string } | null = null;
@@ -411,6 +464,7 @@ export async function prepareContributorDocuments(
     resolved: 0,
     alreadyPrepared: { general: 0, licence: 0 },
     skipped: [],
+    redrawn: 0,
   };
   const skip = (reason: string) => {
     const found = summary.skipped.find((entry) => entry.reason === reason);
@@ -473,7 +527,44 @@ export async function prepareContributorDocuments(
     );
   const byId = new Map(people.map((person) => [person.id, person]));
 
-  const existing = await db.select().from(contributorDocuments);
+  const terms = await currentLicenceTerms();
+  let existing = await db.select().from(contributorDocuments);
+
+  // A form from an earlier licence template that nobody holds yet is drawn
+  // again from the current one (D-340); only for works in this run's scope
+  const free = new Set(
+    (
+      await db
+        .select({ id: contributorDocuments.id })
+        .from(contributorDocuments)
+        .where(and(eq(contributorDocuments.kind, "work_licence"), withoutSignedCopy, notMailed))
+    ).map((row) => row.id),
+  );
+  const inScope = new Set([...works.map((work) => work.id), ...quizzes.map((quiz) => quiz.id)]);
+  const formWorks = await db
+    .select({ documentId: contributorDocumentWorks.documentId, articleId: contributorDocumentWorks.articleId, quizId: contributorDocumentWorks.quizId })
+    .from(contributorDocumentWorks);
+  const outdated = existing
+    .filter(
+      (row) =>
+        row.kind === "work_licence" &&
+        row.templateVersion !== (row.issueId ? LICENCE_GROUP_TEMPLATE_VERSION : LICENCE_FORM_TEMPLATE_VERSION) &&
+        free.has(row.id) &&
+        (inScope.has(row.articleId ?? row.quizId ?? "") ||
+          formWorks.some((work) => work.documentId === row.id && inScope.has(work.articleId ?? work.quizId ?? ""))),
+    )
+    .map((row) => row.id);
+  if (outdated.length) {
+    // The same guard again in the statement: a mail queued since is kept
+    const removed = await db
+      .delete(contributorDocuments)
+      .where(and(inArray(contributorDocuments.id, outdated), withoutSignedCopy, notMailed))
+      .returning({ id: contributorDocuments.id });
+    summary.redrawn = removed.length;
+    const gone = new Set(removed.map((row) => row.id));
+    existing = existing.filter((row) => !gone.has(row.id));
+  }
+
   const generalOf = new Map(
     existing
       .filter((row) => row.kind === "general_agreement" && row.agreementVersionId === version.id)
@@ -481,12 +572,12 @@ export async function prepareContributorDocuments(
   );
   const licenceOf = new Map(
     existing
-      .filter((row) => row.kind === "work_licence" && row.templateVersion === LICENCE_FORM_TEMPLATE_VERSION)
+      .filter((row) => row.kind === "work_licence" && !row.issueId && row.articleId)
       .map((row) => [row.articleId, row]),
   );
   const quizLicenceOf = new Map(
     existing
-      .filter((row) => row.kind === "work_licence" && row.quizId && row.templateVersion === LICENCE_FORM_TEMPLATE_VERSION)
+      .filter((row) => row.kind === "work_licence" && !row.issueId && row.quizId)
       .map((row) => [row.quizId, row]),
   );
 
@@ -510,6 +601,7 @@ export async function prepareContributorDocuments(
       renderedMarkdown: result.markdown,
       textHash: result.hash,
       workContentHash: values.contentHash ?? null,
+      templateVersion: values.templateVersion,
       updatedAt: now,
     };
     if (current) {
@@ -530,7 +622,6 @@ export async function prepareContributorDocuments(
         agreementVersionId: version.id,
         articleId: values.articleId,
         quizId: values.quizId ?? null,
-        templateVersion: values.templateVersion,
         createdBy: actor.id,
         ...fields,
       })
@@ -613,19 +704,11 @@ export async function prepareContributorDocuments(
     .from(contributorDocumentWorks)
     .orderBy(contributorDocumentWorks.position);
   const onGroup = new Set(grouped.flatMap((row) => [row.articleId, row.quizId]).filter((id): id is string => Boolean(id)));
-  // A single form nobody holds yet (not mailed, not queued, no signed copy)
-  // gives way to the issue form; one its owner holds keeps its work (D-314)
-  const free = new Set(
-    (
-      await db
-        .select({ id: contributorDocuments.id })
-        .from(contributorDocuments)
-        .where(and(eq(contributorDocuments.kind, "work_licence"), isNull(contributorDocuments.issueId), withoutSignedCopy, notMailed))
-    ).map((row) => row.id),
-  );
+  // A single form nobody holds yet (`free` above: not mailed, not queued, no
+  // signed copy) gives way to the issue form; one its owner holds keeps its work (D-314)
   const singleOf = (work: GroupWork) => (work.quizId ? quizLicenceOf.get(work.quizId) : licenceOf.get(work.articleId));
   const issueForms = existing.filter(
-    (row) => row.kind === "work_licence" && row.issueId && row.templateVersion === LICENCE_GROUP_TEMPLATE_VERSION,
+    (row) => row.kind === "work_licence" && row.issueId,
   );
 
   const byKey = new Map<string, Candidate[]>();
@@ -649,7 +732,7 @@ export async function prepareContributorDocuments(
       return;
     }
     const formId = current?.id ?? randomUUID();
-    const result = await draftLicence(version, work, author, work.bylineChoice, formId, now, versionReason);
+    const result = await draftLicence(version, terms, work, author, work.bylineChoice, formId, now, versionReason);
     await save(
       "work_licence",
       current,
@@ -697,7 +780,7 @@ export async function prepareContributorDocuments(
 
     const formId = review?.id ?? randomUUID();
     const number = issueNumber.get(issueId) ?? null;
-    const result = await draftGroupLicence(version, members, author, number, formId, now, versionReason);
+    const result = await draftGroupLicence(version, terms, members, author, number, formId, now, versionReason);
     count(result);
     const fields = {
       status: result.status,
@@ -705,6 +788,7 @@ export async function prepareContributorDocuments(
       renderedMarkdown: result.markdown,
       textHash: result.hash,
       worksLabel: number === null ? null : groupLabel(number, members),
+      templateVersion: LICENCE_GROUP_TEMPLATE_VERSION,
       updatedAt: now,
     };
     const replaced = members.flatMap((work) => {
@@ -729,7 +813,6 @@ export async function prepareContributorDocuments(
           userId: author.id,
           agreementVersionId: version.id,
           issueId,
-          templateVersion: LICENCE_GROUP_TEMPLATE_VERSION,
           createdBy: actor.id,
           ...fields,
         });
@@ -758,6 +841,7 @@ export async function prepareContributorDocuments(
       licenceCreated: summary.licenceCreated,
       needsReview: summary.needsReview.total,
       resolved: summary.resolved,
+      redrawn: summary.redrawn,
       ...(scoped ? { scope } : {}),
     },
     ip: meta.ip,
@@ -941,7 +1025,7 @@ export async function viewContributorDocument(actor: Actor, id: string): Promise
     const works = await groupWorksOf(row.id);
     if (works.length === 0) return { ...base, markdown: null, isPreview: true, unavailable: "Belgenin eserleri artık kayıtlı değil." };
     const [issue] = await db.select({ number: issues.number }).from(issues).where(eq(issues.id, row.issueId)).limit(1);
-    const { values } = await groupLicenceValues(version, works, owner!, issue?.number ?? null, row.id, row.updatedAt, (reason) => `**[EKSİK: ${reason}]**`);
+    const { values } = await groupLicenceValues(version, await currentLicenceTerms(), works, owner!, issue?.number ?? null, row.id, row.updatedAt, (reason) => `**[EKSİK: ${reason}]**`);
     values["form.text_hash"] = "(belge hazır olunca hesaplanır)";
     return {
       ...base,
@@ -959,7 +1043,7 @@ export async function viewContributorDocument(actor: Actor, id: string): Promise
     .where(and(eq(rightsGrants.articleId, row.articleId ?? row.id), eq(rightsGrants.status, "signed")))
     .orderBy(desc(rightsGrants.signedAt))
     .limit(1);
-  const { values } = await licenceValues(version, work, owner!, grant?.bylineChoice ?? null, row.id, row.updatedAt);
+  const { values } = await licenceValues(version, await currentLicenceTerms(), work, owner!, grant?.bylineChoice ?? null, row.id, row.updatedAt);
   values["form.text_hash"] = "(belge hazır olunca hesaplanır)";
   return {
     ...base,

@@ -7,7 +7,7 @@
 import Link from "next/link";
 import type { ServerAction } from "@/components/form";
 import { Card, Table, Td, Th } from "@/components/ui";
-import { SIGNED_CONTRACT_STATUS_LABELS, SignedContractUploadForm } from "@/components/signed-contract";
+import { SignedContractUploadForm, signedUploadStatusLabel } from "@/components/signed-contract";
 import { DOCUMENT_KIND_LABELS, DOCUMENT_STATUS_LABELS } from "@/lib/contributor-documents";
 import type { ContributorDocumentItem } from "@/services/contributor-documents";
 import type { OwnSignedContract } from "@/services/signed-contracts";
@@ -35,7 +35,9 @@ export function OwnDocumentsCard({
       <p className="mb-3 text-sm text-muted">
         Size hazırlanan sözleşme ve eser ruhsatı formları. Her belgenin PDF&apos;ini indirip el yazısıyla
         imzalayın ve imzalı hâlini o belgenin satırından yükleyin
-        {upload && prepared > 0 ? ` (${prepared} belge, her biri için bir dosya)` : ""}.
+        {upload && prepared > 0 ? ` (${prepared} belge, her biri için bir dosya)` : ""}. Ruhsat formu
+        sizin ve derginin imzasıyla yürürlüğe girer; yüklediğiniz kopya arşivlenir ve formla aynı olduğu
+        kontrol edilir, panel onayı bir şart değildir.
       </p>
       <Table>
         <thead>
@@ -78,7 +80,7 @@ export function OwnDocumentsCard({
                   <Td className="min-w-[14rem] text-xs">
                     {latest && (
                       <p className="mb-1">
-                        {SIGNED_CONTRACT_STATUS_LABELS[latest.status]} ·{" "}
+                        {signedUploadStatusLabel(latest.status, item.kind === "general_agreement")} ·{" "}
                         <Link href={`/api/media/${latest.fileMediaId}`} className="text-accent underline">
                           yüklenen PDF
                         </Link>

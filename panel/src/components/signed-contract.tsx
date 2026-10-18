@@ -17,6 +17,21 @@ export const SIGNED_CONTRACT_STATUS_LABELS = {
   rejected: "Reddedildi",
 } as const;
 
+/**
+ * A licence form is in force on both parties' signatures (D-340, form article
+ * 12); the upload is only archived and checked against the form. Its labels
+ * say that, and never "approved".
+ */
+export const SIGNED_LICENCE_STATUS_LABELS = {
+  pending: "Yüklendi · arşiv kontrolü bekliyor",
+  approved: "Yüklendi · arşivde doğrulandı",
+  rejected: "Kopya kabul edilmedi · yeniden yükleyin",
+} as const;
+
+export function signedUploadStatusLabel(status: keyof typeof SIGNED_CONTRACT_STATUS_LABELS, isContract: boolean): string {
+  return (isContract ? SIGNED_CONTRACT_STATUS_LABELS : SIGNED_LICENCE_STATUS_LABELS)[status];
+}
+
 const STATUS_CLASS = {
   pending: "text-warning",
   approved: "text-accent",
@@ -43,7 +58,7 @@ export function SignedContractHistory({ rows }: { rows: OwnSignedContract[] }) {
               {row.isContract ? `Genel Katkı Sağlayan Sözleşmesi · v${row.version}` : `Ruhsat formu · ${row.articleTitle ?? "—"}`}
             </Td>
             <Td className="text-xs">
-              <span className={STATUS_CLASS[row.status]}>{SIGNED_CONTRACT_STATUS_LABELS[row.status]}</span>
+              <span className={STATUS_CLASS[row.status]}>{signedUploadStatusLabel(row.status, row.isContract)}</span>
               {row.reviewedAt && <span className="text-muted"> · {formatDateTime(row.reviewedAt)}</span>}
               {row.status === "rejected" && row.rejectionReason && (
                 <p className="mt-1 text-ink">Neden: {row.rejectionReason}</p>

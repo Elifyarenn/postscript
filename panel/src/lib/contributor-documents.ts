@@ -9,17 +9,35 @@
 import type { Role } from "@/db/schema";
 import { countWords } from "./word-count";
 
-/** The licence form as delivered (contracts/eser-bazli-kullanim-ruhsati-formu.md). */
-export const LICENCE_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu.md";
-export const LICENCE_FORM_TEMPLATE_VERSION = "1";
+/**
+ * The licence form as delivered (contracts/eser-bazli-kullanim-ruhsati-formu.md,
+ * template version 1). Forms are no longer drawn from it; the unit test keeps
+ * it equal to the delivered PDF, the base every later version is read against.
+ */
+export const DELIVERED_LICENCE_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu.md";
+
+/**
+ * The single-work form in use (D-340): version 1 with the commercial uses
+ * spelled out and the licence in force on both signatures, not on the panel.
+ */
+export const LICENCE_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu-v3.md";
+export const LICENCE_FORM_TEMPLATE_VERSION = "3";
 
 /**
  * The same form for every work an author gave one issue (D-339): section 1
  * lists the works, the rest of the text applies to each of them. Used when an
- * author has more than one work in the issue; a single work keeps the form above.
+ * author has more than one work in the issue; a single work keeps the form
+ * above. Version 2 was the D-339 text; version 4 carries the D-340 changes.
  */
-export const LICENCE_GROUP_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu-v2.md";
-export const LICENCE_GROUP_TEMPLATE_VERSION = "2";
+export const LICENCE_GROUP_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu-v4.md";
+export const LICENCE_GROUP_TEMPLATE_VERSION = "4";
+
+/**
+ * Whether new licence forms include commercial use (D-340): one
+ * `site_settings` row the admin sets, "included" or "excluded". Without the
+ * row the forms say "Hariç", which grants nothing beyond the free channels.
+ */
+export const LICENCE_COMMERCIAL_SETTING = "licence_commercial_use";
 
 /** The contributor contract as delivered; the current version must be this text. */
 export const CONTRIBUTOR_AGREEMENT_FILE = "genel-katki-saglayan-sozlesmesi.md";
@@ -120,6 +138,9 @@ export function licenceFormValues(input: {
     "form.channel_pdf_issue": yesNo(terms.channels.includes("pdf_issue")),
     "form.channel_social": yesNo(terms.channels.includes("social")),
     "form.channel_newsletter": yesNo(terms.channels.includes("newsletter")),
+    // The print and paid channels exist only with commercial use (D-340, form article 7)
+    "form.channel_print": yesNo(terms.commercialUseIncluded),
+    "form.channel_paid_digital": yesNo(terms.commercialUseIncluded),
     "form.territory_label": TERRITORY_LABELS[terms.territory] ?? null,
     "form.duration_label": LICENCE_DURATION_TEXT,
     "form.exclusivity_label":
