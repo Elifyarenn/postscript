@@ -17,20 +17,21 @@ import { countWords } from "./word-count";
 export const DELIVERED_LICENCE_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu.md";
 
 /**
- * The single-work form in use (D-340): version 1 with the commercial uses
- * spelled out and the licence in force on both signatures, not on the panel.
+ * The single-work form in use: version 1 with the commercial uses spelled out
+ * and the licence in force on both signatures, not on the panel (D-340,
+ * version 3), and changed only by both parties in writing (D-341, version 5).
  */
-export const LICENCE_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu-v3.md";
-export const LICENCE_FORM_TEMPLATE_VERSION = "3";
+export const LICENCE_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu-v5.md";
+export const LICENCE_FORM_TEMPLATE_VERSION = "5";
 
 /**
  * The same form for every work an author gave one issue (D-339): section 1
  * lists the works, the rest of the text applies to each of them. Used when an
  * author has more than one work in the issue; a single work keeps the form
- * above. Version 2 was the D-339 text; version 4 carries the D-340 changes.
+ * above. Version 2 was the D-339 text, version 4 added D-340, version 6 D-341.
  */
-export const LICENCE_GROUP_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu-v4.md";
-export const LICENCE_GROUP_TEMPLATE_VERSION = "4";
+export const LICENCE_GROUP_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu-v6.md";
+export const LICENCE_GROUP_TEMPLATE_VERSION = "6";
 
 /**
  * Whether new licence forms include commercial use (D-340): one

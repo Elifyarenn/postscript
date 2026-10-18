@@ -12,11 +12,15 @@
  *
  * Unsigned contributor documents prepared for these works (D-276) go with
  * them: they were never sent, and they describe a licence that will not be.
+ *
+ * A work whose licence form has a signed copy in the panel is not listed: the
+ * form ends only by both parties' written agreement or a valid legal ground
+ * (form article 10, D-341), never by this administrative removal.
  */
 import "server-only";
 import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { articles, contributorDocumentWorks, contributorDocuments, roleChanges, users } from "@/db/schema";
+import { articles, contributorDocumentWorks, contributorDocuments, roleChanges, signedContracts, users } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import { canManageAgreements, type Actor } from "@/lib/auth/rbac";
 import { forbidden } from "@/lib/errors";
@@ -53,6 +57,16 @@ export async function listUnlicensedFormerWriterWorks(actor: Actor): Promise<Unl
         isNull(articles.deletedAt),
         eq(users.role, "user"),
         sql`exists (select 1 from ${roleChanges} where ${roleChanges.userId} = ${users.id} and ${roleChanges.oldRole} = 'writer')`,
+        // A signed licence form, single or issue form, keeps its work (D-341)
+        sql`not exists (
+          select 1 from ${signedContracts}
+          join ${contributorDocuments} on ${contributorDocuments.id} = ${signedContracts.contributorDocumentId}
+          where ${contributorDocuments.kind} = 'work_licence'
+            and (${contributorDocuments.articleId} = ${articles.id}
+              or exists (select 1 from ${contributorDocumentWorks}
+                where ${contributorDocumentWorks.documentId} = ${contributorDocuments.id}
+                  and ${contributorDocumentWorks.articleId} = ${articles.id}))
+        )`,
       ),
     )
     .orderBy(users.displayName, articles.title);

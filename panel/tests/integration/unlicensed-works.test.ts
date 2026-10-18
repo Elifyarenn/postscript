@@ -5,7 +5,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
-import { articles, auditLog, contributorDocuments, rightsGrants, roleChanges, users, type User } from "@/db/schema";
+import { articles, auditLog, contributorDocuments, media, rightsGrants, roleChanges, signedContracts, users, type User } from "@/db/schema";
 import { isAppError } from "@/lib/errors";
 import { prepareContributorDocuments } from "@/services/contributor-documents";
 import { listUnlicensedFormerWriterWorks, removeUnlicensedFormerWriterWorks } from "@/services/unlicensed-works";
@@ -70,6 +70,36 @@ async function scenario() {
 }
 
 describe("unlicensed works of removed writers", () => {
+  it("never lists, nor removes, a work whose licence form was signed (D-341)", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    // Both of the removed writer's works are in one issue: one issue form (D-339)
+    const [form] = (await db.select().from(contributorDocuments)).filter(
+      (row) => row.kind === "work_licence" && row.userId === s.removed.id,
+    );
+    expect(form!.issueId).not.toBeNull();
+    const [file] = await db
+      .insert(media)
+      .values({ storageKey: "contracts/imzali.pdf", mime: "application/pdf", size: 10 })
+      .returning();
+    await db.insert(signedContracts).values({
+      userId: s.removed.id,
+      agreementVersionId: form!.agreementVersionId!,
+      fileMediaId: file!.id,
+      fileSha256: "0".repeat(64),
+      contributorDocumentId: form!.id,
+    });
+
+    const list = await listUnlicensedFormerWriterWorks(actorOf(s.admin));
+    expect(list.map((row) => row.id)).toEqual([s.licensed.id]);
+
+    // Even named on purpose, the signed work and its form stay
+    await removeUnlicensedFormerWriterWorks(actorOf(s.admin), [s.unlicensedPublished.id], noMeta);
+    const [kept] = await db.select().from(articles).where(eq(articles.id, s.unlicensedPublished.id));
+    expect(kept!.deletedAt).toBeNull();
+    expect(await db.select().from(contributorDocuments).where(eq(contributorDocuments.id, form!.id))).toHaveLength(1);
+  });
+
   it("lists the works of former writers, an old checkbox approval notwithstanding (D-282)", async () => {
     const s = await scenario();
     const list = await listUnlicensedFormerWriterWorks(actorOf(s.admin));

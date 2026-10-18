@@ -353,7 +353,8 @@ export default async function AdminAgreementsPage() {
               Yazarlıktan çıkarılanların ruhsatsız eserleri ({unlicensed.length})
             </h2>
             <p className="mb-4 text-sm text-muted">
-              Yazarı artık yazar rolünde olmayan ve imzalı ruhsat onayı hiç olmayan eserler. Kaldırılan
+              Yazarı artık yazar rolünde olmayan ve imzalı ruhsat formu yüklenmemiş eserler. İmzalı ruhsatı
+              olan eser burada listelenmez: ruhsat panelde kaldırmakla sona ermez (formun 10. maddesi). Kaldırılan
               eser sitede ve panelde görünmez olur; kaydı ve sürüm geçmişi saklanır. Bu eserler için
               hazırlanmış, gönderilmemiş belgeler de silinir. Yalnızca aşağıda listelenenler kaldırılır.
             </p>

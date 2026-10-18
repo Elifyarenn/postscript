@@ -13346,3 +13346,34 @@ maddeleri aynı; basılı/ücretli mecralar yalnızca Dahil ise Evet. Entegrasyo
 Hariç, yalnızca admin ayarlar (403), denetim kaydı, yeni form Dahil, hazır form değişmez;
 eski şablonla gönderilmemiş form yeniden çizilir, gönderilmiş kalır, ikinci çalıştırmada
 yeniden çizim yok.
+
+## D-341 — Ruhsat formunun 10. maddesi: değişiklik yalnızca iki tarafın yazılı mutabakatıyla
+
+**İstek (ürün sahibi, 2026-10-18):** Eser bazlı kullanım ruhsatının yalnızca 10. maddesi
+verilen metinle değişsin; paneldeki idari iptal işlemi imzalanmış ruhsatı kendiliğinden
+hukuken sona erdirmesin.
+
+**Karar:**
+- **Metin:** 10. madde harfiyen ürün sahibinin metni oldu ("Bu form imzalandıktan sonra
+  tek taraflı olarak değiştirilemez. … bu değişiklikten etkilenmez."). Eski "Dergi
+  tarafından iptal edilir" cümlesi kalktı. Başka madde değişmedi.
+- **Şablon sürümü:** tek eser `eser-bazli-kullanim-ruhsati-formu-v5.md` (sürüm `5`), sayı
+  formu `...-v6.md` (sürüm `6`); v3/v4 kayıt için dosyada kalır. Aynı sürüm numarası altında
+  iki farklı 10. madde olmasın diye sürüm yükseltildi; gönderilmemiş, imzalı kopyası olmayan
+  v3/v4 formlar D-340'taki kuralla "Belgeleri hazırla"da yeniden çizilir, gönderilmişler
+  eski metinle kalır.
+- **İdari iptal:** panelde ruhsat formunu iptal eden bir işlem yok; formu silen yollar
+  (gönderilmemişleri sil, yeniden çizme, yazarlıktan çıkarılanların eserlerini kaldırma)
+  zaten imzalı kopyası olan formlara dokunmuyordu. Eksik olan: "Yazarlıktan çıkarılanların
+  ruhsatsız eserleri" listesi imzalı ruhsat formu yüklenmiş eserleri de "ruhsatsız" sayıp
+  siteden kaldırabiliyordu. Artık imzalı kopyası yüklenmiş (durumu ne olursa olsun, D-340
+  m. 12.4) tek eser veya sayı formundaki eser listelenmez ve kaldırma işlemi onu atlar.
+  Yüklemenin "kabul edilmedi" işaretlenmesi zaten yalnızca arşiv durumudur (D-340).
+- Migration yok; KVKK metni değişmedi. **Hukukçu görüşü gerekiyor:** "kanundan doğan geçerli
+  sebep" ile sona ermenin panelde nasıl kaydedileceği (şimdilik hiçbir işlem ruhsatı sona
+  erdirmez; gerekirse taraflar yazılı olarak yeni form düzenler).
+
+**Doğrulama:** Birim: v5/v6'nın 10. maddesi verilen metinle birebir, "Dergi tarafından
+iptal edilir" yok, teslim metninin diğer değişmeyen maddeleri aynı. Entegrasyon
+(`unlicensed-works.test.ts`): imzalı kopyası olan sayı formunun eserleri listelenmez,
+adıyla gönderilse de kaldırılmaz, form silinmez.

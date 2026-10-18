@@ -129,10 +129,23 @@ describe("the licence forms in use (D-340)", () => {
   it("leaves every other article of the delivered form as it was", () => {
     const delivered = articles(readFileSync(contracts(DELIVERED_LICENCE_FORM_FILE), "utf8"));
     const current = articles(forms[0]!);
-    const changed = ["## 3. Ruhsat Kapsamındaki Mali Haklar", "## 4. Mecralar", "## 5. Süre ve Yer", "## 6. Bedel", "## 7. Ticari Kullanım", "## 8. Ad Gösterimi ve Ruhsatın Devamı", "## 12. Şekil"];
+    const changed = ["## 3. Ruhsat Kapsamındaki Mali Haklar", "## 4. Mecralar", "## 5. Süre ve Yer", "## 6. Bedel", "## 7. Ticari Kullanım", "## 8. Ad Gösterimi ve Ruhsatın Devamı", "## 10. Değişiklik", "## 12. Şekil"];
     for (const [heading, text] of Object.entries(delivered)) {
       if (heading.startsWith("# POSTSCRIPT") || changed.includes(heading)) continue;
       expect(current[heading], heading).toBe(text);
+    }
+  });
+});
+
+describe("article 10 of the licence forms in use (D-341)", () => {
+  it("changes a signed form only by both parties in writing; no cancellation by the magazine alone", () => {
+    for (const file of [LICENCE_FORM_FILE, LICENCE_GROUP_FORM_FILE]) {
+      const text = readFileSync(contracts(file), "utf8");
+      const article = text.split("## 10. Değişiklik\n\n")[1]!.split("\n\n## ")[0];
+      expect(article).toBe(
+        "Bu form imzalandıktan sonra tek taraflı olarak değiştirilemez. Ruhsat kapsamının değiştirilmesi gerektiğinde tarafların yazılı mutabakatıyla yeni bir ruhsat formu düzenlenir. Önceki ruhsatın sona ermesi veya değiştirilmesi, tarafların yazılı anlaşmasına ya da kanundan doğan geçerli bir sebebe dayanır. Önceki ruhsat kapsamında hukuka uygun olarak gerçekleştirilmiş kullanımlar bu değişiklikten etkilenmez.",
+      );
+      expect(text).not.toMatch(/Dergi tarafından iptal edilir/);
     }
   });
 });
