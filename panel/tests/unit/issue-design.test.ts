@@ -152,42 +152,46 @@ describe("issue 01 as shipped", () => {
     expect(issue.pages.at(-1)!.role).toBe("back_cover");
   });
 
-  it("keeps the front matter in the order set in the panel, the memorial page drawn once (D-324)", () => {
-    expect(issue.pages.slice(0, 5).map((entry) => entry.key)).toEqual(["on-kapak", "anma", "sunus", "icindekiler-1", "icindekiler-2"]);
-    expect(issue.pages[1]!.omitTextObjects).toEqual([3, 4]);
+  it("keeps the memorial page right after the cover (D-324), then the letter, contents and masthead", () => {
+    expect(issue.pages.slice(0, 6).map((entry) => entry.key)).toEqual(["on-kapak", "anma", "sunus", "icindekiler-1", "icindekiler-2", "kunye"]);
+    // The revision has the memorial text once: nothing is left out when drawing (D-342)
+    expect(issue.pages.some((entry) => entry.omitTextObjects?.length)).toBe(false);
+    expect(issue.pages.at(-2)!.key).toBe("gelecek-sayi");
   });
 
-  it("keeps the science section in printed order 06 → 11 (D-329)", () => {
-    const science = issue.pages.filter((entry) => entry.source === "POSTSCRIPT bilim.ai").map((entry) => entry.printedNumber);
-    expect(science).toEqual([6, 7, 8, 9, 10, 11]);
-  });
-
-  it("keeps the psychology section in printed order 12 → 17 (D-328)", () => {
-    const psychology = issue.pages.filter((entry) => entry.source === "POSTSCRIPT psikoloj.ai");
-    expect(psychology.map((entry) => entry.printedNumber)).toEqual([12, 13, 14, 15, 16, 17]);
-    expect(psychology.slice(1).every((entry) => entry.key.endsWith(`-${entry.printedNumber}`))).toBe(true);
-  });
-
-  it("puts the numbered sections in printed order, 18 to 71 without a gap (D-327)", () => {
-    const from = issue.pages.findIndex((entry) => entry.key === "film-dizi-kitap-acilis");
-    const numbers = issue.pages.slice(from, -1).map((entry) => entry.printedNumber);
-    expect(numbers).toEqual(Array.from({ length: 54 }, (_, index) => 18 + index));
-  });
-
-  it("gives every written page its text", () => {
-    for (const entry of issue.pages.filter((page) => /^(bilim|psikoloji)-/.test(page.key))) {
-      expect(entry.transcript?.length ?? 0).toBeGreaterThan(20);
+  it("puts the numbered pages in printed order, 08 to 55 without a gap (D-342)", () => {
+    const numbers = issue.pages.flatMap((entry) => (entry.printedNumber === null ? [] : [entry.printedNumber]));
+    expect(numbers).toEqual(Array.from({ length: 48 }, (_, index) => 8 + index));
+    for (const entry of issue.pages.filter((page) => page.printedNumber !== null && !page.key.endsWith("-acilis"))) {
+      expect(entry.key.endsWith(`-${String(entry.printedNumber).padStart(2, "0")}`)).toBe(true);
     }
   });
 
-  it("uses every page of the twelve delivered files, the empty ones too (D-323)", () => {
-    expect(issue.excluded).toEqual([]);
-    expect(issue.pages).toHaveLength(72);
+  it("closes every section with its unnumbered illustration page", () => {
+    const keys = issue.pages.map((entry) => entry.key);
+    const openers = keys.filter((key) => key.endsWith("-acilis"));
+    expect(openers).toHaveLength(11);
+    for (const opener of openers.slice(1)) expect(keys[keys.indexOf(opener) - 1]).toMatch(/-cizer$/);
+    expect(keys[keys.indexOf("gelecek-sayi") - 1]).toBe("eglence-dedikodu-cizer");
+  });
+
+  it("gives every written and illustration page its text", () => {
+    for (const entry of issue.pages.filter((page) => /-(\d\d|cizer)$/.test(page.key))) {
+      expect(entry.transcript?.length ?? 0).toBeGreaterThan(100);
+      expect(entry.transcript).not.toMatch(/�/);
+    }
+  });
+
+  it("uses every page of the twelve delivered files but the documented empty ones", () => {
+    expect(issue.pages).toHaveLength(67);
     const files = new Set(issue.pages.map((entry) => entry.source));
     expect(files.size).toBe(12);
+    const counts: Record<string, number> = { "POSTSCRIPT 01.ai": 8, "POSTSCRIPT bilim.ai": 7 };
     for (const file of files) {
-      const pages = issue.pages.filter((entry) => entry.source === file).map((entry) => entry.sourcePage);
-      expect(pages.sort((x, y) => x - y)).toEqual([1, 2, 3, 4, 5, 6]);
+      const used = issue.pages.filter((entry) => entry.source === file).map((entry) => entry.sourcePage);
+      const left = issue.excluded.filter((entry) => entry.source === file).flatMap((entry) => entry.pages);
+      const all = Array.from({ length: counts[file] ?? 6 }, (_, index) => index + 1);
+      expect([...used, ...left].sort((x, y) => x - y)).toEqual(all);
     }
   });
 

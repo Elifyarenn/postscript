@@ -2,8 +2,9 @@
 
 /**
  * The designers' pages kept in code (D-274): one button imports or updates
- * them, the other undoes the last import. Offered only on the admin-only
- * issue; the service refuses any other issue on its own.
+ * them, the other undoes the last import. Offered on the admin-only issue
+ * and on a published one (D-342); the service refuses any other issue on its
+ * own.
  */
 import { useActionState } from "react";
 import { SubmitRow } from "@/components/form";
@@ -15,12 +16,15 @@ export function DesignImport({
   csrfToken,
   pageCount,
   pending,
+  published,
 }: {
   issueId: string;
   csrfToken: string;
   pageCount: number;
   /** The earlier pages the last import set aside, when they can be put back. */
   pending: { count: number; at: string } | null;
+  /** Readers have this issue open: what the import changes, they see at once. */
+  published: boolean;
 }) {
   const [state, importAction] = useActionState<ActionState, FormData>(importIssueDesignAction, null);
   const [undoState, undoAction] = useActionState<ActionState, FormData>(restoreIssueDesignAction, null);
@@ -33,7 +37,10 @@ export function DesignImport({
         <p className="text-sm text-muted">
           Kodda tanımlı {pageCount} tasarım sayfasını (<code>src/lib/issue-design/</code>) bu sayıya aktarır.
           Sıra, içindekiler ve etkileşim alanları oradan gelir. Tekrar çalıştırmak yalnızca değişeni günceller;
-          aynı görsel ikinci kez yüklenmez. İlk aktarımda sayının önceki sayfaları yedeklenip çıkarılır.
+          aynı görsel ikinci kez yüklenmez.{" "}
+          {published
+            ? "Bu sayı yayında: değişiklik okurlara hemen görünür, kodda olmayan tasarım sayfaları sayıdan çıkar. Tasarımdan gelmeyen bir sayfa varsa aktarım hiçbir şey yazmadan durur."
+            : "İlk aktarımda sayının önceki sayfaları yedeklenip çıkarılır."}
         </p>
         <SubmitRow state={state} label="Tasarım sayfalarını içe aktar / güncelle" />
       </form>

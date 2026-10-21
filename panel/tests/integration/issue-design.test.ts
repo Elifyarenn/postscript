@@ -1,6 +1,6 @@
 /**
  * Importing the designers' pages from code (D-274): only into the admins'
- * working issue, pictures stored and read back before anything older is
+ * working issue or, as a revision, a published one (D-342), pictures stored and read back before anything older is
  * taken out, the older pages kept in a snapshot that puts them back exactly,
  * and a rerun that changes only what changed.
  *
@@ -120,7 +120,7 @@ async function expectStatus(promise: Promise<unknown>, status: number) {
 const storedKeys = () => [...(getStorage() as MemoryStorageAdapter).objects.keys()];
 
 describe("where the import may go", () => {
-  it("is the admins' alone, and only into the admin-only issue", async () => {
+  it("is the admins' alone, and only into the admin-only issue or a published one", async () => {
     const issue = await makeIssue();
     const other = await db.insert(issues).values({ number: 2, title: "İki", status: "planning" }).returning();
     const deps = await depsFor(testManifest());
@@ -154,6 +154,72 @@ describe("where the import may go", () => {
       { kind: "quiz", name: "Test", rect: [0.1, 0.1, 0.2, 0.2], quizTitle: "Olmayan test" },
     ]);
     await expectStatus(importIssueDesign(admin, issue.id, noMeta, await depsFor(manifest)), 400);
+    expect(await db.select().from(issuePages)).toHaveLength(0);
+  });
+});
+
+describe("a revision of a published issue (D-342)", () => {
+  /** Imported while admin-only, then published the way the panel does it (D-316). */
+  async function publishedIssue(admin: ReturnType<typeof actorOf>) {
+    const issue = await makeIssue();
+    await importIssueDesign(admin, issue.id, noMeta, await depsFor(testManifest()));
+    await db.update(issues).set({ status: "published", adminOnly: false, publishedAt: new Date() }).where(eq(issues.id, issue.id));
+    return issue;
+  }
+
+  it("updates the design in place: same page kept, changed picture replaced, removed page gone, new page added", async () => {
+    const admin = actorOf(await createUser({ role: "admin" }));
+    const issue = await publishedIssue(admin);
+    const [cover] = await db.select().from(issuePages).where(eq(issuePages.label, "Tasarım · kapak · Sayfa kapak"));
+    const publishedFiles = storedKeys();
+
+    const revised = testManifest(["kapak", "bolum-a", "bolum-c", "arka"]);
+    const result = await importIssueDesign(admin, issue.id, noMeta, await depsFor(revised, { "bolum-a": "#00ff00" }));
+    expect(result).toMatchObject({ pages: 4, added: 1, replaced: 1, unchanged: 2, dropped: 1, retired: 0 });
+
+    // Readers get the revision at once, and keep the pages that did not change
+    const reader = await readIssuePages(null, 1);
+    expect(reader.pages.map((entry) => designKeyOf(entry.label))).toEqual(["kapak", "bolum-a", "bolum-c", "arka"]);
+    expect(reader.pages[0]!.id).toBe(cover!.id);
+
+    // What readers had is kept: every earlier file stays, and a copy of the pages is stored
+    expect(storedKeys()).toEqual(expect.arrayContaining(publishedFiles));
+    // Four earlier pictures and the two new ones
+    expect((await db.select().from(media).where(isNull(media.deletedAt))).length).toBe(6);
+    const [archived] = await db.select().from(auditLog).where(eq(auditLog.action, "issue_design.published_pages_archived"));
+    expect(archived!.after).toMatchObject({ count: 4 });
+    // The undo button is not offered for that copy
+    expect(await pendingSnapshot(issue.id)).toBeNull();
+  });
+
+  it("refuses, writing nothing, while the issue has a page that did not come from the design", async () => {
+    const admin = actorOf(await createUser({ role: "admin" }));
+    const issue = await publishedIssue(admin);
+    await db.insert(issuePages).values({ issueId: issue.id, position: 50, template: "editorial", heading: "Elle eklenmiş" });
+    const before = await db.select().from(issuePages);
+    const files = storedKeys().length;
+
+    const revised = testManifest(["kapak", "bolum-a", "arka"]);
+    await expectStatus(importIssueDesign(admin, issue.id, noMeta, await depsFor(revised, { kapak: "#00ff00" })), 400);
+    expect(await db.select().from(issuePages)).toEqual(before);
+    expect(storedKeys()).toHaveLength(files);
+  });
+
+  it("is never undone on a published issue", async () => {
+    const admin = actorOf(await createUser({ role: "admin" }));
+    const issue = await makeIssue();
+    await oldPreview(issue.id, admin);
+    await importIssueDesign(admin, issue.id, noMeta, await depsFor(testManifest()));
+    await db.update(issues).set({ status: "published", adminOnly: false }).where(eq(issues.id, issue.id));
+
+    await expectStatus(restoreIssueDesignSnapshot(admin, issue.id, noMeta), 400);
+    expect((await readIssuePages(null, 1)).pages).toHaveLength(4);
+  });
+
+  it("stays closed for an issue still being planned", async () => {
+    const admin = actorOf(await createUser({ role: "admin" }));
+    const issue = await makeIssue(false);
+    await expectStatus(importIssueDesign(admin, issue.id, noMeta, await depsFor(testManifest())), 400);
     expect(await db.select().from(issuePages)).toHaveLength(0);
   });
 });

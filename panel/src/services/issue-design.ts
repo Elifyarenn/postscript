@@ -5,7 +5,7 @@ import path from "node:path";
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { auditLog, issuePageHotspots, issuePages, issueQuizzes, issues, media } from "@/db/schema";
+import { auditLog, issuePageHotspots, issuePages, issueQuizzes, issues, media, type Issue } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import { canAccessAdminPanel, type Actor } from "@/lib/auth/rbac";
 import { badRequest, forbidden, notFound } from "@/lib/errors";
@@ -96,6 +96,7 @@ export type DesignImportResult = {
 };
 
 const RETIRED_ACTION = "issue_design.previous_pages_retired";
+const ARCHIVED_ACTION = "issue_design.published_pages_archived";
 const RESTORED_ACTION = "issue_design.previous_pages_restored";
 
 function sha256(buffer: Buffer): string {
@@ -106,7 +107,16 @@ function snapshotKey(issueId: string, snapshotId: string): string {
   return `issue-pages/snapshots/${issueId}/${snapshotId}.json`;
 }
 
-async function adminIssue(actor: Actor, issueId: string) {
+/**
+ * True when the design may be imported into this issue: the admins' working
+ * issue, or an issue already published (D-342). An issue being planned is
+ * neither: the team could open pages there before the admins decide (D-240).
+ */
+export function mayImportDesign(issue: Pick<Issue, "status" | "adminOnly">): boolean {
+  return issue.adminOnly || issue.status === "published";
+}
+
+async function adminIssue(actor: Actor, issueId: string, allowPublished: boolean) {
   if (!canAccessAdminPanel(actor)) throw forbidden("Tasarım aktarımı yalnızca yöneticilerindir.");
   const [issue] = await db
     .select()
@@ -114,10 +124,12 @@ async function adminIssue(actor: Actor, issueId: string) {
     .where(and(eq(issues.id, issueId), isNull(issues.deletedAt)))
     .limit(1);
   if (!issue) throw notFound("Sayı bulunamadı.");
-  // Only the admins' working issue: nothing here may put pages where the
-  // team or readers could open them before the admins decide (D-240)
-  if (!issue.adminOnly) {
-    throw badRequest("Tasarım aktarımı yalnızca “yalnızca yöneticiler” olarak işaretli örnek sayıya yapılır.");
+  if (allowPublished ? !mayImportDesign(issue) : !issue.adminOnly) {
+    throw badRequest(
+      allowPublished
+        ? "Tasarım aktarımı yalnızca “yalnızca yöneticiler” olarak işaretli örnek sayıya ya da yayımlanmış sayıya yapılır."
+        : "Önceki sayfalara dönüş yalnızca “yalnızca yöneticiler” olarak işaretli örnek sayıda yapılır.",
+    );
   }
   return issue;
 }
@@ -181,6 +193,39 @@ async function releaseDesignMedia(mediaId: string, actor: Actor, meta: RequestMe
   });
 }
 
+/**
+ * Stores the published issue's pages and areas as they are, before a revision
+ * changes them (D-342). Read back before anything is written; not offered
+ * for undo, it is the record of what readers had.
+ */
+async function archivePublishedPages(issue: Issue, ids: string[], actor: Actor, meta: RequestMeta): Promise<void> {
+  const snapshotId = randomUUID();
+  const snapshot = {
+    version: 1,
+    issueId: issue.id,
+    issueNumber: issue.number,
+    takenAt: new Date().toISOString(),
+    pages: await db.select().from(issuePages).where(inArray(issuePages.id, ids)).orderBy(asc(issuePages.position)),
+    hotspots: await db
+      .select()
+      .from(issuePageHotspots)
+      .where(inArray(issuePageHotspots.pageId, ids))
+      .orderBy(asc(issuePageHotspots.position)),
+  };
+  const body = Buffer.from(JSON.stringify(snapshot), "utf8");
+  const key = snapshotKey(issue.id, snapshotId);
+  await getStorage().put({ bucket: "media", key, body, mime: "application/json" });
+  await assertStored(key, sha256(body), "Yayımlanmış sayfaların kopyası");
+  await writeAudit({
+    actorId: actor.id,
+    action: ARCHIVED_ACTION,
+    entityType: "issues",
+    entityId: issue.id,
+    after: { snapshotId, pageIds: ids, count: ids.length },
+    ip: meta.ip,
+  });
+}
+
 /** Reads a stored object back; the import counts nothing it cannot read. */
 async function assertStored(key: string, expected: string, what: string): Promise<void> {
   const body = await getStorage()
@@ -212,7 +257,7 @@ export async function importIssueDesign(
   meta: RequestMeta,
   deps: DesignDeps = defaultDeps,
 ): Promise<DesignImportResult> {
-  const issue = await adminIssue(actor, issueId);
+  const issue = await adminIssue(actor, issueId, true);
   const manifest = deps.manifestFor(issue.number);
   if (!manifest) throw badRequest(`Sayı ${issue.number} için kodda tanımlı bir tasarım yok.`);
 
@@ -253,6 +298,23 @@ export async function importIssueDesign(
 
   /* ---- 1. Pictures: stored, read back, attached ---- */
   const before = await pagesWithKeys(issue.id);
+  // A published issue's own pages are not set aside behind the readers' backs:
+  // the import there only updates design pages, and refuses before writing
+  const handMade = before.filter((row) => designKeyOf(row.label) === null);
+  if (!issue.adminOnly && handMade.length) {
+    throw badRequest(
+      `Yayımlanmış sayıda tasarımdan gelmeyen ${handMade.length} sayfa var; aktarım onları çıkarmaz. Önce panelden kaldırın ya da yerinde bırakmak için bu sayıya aktarım yapmayın.`,
+    );
+  }
+  // What readers had is kept, not erased: whether we must keep published
+  // content for two years is open (5187 s. K., CLAUDE.md), so on a published
+  // issue the pages as they were go to a stored copy first, and no picture
+  // file of theirs is removed (D-342)
+  if (!issue.adminOnly && before.length) {
+    await archivePublishedPages(issue, before.map((row) => row.id), actor, meta);
+  }
+  const release = issue.adminOnly ? releaseDesignMedia : async () => undefined;
+
   const byKey = new Map<string, (typeof before)[number]>();
   for (const row of before) {
     const key = designKeyOf(row.label);
@@ -281,7 +343,7 @@ export async function importIssueDesign(
     } else if (found) {
       await replacePageImage(actor, found.id, input, meta);
       await assertStored(storageKey, picture.sha, `“${page.title}”`);
-      if (found.imageMediaId) await releaseDesignMedia(found.imageMediaId, actor, meta);
+      if (found.imageMediaId) await release(found.imageMediaId, actor, meta);
       replaced += 1;
       pageIds.set(page.key, found.id);
     } else {
@@ -340,7 +402,7 @@ export async function importIssueDesign(
     if (found) {
       await updateIssuePage(actor, found.id, content, meta);
       // Only if this key was once a picture: the picture is no longer the page
-      if (found.imageMediaId) await releaseDesignMedia(found.imageMediaId, actor, meta);
+      if (found.imageMediaId) await release(found.imageMediaId, actor, meta);
       unchanged += 1;
       pageId = found.id;
     } else {
@@ -394,7 +456,7 @@ export async function importIssueDesign(
 
   for (const row of stale) {
     await db.delete(issuePages).where(eq(issuePages.id, row.id));
-    if (row.imageMediaId) await releaseDesignMedia(row.imageMediaId, actor, meta);
+    if (row.imageMediaId) await release(row.imageMediaId, actor, meta);
   }
 
   if (older.length) {
@@ -505,7 +567,8 @@ export async function restoreIssueDesignSnapshot(
   issueId: string,
   meta: RequestMeta,
 ): Promise<{ restored: number; removed: number }> {
-  const issue = await adminIssue(actor, issueId);
+  // Undoing takes every design page out: never on an issue readers have open
+  const issue = await adminIssue(actor, issueId, false);
   const pending = await pendingSnapshot(issue.id);
   if (!pending) throw badRequest("Geri alınacak bir tasarım aktarımı yok.");
 

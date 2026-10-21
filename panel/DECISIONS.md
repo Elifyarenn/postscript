@@ -13377,3 +13377,75 @@ hukuken sona erdirmesin.
 iptal edilir" yok, teslim metninin diğer değişmeyen maddeleri aynı. Entegrasyon
 (`unlicensed-works.test.ts`): imzalı kopyası olan sayı formunun eserleri listelenmez,
 adıyla gönderilse de kaldırılmaz, form silinmez.
+
+## D-342 — Sayı 01 revizyonu: `revizebirincisayi/` teslimi, yayımlanmış sayıya tasarım aktarımı
+
+**İstek (ürün sahibi, 2026-10-21):** "1. sayıyı bu dosyalarla revize et" (`revizebirincisayi/`,
+12 .ai dosyası; deponun kökünde, `deneme/`, `sayı/`, `son/` gibi izlenmez — asla `git add`
+edilmez).
+
+**Teslimde ne değişti:** On iki dosyanın hepsi yeni. Yazılar yeniden dizilmiş, daha az
+sayfaya sığdırılmış: basılı numaralar artık 08–55 (önce 06–71). Her bölüme numarasız bir
+çizim sayfası ("Çizer: …", bir alıntı ve başlık) eklenmiş; bölüm açılışlarının çizimleri
+desenli bordo halı zemine taşınmış. `POSTSCRIPT 01.ai` 8 çizim alanı: yeni **künye** ve
+"Gelecek Sayı: GOTHIC, 05 Kasım" sayfası geldi; anma sayfasındaki çift metin (D-324)
+artık yok. `POSTSCRIPT bilim.ai` 7 çizim alanı. Beş dosyada 4. alan, Eğlence'de 3. ve 4.
+alan bembeyaz ve boş; Yazar Köşesi'nin 4. alanı yalnızca başlık ve "51" taşıyan boş şablon
+(51 numaralı yazı 1. alanda).
+
+**Karar:**
+- Manifest (`issue-01.ts`) baştan yazıldı: 67 görsel sayfa + test sayfası. Sıra: kapak,
+  anma (D-324'teki elle verilen yer korunur), sunuş, iki içindekiler, künye; on bir bölüm
+  (açılış, basılı numara sırasıyla yazılar, sonra bölümün çizim sayfası); gelecek sayı;
+  arka kapak. Çizim sayfasının numarası yok, dosyadaki yeri de sıra bildirmiyor; bölümü
+  kapatması muhafazakâr seçim (tasarımcıya sorulabilir). Boş alanlar `excluded`'da.
+- Anahtarlar basılı numarayı taşır (`bilim-09` … `eglence-dedikodu-55`), çizimler
+  `<bölüm>-cizer`. Numarasız anahtarlar (`on-kapak`, `anma`, `sunus`, `icindekiler-*`,
+  `*-acilis`, `eglence-dedikodu-test`, `arka-kapak`) aynı kaldı: bu sayfaların kimliği
+  ve okurun "kaldığın yer"i korunur. Numaralı eski sayfalar sayıdan çıkar.
+- İçindekiler listesi artık her yazının ilk sayfasını adıyla gösterir (önce yalnızca
+  Bilim/Psikoloji); adlar derginin içindekiler sayfalarından. Fashion 47 ("“Aesthetic”
+  Hayatlar") basılı içindekilerde yok ama yazı olduğu için listeye alındı.
+- Ekran okuyucu metinleri tek dosyada (`issue-01-transcripts.ts`), metin katmanından
+  otomatik çıkarıldı; D-327'deki elle yazılmış Bilim/Psikoloji metinleri ve
+  `issue-01-section-transcripts.ts` kalktı (yazılar yeniden dizildiği için artık
+  sayfalara uymuyordu). Karakter haritası olmayan yazı tipindeki iki başlık ("El Alem
+  Ne Giyer?", "Susamayan Zihinlerin Yankısı") ve "Zayıflık"/"Grafik"teki f bağı
+  resimden dolduruldu. Paragraf yer yer metin çerçevesinin kırıldığı yerden bölünür.
+- **Yayımlanmış sayıya aktarım.** Aktarım yalnızca `admin_only` sayıya yapılabiliyordu
+  (D-240); Sayı 1 yayımlanınca bu kapandı (D-316). Artık `mayImportDesign`: admin-only
+  **ya da** yayımlanmış sayı; hazırlanmakta olan sayı yine kapalı (ekip görebilir).
+  Yayımlanmış sayıda:
+  - Tasarımdan gelmeyen bir sayfa varsa aktarım hiçbir şey yazmadan 400 döner; okurun
+    gördüğü elle eklenmiş bir sayfa sessizce yedeğe alınıp çıkarılmaz.
+  - Değişiklikten önce bütün sayfalar ve alanları depoya bir kopya olarak yazılır, geri
+    okunur, `issue_design.published_pages_archived` denetim kaydı düşülür. Eski
+    görsellerin dosyası silinmez, medya kaydı silinmiş işaretlenmez. Neden: 5187 s.
+    Kanun kapsamında 2 yıllık içerik saklama yükümlülüğümüz olup olmadığı belirsiz
+    (CLAUDE.md); **hukukçu görüşü gerekiyor** — yükümlülük yoksa bu kopyalar ileride
+    temizlenebilir.
+  - "Önceki sayfalara geri dön" yayımlanmış sayıda sunulmaz ve servis reddeder (bütün
+    tasarım sayfalarını çıkarırdı).
+  - Paneldeki aktarım kartı yayımlanmış sayıda "değişiklik okurlara hemen görünür"
+    uyarısıyla görünür.
+
+**Canlıya etkisi:** Migration yok. Push'tan sonra bir admin, Sayı 1'in sayfalar ekranında
+(`/editor/issues/ad7b01f9-aab8-404a-99c8-ed74e1b4a106/sayfalar`) "Tasarım sayfalarını içe
+aktar / güncelle"ye basar; o ana kadar okurlar eski hâli görür. Basınca: numaralı eski
+sayfalar çıkar, yeniler eklenir, numarasız sayfaların görseli değiştirilir. Sayfaya elle
+eklenmiş bir sayfa varsa aktarım durur, mesajda sayısı yazar.
+
+**Tasarımcıya iletilecekler:** boş beyaz çizim alanları; Yazar Köşesi'nde iki kez 51;
+içindekilerde Fashion 47 yok. (Film 21'in metin katmanındaki fazladan "20" resimde
+görünmüyor; ekran okuyucu metninden çıkarıldı.)
+
+**Hukuk:** Kişisel veri yok, aydınlatma metni değişmedi. Künye sayfası ekip adlarını
+taşır; `/kunye` sayfasının yerine geçmez (5651 m. 3 künyesi `site_settings`'ten gelmeye
+devam eder).
+
+**Doğrulama:** Kapı: typecheck, lint, test. Birim (`issue-design.test.ts`): ön kısım
+sırası, 08–55 boşluksuz, her bölüm çizim sayfasıyla biter, her yazı/çizim sayfasının
+metni var ve bozuk karakter yok, kullanılmayan her alan `excluded`'da. Entegrasyon:
+yayımlanmış sayıda değişmeyen sayfa kimliğini korur, değişen görsel yenilenir, çıkan
+sayfa gider, eski dosyalar ve kopya kalır, geri alma sunulmaz/reddedilir; elle eklenmiş
+sayfa varken hiçbir şey yazılmaz; hazırlanan sayı kapalı.

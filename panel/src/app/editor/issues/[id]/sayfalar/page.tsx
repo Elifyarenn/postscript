@@ -8,7 +8,7 @@ import { templateOf } from "@/lib/issue-templates";
 import type { ReaderPage } from "@/lib/issue-reader";
 import { findIssue } from "@/services/issues";
 import { listIssuePages } from "@/services/issue-pages";
-import { pendingSnapshot } from "@/services/issue-design";
+import { mayImportDesign, pendingSnapshot } from "@/services/issue-design";
 import { designFor } from "@/lib/issue-design";
 import { designKeyOf } from "@/lib/issue-design/manifest";
 import { listArticles } from "@/services/articles";
@@ -49,7 +49,7 @@ export default async function IssuePagesPage({ params }: { params: Promise<{ id:
     throw error;
   });
 
-  const design = issue.adminOnly ? designFor(issue.number) : null;
+  const design = mayImportDesign(issue) ? designFor(issue.number) : null;
   const [pages, csrfToken, media, articleList, areas, pending] = await Promise.all([
     listIssuePages(actor, issue.id),
     readCsrfToken(),
@@ -57,7 +57,8 @@ export default async function IssuePagesPage({ params }: { params: Promise<{ id:
     // Only this issue's own articles: two issues never share a list (D-330)
     listArticles(actor, { issueId: id, limit: 200 }).then((list) => list.items),
     listAllWriterAreasWithQuota(),
-    design ? pendingSnapshot(issue.id) : null,
+    // Undoing is offered on the admins' working issue only (D-342)
+    design && issue.adminOnly ? pendingSnapshot(issue.id) : null,
   ]);
   // Once the real designs are in, the stand-in preview would only push them back
   const hasDesignPages = pages.some((page) => designKeyOf(page.label) !== null);
@@ -197,6 +198,7 @@ export default async function IssuePagesPage({ params }: { params: Promise<{ id:
             csrfToken={csrfToken ?? ""}
             pageCount={design.pages.length}
             pending={pending ? { count: pending.count, at: pending.at.toISOString() } : null}
+            published={!issue.adminOnly}
           />
         </Card>
       )}
