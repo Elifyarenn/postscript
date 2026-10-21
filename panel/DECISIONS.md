@@ -13449,3 +13449,51 @@ metni var ve bozuk karakter yok, kullanılmayan her alan `excluded`'da. Entegras
 yayımlanmış sayıda değişmeyen sayfa kimliğini korur, değişen görsel yenilenir, çıkan
 sayfa gider, eski dosyalar ve kopya kalır, geri alma sunulmaz/reddedilir; elle eklenmiş
 sayfa varken hiçbir şey yazılmaz; hazırlanan sayı kapalı.
+
+## D-343 — Dergi sayfaları hızlandı: sonraki sayfalar önceden yüklenir, yayımlanmış sayının görselleri CDN'de
+
+**İstek (ürün sahibi, 2026-10-21):** "dergi sayfaları neden geç yükleniyor hızlandırma
+imkanımız yok mu"
+
+**Ölçüm (canlı, girişsiz):** Okuyucu HTML'i ~1,4 sn'de ilk bayt. Her sayfa görseli
+`/api/issue-pages/:id/media/:mediaId` fonksiyonundan geliyordu: ilk bayt ~1 sn, her
+istekte `X-Vercel-Cache: MISS` (`private, max-age=3600`: yalnızca okurun tarayıcısı
+saklıyordu, CDN hiç). Görsel 104 KB (720), 220 KB (1280), 823 KB (asıl). Okuyucu yalnızca
+açık sayfanın görselini istiyordu; sayfa çevrilince bekleme baştan başlıyordu.
+
+**Karar:**
+- **Önceden yükleme.** Okuyucu açık sayfayı gösterirken sonraki iki sayfayı (çift
+  sayfada iki açılımı) ve bir öncekini, sayfanın kendisiyle aynı `srcset`/`sizes` ile
+  düşük öncelikle ister (`pagesToPreload`, `lib/issue-reader.ts`). Tarayıcı aynı kopyayı
+  seçer ve saklar; çevrilen sayfa çoğunlukla hazırdır.
+- **CDN.** Yayımlanmış sayının görsel yanıtı: `Cache-Control: public, max-age=3600`,
+  `Vercel-CDN-Cache-Control: max-age=3600`, `Vercel-Cache-Tag: issue-<id>,issue-page-<id>`
+  (`lib/cdn-cache.ts`). Herkese açık olmayan yanıt `private, no-store` kalır; hata yanıtı
+  zaten `no-store`. CDN'den dönen görsel fonksiyon çalıştırmaz: hem hız hem Hobby CPU
+  kotası (D-308) için.
+- **Kapanınca anında silinir.** D-317 "yayından çıkan sayı herkese kapanır" CDN için de
+  geçerli: `setIssueStatus` yayından çıkarken sayının etiketini, `removeIssuePage`,
+  `replacePageImage`, `updateIssuePage`, (bilgi görseli varsa) `saveHotspots` ve tasarım
+  aktarımında çıkan sayfalar sayfanın etiketini `dangerouslyDeleteByTag` ile siler
+  (çağrı başına en çok 16 etiket). Silme başarısız olursa günlüğe yazılır, değişiklik
+  geri alınmaz; CDN kopyası en çok bir saat kalır — okurun tarayıcısının zaten
+  saklayabildiği süre (D-317 notu). Bir kaldırma başvurusunda (5651 m. 9) sayfayı
+  kaldırmak CDN kopyasını da hemen siler.
+- **Yeni bağımlılık:** `@vercel/functions` 3.9.11 (Vercel'in resmî paketi; aynı işi yapan
+  başka kütüphane yok). Next'in `revalidateTag`'inin başlıkla etiketlenmiş yanıtları
+  sildiği Vercel belgelerinde açıkça yazmadığı için belgelenmiş yol seçildi. Sürüm bilerek
+  en yeni (bir gün önce çıkan 3.10.2) değil, iki haftadan eski.
+
+**Sıralama sorusu (aynı gün):** Panelde yapılan sıralama canlıda görünüyordu (künye
+sunuştan önce). Okuyucu sayfası önbelleğe alınmaz; açık bir okuyucu sekmesi yenilenmeden
+yeni sırayı göstermez. "Tasarım sayfalarını içe aktar / güncelle" sırayı manifestin sırasına
+çevirir: elle verilen sıra korunacaksa manifeste işlenmeli.
+
+**Hukuk:** Yeni kişisel veri yok; CDN Vercel'in zaten aydınlatma metninde yazılı olan
+hizmeti. Metin değişmedi.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Birim: `issue-reader.test.ts`
+(önceden yüklenecek sayfalar). Entegrasyon: `picture-cache.test.ts` (açık yanıtın
+başlıkları ve etiketleri; yayından çıkış sayının, sayfa silme ve görsel değiştirme
+sayfanın etiketini siler; yayımlama ve yayın dışı geçişler silmez; 16'lık gruplar;
+Vercel dışında çağrı yok).

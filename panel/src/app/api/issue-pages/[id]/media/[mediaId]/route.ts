@@ -8,16 +8,18 @@
  * open this issue, and does this page really use this picture — so knowing a
  * media id gets nobody anywhere.
  *
- * The answer is never put in a shared cache: two people may get different
- * answers for the same address, and a shared cache must not decide which one.
- * A picture of a published issue is the same for everyone and its bytes never
- * change under a media id (a replaced picture is a new media row), so the reader's own
- * browser may keep it for an hour instead of asking again on every page turn.
- * Anything not public stays no-store.
+ * Only a public answer is ever put in a shared cache: two people may get
+ * different answers for the same address while an issue is closed, and a
+ * shared cache must not decide which one. A picture of a published issue is
+ * the same for everyone and its bytes never change under a media id (a
+ * replaced picture is a new media row), so the browser and the CDN may keep
+ * it for an hour, tagged so that closing the issue or the page deletes the
+ * CDN's copy at once (D-343). Anything not public stays no-store.
  */
 import { NextResponse } from "next/server";
 import { readerSession } from "@/lib/auth/guard";
 import { errorJson } from "@/lib/api";
+import { publicPictureHeaders } from "@/lib/cdn-cache";
 import { parseVariantWidth } from "@/lib/issue-page-variants";
 import { readPageMedia } from "@/services/issue-pages";
 
@@ -44,8 +46,8 @@ export async function GET(
       headers: {
         "content-type": file.mime,
         "content-length": String(file.body.length),
-        "cache-control": file.isPublic ? "private, max-age=3600" : "private, no-store",
         "content-disposition": "inline",
+        ...(file.isPublic ? publicPictureHeaders(file.issueId, id) : { "cache-control": "private, no-store" }),
       },
     });
   } catch (error) {

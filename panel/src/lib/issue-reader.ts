@@ -78,4 +78,17 @@ export function spreadStartFor(index: number): number {
   return index % 2 === 1 ? index : index - 1;
 }
 
+/**
+ * The pages worth fetching before the reader turns to them (D-343): the next
+ * two spreads (or pages), then the one before. Ahead first, because that is
+ * where a reader almost always goes; the order is the order of the fetches.
+ */
+export function pagesToPreload<T>(pages: T[], start: number, shownCount: number, spread: boolean): T[] {
+  const step = spread ? 2 : 1;
+  const after = start + shownCount;
+  const ahead = pages.slice(after, after + 2 * step);
+  const before = pages.slice(Math.max(0, start - step), start);
+  return [...ahead, ...before];
+}
+
 export type ReaderQuizzes = Record<string, ReaderQuiz>;

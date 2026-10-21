@@ -38,7 +38,8 @@ import {
 import { testQuizId } from "@/lib/issue-block-rules";
 import type { ReaderHotspot } from "@/lib/issue-hotspots";
 import type { ReaderQuiz } from "@/lib/issue-quiz";
-import { spreadStartFor, type ReaderPage } from "@/lib/issue-reader";
+import { pageSrcSet } from "@/lib/issue-page-variants";
+import { pagesToPreload, spreadStartFor, type ReaderPage } from "@/lib/issue-reader";
 import { IssuePageImage } from "./issue-page-image";
 import { IssuePageSheet } from "./issue-page-sheet";
 import { IssueQuizPlayer } from "./issue-quiz-player";
@@ -152,6 +153,25 @@ export function MagazineReader({
   const start = spread ? spreadStartFor(index) : index;
   const shown = pagesAt(pages, start, spread);
   const current = pages[index];
+
+  // The next pages are fetched while this one is read, so a turn shows a
+  // picture the browser already has instead of waiting on the server (D-343).
+  // Same srcset and sizes as the page will be drawn with, so the browser picks
+  // the same copy and keeps it; kept referenced until the next turn so a
+  // started download is not dropped
+  const preloadRef = useRef<HTMLImageElement[]>([]);
+  useEffect(() => {
+    const sizes = `calc(1 * min(${100 / shown.length}vw, 71vh))`;
+    preloadRef.current = pagesToPreload(pages, start, shown.length, spread).flatMap((page) => {
+      if (!page.imageUrl || !page.imageWidth) return [];
+      const image = new Image();
+      image.decoding = "async";
+      image.fetchPriority = "low";
+      image.sizes = sizes;
+      image.srcset = pageSrcSet(page.imageUrl, page.imageWidth);
+      return [image];
+    });
+  }, [pages, shown.length, spread, start]);
 
   // Written once the reader has moved (or arrived at a page by link), so
   // opening the reader does not overwrite the place they left (D-316)

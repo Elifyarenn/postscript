@@ -22,6 +22,7 @@ import {
   type RenderRecord,
 } from "@/lib/issue-design/manifest";
 import { PAGE_VARIANT_WIDTHS, variantName } from "@/lib/issue-page-variants";
+import { forgetCachedPictures, pageCacheTag } from "@/lib/cdn-cache";
 import { getStorage } from "@/lib/storage";
 import type { RequestMeta } from "./auth";
 import { createQuiz, updateQuiz } from "./issue-quizzes";
@@ -458,6 +459,8 @@ export async function importIssueDesign(
     await db.delete(issuePages).where(eq(issuePages.id, row.id));
     if (row.imageMediaId) await release(row.imageMediaId, actor, meta);
   }
+  // A page the design no longer has stops answering from the CDN too (D-343)
+  await forgetCachedPictures(stale.map((row) => pageCacheTag(row.id)));
 
   if (older.length) {
     const snapshotId = randomUUID();

@@ -30,6 +30,7 @@ import { PAGE_TEMPLATE_IDS, templateOf } from "@/lib/issue-templates";
 import { detectFileType } from "./media";
 import { buildStorageKey, getStorage } from "@/lib/storage";
 import { variantName, type PageVariantWidth } from "@/lib/issue-page-variants";
+import { forgetCachedPictures, pageCacheTag } from "@/lib/cdn-cache";
 import type { RequestMeta } from "./auth";
 
 /**
@@ -386,7 +387,7 @@ export async function readPageMedia(
   pageId: string,
   mediaId: string,
   width: PageVariantWidth | null = null,
-): Promise<{ mime: string; body: Buffer; isPublic: boolean }> {
+): Promise<{ mime: string; body: Buffer; isPublic: boolean; issueId: string }> {
   const rows = await db
     .select({ page: issuePages, issue: issues })
     .from(issuePages)
@@ -415,13 +416,14 @@ export async function readPageMedia(
     const copy = await getStorage()
       .get({ bucket: "media", key: copyKey })
       .catch(() => null);
-    if (copy) return { mime: "image/webp", body: copy, isPublic };
+    if (copy) return { mime: "image/webp", body: copy, isPublic, issueId: found.issue.id };
   }
 
   return {
     mime: row.mime,
     body: await getStorage().get({ bucket: "media", key: row.storageKey }),
     isPublic,
+    issueId: found.issue.id,
   };
 }
 
@@ -578,6 +580,8 @@ export async function updateIssuePage(
     after: { template: parsed.data.template },
     ip: meta.ip,
   });
+  // The picture or a block picture may have left the page (D-343)
+  await forgetCachedPictures([pageCacheTag(pageId)]);
 }
 
 /** The fields the page list edits: the label, the alt text and what it is. */
@@ -635,6 +639,8 @@ export async function removeIssuePage(actor: Actor, pageId: string, meta: Reques
     before: { issueId: row.issueId },
     ip: meta.ip,
   });
+  // A page taken out is gone for everyone, not an hour later (D-343)
+  await forgetCachedPictures([pageCacheTag(pageId)]);
 }
 
 export async function duplicateIssuePage(actor: Actor, pageId: string, meta: RequestMeta): Promise<string> {
@@ -946,6 +952,8 @@ export async function replacePageImage(
     after: { mime: detected.mime, size: input.buffer.length },
     ip: meta.ip,
   });
+  // The old picture's address must stop answering too, not an hour later (D-343)
+  await forgetCachedPictures([pageCacheTag(pageId)]);
 
   return { aspectChanged: !sameAspect(before, size) };
 }
@@ -1010,7 +1018,7 @@ export async function saveHotspots(
   }
 
   const existing = await db
-    .select({ id: issuePageHotspots.id })
+    .select({ id: issuePageHotspots.id, infoMediaId: issuePageHotspots.infoMediaId })
     .from(issuePageHotspots)
     .where(eq(issuePageHotspots.pageId, pageId));
   const keep = new Set(parsed.data.map((area) => area.id).filter(Boolean) as string[]);
@@ -1058,6 +1066,12 @@ export async function saveHotspots(
     after: { count: parsed.data.length },
     ip: meta.ip,
   });
+
+  // An info window picture is served under this page too (D-343); without
+  // one before or after, nothing cached can have changed
+  if (existing.some((row) => row.infoMediaId) || parsed.data.some((area) => area.kind === "info" && area.infoMediaId)) {
+    await forgetCachedPictures([pageCacheTag(pageId)]);
+  }
 }
 
 /** One page with everything the area editor needs around it. */
