@@ -13541,3 +13541,65 @@ karşı ayrıca denenemedi. Ürün sahibine soruldu.
 toplam ve eşzamanlı iki açılış, ekip sayılmaz, yayımlanmamış/olmayan sayı 404 ve satır
 yok, Türkiye günü (gece yarısı sınırı), satırda yalnızca sayı/gün/sayaç, sayı silinince
 sayaç gider.
+
+## D-345 — Okuyucuda sayfa çevirme: StPageFlip (`page-flip`), köşeden sürükleme
+
+**İstek (ürün sahibi, 2026-10-21):** Okuyucuya StPageFlip (react-pageflip) ile, sayfanın
+köşesinden tutup sürükleyerek çevrilen gerçekçi bir flipbook; masaüstünde çift, mobilde
+tek sayfa; sayfa içerikleri ve tasarımları korunsun; önce mimariyle uyum değerlendirilsin,
+okuyucunun işlevleri bozulmasın.
+
+**Uyum değerlendirmesi:**
+- `react-pageflip` 2.0.3 ve `page-flip` 2.0.7 2022'den beri güncellenmiyor. Sarmalayıcı
+  `page-flip`'i `"latest"` olarak istiyor (sabitlenmemiş bağımlılık) ve React'in sahip
+  olduğu sayfa elemanlarını doğrudan StPageFlip'e veriyor; StPageFlip bu elemanları kendi
+  kutusuna taşıyor ve yok edilirken kurulduğu elemanı DOM'dan siliyor, React sonradan
+  `removeChild` hatası veriyor. **Karar: sarmalayıcı değil, çekirdek `page-flip` 2.0.7
+  (sabit sürüm) ve kendi ince bileşenimiz** (`magazine-flipbook.tsx`): her sayfa React
+  dışında yaratılan çıplak bir eleman, React sayfayı ona portal ile çizer, kitap da React
+  dışında yaratılan bir elemana kurulur.
+- Pakette tip tanımı yok → `src/types/page-flip.d.ts` (kullanılan kısım). Paket içe
+  aktarılınca kendi CSS'ini `<style>` olarak ekliyor; CSP `style-src 'unsafe-inline'`
+  izin veriyor, gerekli kurallar ayrıca `site.css`'te de var.
+- Çift sayfa eşleşmesi StPageFlip'in `showCover` düzeniyle birebir aynı (kapak tek,
+  sonra 2–3, 4–5…; çift sayıda sayfada son sayfa tek): sayaç, kaldığın yer, önceden
+  yükleme ve çift sayfa mantığı değişmedi.
+- **Yakınlaştırma:** StPageFlip dokunma noktasını kutunun ölçeğiyle hesaplıyor; ölçeklenmiş
+  bir kutuda sürükleme yanlış yere düşer. Bu yüzden kitap yalnızca sığdırılmış (zoom 1)
+  görünümde; yakınlaştırınca okuyucu bugünkü düz görünüme geçer (kaydırma, sürükleyerek
+  gezinme, ctrl+tekerlek aynen), "Sayfaya sığdır" kitaba döner.
+- **Etkileşim alanları:** StPageFlip yalnızca hedefi tam olarak `a`/`button` olan basışı
+  iletiyor; alanın içindeki ikon ya da metne basış sayfa çevirmeye gidiyordu → kitap
+  içinde `a`/`button` çocuklarına `pointer-events: none`. Sayfa ortasına tıklamak sayfa
+  çevirmez (`disableFlipByClick`), yalnızca köşeler; tıklamalar alanlara kalır.
+- **İki kütüphane hatası (2.0.7):** `flipPrev` x = 10'u, `flipNext` y = 1'i bütün kutuya
+  göre hedefliyor, sayfaya göre değil; sayfa kutuyu doldurmadığında (her zaman yatayda,
+  telefonda dikeyde) nokta köşeye düşmüyor ve `disableFlipByClick` açıkken çevirme
+  düşüyordu (Önceki düğmesi/sol ok hiç, telefonda Sonraki de çalışmıyordu). Bu iki çağrı
+  için ayar o an kaldırılıp geri konuyor. Ayrıca yükleme kutuya iki sayfa × `minWidth`
+  min-width veriyor; tek sayfa için kullanılan büyük `minWidth` sayfayı ekran dışına
+  itiyordu → yüklemeden sonra sıfırlanıp `update()`.
+- **Tek/çift sayfa:** StPageFlip yerinde mod değiştiremiyor; mod (masaüstü ≥ 900 px ve
+  "Çift sayfa görünümü") değişince kitap yeni anahtarla yeniden kurulur, açık sayfa korunur.
+- **Yükleme:** Bütün sayfalar kitapta duruyor ama yalnızca açık sayfaya ±4 olanlar
+  görselini alıyor; D-343'ün önceden yüklemesi ve CDN aynen.
+- **Erişilebilirlik:** "Hareketi azalt" isteyen sistemde kitap kurulmaz, düz görünüm.
+  Araç çubuğunda "Sayfa çevirmeyi kapat/aç" düğmesi (bu ziyaret için; saklanmaz, yerel
+  depoya yeni kayıt yok). Sunucu düz görünümü çizer, kitap tarayıcıda sonradan kurulur;
+  kurulamazsa okuyucu düz görünümde kalır.
+
+**Bilinen sınırlar:** Telefonda iki parmakla yakınlaştırma tarayıcının kendi yakınlaştırması
+(önceden de öyleydi). Kitap modunda sayfa içinde metin seçilemez. Panelin alan
+düzenleyicisinde etiketler alanlara bağlı değil (`Field` `htmlFor` almıyor) — ayrı bir
+erişilebilirlik eksiği, bu adımda değiştirilmedi.
+
+**Hukuk:** Yeni kişisel veri, çerez ya da yerel depo kaydı yok; aydınlatma metni değişmedi.
+
+**Doğrulama:** Kapı: typecheck, lint, test. E2E (`10-flipbook.spec.ts`, Playwright,
+üretim derlemesi): admin beş sayfa yükler ve 2. sayfaya bilgi alanı çizer; masaüstünde
+kapak tek, sonra iki sayfa yan yana ve ekranın içinde; Sonraki, sağ/sol ok, Home/End ve
+sağ alt köşeden sürükleme sayfayı çevirir; kitaptaki alana tıklamak bilgi kutusunu açar,
+sayfa çevrilmez; yakınlaştırınca düz görünüm, sığdırınca kitap aynı sayfada; tek sayfa
+görünümü ve çevirmeyi kapatma; telefonda tek sayfa ekranı doldurur ve çevrilir; "hareketi
+azalt"ta kitap yok. Ekran görüntüleriyle çift sayfa, köşe kıvrılması ve telefon görünümü
+gözle kontrol edildi.

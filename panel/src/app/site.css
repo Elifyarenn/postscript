@@ -5608,6 +5608,78 @@ html:has(.profile-editor[open]) {
   overflow-y: auto;
 }
 
+/* ──────────────── Turning pages (D-345) ──────────────── */
+
+/* The book fills the stage; StPageFlip centres the pages in it. Nothing to
+   scroll: zoomed in, the reader leaves the book for the plain view above */
+.ps-site .reader-stage[data-flip] {
+  overflow: hidden;
+  /* A drag across is a page turn; up and down and a pinch stay the browser's */
+  touch-action: pan-y pinch-zoom;
+}
+
+.ps-site .reader-flip,
+.ps-site .reader-flip-book {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* StPageFlip's own rules, here so the book never depends on its injected
+   stylesheet; the wrapper fills the box because the size is not automatic */
+.ps-site .reader-flip .stf__wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.ps-site .reader-flip .stf__block {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  perspective: 2000px;
+}
+
+.ps-site .reader-flip .stf__item {
+  display: none;
+  position: absolute;
+  transform-style: preserve-3d;
+}
+
+.ps-site .reader-flip :is(.stf__outerShadow, .stf__innerShadow, .stf__hardShadow, .stf__hardInnerShadow) {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+/* A page is exactly the box StPageFlip gives it, picture and areas alike, so
+   an area stays on the same part of the design */
+.ps-site .reader-flip-page .page-image {
+  width: 100%;
+  height: 100%;
+}
+
+.ps-site .reader-flip-page .page-image img {
+  width: 100%;
+  height: 100%;
+}
+
+.ps-site .reader-flip-page .page-sheet {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  aspect-ratio: auto;
+  overflow: hidden;
+}
+
+/* StPageFlip passes a press on to a link or button only when the press lands
+   on the element itself, not on an icon or text inside it; otherwise the
+   press would start a page turn instead of opening the area */
+.ps-site .reader-flip-page :is(a, button) * {
+  pointer-events: none;
+}
+
 /* The same page inside the panel's area editor: sized by the column, not by a
    reader's screen (D-247) */
 .ps-site.page-preview-frame {

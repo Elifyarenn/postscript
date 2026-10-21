@@ -9,7 +9,10 @@
  * pages, and open what an area points at without losing the reader's place.
  *
  * Only the pages on screen are mounted, so an issue's pictures are not all
- * fetched at once. Where the reader got to is remembered per issue in this
+ * fetched at once. At the fitted size the pages turn like paper (D-345,
+ * `MagazineFlipbook`); zoomed in, or where the reader asked the system for less
+ * motion, the plain view below is shown instead, so panning and zooming work
+ * as they always did. Where the reader got to is remembered per issue in this
  * browser alone, and offered rather than jumped to.
  */
 import {
@@ -23,6 +26,7 @@ import {
 import Link from "next/link";
 import {
   BookOpen,
+  BookOpenText,
   ChevronLeft,
   ChevronRight,
   Columns2,
@@ -42,6 +46,7 @@ import { pageSrcSet } from "@/lib/issue-page-variants";
 import { TURKEY_TIME_ZONE } from "@/lib/utils";
 import { pagesToPreload, spreadStartFor, type ReaderPage } from "@/lib/issue-reader";
 import { IssuePageImage } from "./issue-page-image";
+import { MagazineFlipbook, type FlipbookHandle } from "./magazine-flipbook";
 import { IssuePageSheet } from "./issue-page-sheet";
 import { IssueQuizPlayer } from "./issue-quiz-player";
 
@@ -86,6 +91,15 @@ function countView(issueNumber: number): void {
   }
   // A lost count is not worth an error on the reader's screen
   void fetch(`/api/issues/${issueNumber}/view`, { method: "POST", keepalive: true }).catch(() => undefined);
+}
+
+/**
+ * How wide a page is drawn, as an img `sizes`: an upper bound in viewport
+ * units, fitted by width or by height at √2 (site.css .page-image), then zoomed.
+ * The preloads use the same, so the browser picks the copy it already has.
+ */
+function pageSizes(zoom: number, across: number): string {
+  return `calc(${zoom} * min(${100 / across}vw, 71vh))`;
 }
 
 /** The pages a spread shows: the cover alone, then two at a time. */
@@ -133,6 +147,12 @@ export function MagazineReader({
   const [quizId, setQuizId] = useState<string | null>(null);
   // Once the reader has moved anywhere, the old place is no longer news
   const [moved, setMoved] = useState(false);
+  // Page turning (D-345): wanted unless switched off for this visit; only in
+  // the browser, after the first render, so the server draws the plain view
+  const [flipWanted, setFlipWanted] = useState(true);
+  const [flipFailed, setFlipFailed] = useState(false);
+  const [calmMotion, setCalmMotion] = useState(true);
+  const bookRef = useRef<FlipbookHandle>(null);
 
   const frameRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -157,6 +177,16 @@ export function MagazineReader({
     return () => query.removeEventListener("change", sync);
   }, []);
 
+  // A reader who asked the system for less motion gets the plain view; it is
+  // also what the server drew, so nothing turns until this has been read
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setCalmMotion(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
+
   // Where this browser left off. Read through the external-store hook rather
   // than an effect, so nothing is set during render and the server renders
   // the same first page every time (D-234).
@@ -174,6 +204,9 @@ export function MagazineReader({
   const start = spread ? spreadStartFor(index) : index;
   const shown = pagesAt(pages, start, spread);
   const current = pages[index];
+  const flipActive = flipWanted && !flipFailed && !calmMotion && zoom === 1;
+  // How many pages share the width: the book keeps room for two even on the cover
+  const across = flipActive ? (spread ? 2 : 1) : shown.length;
 
   // The next pages are fetched while this one is read, so a turn shows a
   // picture the browser already has instead of waiting on the server (D-343).
@@ -182,7 +215,7 @@ export function MagazineReader({
   // started download is not dropped
   const preloadRef = useRef<HTMLImageElement[]>([]);
   useEffect(() => {
-    const sizes = `calc(1 * min(${100 / shown.length}vw, 71vh))`;
+    const sizes = pageSizes(1, across);
     preloadRef.current = pagesToPreload(pages, start, shown.length, spread).flatMap((page) => {
       if (!page.imageUrl || !page.imageWidth) return [];
       const image = new Image();
@@ -192,7 +225,7 @@ export function MagazineReader({
       image.srcset = pageSrcSet(page.imageUrl, page.imageWidth);
       return [image];
     });
-  }, [pages, shown.length, spread, start]);
+  }, [across, pages, shown.length, spread, start]);
 
   // A preview is the team's, not a reading
   useEffect(() => {
@@ -207,31 +240,44 @@ export function MagazineReader({
 
   const goTo = useCallback(
     (next: number) => {
-      setIndex(Math.max(0, Math.min(total - 1, next)));
+      const target = Math.max(0, Math.min(total - 1, next));
+      setIndex(target);
       setMoved(true);
+      // A jump in the book is made at once; turning page by page is for back and forward
+      if (flipActive) bookRef.current?.turnTo(target);
       // Turning a page starts it fitted and at the top: carrying a zoom and a
       // scroll position across a page break lands a reader in the middle of
       // something with no way of knowing where they are
       setZoom(1);
       stageRef.current?.scrollTo({ top: 0, left: 0 });
     },
-    [total],
+    [flipActive, total],
   );
+
+  // A turn the book made itself, by a drag, a swipe or a corner click
+  const onTurn = useCallback((turned: number) => {
+    setIndex(turned);
+    setMoved(true);
+  }, []);
+  const onFlipFail = useCallback(() => setFlipFailed(true), []);
 
   // The spread's first page is worked out from the index rather than taken
   // from a value computed further down: the compiler cannot prove that one
   // will not change, and this is the same arithmetic either way
   const back = useCallback(() => {
+    // The book turns the page itself and reports where it got to (onTurn)
+    if (flipActive && bookRef.current) return bookRef.current.prev();
     if (!spread) return goTo(index - 1);
     const from = spreadStartFor(index);
     goTo(from <= 1 ? 0 : from - 2);
-  }, [goTo, index, spread]);
+  }, [flipActive, goTo, index, spread]);
 
   const forward = useCallback(() => {
+    if (flipActive && bookRef.current) return bookRef.current.next();
     if (!spread) return goTo(index + 1);
     const from = spreadStartFor(index);
     goTo(from === 0 ? 1 : from + 2);
-  }, [goTo, index, spread]);
+  }, [flipActive, goTo, index, spread]);
 
   const atStart = start === 0;
   const atEnd = spread ? start + shown.length >= total : index >= total - 1;
@@ -464,6 +510,19 @@ export function MagazineReader({
             </button>
           )}
 
+          {!calmMotion && !flipFailed && (
+            <button
+              type="button"
+              className="reader-icon"
+              onClick={() => setFlipWanted((on) => !on)}
+              title={flipWanted ? "Sayfa çevirmeyi kapat" : "Sayfa çevirmeyi aç"}
+              aria-label={flipWanted ? "Sayfa çevirmeyi kapat" : "Sayfa çevirmeyi aç"}
+              aria-pressed={flipWanted}
+            >
+              <BookOpenText aria-hidden />
+            </button>
+          )}
+
           <button
             type="button"
             className="reader-icon"
@@ -512,34 +571,63 @@ export function MagazineReader({
       <div
         className="reader-stage"
         ref={stageRef}
-        data-spread={spread && shown.length > 1 ? "" : undefined}
+        data-flip={flipActive ? "" : undefined}
+        data-spread={!flipActive && spread && shown.length > 1 ? "" : undefined}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerLeave={endDrag}
       >
-        <div
-          className="reader-pages"
-          style={{ "--zoom": zoom, "--pages": shown.length } as React.CSSProperties}
-        >
-          {shown.map((page) =>
-            page.imageUrl ? (
-              <IssuePageImage
-                key={page.id}
-                page={page}
-                onHotspot={openHotspot}
-                suppressClicks={suppressClicks}
-                // The page's drawn width (site.css .page-image), an upper bound
-                // in viewport units: fitted by width or by height at √2, then zoomed
-                sizes={`calc(${zoom} * min(${100 / shown.length}vw, 71vh))`}
-              />
-            ) : (
-              // Laid out from a template before D-240 and never given a
-              // picture: still shown, so nothing already typed is lost
-              <IssuePageSheet key={page.id} page={page} preview={preview} quizzes={quizzes} />
-            ),
-          )}
-        </div>
+        {flipActive ? (
+          <MagazineFlipbook
+            // A new book for a new mode: StPageFlip cannot change it in place
+            key={spread ? "spread" : "single"}
+            ref={bookRef}
+            pages={pages}
+            index={index}
+            spread={spread}
+            onTurn={onTurn}
+            onFail={onFlipFail}
+            renderPage={(page, near) =>
+              page.imageUrl ? (
+                near ? (
+                  <IssuePageImage
+                    page={page}
+                    onHotspot={openHotspot}
+                    suppressClicks={suppressClicks}
+                    sizes={pageSizes(1, across)}
+                  />
+                ) : (
+                  // Far from the open page: its place, not yet its picture
+                  <figure className="page-image" aria-hidden />
+                )
+              ) : (
+                <IssuePageSheet page={page} preview={preview} quizzes={quizzes} />
+              )
+            }
+          />
+        ) : (
+          <div
+            className="reader-pages"
+            style={{ "--zoom": zoom, "--pages": shown.length } as React.CSSProperties}
+          >
+            {shown.map((page) =>
+              page.imageUrl ? (
+                <IssuePageImage
+                  key={page.id}
+                  page={page}
+                  onHotspot={openHotspot}
+                  suppressClicks={suppressClicks}
+                  sizes={pageSizes(zoom, shown.length)}
+                />
+              ) : (
+                // Laid out from a template before D-240 and never given a
+                // picture: still shown, so nothing already typed is lost
+                <IssuePageSheet key={page.id} page={page} preview={preview} quizzes={quizzes} />
+              ),
+            )}
+          </div>
+        )}
       </div>
 
       <footer className="reader-foot">
