@@ -39,6 +39,7 @@ import { testQuizId } from "@/lib/issue-block-rules";
 import type { ReaderHotspot } from "@/lib/issue-hotspots";
 import type { ReaderQuiz } from "@/lib/issue-quiz";
 import { pageSrcSet } from "@/lib/issue-page-variants";
+import { TURKEY_TIME_ZONE } from "@/lib/utils";
 import { pagesToPreload, spreadStartFor, type ReaderPage } from "@/lib/issue-reader";
 import { IssuePageImage } from "./issue-page-image";
 import { IssuePageSheet } from "./issue-page-sheet";
@@ -65,6 +66,26 @@ function writeResume(issueNumber: number, pageId: string): void {
   } catch {
     /* nothing to do: remembering the place is a convenience, not the feature */
   }
+}
+
+const VIEWED_KEY = "ps-viewed";
+
+/**
+ * Counts this opening, once a day per browser (D-344). The day is kept in this
+ * browser only and never sent; the server learns no more than "one more".
+ * Without storage every opening counts: better than not counting at all.
+ */
+function countView(issueNumber: number): void {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: TURKEY_TIME_ZONE }).format(new Date());
+  const key = `${VIEWED_KEY}:${issueNumber}`;
+  try {
+    if (window.localStorage.getItem(key) === today) return;
+    window.localStorage.setItem(key, today);
+  } catch {
+    /* storage blocked: count anyway */
+  }
+  // A lost count is not worth an error on the reader's screen
+  void fetch(`/api/issues/${issueNumber}/view`, { method: "POST", keepalive: true }).catch(() => undefined);
 }
 
 /** The pages a spread shows: the cover alone, then two at a time. */
@@ -172,6 +193,11 @@ export function MagazineReader({
       return [image];
     });
   }, [pages, shown.length, spread, start]);
+
+  // A preview is the team's, not a reading
+  useEffect(() => {
+    if (!preview) countView(issueNumber);
+  }, [issueNumber, preview]);
 
   // Written once the reader has moved (or arrived at a page by link), so
   // opening the reader does not overwrite the place they left (D-316)

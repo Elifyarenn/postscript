@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { readerSession } from "@/lib/auth/guard";
 import { getPublishedIssue } from "@/services/public";
 import { readIssuePages } from "@/services/issue-pages";
+import { issueViewTotal } from "@/services/issue-views";
 import { ArticleCard } from "@/components/magazine";
 import { SiteBanner } from "@/components/site-ui";
 import { EmptyState } from "@/components/ui";
@@ -62,12 +63,16 @@ export default async function IssuePage({ params }: { params: Promise<{ number: 
   // The published issue keeps its own contents list of articles; a draft has
   // only the pages that have been laid out so far
   // (null too for the admins' working issue once it is marked published)
-  const published = reader.preview ? null : await publishedIssue(parsed);
+  const [published, views] = reader.preview
+    ? [null, null]
+    : await Promise.all([publishedIssue(parsed), issueViewTotal(reader.issue.id)]);
 
   const subtitle = [
     `Sayı ${formatIssueNumber(reader.issue.number)}`,
     reader.issue.theme,
     reader.issue.publishedAt && formatDate(reader.issue.publishedAt),
+    // How many times it was read; no number before anyone has (D-344)
+    views ? `${views.toLocaleString("tr-TR")} görüntülenme` : null,
   ]
     .filter(Boolean)
     .join(" · ");

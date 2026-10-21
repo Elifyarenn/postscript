@@ -1218,6 +1218,25 @@ export const issueQuizzes = pgTable(
 );
 
 /**
+ * How many times an issue was opened in the reader, per day (D-344).
+ *
+ * Only a number: no address, no account, no browser. A browser counts once a
+ * day, which it remembers itself; the team's own visits are not counted.
+ */
+export const issueViewDays = pgTable(
+  "issue_view_days",
+  {
+    issueId: uuid("issue_id")
+      .notNull()
+      .references(() => issues.id, { onDelete: "cascade" }),
+    /** The day in Turkey's time. */
+    day: date("day").notNull(),
+    views: integer("views").notNull().default(0),
+  },
+  (t) => [uniqueIndex("issue_view_days_issue_day_unique").on(t.issueId, t.day)],
+);
+
+/**
  * A clickable area drawn on a page image (D-240).
  *
  * Position is stored as fractions of the picture (0..1), never as pixels: the

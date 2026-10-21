@@ -13497,3 +13497,47 @@ hizmeti. Metin değişmedi.
 başlıkları ve etiketleri; yayından çıkış sayının, sayfa silme ve görsel değiştirme
 sayfanın etiketini siler; yayımlama ve yayın dışı geçişler silmez; 16'lık gruplar;
 Vercel dışında çağrı yok).
+
+## D-344 — Sayının görüntülenme sayısı: kişisel veri tutmayan günlük sayaç
+
+**İstek (ürün sahibi, 2026-10-21):** "dergiyi kaç kişinin görüntülediğini görebilir
+miyiz" → "vercel panelinden bak sonra dergi sayfasında görüntülenmeyi göster kvkk yı ona
+göre güncelleriz".
+
+**Vercel paneli:** Geçmişe dönük sayı alınamadı. `vercel logs` Hobby'de yalnızca son 50
+isteği döndürüyor, yol filtresi uygulanmıyor; dönen kayıtlar tek bir dakikayı kapsıyordu.
+Kayıt saklama süresi de kısa. Ayrıca istek sayısı kişi değil açılış sayısıdır.
+
+**Karar:**
+- `issue_view_days` (sayı, Türkiye günü, sayaç; migration 0063). IP, hesap, tarayıcı
+  bilgisi tutulmaz; sayaç kişisel veri işlemez.
+- Okuyucu açılınca `POST /api/issues/:number/view` (aynı köken şartı). Tarayıcı aynı
+  sayıyı aynı gün bir kez sayar; günü kendi yerel deposunda (`ps-viewed:<sayı>`) tutar,
+  sunucuya göndermez. Depo kapalıysa her açılış sayılır. Önizleme (yayımlanmamış sayı)
+  sayılmaz; editör/admin oturumuyla açılış sayılmaz (`counted: false`); yazar ve üye
+  sayılır. Yayımlanmamış ya da olmayan sayı 404 — sayaç bir sayının varlığını sızdırmaz.
+- Artırma tek ifade: `insert … on conflict (issue_id, day) do update set views = views + 1`
+  (D-250 deseni; gün `date` sütununa metin olarak gider, ham SQL'den zaman damgası
+  geçmez).
+- Sayı sayfasının alt başlığında toplam: "Sayı 01 · tema · tarih · 1.234 görüntülenme";
+  henüz okunmamışsa gösterilmez.
+- **Bilinen sınır:** Biri isteği elle tekrarlayarak sayıyı şişirebilir. IP'ye göre hız
+  sınırı kişisel veri işlemek demek; o yüzden konmadı. Sayı tanıtım amaçlıdır, karar
+  dayanağı değildir.
+
+**Hukuk:** Aydınlatma metni (`data/kvkk-aydinlatma-metni.md` §5) güncellendi: okuyucunun
+yerel depoda tuttuğu iki kayıt (`ps-reader`, eskiden yazılmamıştı; `ps-viewed`) ve
+sayacın kişisel veri tutmadığı. Yeni kişisel veri yok; esaslı değişiklik sayılmadığı için
+e-posta duyurusu gerekmez, yeni sürümü bir admin panelden yayımlar.
+
+**Canlıya etkisi:** Migration 0063 üretime **push'tan önce** uygulanmalı (D-079): kod
+`issue_view_days`'i sayı sayfasında okur, tablo yoksa sayfa hata verir.
+
+**D-078:** Upsert yalnızca tamsayı aritmetiği içeriyor ve aynı desen (`rate-limit.ts`)
+üretimde postgres.js ile çalışıyor; ama Neon dal kotası dolu (10/10) olduğu için bir dala
+karşı ayrıca denenemedi. Ürün sahibine soruldu.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Entegrasyon (`issue-views.test.ts`): günlük
+toplam ve eşzamanlı iki açılış, ekip sayılmaz, yayımlanmamış/olmayan sayı 404 ve satır
+yok, Türkiye günü (gece yarısı sınırı), satırda yalnızca sayı/gün/sayaç, sayı silinince
+sayaç gider.

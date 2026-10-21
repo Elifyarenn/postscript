@@ -435,6 +435,13 @@
       "when": 1792235486100,
       "tag": "0062_thick_killmonger",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1792583375135,
+      "tag": "0063_sad_gideon",
+      "breakpoints": true
     }
   ]
 }

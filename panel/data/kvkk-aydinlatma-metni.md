@@ -147,6 +147,19 @@ Sitede yalnızca işlevin çalışması için zorunlu iki çerez kullanılır:
 
 Reklam, ölçümleme, analitik veya üçüncü taraf takip çerezi kullanılmaz.
 
+Dergi okuyucusu tarayıcınızın yerel deposunda (localStorage) iki kayıt tutar;
+bunlar çerez değildir ve sunucumuza gönderilmez:
+
+| Kayıt | Amaç | Süre |
+|---|---|---|
+| ps-reader:\<sayı\> | Bir sayıda en son açık olan sayfa, kaldığınız yerden devam edebilmeniz için | Siz silene kadar |
+| ps-viewed:\<sayı\> | O sayıyı bugün açtığınız gün (yalnızca tarih), sayının aynı gün ikinci kez sayılmaması için | Siz silene kadar; ertesi gün üzerine yazılır |
+
+**Okunma sayısı:** Yayımlanmış bir sayı okuyucuda açıldığında, sayının sayfasında
+gösterilen görüntülenme sayısı bir artar. Sunucuda yalnızca sayı ve gün başına bir
+toplam tutulur; IP adresiniz, hesabınız, tarayıcı bilginiz veya sizi tanıtan başka
+bir bilgi bu sayaç için kaydedilmez. Bu nedenle sayaç kişisel veri işlemez.
+
 Ana sayfadaki müzik çaları yalnızca üyelere açılır; üye olmayan ziyaretçiler için hiç yüklenmez, üyeler için de çal düğmesine basmadıkça yüklenmez. Bastığınızda
 çalar Spotify AB tarafından sunulur ve Spotify, kendi alan adı altında kendi
 çerezlerini kullanabilir; bu çerezler için Spotify çerez politikası geçerlidir.
