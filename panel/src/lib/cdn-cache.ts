@@ -14,6 +14,7 @@
  */
 import "server-only";
 import { dangerouslyDeleteByTag } from "@vercel/functions";
+import { refreshPublicPages } from "@/lib/revalidate";
 
 /** How long the CDN may keep a published picture, in seconds. */
 export const PUBLIC_PICTURE_SECONDS = 3600;
@@ -41,6 +42,8 @@ export function publicPictureHeaders(issueId: string, pageId: string): Record<st
  * has already been made, and the hour above bounds what is left.
  */
 export async function forgetCachedPictures(tags: string[]): Promise<void> {
+  // The issue's cached pages name the pictures, so they go with them (D-351)
+  refreshPublicPages();
   if (!process.env.VERCEL) return;
   // Vercel takes at most 16 tags in one purge
   for (let from = 0; from < tags.length; from += 16) {

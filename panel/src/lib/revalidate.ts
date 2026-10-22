@@ -7,7 +7,22 @@
  */
 import "server-only";
 import { createHmac } from "node:crypto";
+import { revalidatePath } from "next/cache";
 import { env } from "@/lib/env";
+
+/**
+ * Drops the cached copies of the public pages (D-351): everything under /anon
+ * that visitors without a session are served. They rebuild within a minute on
+ * their own; this makes a publication, a withdrawal or a removal (5651 m. 9)
+ * show at once.
+ */
+export function refreshPublicPages(): void {
+  try {
+    revalidatePath("/anon", "layout");
+  } catch {
+    // Outside a request (a script, a test) there is no page cache to drop
+  }
+}
 
 export type RevalidateEvent = {
   type: "article.published" | "article.withdrawn" | "article.updated" | "issue.published";
@@ -16,6 +31,7 @@ export type RevalidateEvent = {
 };
 
 export async function triggerRevalidate(event: RevalidateEvent): Promise<void> {
+  refreshPublicPages();
   const config = env();
   const url = config.REVALIDATE_WEBHOOK_URL;
   if (!url) return;

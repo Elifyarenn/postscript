@@ -16,6 +16,7 @@ import { hasRole, type Actor } from "@/lib/auth/rbac";
 import { sha256Hex } from "@/lib/crypto";
 import { env } from "@/lib/env";
 import { badRequest, conflict, forbidden } from "@/lib/errors";
+import { refreshPublicPages } from "@/lib/revalidate";
 import { queueMails } from "@/services/mail-queue";
 import * as templates from "@emails/templates";
 import { notify } from "@/services/notifications";
@@ -104,6 +105,8 @@ export async function publishKvkkVersion(
     return next;
   });
 
+  // The notice is a cached page; the new version shows at once (D-351)
+  refreshPublicPages();
   // After the commit: a rolled back version must not reach anyone's inbox
   const notified = input.notifyMembers ? await tellMembers(version) : 0;
   return { version, notified };

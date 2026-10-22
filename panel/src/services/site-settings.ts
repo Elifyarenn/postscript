@@ -13,6 +13,7 @@ import { siteSettings } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import { canManageUsers, type Actor } from "@/lib/auth/rbac";
 import { badRequest, forbidden } from "@/lib/errors";
+import { refreshPublicPages } from "@/lib/revalidate";
 import type { RequestMeta } from "./auth";
 
 /** Keys the contract render reads. All of them are required to publish. */
@@ -105,6 +106,8 @@ export async function saveSiteSettings(
     ip: meta.ip,
   });
 
+  // The imprint and the terms are cached pages; they show the new details at once (D-351)
+  refreshPublicPages();
   return after;
 }
 

@@ -96,6 +96,50 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  // A visitor without a session cookie reads the cached copy of the public
+  // pages under /anon (D-351). The match runs in Vercel's routing layer, before
+  // any function, so a CDN hit wakes neither a function nor the database. With
+  // a session cookie the per-request page answers as before. Only the address
+  // changes inside the platform; the browser keeps the public URL.
+  async rewrites() {
+    const anonymous = [{ type: "cookie" as const, key: "ps_session" }];
+    const page = (source: string, destination: string) => ({ source, destination, missing: anonymous });
+    return {
+      beforeFiles: [
+        // Pages without an address parameter share one dynamic route, so none
+        // of them is drawn at build time (src/app/anon/s/[key])
+        page("/", "/anon/s/ana-sayfa"),
+        page("/kategoriler", "/anon/s/kategoriler"),
+        page("/kunye", "/anon/s/kunye"),
+        page("/kvkk", "/anon/s/kvkk"),
+        page("/kullanim-sartlari", "/anon/s/kullanim-sartlari"),
+        // Each section of the about page is its own cached copy; an unknown
+        // value stays on the per-request page rather than filling the cache
+        {
+          source: "/hakkinda",
+          has: [{ type: "query" as const, key: "bolum", value: "(?<bolum>hikayemiz|yazarlar|editorler|tasarim)" }],
+          missing: anonymous,
+          destination: "/anon/hakkinda/:bolum",
+        },
+        { source: "/hakkinda", missing: [...anonymous, { type: "query" as const, key: "bolum" }], destination: "/anon/hakkinda/hikayemiz" },
+        // The plain list only: a search, a category or the welcome note stays per request
+        {
+          source: "/magazine",
+          missing: [
+            ...anonymous,
+            { type: "query" as const, key: "q" },
+            { type: "query" as const, key: "kategori" },
+            { type: "query" as const, key: "verified" },
+          ],
+          destination: "/anon/s/dergi",
+        },
+        page("/magazine/issues", "/anon/s/sayilar"),
+        page("/magazine/issues/:number", "/anon/magazine/issues/:number"),
+        page("/magazine/articles/:slug", "/anon/magazine/articles/:slug"),
+        page("/magazine/authors/:slug", "/anon/magazine/authors/:slug"),
+      ],
+    };
+  },
 };
 
 export default nextConfig;

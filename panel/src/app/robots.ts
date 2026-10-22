@@ -18,6 +18,8 @@ export default function robots(): MetadataRoute.Robots {
           "/writer-application",
           "/account",
           "/api/",
+          // The cached copies of the public pages (D-351); their canonical is the public URL
+          "/anon",
           "/login/2fa",
           "/reset-password",
           "/verify-email",

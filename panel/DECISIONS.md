@@ -13775,3 +13775,56 @@ yayına alınabilir; 263 ve sonrası migration ister.
 
 **Doğrulama:** Kapı: typecheck, lint, test. Entegrasyon: kapsam raporu, kayıtsız değişikliği
 engellenecek iş olarak gösterir.
+
+## D-351 — Oturumu olmayan ziyaretçiye herkese açık sayfaların önbellekteki kopyası
+
+**Bağlam:** Faz 0 ölçümü (2026-10-22): herkese açık sayfaların hepsi `private, no-store`
+dönüyor ve her istekte bir Vercel fonksiyonu ile Neon sorgusu çalıştırıyordu (Neon günde
+~55–63 kez uyanıyor; uykudan sonraki ilk istek 4,5 sn). Sebep: sayfalar oturumu ve form
+anahtarını okuyor (`getAuthContext`, `readCsrfToken`), bu da her sayfayı dinamik yapıyor.
+Hedef 0 TL; Vercel Hobby'nin aylık 4 saatlik CPU sınırı aşılmış durumda.
+
+**Karar:**
+- `next.config.ts` → `rewrites().beforeFiles`: `ps_session` çerezi **olmayan** istek,
+  aynı sayfanın `/anon/...` altındaki kopyasına yönlendirilir. Bu eşleşme Vercel'in yönlendirme
+  katmanında, fonksiyondan önce olur; tarayıcıdaki adres değişmez.
+- Kopyalar ISR'dir (`revalidate = 60`) ve **derleme anında çizilmez**: hepsi dinamik bir
+  bölümün altında, `generateStaticParams` boş liste döner. Böylece derleme veritabanına hiç
+  dokunmaz (Vercel'de Neon'u uyandırmaz, e2e'de PGlite'a çoklu yazar sorunu yok). Her adres
+  ilk ziyarette çizilir, sonra CDN'den gelir.
+  - `/anon/s/[key]`: ana sayfa, kategoriler, künye, KVKK, kullanım şartları, `/magazine`
+    (yalnızca sorgusuz hâli), `/magazine/issues`.
+  - `/anon/hakkinda/[bolum]`: dört bölüm; bilinmeyen `bolum` değeri dinamik sayfada kalır
+    (önbellek şişmesin).
+  - `/anon/magazine/issues/[number]`, `/anon/magazine/articles/[slug]`,
+    `/anon/magazine/authors/[slug]` + kendi `SiteShell user={null}` düzeni.
+- Sayfa gövdeleri `src/components/public-views/*` altına taşındı; dinamik sayfa ile kopya
+  aynı görünümü çizer. Fark yalnızca `user` (kopyada `null`) ve form anahtarı (kopyada yok).
+- **Kişisel veri kopyaya giremez:** kopyanın ağacında çerez okuyan bir şey yok; yorumlar,
+  kaydet düğmesi, üye menüsü, KVKK bandı, admin'e özel künye uyarısı yalnızca oturumla çizilir.
+  Yayımlanmamış sayı kopyada da 404 (`readIssuePages(null, …)`).
+- **Tazeleme:** en geç 60 sn; ayrıca `refreshPublicPages()` (`revalidatePath("/anon", "layout")`)
+  yayın/geri çekme (`triggerRevalidate`), sayı sayfası değişikliği ve yayından kaldırma
+  (`forgetCachedPictures`), künye/ayar kaydı ve yeni KVKK sürümünde hemen çalışır. 5651 m. 9
+  kaldırması ve geri çekilen yazının 410 yanıtı beklemez.
+- `/anon` robots.txt'te kapalı; kopyaların `canonical` adresi herkese açık adres.
+- Oturumu olan üye (ve oturum çerezi duran herkes) bugünkü gibi istek başına sayfayı alır;
+  CSRF ve oturum modeli değişmedi. `proxy.ts` aynı: CSRF çerezi yine ilk ziyarette verilir
+  (oturumu olan bir okurun formları bu çereze dayanıyor).
+
+**Kapsam dışı:** `/magazine?q=…` (arama), `/magazine?kategori=…`, okuyucu `/oku`
+(`?s=` sorgusu) ve topluluk sayfaları istek başına kalır.
+
+**Beklenen etki (canlıda ölçülecek):** Oturumu olmayan okuyucunun sayfa isteği CDN'den;
+Vercel fonksiyonu ve Neon dakikada en çok bir kez (sayfa başına). Neon'un yalnızca üyeler ve
+panel için uyanması.
+
+**Hukuk:** Yeni kişisel veri, çerez ya da yerel depo kaydı yok; aydınlatma metni değişmedi.
+Migration yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Üretim derlemesi veritabanısız başarılı; beş kopya
+rotası `●` (ISR), üye sayfaları `ƒ`. E2E `11-anonymous-cache.spec.ts` (13 test): dokuz sayfa
+oturumsuz `s-maxage=60` ile, form anahtarı ve "Çıkış" olmadan; arama istek başına; yayımlanmamış
+sayı 404; bilinmeyen kopya 404; üye istek başına sayfayı hesabıyla alır. `02-access-control`
+e2e geçti; `01-registration`'daki tek hata bu adımdan bağımsız ve önceden var: hesap sayfasında
+artık olmayan "Kullanıcı" etiketini arıyor (hesap sayfası bu adımda değişmedi).
