@@ -9,6 +9,10 @@ const SPOTIFY_ORIGIN = "https://open.spotify.com";
 // React dev mode uses eval() to reconstruct call stacks, so the strict
 // production CSP (no unsafe-eval) has to be relaxed for local development.
 // Production React never calls eval, so the shipped policy stays strict.
+// Published issue pictures straight from R2, once that is switched on (D-353);
+// unset, pictures stay same-origin and the policy is unchanged
+const PUBLIC_MEDIA_ORIGIN = process.env.PUBLIC_MEDIA_URL?.trim() || null;
+
 const scriptSrc = ["'self'", "'unsafe-inline'", TURNSTILE_ORIGIN];
 if (process.env.NODE_ENV === "development") scriptSrc.push("'unsafe-eval'");
 
@@ -26,7 +30,7 @@ const securityHeaders = [
       "default-src 'self'",
       `script-src ${scriptSrc.join(" ")}`,
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob:",
+      ["img-src 'self' data: blob:", PUBLIC_MEDIA_ORIGIN].filter(Boolean).join(" "),
       "font-src 'self' data:",
       "connect-src 'self'",
       // Turnstile and the Spotify player both render inside frames served by their owners

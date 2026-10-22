@@ -13844,3 +13844,60 @@ geç bir günde düşer; bu 5651 m. 9'un 24 saatlik kaldırma süresinin içinde
 **Hukuk:** Yeni kişisel veri yok. Migration yok.
 
 **Doğrulama:** Kapı: typecheck, lint, test. `picture-cache.test.ts`: tarayıcı bir saat, CDN bir gün.
+
+## D-353 — Yayımlanmış sayı görselleri doğrudan R2'den (hazır, kapalı)
+
+**Bağlam:** Sayı sayfası görselleri `/api/issue-pages/:id/media/:mediaId` fonksiyonundan geçiyor:
+fonksiyon R2'den okuyup aktarıyor (CDN'de yokken 3,3 sn), aktarım Vercel'in ücretsiz
+"Fast Origin Transfer" kotasından düşüyor (10 GB'ın 6,92'si). Yayımlanmış sayı herkes için
+aynı; görselleri R2'nin kendisi sunabilir. Cloudflare DNS/proxy değişikliği bu adımda yasak
+(ürün sahibi talimatı), bu yüzden kod hazır ama kapalı.
+
+**Karar:** İki ayrı anahtar, ikisi de boşken her şey bugünkü gibi.
+1. **`S3_PUBLIC_BUCKET`** (yalnızca kopyalama): ayrı, herkese açık bir R2 bucket'ına yalnızca
+   `mayReadIssue(null, …)` doğru olan sayıların (yayımlanmış ve admin'e özel olmayan) sayfa
+   görselleri kopyalanır: `issues/<sayı>/<sayfa>/<medya>`, sayfa görselinin 720/1280 kopyaları
+   `….w720`, `….w1280` (küçük kopyası olmayan görselde orijinal). Yalnızca rotanın zaten
+   sunduğu görseller (sayfa görseli, yakınlaştırma/galeri blokları, bilgi alanı görselleri).
+   - **Silme hemen:** sayı yayından kalkınca, sayfa çıkınca, görseli değişince, alanları
+     kaydedilince, tasarım içe aktarımı ya da yedekten dönüşte, değişikliği yapan istek
+     bitmeden kopyalar silinir. Önce manifest güncellenir (okura artık o adres verilmez),
+     sonra nesne silinir.
+   - **Ekleme sonra:** aynı yerlerde yanıt gittikten sonra (`runInBackground`, 40 sn) ve
+     günlük `sync_public_media` görevinde (120 sn bütçe; kalan bir sonraki güne). Eksik kopya
+     yeniden konur, fazlası silinir.
+   - Manifest özel bucket'ta (`public-manifests/<sayı>.json`); herkese açık bucket'ta yalnızca
+     görseller var. Sözleşme, başvuru, profil gibi hiçbir dosya oraya yazılmaz; S3 bağdaştırıcısı
+     `public` için asla özel bucket'a düşmez (`S3_PUBLIC_BUCKET` yoksa hata).
+2. **`PUBLIC_MEDIA_URL`** (`https://alan-adı`, yol yok; sunma): okuyucu, **manifestin listelediği**
+   görsel için R2 adresini kullanır; listede olmayan her görsel korumalı rotada kalır, görsel
+   kırılmaz. Fonksiyon örneği manifesti sayı başına en çok dakikada bir okur. CSP `img-src`
+   bu kökeni yalnızca değişken doluyken içerir.
+- `mayReadIssue` kendi modülüne (`src/lib/issue-access.ts`) taşındı (döngüsel içe aktarma olmasın);
+  `issue-pages` aynı adla dışa vermeye devam ediyor.
+- Depolama bağdaştırıcısına `list` ve isteğe bağlı `cacheControl` eklendi (S3, yerel disk, bellek).
+  Herkese açık kopyalar `public, max-age=3600` taşır (tarayıcı, D-308).
+
+**Açık devreye alma adımları (ürün sahibi, sırayla):**
+1. Cloudflare'de AB yetki alanlı ikinci bir R2 bucket'ı (ör. `postscript-public`) ve ona özel
+   alan adı (ör. `cdn.postscriptmag.com`). Özel alan adı, alan adının DNS'inin Cloudflare'de
+   olmasını ister → Faz 1'e bağlı. `r2.dev` adresi üretim için kullanılmamalı (hız sınırlı).
+2. R2 API anahtarına yeni bucket için yazma izni; Vercel'e `S3_PUBLIC_BUCKET`.
+3. Bir günlük çalışma ya da sayı sayfası değişikliği sonrası kopyaları ve manifesti kontrol et.
+4. **Aydınlatma metni:** okurun tarayıcısı görselleri doğrudan Cloudflare'den alacağı için IP
+   adresi ve tarayıcı bilgisi Cloudflare'e gider; metin bu satırla güncellenip yeni sürüm
+   yayımlanmadan `PUBLIC_MEDIA_URL` açılmaz (hukukçu görüşü: yurt dışı aktarım, m. 9).
+5. Vercel'e `PUBLIC_MEDIA_URL` (yeniden dağıtım gerekir: CSP derleme anında okunur).
+
+**Bilinen sınır:** Cloudflare kenarındaki önbellek, silinen bir görseli `max-age` süresince (en çok
+bir saat) gösterebilir; 5651 m. 9'un 24 saatinin içinde. Kenar önbelleğini anında temizlemek
+Cloudflare API anahtarı ister; Faz 1'de.
+
+**Hukuk:** Kapalıyken yeni kişisel veri yok; açmadan önce 4. adım şart. Migration yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Entegrasyon (`public-issue-media.test.ts`, 8 test):
+kapalıyken hiçbir kopya yok ve okuyucu korumalı rotada; yayımlanınca iki sayfanın görselleri
+küçük kopyalarıyla (6 nesne) kopyalanır ve okuyucu R2 adresini, `srcset` `.w720`'yi kullanır;
+yayımlanmamış/admin'e özel sayıya kopya yok; sayı kapanınca bütün kopyalar, sayfa çıkınca yalnızca
+o sayfanınkiler gider; manifest yokken okuyucu korumalı rotada kalır ve günlük çalışma onu yeniden
+yazar; kaybolan kopya geri konur; yalnızca kopyalama açıkken okuyucu korumalı rotada.

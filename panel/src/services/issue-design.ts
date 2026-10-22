@@ -23,6 +23,7 @@ import {
 } from "@/lib/issue-design/manifest";
 import { PAGE_VARIANT_WIDTHS, variantName } from "@/lib/issue-page-variants";
 import { forgetCachedPictures, pageCacheTag } from "@/lib/cdn-cache";
+import { afterIssuePicturesChanged } from "./public-issue-media";
 import { getStorage } from "@/lib/storage";
 import type { RequestMeta } from "./auth";
 import { createQuiz, updateQuiz } from "./issue-quizzes";
@@ -461,6 +462,7 @@ export async function importIssueDesign(
   }
   // A page the design no longer has stops answering from the CDN too (D-343)
   await forgetCachedPictures(stale.map((row) => pageCacheTag(row.id)));
+  await afterIssuePicturesChanged(issue.id);
 
   if (older.length) {
     const snapshotId = randomUUID();
@@ -643,5 +645,7 @@ export async function restoreIssueDesignSnapshot(
     after: { snapshotId: pending.snapshotId, restored: restoredIds.length, removed: design.length },
     ip: meta.ip,
   });
+  // The design pages it took out lose their public copies too (D-353)
+  await afterIssuePicturesChanged(issue.id);
   return { restored: restoredIds.length, removed: design.length };
 }

@@ -12,6 +12,7 @@ import { articles, issues, type Issue } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import { canAccessAdminPanel, canAccessEditorPanel, type Actor } from "@/lib/auth/rbac";
 import { forgetCachedPictures, issueCacheTag } from "@/lib/cdn-cache";
+import { afterIssuePicturesChanged } from "./public-issue-media";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { triggerRevalidate } from "@/lib/revalidate";
 import type { RequestMeta } from "./auth";
@@ -228,6 +229,8 @@ export async function setIssueStatus(
     // Off the air means closed to everyone now, CDN copies included (D-317, D-343)
     await forgetCachedPictures([issueCacheTag(issueId)]);
   }
+  // Opening copies the pictures out, closing takes them back (D-353)
+  await afterIssuePicturesChanged(issueId);
 
   return updated!;
 }

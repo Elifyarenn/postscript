@@ -21,6 +21,7 @@ import { pruneResolvedReports } from "@/services/reports";
 import { processMailQueue, pruneMailJobs } from "@/services/mail-queue";
 import { announceOpenedIssueWindows } from "@/services/issue-mail";
 import { verifySignedContractFiles } from "@/services/contract-integrity";
+import { reconcileAllPublicMedia } from "@/services/public-issue-media";
 import { sendApprovalReminders } from "@/services/rights";
 import { anonymiseUser } from "@/services/users";
 
@@ -127,6 +128,8 @@ export const DAILY_TASKS: readonly HousekeepingTask[] = [
   { name: "announce_issue_windows", run: announceOpenedIssueWindows },
   // The stored signed contracts against the hash taken at upload (D-348)
   { name: "verify_contract_files", run: verifySignedContractFiles },
+  // Published issue pictures in the public bucket, when it is set (D-353)
+  { name: "sync_public_media", run: () => reconcileAllPublicMedia() },
   // Last, so the reminders queued above go out in the same run; retries left over from the day too
   { name: "process_mail_queue", run: () => processMailQueue({ budgetMs: 120_000, limit: 1000 }) },
 ];

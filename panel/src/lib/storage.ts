@@ -1,13 +1,16 @@
 /**
  * Object storage behind an adapter (specification §2 and §11).
  *
- * One bucket: article media and contract PDFs. The identity-document bucket
- * from D-009 was dropped in D-047.
+ * One private bucket, `media`: article media and contract PDFs. The
+ * identity-document bucket from D-009 was dropped in D-047. A second, public
+ * bucket holds copies of published issue pictures only, served straight from
+ * R2 when it is configured (D-353); nothing else is ever written there.
  */
 import "server-only";
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -35,15 +38,17 @@ function isMissingS3Object(error: unknown): boolean {
   return name === "NoSuchKey" || $metadata?.httpStatusCode === 404;
 }
 
-export type Bucket = "media";
+export type Bucket = "media" | "public";
 
 export type StoredObject = { key: string; bucket: Bucket; size: number; mime: string };
 
 export type StorageAdapter = {
-  put(input: { bucket: Bucket; key: string; body: Buffer; mime: string }): Promise<void>;
+  put(input: { bucket: Bucket; key: string; body: Buffer; mime: string; cacheControl?: string }): Promise<void>;
   get(input: { bucket: Bucket; key: string }): Promise<Buffer>;
   remove(input: { bucket: Bucket; key: string }): Promise<void>;
   signedUrl(input: { bucket: Bucket; key: string; expiresInSeconds: number }): Promise<string>;
+  /** Every key under a prefix. */
+  list(input: { bucket: Bucket; prefix: string }): Promise<string[]>;
 };
 
 /* ------------------------------------------------------------------ */
@@ -86,16 +91,22 @@ function createS3Adapter(): StorageAdapter {
     },
   });
 
-  const bucketName = (_bucket: Bucket) => config.S3_BUCKET;
+  const bucketName = (bucket: Bucket) => {
+    if (bucket === "media") return config.S3_BUCKET;
+    // Never fall back to the private bucket: a public copy must not land there
+    if (!config.S3_PUBLIC_BUCKET) throw new Error("S3_PUBLIC_BUCKET is not set");
+    return config.S3_PUBLIC_BUCKET;
+  };
 
   return {
-    async put({ bucket, key, body, mime }) {
+    async put({ bucket, key, body, mime, cacheControl }) {
       await client.send(
         new PutObjectCommand({
           Bucket: bucketName(bucket),
           Key: key,
           Body: body,
           ContentType: mime,
+          ...(cacheControl ? { CacheControl: cacheControl } : {}),
         }),
       );
     },
@@ -116,6 +127,18 @@ function createS3Adapter(): StorageAdapter {
       return getSignedUrl(client, new GetObjectCommand({ Bucket: bucketName(bucket), Key: key }), {
         expiresIn: expiresInSeconds,
       });
+    },
+    async list({ bucket, prefix }) {
+      const keys: string[] = [];
+      let token: string | undefined;
+      do {
+        const page = await client.send(
+          new ListObjectsV2Command({ Bucket: bucketName(bucket), Prefix: prefix, ContinuationToken: token }),
+        );
+        for (const item of page.Contents ?? []) if (item.Key) keys.push(item.Key);
+        token = page.IsTruncated ? page.NextContinuationToken : undefined;
+      } while (token);
+      return keys;
     },
   };
 }
@@ -160,6 +183,15 @@ function createLocalDiskAdapter(root: string): StorageAdapter {
       // Served through the authorised /api/media route rather than a real URL
       return `/api/media/local?bucket=${bucket}&key=${encodeURIComponent(key)}`;
     },
+    async list({ bucket, prefix }) {
+      const { readdir } = await import("node:fs/promises");
+      const base = path.resolve(root, bucket);
+      const entries = await readdir(base, { recursive: true, withFileTypes: true }).catch(() => []);
+      return entries
+        .filter((entry) => entry.isFile())
+        .map((entry) => path.relative(base, path.join(entry.parentPath, entry.name)).split(path.sep).join("/"))
+        .filter((key) => key.startsWith(prefix));
+    },
   };
 }
 
@@ -171,7 +203,7 @@ export class MemoryStorageAdapter implements StorageAdapter {
     return `${bucket}:${key}`;
   }
 
-  async put({ bucket, key, body, mime }: { bucket: Bucket; key: string; body: Buffer; mime: string }) {
+  async put({ bucket, key, body, mime }: { bucket: Bucket; key: string; body: Buffer; mime: string; cacheControl?: string }) {
     this.objects.set(this.id(bucket, key), { body, mime });
   }
 
@@ -187,6 +219,14 @@ export class MemoryStorageAdapter implements StorageAdapter {
 
   async signedUrl({ bucket, key }: { bucket: Bucket; key: string; expiresInSeconds: number }) {
     return `memory://${bucket}/${key}`;
+  }
+
+  async list({ bucket, prefix }: { bucket: Bucket; prefix: string }) {
+    const start = `${bucket}:`;
+    return [...this.objects.keys()]
+      .filter((id) => id.startsWith(start))
+      .map((id) => id.slice(start.length))
+      .filter((key) => key.startsWith(prefix));
   }
 
   clear(): void {

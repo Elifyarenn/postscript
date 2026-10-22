@@ -5,7 +5,7 @@ import { renderMarkdown } from "@/lib/markdown";
 import { CARD_LABELS, issueExtrasFor } from "@/lib/issue-extras";
 import { templateOf } from "@/lib/issue-templates";
 import type { ReaderExtras, ReaderPage } from "@/lib/issue-reader";
-import { pageMediaUrl, readIssuePages } from "@/services/issue-pages";
+import { readIssuePages } from "@/services/issue-pages";
 import { MagazineReader } from "@/components/magazine-reader";
 
 export const metadata = { title: "Dergi", robots: { index: false, follow: false } };
@@ -96,14 +96,14 @@ export default async function IssueReaderPage({
               bodyHtml: page.article.body ? await renderMarkdown(page.article.body) : null,
             }
           : null,
-        // Block pictures go through the page's own guarded route as well
+        // Block pictures follow the page picture: the guarded route, or the public copy (D-353)
         mediaUrls: Object.fromEntries(
           page.blocks.flatMap((block) => {
             if (block.kind === "zoom" && block.mediaId) {
-              return [[block.mediaId, pageMediaUrl(page.id, block.mediaId)]];
+              return [[block.mediaId, reader.pictureUrl(page.id, block.mediaId)]];
             }
             if (block.kind === "gallery") {
-              return block.mediaIds.map((id) => [id, pageMediaUrl(page.id, id)]);
+              return block.mediaIds.map((id) => [id, reader.pictureUrl(page.id, id)]);
             }
             return [];
           }),

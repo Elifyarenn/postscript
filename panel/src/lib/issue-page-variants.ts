@@ -24,12 +24,20 @@ export function variantName(name: string, width: PageVariantWidth): string | nul
 }
 
 /**
+ * The address of a smaller copy. The guarded route takes the width as a query;
+ * a copy in the public bucket is an object of its own next to the original (D-353).
+ */
+export function variantUrl(url: string, width: PageVariantWidth): string {
+  return url.startsWith("/") ? `${url}?w=${width}` : `${url}.w${width}`;
+}
+
+/**
  * The `srcset` for one page: the copies narrower than the original, then the
  * original itself, so the browser can always reach full resolution.
  */
 export function pageSrcSet(url: string, originalWidth: number): string {
   const copies = PAGE_VARIANT_WIDTHS.filter((width) => width < originalWidth).map(
-    (width) => `${url}?w=${width} ${width}w`,
+    (width) => `${variantUrl(url, width)} ${width}w`,
   );
   return [...copies, `${url} ${originalWidth}w`].join(", ");
 }

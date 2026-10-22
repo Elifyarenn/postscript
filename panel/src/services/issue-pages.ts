@@ -31,6 +31,8 @@ import { detectFileType } from "./media";
 import { buildStorageKey, getStorage } from "@/lib/storage";
 import { variantName, type PageVariantWidth } from "@/lib/issue-page-variants";
 import { forgetCachedPictures, pageCacheTag } from "@/lib/cdn-cache";
+import { mayReadIssue } from "@/lib/issue-access";
+import { afterIssuePicturesChanged, publicPictureResolver } from "./public-issue-media";
 import type { RequestMeta } from "./auth";
 
 /**
@@ -98,6 +100,8 @@ export type IssueReader = {
     publishedAt: Date | null;
   };
   pages: IssuePageView[];
+  /** The address of any other picture a page shows (zoom and gallery blocks), same rule as the page's own. */
+  pictureUrl: (pageId: string, mediaId: string) => string;
   quizzes: ReaderQuiz[];
   /** True when the reader is looking at something not yet published. */
   preview: boolean;
@@ -111,6 +115,9 @@ export type IssueReader = {
 export function pageMediaUrl(pageId: string, mediaId: string): string {
   return `/api/issue-pages/${pageId}/media/${mediaId}`;
 }
+
+/** Where a page picture is read from: the guarded route, or its public copy (D-353). */
+export type PictureUrl = (pageId: string, mediaId: string) => string;
 
 const pageColumns = {
   id: issuePages.id,
@@ -161,7 +168,7 @@ function articleOf(row: Record<string, unknown>, preview: boolean): PageArticle 
 
 type HotspotRow = typeof issuePageHotspots.$inferSelect;
 
-function hotspotView(row: HotspotRow): HotspotView {
+function hotspotView(row: HotspotRow, pictureUrl: PictureUrl): HotspotView {
   return {
     id: row.id,
     kind: row.kind as HotspotKind,
@@ -179,7 +186,7 @@ function hotspotView(row: HotspotRow): HotspotView {
     targetPageId: row.targetPageId,
     infoTitle: row.infoTitle,
     infoBody: row.infoBody,
-    infoImageUrl: row.infoMediaId ? pageMediaUrl(row.pageId, row.infoMediaId) : null,
+    infoImageUrl: row.infoMediaId ? pictureUrl(row.pageId, row.infoMediaId) : null,
     quizId: row.quizId,
     ready: hotspotIsReady({
       kind: row.kind as HotspotKind,
@@ -196,6 +203,7 @@ function toView(
   row: Record<string, unknown>,
   hotspots: HotspotView[],
   preview: boolean,
+  pictureUrl: PictureUrl,
 ): IssuePageView {
   const id = row.id as string;
   const imageMediaId = row.imageMediaId as string | null;
@@ -211,7 +219,7 @@ function toView(
     body: (row.body as string | null) ?? null,
     caption: (row.caption as string | null) ?? null,
     section: (row.section as string | null) ?? null,
-    imageUrl: imageMediaId ? pageMediaUrl(id, imageMediaId) : null,
+    imageUrl: imageMediaId ? pictureUrl(id, imageMediaId) : null,
     imageAlt: ((row.pageAlt as string | null) ?? (row.mediaAlt as string | null)) ?? null,
     imageWidth: (row.imageWidth as number | null) ?? null,
     imageHeight: (row.imageHeight as number | null) ?? null,
@@ -223,7 +231,7 @@ function toView(
   };
 }
 
-async function pagesOf(issueId: string, preview: boolean): Promise<IssuePageView[]> {
+async function pagesOf(issueId: string, preview: boolean, pictureUrl: PictureUrl = pageMediaUrl): Promise<IssuePageView[]> {
   const rows = await db
     .select(pageColumns)
     .from(issuePages)
@@ -246,12 +254,12 @@ async function pagesOf(issueId: string, preview: boolean): Promise<IssuePageView
   const byPage = new Map<string, HotspotView[]>();
   for (const area of areas) {
     const list = byPage.get(area.pageId) ?? [];
-    list.push(hotspotView(area));
+    list.push(hotspotView(area, pictureUrl));
     byPage.set(area.pageId, list);
   }
 
   return rows.map((row) =>
-    toView(row as Record<string, unknown>, byPage.get(row.id) ?? [], preview),
+    toView(row as Record<string, unknown>, byPage.get(row.id) ?? [], preview, pictureUrl),
   );
 }
 
@@ -259,22 +267,8 @@ async function pagesOf(issueId: string, preview: boolean): Promise<IssuePageView
 /* The one door                                                        */
 /* ------------------------------------------------------------------ */
 
-/**
- * Whether this actor may open this issue at all.
- *
- *  - an issue marked `adminOnly` is the admins' working copy: nobody else,
- *    not an editor, not a writer, not a signed-in reader (D-240)
- *  - a published issue is open to everyone, signed in or not (D-257)
- *  - anything else is the editorial panel's preview. An archived issue
- *    counted as open here while the public API and the issue page already
- *    closed it; taking an issue out of "published" now closes the reader,
- *    its pictures and its tests as well (D-317)
- */
-export function mayReadIssue(actor: Actor | null, issue: Pick<Issue, "status" | "adminOnly">): boolean {
-  if (issue.adminOnly) return actor !== null && canAccessAdminPanel(actor);
-  if (issue.status === "published") return true;
-  return actor !== null && canAccessEditorPanel(actor);
-}
+// The door itself lives in @/lib/issue-access (D-353); kept here for the callers
+export { mayReadIssue };
 
 /** True when this actor is looking at something not yet published. */
 function isPreview(issue: Pick<Issue, "status">): boolean {
@@ -312,8 +306,11 @@ export async function readIssuePages(actor: Actor | null, number: number): Promi
   if (!mayReadIssue(actor, issue)) throw notFound("Sayı bulunamadı.");
 
   const preview = isPreview(issue);
+  // A published issue's pictures come from their public copies once copied (D-353)
+  const publicUrl = await publicPictureResolver(issue);
+  const pictureUrl: PictureUrl = (pageId, mediaId) => publicUrl(pageId, mediaId) ?? pageMediaUrl(pageId, mediaId);
   const [pages, quizRows] = await Promise.all([
-    pagesOf(issue.id, preview),
+    pagesOf(issue.id, preview, pictureUrl),
     db.select().from(issueQuizzes).where(eq(issueQuizzes.issueId, issue.id)),
   ]);
 
@@ -344,6 +341,7 @@ export async function readIssuePages(actor: Actor | null, number: number): Promi
       publishedAt: issue.publishedAt,
     },
     pages: readable,
+    pictureUrl,
     // Without their answer keys: `correct` and `points` never leave the server
     quizzes: quizRows
       .filter((row) => reachable.has(row.id))
@@ -582,6 +580,7 @@ export async function updateIssuePage(
   });
   // The picture or a block picture may have left the page (D-343)
   await forgetCachedPictures([pageCacheTag(pageId)]);
+  await afterIssuePicturesChanged(updated[0].issueId);
 }
 
 /** The fields the page list edits: the label, the alt text and what it is. */
@@ -641,6 +640,7 @@ export async function removeIssuePage(actor: Actor, pageId: string, meta: Reques
   });
   // A page taken out is gone for everyone, not an hour later (D-343)
   await forgetCachedPictures([pageCacheTag(pageId)]);
+  await afterIssuePicturesChanged(row.issueId);
 }
 
 export async function duplicateIssuePage(actor: Actor, pageId: string, meta: RequestMeta): Promise<string> {
@@ -954,6 +954,7 @@ export async function replacePageImage(
   });
   // The old picture's address must stop answering too, not an hour later (D-343)
   await forgetCachedPictures([pageCacheTag(pageId)]);
+  await afterIssuePicturesChanged(page.issueId);
 
   return { aspectChanged: !sameAspect(before, size) };
 }
@@ -1071,6 +1072,7 @@ export async function saveHotspots(
   // one before or after, nothing cached can have changed
   if (existing.some((row) => row.infoMediaId) || parsed.data.some((area) => area.kind === "info" && area.infoMediaId)) {
     await forgetCachedPictures([pageCacheTag(pageId)]);
+    await afterIssuePicturesChanged(page.issueId);
   }
 }
 

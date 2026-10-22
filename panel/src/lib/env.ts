@@ -38,6 +38,14 @@ const envSchema = z.object({
   S3_SECRET_ACCESS_KEY: z.string().default("postscript"),
   S3_BUCKET: z.string().default("postscript"),
   S3_FORCE_PATH_STYLE: booleanish,
+  // Published issue pictures straight from R2 (D-353), in two steps. The public
+  // bucket alone turns on the copying; its public address on top turns on the
+  // reader using it. Both empty: everything goes through the guarded route.
+  S3_PUBLIC_BUCKET: z.string().default(""),
+  PUBLIC_MEDIA_URL: z
+    .string()
+    .default("")
+    .refine((value) => value === "" || /^https:\/\/[^/]+$/.test(value), "PUBLIC_MEDIA_URL must be https://host with no path"),
 
   REVALIDATE_WEBHOOK_URL: z.string().optional(),
   REVALIDATE_WEBHOOK_SECRET: z.string().optional(),
