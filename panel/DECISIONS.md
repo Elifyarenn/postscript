@@ -13738,3 +13738,40 @@ paketiyle çalıştı.
 her tablo için yasak değişikliğin reddi ve bilinçli akışların (bekleyen yüklemenin kararı,
 iznin geri alınması, kabulün eskimesi, taslak belgenin yeniden çizilip silinmesi, karşı
 imzalı kopyanın değişmesi, silinen kullanıcının adının düşmesi) sürdüğü.
+
+## D-350 — Faz 0 üretim verisiyle doğrulandı; kapsam raporu ve 0064–0065 geri dönüşü
+
+**Bağlam:** D-347..D-349 üretime çıkmadan önce, üretim verisini değiştirmeden (yalnızca
+`SELECT`, 2026-10-22) doğrulama.
+
+**Üretimde bulunan (2026-10-22):**
+- Migration defteri 63 kayıt (0063'e kadar); 0064 ve 0065 uygulanmamış.
+- Makaleler: 37 `ready_for_publishing`, 15 `in_review`, 8 `pending_admin_approval`, 1 `draft`.
+  `scheduled`, `published` ya da `awaiting_rights` makale yok; Sayı 1 tasarım sayfalarıyla yayında.
+- **D-347 kapsam kuralı:** imzalı 42 iznin 19'u metinle birebir aynı, 23'ü yalnızca kayıtlı
+  düzeltmelerle uzaklaşmış — **yayında takılacak iş 0**; kayıttaki metin ile özeti tutmayan
+  izin 0. (`ready_for_publishing`'deki 13 makalenin imzalı izni hiç yok; onları D-347 değil,
+  eskiden beri var olan "imzalı izin yok" kuralı durdurur.)
+- **0065 doldurması:** karşı imzalı 46 kopyanın 46'sının özeti denetim kaydında var.
+  Bekleyen imzalı yükleme yok.
+- Tablolar küçük (`signed_contracts` 144 kB, `article_versions` 1 MB): `ADD COLUMN` (null,
+  varsayılansız) yalnızca katalog değişikliği; `CREATE TRIGGER` kısa bir kilit alır.
+  Kilitlenme riski ihmal edilebilir. Veri silen ya da değiştiren tek ifade boş kolona yapılan
+  doldurma; veri kaybı yok.
+
+**Karar:**
+- `licenceCoverageReport()` (servis) ve `pnpm check-licence-coverage` (salt okunur betik):
+  imzalı izni olan her canlı eser için kapsam sonucu. Engellenecek iş varsa çıkış kodu 1.
+  Üretimde çalıştırma: `pnpm exec neon-env run -- pnpm check-licence-coverage`.
+- `scripts/rollback/0064-0065-down.sql`: tetikleyicileri, fonksiyonları, kolonu ve defterdeki
+  iki kaydı kaldırır. Otomatik çalışmaz; sıra dosyanın başında (önce eski kod, sonra
+  snapshot, sonra tek işlemde bu dosya).
+
+**Canlıya geçiş sırası (ürün sahibi):** 0064+0065'i uygula (D-079, `!` ile) → `check-licence-coverage`
+→ `faz0-ruhsat-butunlugu` dalını `main`'e al ve push et. 261–262 tek başına migration'sız da
+yayına alınabilir; 263 ve sonrası migration ister.
+
+**Hukuk:** Yeni kişisel veri yok; aydınlatma metni değişmedi. Migration yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Entegrasyon: kapsam raporu, kayıtsız değişikliği
+engellenecek iş olarak gösterir.

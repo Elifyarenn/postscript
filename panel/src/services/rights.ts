@@ -368,6 +368,38 @@ export async function licenceCoverageFor(
   return checkLicenceCoverage(grant, article.bodyMarkdown, versions);
 }
 
+export type CoverageReportRow = {
+  articleId: string;
+  title: string;
+  status: ArticleStatus;
+  result: CoverageResult;
+};
+
+/**
+ * Every live work with a signed licence, and whether that licence covers its
+ * current text (D-350). Read only: run before turning the D-347 guard on in
+ * production, and any time after, to see which works would be stopped at the
+ * publish step and why.
+ */
+export async function licenceCoverageReport(): Promise<CoverageReportRow[]> {
+  const rows = await db
+    .select({ article: articles, grant: rightsGrants })
+    .from(articles)
+    .innerJoin(rightsGrants, and(eq(rightsGrants.articleId, articles.id), eq(rightsGrants.status, "signed")))
+    .where(isNull(articles.deletedAt))
+    .orderBy(asc(articles.title));
+  const report: CoverageReportRow[] = [];
+  for (const { article, grant } of rows) {
+    report.push({
+      articleId: article.id,
+      title: article.title,
+      status: article.status,
+      result: await licenceCoverageFor(article, grant),
+    });
+  }
+  return report;
+}
+
 async function findArticle(articleId: string): Promise<Article> {
   const rows = await db.select().from(articles).where(eq(articles.id, articleId)).limit(1);
   const row = rows[0];

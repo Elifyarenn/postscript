@@ -676,6 +676,17 @@ describe("the licence must cover the text it publishes (D-347)", () => {
     expect(row!.status).toBe("scheduled");
   });
 
+  it("reports which signed works the guard would stop, and why (D-350)", async () => {
+    const { article } = await approved();
+    const { licenceCoverageReport } = await import("@/services/rights");
+    expect((await licenceCoverageReport()).map((row) => row.result.ok)).toEqual([true]);
+
+    await db.update(articles).set({ bodyMarkdown: "# Başlık\n\nKayıtsız değişiklik." }).where(eq(articles.id, article.id));
+    const [row] = await licenceCoverageReport();
+    expect(row!.articleId).toBe(article.id);
+    expect(row!.result.ok).toBe(false);
+  });
+
   it("lets only one of two simultaneous transitions through", async () => {
     const { admin, article } = await approved();
     const results = await Promise.allSettled([

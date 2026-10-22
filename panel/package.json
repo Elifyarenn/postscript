@@ -27,7 +27,8 @@
     "issue-design-variants": "tsx --tsconfig scripts/tsconfig.json scripts/issue-design-variants.ts",
     "redraw-team-avatars": "tsx --tsconfig scripts/tsconfig.json scripts/redraw-team-avatars.ts",
     "prune-community": "tsx --tsconfig scripts/tsconfig.json scripts/prune-community.ts",
-    "housekeeping": "tsx --tsconfig scripts/tsconfig.json scripts/housekeeping.ts"
+    "housekeeping": "tsx --tsconfig scripts/tsconfig.json scripts/housekeeping.ts",
+    "check-licence-coverage": "tsx --tsconfig scripts/tsconfig.json scripts/check-licence-coverage.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1127.0",
