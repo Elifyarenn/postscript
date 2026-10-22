@@ -80,7 +80,7 @@ test("a reader applies, gets reviewed twice, and becomes a writer once the signe
 
   // The applicant uploads the signed PDF; it waits for the admin
   await page.locator('input[name="file"]').setInputFiles({ ...SAMPLE, name: "imzali-sozlesme.pdf" });
-  await page.getByRole("button", { name: "İmzalı sözleşmeyi yükle" }).click();
+  await page.getByRole("button", { name: "İmzalı PDF'i yükle" }).click();
   await expect(page.getByText("Sözleşmeniz inceleniyor")).toBeVisible();
   await logout(page);
 
@@ -90,11 +90,14 @@ test("a reader applies, gets reviewed twice, and becomes a writer once the signe
   await expect(page.getByRole("heading", { name: "İmzalı sözleşme doğrulaması" })).toBeVisible();
   page.once("dialog", (dialog) => void dialog.accept());
   await page.getByRole("button", { name: "Doğrula" }).click();
-  await expect(page.getByText("İmzalı sözleşmeniz doğrulandı.", { exact: false })).toBeVisible();
+  // The row moves to the decided ones; that is the outcome, not a passing message
+  await expect(page.getByRole("row", { name: /Aylin Aday .*Onaylandı/ })).toBeVisible();
   await logout(page);
 
   // The verification is what makes the account a writer
   await submitLogin(page, SEED.applicant);
+  // The sign-in finishes before the next address is opened
+  await waitForHome(page);
   await page.goto("/writer");
   await expect(page.getByRole("heading", { name: "Merhaba, Aylin Aday" })).toBeVisible();
 

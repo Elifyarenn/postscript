@@ -60,8 +60,9 @@ test("registers as a reader, verifies the address, and stays a reader", async ({
   await page.getByRole("link", { name: "Hesabım" }).first().click();
   await page.waitForURL("**/account");
 
-  // The account is a plain reader, not a writer
-  await expect(page.getByText("Kullanıcı", { exact: true })).toBeVisible();
+  // The account is a plain reader, not a writer: the page no longer prints the
+  // role, but only a plain reader is told how to become a writer
+  await expect(page.getByText("Yazar olmak", { exact: true })).toBeVisible();
 
   // The birth date given at registration is stored and locked for the user
   await expect(page.getByLabel("Doğum tarihi")).toHaveValue("1995-05-20");

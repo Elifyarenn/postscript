@@ -62,7 +62,8 @@ test("the article page no longer offers a media card (D-080)", async ({ page }) 
   await loginElevated(page, "editor", SEED.editor);
 
   await page.goto("/editor/articles");
-  await page.locator("tbody tr").first().getByRole("link").click();
+  // The row links the article first, then its author's page
+  await page.locator("tbody tr").first().getByRole("link").first().click();
 
   await expect(page.getByRole("heading", { name: "Görseller" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Görsel ekle" })).toHaveCount(0);

@@ -15,10 +15,11 @@ import {
   waitForHome,
 } from "./helpers";
 
+// The template the panel versions since D-276 (`TEMPLATE_FILE` in src/lib/agreement/template.ts)
 const TEMPLATE = path.join(
   process.cwd(),
   "contracts",
-  "yazar-sozlesmesi-ve-ruhsat-taahhudu.md",
+  "genel-katki-saglayan-sozlesmesi.md",
 );
 
 test.describe.configure({ mode: "serial" });

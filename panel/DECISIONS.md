@@ -13924,3 +13924,40 @@ sayfa yükleyip sayıyı yayımlar; oturumsuz okuyucu düz açılışta `s-maxag
 ikinci istek `x-nextjs-cache: HIT`; `?s=` ile istek başına; sayı sayfası da kopyadan. Aynı
 çalıştırmada yayımdan önce 404 olan kopyanın yayımla hemen tazelendiği görüldü (`refreshPublicPages`).
 `10-flipbook` (7 test) değişmeden geçiyor.
+
+## D-355 — Eser Onayı ekranı imzalı sözleşmeye bakar; uçtan uca testler güncel arayüze uyduruldu
+
+**Bağlam:** Faz 0 doğrulamasında bütün e2e paketi gruplar hâlinde çalıştırıldı (son tam
+çalıştırma D-345'ten önceydi). Hataların biri gerçek bir ürün hatasıydı, gerisi arayüz
+değiştikçe güncellenmemiş testler.
+
+**Ürün hatası (düzeltildi):** `/writer/approvals` "güncel sözleşme var mı" sorusunu hâlâ eski
+onay kutusu kayıtlarından (`agreement_acceptances`) okuyordu. D-275'ten beri oraya kimse
+yazmıyor; sözleşme `signed_contracts`'ta doğrulanmış imzalı PDF demek. Sonuç: doğrulanmış
+sözleşmesi olan **her yazarın** onay ekranı kilitliydi; bekleyen bir Eser Onayı (içerik
+değişikliğinden sonra açılan) ekrandan verilemezdi. Üretimde şu an bekleyen onay yok (51 imzalı,
+4 geri alınmış; D-350), bu yüzden henüz kimse takılmadı. Ekran artık gönderim adımının
+kullandığı aynı kuralı soruyor (`hasAcceptedCurrentAgreement`); adminler sözleşme imzalamadığı
+ve yazar durumu taşımadığı için kilitlenmez (D-304, D-305). Sunucudaki `approveWork` zaten bu
+kilide bakmıyordu; değişen yalnızca ekran.
+
+**Testler (ürün davranışı değişmedi, testler bugünkü arayüze göre düzeltildi):**
+- `04-editorial`: makale kuyruğunda D-346'nın "Kategori" süzgeci → oluşturma formunun alanı
+  kimliğiyle (`#category`) seçilir; başlıktaki slug satırına kelime sayısı eklenmişti → slug
+  ` · `'dan önceki kısım. Bu düzeltmelerden sonra yayın, D-347 kapsam kontrolü ve geri çekme
+  uçtan uca geçiyor.
+- `01-registration`: hesap sayfası rolü artık yazmıyor → düz okur olduğu "Yazar olmak" notundan anlaşılır.
+- `05-media-license`: kuyruk satırında yazar bağlantısı da var → satırın ilk bağlantısı.
+- `06-agreement-version`: şablon D-276'da `genel-katki-saglayan-sozlesmesi.md` oldu; test eski dosyayı değiştiriyordu.
+- `07-writer-application`: yükleme düğmesi "İmzalı PDF'i yükle"; doğrulamanın sonucu satırın
+  "Onaylandı"ya geçmesiyle okunur; girişten sonra ana sayfa beklenir (yarış).
+- `07c`: "çizer" → "Tasarımcı" (D-310), boş liste "0 tasarımcı". `07d`: konuşma listesi topluluk adını gösterir.
+- `09-manor-game` → `07e-manor-game`: 08 editörün ikinci adımını kapatıp admini yeni TOTP
+  anahtarıyla yeniden kaydediyor; oyun testi 07c gibi 08'den önce koşmalı (testler birbirinden
+  bağımsız olmalı kuralına uyan en küçük düzeltme).
+
+**Hukuk:** Yeni kişisel veri yok. Migration yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test. E2E, gruplar hâlinde (her grup kendi tohumu ve
+derlemesiyle): 01–03 (13), 04 (2), 05–06 (4), 07 (1), 07b (1), 07c–08 (12), 10 (7), 11 (17) —
+hepsi geçti.

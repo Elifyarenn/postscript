@@ -24,7 +24,8 @@ const ARTICLE_TITLE = "Uçtan Uca Yayın Denemesi";
 /** The article detail page prints its slug under the title. */
 async function readSlug(page: Page): Promise<string> {
   const text = await page.locator("header p").first().innerText();
-  return text.trim().replace(/^\//, "");
+  // "/slug · 3 kelime": the word count came after this helper was written
+  return text.split(" · ")[0]!.trim().replace(/^\//, "");
 }
 
 /**
@@ -55,7 +56,8 @@ test("takes an article through the review chain to publication and withdraws it"
   await page.getByLabel("Özet").fill("Uçtan uca test için oluşturuldu.");
   // The filter form has a "Yazar" select too, so the create form's id is used
   await page.locator("#newAuthorId").selectOption({ label: "Ada Y." });
-  await page.getByLabel("Kategori").fill("Sanat & Edebiyat");
+  // The filter form has a "Kategori" select too since D-346
+  await page.locator("#category").fill("Sanat & Edebiyat");
   await page.getByLabel("Gövde (markdown)").fill("## Giriş\n\nDeneme gövdesi.\n");
   await page.getByRole("button", { name: "Oluştur" }).click();
 
@@ -193,7 +195,8 @@ test("a content change revokes the approval and asks for a new one", async ({ pa
   await page.goto("/editor/articles");
   await page.getByLabel("Başlık").fill(title);
   await page.locator("#newAuthorId").selectOption({ label: "Ada Y." });
-  await page.getByLabel("Kategori").fill("Sanat & Edebiyat");
+  // The filter form has a "Kategori" select too since D-346
+  await page.locator("#category").fill("Sanat & Edebiyat");
   await page.getByLabel("Gövde (markdown)").fill("## İlk\n\nİlk gövde.\n");
   await page.getByRole("button", { name: "Oluştur" }).click();
 

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { guardPanel } from "@/lib/auth/guard";
 import { articleHash, listApprovalsForWriter, APPROVAL_STATEMENT } from "@/services/rights";
-import { getCurrentAgreement, listAcceptancesForUser } from "@/services/agreements";
+import { hasAcceptedCurrentAgreement } from "@/services/agreements";
+import { needsAuthorAgreement } from "@/lib/auth/rbac";
 import { readCsrfToken } from "@/lib/csrf";
 import { Alert, Card, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
 import { formatDate, formatDateTime } from "@/lib/utils";
@@ -24,10 +25,13 @@ export default async function WriterApprovalsPage({
   const { user } = await guardPanel("writer");
   const csrfToken = (await readCsrfToken()) ?? "";
 
-  const [allApprovals, current, acceptances, activeIssue] = await Promise.all([
+  const [allApprovals, contractCurrent, activeIssue] = await Promise.all([
     listApprovalsForWriter({ ...user }),
-    getCurrentAgreement(),
-    listAcceptancesForUser(user.id),
+    // The same test the submit step uses: a verified signed contract for the
+    // current version (D-275). This page still read the old checkbox
+    // acceptances, which nothing writes since then, so it stayed locked for
+    // every writer with a verified contract (D-355)
+    hasAcceptedCurrentAgreement(user.id),
     getActiveIssue(),
   ]);
   // One issue at a time (D-330): the issues the writer has approvals in, and the active one
@@ -43,10 +47,9 @@ export default async function WriterApprovalsPage({
   const selected = pickListIssue(issueRows, (await searchParams).issueId, activeIssue?.id ?? null);
   const approvals = allApprovals.filter((row) => row.issueId === selected?.id);
 
-  // §6.4: a pending contract version blocks approvals until it is accepted
-  const contractCurrent =
-    current !== null && acceptances.some((row) => row.version === current.version);
-  const locked = user.writerStatus !== "active" || !contractCurrent;
+  // §6.4: a pending contract version blocks approvals until it is signed. The
+  // admins sign no contract and have no writer status (D-304, D-305)
+  const locked = needsAuthorAgreement(user) && (user.writerStatus !== "active" || !contractCurrent);
 
   const pending = approvals.filter((row) => row.status === "pending");
   const settled = approvals.filter((row) => row.status !== "pending");

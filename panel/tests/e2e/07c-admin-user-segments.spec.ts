@@ -26,7 +26,8 @@ test("an admin walks the users lists from the sidebar", async ({ page }) => {
 
   await page.getByRole("link", { name: "Tasarımcılar", exact: true }).click();
   await page.waitForURL("**/admin/users/illustrators");
-  await expect(page.getByText("Henüz çizer yok.")).toBeVisible();
+  // "Çizer" became "Tasarımcı" (D-310); the empty list says so in its count
+  await expect(page.getByRole("heading", { name: "0 tasarımcı" })).toBeVisible();
 
   // The readers sub-link shares its label with the parent item, and comes after it
   await page.getByRole("link", { name: "Kullanıcılar", exact: true }).last().click();

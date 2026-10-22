@@ -4,6 +4,10 @@
  * Who gets in is asserted on the HTTP status and on the page body, and the
  * game's server actions are replayed from an account that may not play: the
  * lock has to hold on the server, not only in the page.
+ *
+ * Named to run before 08, like 07c: 08 turns the editor's second factor off and
+ * re-enrols the admin with a new TOTP secret, after which the seeded code no
+ * longer signs either of them in the way this spec expects.
  */
 import { expect, test, type Page } from "@playwright/test";
 import {

@@ -95,8 +95,8 @@ test("two members meet in the community area", async ({ page }) => {
   await signIn(page, SEED.reader);
 
   await page.goto("/social/messages");
-  // The writer publishes under a pen name, which is what the list shows
-  await page.getByRole("link", { name: /Ada Y\./ }).click();
+  // The conversation list shows the community handle
+  await page.getByRole("link", { name: /ada_yazar/ }).click();
   await page.waitForURL("**/social/messages/ada_yazar");
   await expect(page.locator("ol").getByText(privateMessage)).toBeVisible();
 
