@@ -13901,3 +13901,26 @@ küçük kopyalarıyla (6 nesne) kopyalanır ve okuyucu R2 adresini, `srcset` `.
 yayımlanmamış/admin'e özel sayıya kopya yok; sayı kapanınca bütün kopyalar, sayfa çıkınca yalnızca
 o sayfanınkiler gider; manifest yokken okuyucu korumalı rotada kalır ve günlük çalışma onu yeniden
 yazar; kaybolan kopya geri konur; yalnızca kopyalama açıkken okuyucu korumalı rotada.
+
+## D-354 — Okuyucunun düz açılışı da önbellekteki kopyadan
+
+**Bağlam:** D-351 okuyucuyu (`/magazine/issues/:n/oku`) `?s=` sorgusu yüzünden istek başına
+bırakmıştı. Okuyucu derginin asıl sayfası: her açılışta bütün sayfaların verisi, alanları,
+testleri ve markdown'ı sunucuda hazırlanıyor.
+
+**Karar:** Oturumu olmayan ziyaretçi okuyucuyu **sorgusuz** açtığında (sayı sayfasındaki
+"Dergiyi oku" düğmesi) `/anon/oku/:n` kopyası gelir (ISR, 60 sn, derlemede çizilmez,
+`refreshPublicPages` ile hemen tazelenir). `?s=` ile bir sayfada açılış (içindekiler
+bağlantıları) istek başına kalır; böylece okuyucunun istemci kodu hiç değişmedi (başlangıç
+sayfası sunucu ile tarayıcıda aynı kalıyor). Sayfa gövdesi `src/components/public-views/reader.tsx`'e
+taşındı; kopya okuyucunun çıplak çerçevesini (`(reader)/layout`) kullanır. Yayımlanmamış ya da
+admin'e özel sayı kopyada da 404.
+
+**Hukuk:** Yeni kişisel veri yok; görüntülenme sayacı (D-344) tarayıcıdan gönderildiği için
+kopyadan etkilenmez. Migration yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test. E2E `11-anonymous-cache.spec.ts` (17 test): admin bir
+sayfa yükleyip sayıyı yayımlar; oturumsuz okuyucu düz açılışta `s-maxage=60`, form anahtarı yok,
+ikinci istek `x-nextjs-cache: HIT`; `?s=` ile istek başına; sayı sayfası da kopyadan. Aynı
+çalıştırmada yayımdan önce 404 olan kopyanın yayımla hemen tazelendiği görüldü (`refreshPublicPages`).
+`10-flipbook` (7 test) değişmeden geçiyor.

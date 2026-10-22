@@ -7,7 +7,8 @@
  * for a visitor whether the copy is fresh or not.
  */
 import { expect, test } from "@playwright/test";
-import { completeTwoFactorIfAsked, SEED, submitLogin } from "./helpers";
+import sharp from "sharp";
+import { completeTwoFactorIfAsked, loginElevated, SEED, submitLogin } from "./helpers";
 
 const CACHED = ["/", "/kunye", "/kvkk", "/kullanim-sartlari", "/kategoriler", "/hakkinda", "/hakkinda?bolum=yazarlar", "/magazine", "/magazine/issues"];
 
@@ -39,6 +40,55 @@ test.describe("visitor without a session", () => {
 
   test("an unknown copy is a 404, not a page", async ({ request }) => {
     expect((await request.get("/anon/s/yok")).status()).toBe(404);
+  });
+
+  test("the reader of an issue that is not published stays a 404, opened plainly or at a page (D-354)", async ({ request }) => {
+    expect((await request.get("/magazine/issues/1/oku")).status()).toBe(404);
+    const atPage = await request.get("/magazine/issues/1/oku?s=00000000-0000-0000-0000-000000000000");
+    expect(atPage.status()).toBe(404);
+    expect(atPage.headers()["cache-control"]).not.toMatch(/s-maxage/);
+  });
+});
+
+test.describe("a published issue", () => {
+  test.describe.configure({ mode: "serial" });
+
+  test("an admin lays out a page and publishes the seeded issue", async ({ page }) => {
+    await loginElevated(page, "admin", SEED.admin);
+    await page.goto("/editor/issues");
+    await page.getByRole("link", { name: "Sayfalar" }).first().click();
+    const picture = await sharp({ create: { width: 600, height: 848, channels: 3, background: "#6b1d2f" } }).png().toBuffer();
+    await page.locator('input[type="file"]').setInputFiles([{ name: "kapak.png", mimeType: "image/png", buffer: picture }]);
+    await page.getByRole("button", { name: /görseli yükle/ }).click();
+    await expect(page.getByText(/\d+ sayfa/).first()).toBeVisible({ timeout: 60_000 });
+
+    await page.goto("/editor/issues");
+    await page.getByLabel("Durum").first().selectOption("published");
+    await page.getByRole("button", { name: "Durumu değiştir" }).first().click();
+    await expect(page.getByLabel("Durum").first()).toHaveValue("published");
+  });
+
+  test("its reader, opened plainly, is a shared copy; opened at a page it is per request (D-354)", async ({ request }) => {
+    const first = await request.get("/magazine/issues/1/oku");
+    expect(first.status()).toBe(200);
+    expect(first.headers()["cache-control"]).toMatch(/s-maxage=60/);
+    const html = await first.text();
+    expect(html).not.toContain('name="csrfToken"');
+    // Pictures still go through the guarded route while R2 serving is off (D-353)
+    expect(html).toContain("/api/issue-pages/");
+
+    const again = await request.get("/magazine/issues/1/oku");
+    expect(again.headers()["x-nextjs-cache"]).toBe("HIT");
+
+    const atPage = await request.get("/magazine/issues/1/oku?s=00000000-0000-0000-0000-000000000000");
+    expect(atPage.status()).toBe(200);
+    expect(atPage.headers()["cache-control"]).not.toMatch(/s-maxage/);
+  });
+
+  test("its own page is a shared copy too", async ({ request }) => {
+    const response = await request.get("/magazine/issues/1");
+    expect(response.status()).toBe(200);
+    expect(response.headers()["cache-control"]).toMatch(/s-maxage=60/);
   });
 });
 

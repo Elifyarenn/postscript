@@ -139,6 +139,13 @@ const nextConfig: NextConfig = {
         },
         page("/magazine/issues", "/anon/s/sayilar"),
         page("/magazine/issues/:number", "/anon/magazine/issues/:number"),
+        // The reader opened plainly; opened at a page (`?s=`, the contents
+        // links) it stays per request, so the reader's own code is unchanged (D-354)
+        {
+          source: "/magazine/issues/:number/oku",
+          missing: [...anonymous, { type: "query" as const, key: "s" }],
+          destination: "/anon/oku/:number",
+        },
         page("/magazine/articles/:slug", "/anon/magazine/articles/:slug"),
         page("/magazine/authors/:slug", "/anon/magazine/authors/:slug"),
       ],
