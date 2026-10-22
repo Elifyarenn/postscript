@@ -37,6 +37,7 @@ import { uniqueEntryNames, type ZipEntry } from "@/lib/zip";
 import { canAccessIllustratorPanel, canAccessWriterPanel, canManageAgreements, type Actor } from "@/lib/auth/rbac";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { getCurrentAgreement } from "./agreements";
+import { recordIntegrityFailure, sha256Hex, verifyStoredFile } from "./contract-integrity";
 import { stillContributing } from "./contributor-documents";
 import { detectFileType, storeGeneratedPdf } from "./media";
 import { checkWriterEligibility, findUserById } from "./users";
@@ -363,6 +364,15 @@ export async function approveSignedContract(actor: Actor, id: string, meta: Requ
     throw conflict("Bu dosya güncel olmayan bir sözleşme sürümü için yüklenmiş; reddedip güncel sürümü isteyin.");
   }
 
+  // What the admin opened must still be what the member uploaded (D-348)
+  const fileCheck = await verifyStoredFile(row.fileMediaId, row.fileSha256);
+  if (!fileCheck.ok) {
+    await recordIntegrityFailure(row.id, row.fileMediaId, row.fileSha256, fileCheck, "verification");
+    throw conflict(
+      "Depodaki dosya, yüklendiği anda alınan özetle eşleşmiyor ya da bulunamıyor. Bu kayıt doğrulanamaz; üyeden dosyayı yeniden isteyin.",
+    );
+  }
+
   const member = await findUserById(row.userId);
   // A licence form's signed copy is recorded only; the contract is what activates (D-289)
   const contract = await isContractUpload(row);
@@ -456,6 +466,8 @@ export type CountersignItem = {
   articleTitle: string | null;
   version: number;
   fileMediaId: string;
+  /** The hash taken at upload; the archive download checks the file against it (D-348). */
+  fileSha256: string;
   reviewedAt: Date | null;
   countersignedMediaId: string | null;
   countersignedAt: Date | null;
@@ -483,6 +495,7 @@ export async function listForCountersign(
       memberName: users.displayName,
       version: agreementVersions.version,
       fileMediaId: signedContracts.fileMediaId,
+      fileSha256: signedContracts.fileSha256,
       reviewedAt: signedContracts.reviewedAt,
       countersignedMediaId: signedContracts.countersignedMediaId,
       countersignedAt: signedContracts.countersignedAt,
@@ -541,11 +554,24 @@ export async function countersignZipEntries(
   );
   const names = uniqueEntryNames(items.map(countersignFileName));
   async function* entries(): AsyncGenerator<ZipEntry> {
+    // Every file is hashed on the way out and listed with the hash taken at
+    // upload, so the archive itself shows which copy is intact (D-348)
+    const sums: string[] = [];
     for (const [index, item] of items.entries()) {
       const [file] = await db.select().from(media).where(eq(media.id, item.fileMediaId)).limit(1);
       if (!file) continue;
       const body = await getStorage().get({ bucket: "media", key: file.storageKey });
-      yield { name: names[index]!, data: new Uint8Array(body), modified: item.reviewedAt ?? undefined };
+      const actual = sha256Hex(body);
+      const intact = actual === item.fileSha256;
+      if (!intact) {
+        await recordIntegrityFailure(item.id, item.fileMediaId, item.fileSha256, { ok: false, kind: "mismatch", actual }, "archive_download");
+      }
+      const name = intact ? names[index]! : `UYUMSUZ - ${names[index]!}`;
+      sums.push(`${item.fileSha256}  ${name}${intact ? "" : `  (depodaki: ${actual})`}`);
+      yield { name, data: new Uint8Array(body), modified: item.reviewedAt ?? undefined };
+    }
+    if (sums.length) {
+      yield { name: "SHA256SUMS.txt", data: new TextEncoder().encode(`${sums.join("\n")}\n`) };
     }
   }
   return { count: items.length, entries: entries() };

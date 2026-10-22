@@ -13663,3 +13663,33 @@ takılan olursa çözüm yazardan yeni Eser Onayı almaktır.
 `article-status.test.ts` (kapsam sorulmadıysa ret). Entegrasyon (`lifecycle.test.ts`):
 düzeltme sonrası yayın sürer; kaydı olmayan gövde değişikliği 409; zamanlandıktan sonra
 değişen metni cron yayımlamaz; eşzamanlı iki geçişten yalnızca biri geçer, diğeri 409.
+
+## D-348 — İmzalı sözleşme dosyaları yükleme anındaki özetle yeniden doğrulanır
+
+**Bağlam:** Faz 0 ruhsat bütünlüğü incelemesi (P2). `signed_contracts.file_sha256` yüklemede
+bir kez yazılıyor ve bir daha okunmuyordu: depodaki (R2) dosya değişse ya da silinse bunu
+fark edecek bir yer yoktu.
+
+**Karar:** Dosyanın baytları üç yerde yeniden özetlenir (`src/services/contract-integrity.ts`):
+- **Doğrulama:** Admin bir yüklemeyi onaylamadan önce. Dosya eşleşmiyor ya da yoksa 409;
+  kayıt `pending` kalır, admin üyeden dosyayı yeniden ister.
+- **Arşiv indirme (ZIP):** Her dosya çıkarken özetlenir. Eşleşmeyenin adı `UYUMSUZ - …` ile
+  başlar; arşivin sonuna yükleme özetlerini listeleyen `SHA256SUMS.txt` eklenir.
+- **Günlük iş:** `verify_contract_files` (günlük cron'da) bütün imzalı yüklemeleri durumuna
+  bakmadan kontrol eder.
+
+Her başarısızlık denetim kaydına `signed_contract.integrity_failed` olarak yazılır (nerede,
+beklenen ve bulunan özet). Günlük işte en az bir başarısızlık varsa adminlere tek bir panel
+bildirimi gider. **Hiçbir şey otomatik onarılmaz:** depodaki kopya kanıttır, ne olduğuna
+bir insan karar verir. Üyenin kendi indirmesi (`/api/media`) imzalı adrese yönlenmeye devam
+eder; onu günlük iş kapsar (indirmeye ikinci bir okuma eklemek trafiği iki katına çıkarırdı).
+
+**Bilinen sınır:** Dergi tarafından imzalanmış kopyanın özeti bugün yalnızca denetim kaydında;
+o kopyanın kontrolü D-349'daki kolonla gelir.
+
+**Hukuk:** Yeni kişisel veri yok; aydınlatma metni değişmedi. Migration yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Entegrasyon (`contract-integrity.test.ts`):
+değişmiş ve silinmiş dosya onaylanmaz ve kaydedilir; sağlam dosya eskisi gibi onaylanır;
+günlük iş sayar, kaydeder, adminlere bir kez bildirir; ZIP değişen dosyayı işaretler ve
+`SHA256SUMS.txt` taşır.
