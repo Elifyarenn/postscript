@@ -34,6 +34,12 @@ export type TransitionContext = {
   rightsGrantStatus: GrantStatus | null;
   /** False when any attached media row has no license_type (§8, last rule). */
   allMediaLicensed: boolean;
+  /**
+   * Whether the licence covers the text being published (D-347). Only read on
+   * the edges that publish; missing there counts as not covered, so a caller
+   * that forgets to ask cannot publish.
+   */
+  licenceCoverage?: TransitionCheck;
   /** `withdrawn_reason` is mandatory when withdrawing. */
   withdrawnReason?: string | null;
   /** The reviewer's note; mandatory when the main editor rejects (D-318). */
@@ -106,6 +112,10 @@ export function checkTransition(
         reason: "Makaleye bağlı her görselin lisans bilgisi girilmeden yayına alınamaz.",
       };
     }
+    if (!context.licenceCoverage) {
+      return { ok: false, reason: "Yayın izninin bu metni kapsadığı doğrulanamadı." };
+    }
+    if (!context.licenceCoverage.ok) return context.licenceCoverage;
   }
 
   // Going back for revision from awaiting_rights only makes sense after a refusal

@@ -13624,3 +13624,42 @@ yazılar "Kategorisiz" seçeneğiyle (`NO_CATEGORY`) ayrıca bulunur.
 
 **Doğrulama:** Kapı: typecheck, lint, test. Entegrasyon testi: kategori sayımı,
 kategoriye ve "Kategorisiz"e göre liste, kategoriye göre durum sayımı.
+
+## D-347 — Yayın kapısı metni karşılaştırır; durum yalnızca kontrol edildiği yerden yazılır
+
+**Bağlam:** Faz 0 ruhsat bütünlüğü incelemesi (P1, P5). Yayın kapısı (`checkTransition`)
+yalnızca canlı iznin `signed` olmasına bakıyordu; yayımlanacak metin izin verilen metinle
+karşılaştırılmıyordu. Servis dışından (elle SQL, hatalı bir kod yolu) değişen bir gövde
+eski izinle yayına çıkabilirdi. Ayrıca `applyStatus` durumu `WHERE id` ile yazıyordu: aynı
+makaleye aynı anda gelen iki geçiş ikisi de kontrolden geçip birbirinin üstüne yazabiliyordu.
+
+**Karar:**
+- **D-268'in kapsamı değişmedi.** İzin modeli bugünkü hâliyle kalıyor (`rights_grants`,
+  gönderimde beyan, editör düzeltmesi izni korur — §7.5). Bu, D-268 gelene kadar muhafazakâr
+  bir ara kontrol.
+- `scheduled`/`published` geçişlerinde (elle ve zamanlanmış yayında) `licenceCoverageFor`
+  sorulur; kural saf fonksiyonda (`src/lib/licence-coverage.ts`):
+  1. Kayıttaki metin (`accepted_body_markdown`) varsa özetiyle (`form_text_hash`) tutmalı;
+     tutmuyorsa kayıt bozulmuş sayılır, yayın yok.
+  2. Güncel gövdenin özeti izin özetine eşitse yayın serbest.
+  3. Değilse: izinden sonraki her sürüm (`article_versions`) `correction` olmalı ve en
+     yeni sürüm yayımlanacak metnin ta kendisi olmalı. Beyan sürüm numarasını taşıyor
+     (`accepted_version`); ekrandan verilen onay taşımadığı için onun anı (`signed_at`)
+     kullanılır. İkisi de yoksa yalnızca birebir aynı metin geçer.
+- Kapsam bilgisi verilmemişse yayın kenarı reddeder: soran bir çağıran unutursa yayın olmaz.
+- `applyStatus` artık `WHERE id AND status = <kontrol edilen durum>` ile yazar; satır
+  değişmezse 409 "Makalenin durumu bu sırada değişti." Zamanlanmış yayın döngüsü bu
+  durumda o makaleyi atlar, diğerlerine devam eder.
+
+**Etkisi:** Servis üzerinden yapılan her değişiklik zaten sürüm kaydı ürettiği için bugünkü
+akışların hiçbiri değişmez (düzeltme sonrası yayın, içerik değişikliğinde yeni onay).
+Yalnızca kaydı olmayan bir metin değişikliği artık yayına çıkamaz. Üretimde bu kurala
+takılacak bir makale olup olmadığı bu adımda ölçülmedi (canlı veritabanı okuması yok);
+takılan olursa çözüm yazardan yeni Eser Onayı almaktır.
+
+**Hukuk:** Yeni kişisel veri yok; aydınlatma metni değişmedi. Migration yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Birim: `licence-coverage.test.ts` (9 durum),
+`article-status.test.ts` (kapsam sorulmadıysa ret). Entegrasyon (`lifecycle.test.ts`):
+düzeltme sonrası yayın sürer; kaydı olmayan gövde değişikliği 409; zamanlandıktan sonra
+değişen metni cron yayımlamaz; eşzamanlı iki geçişten yalnızca biri geçer, diğeri 409.

@@ -63,6 +63,7 @@ import { hasIssueGrant } from "./issue-grants";
 import {
   declineWork,
   findLiveApproval,
+  licenceCoverageFor,
   openApprovalForArticle,
   recordSubmissionDeclaration,
   revokeApproval,
@@ -1132,10 +1133,12 @@ export async function transitionArticle(
   }
 
   const grant = await findLiveApproval(article.id);
+  const publishes = to === "scheduled" || to === "published";
 
   const check = checkTransition(article.status, to, {
     rightsGrantStatus: grant?.status ?? null,
     allMediaLicensed: await allMediaLicensed(article.id),
+    licenceCoverage: publishes ? await licenceCoverageFor(article, grant) : undefined,
     withdrawnReason: options.withdrawnReason,
     note: options.note,
   });
@@ -1242,11 +1245,17 @@ async function applyStatus(
   }
   if (to === "awaiting_rights") patch.scheduledAt = null;
 
+  // Only from the status the check was made against (D-347): two requests
+  // racing on the same article would otherwise both pass the check and the
+  // second would write over the first, skipping the edge it was checked for
   const [updated] = await db
     .update(articles)
     .set(patch)
-    .where(eq(articles.id, article.id))
+    .where(and(eq(articles.id, article.id), eq(articles.status, article.status)))
     .returning();
+  if (!updated) {
+    throw conflict("Makalenin durumu bu sırada değişti. Sayfayı yenileyip tekrar deneyin.");
+  }
 
   if (to === "published") {
     await snapshotVersion(updated!, actorId, options.note ?? "Yayınlanan sürüm", true);
@@ -1326,12 +1335,19 @@ export async function publishScheduledArticles(now: Date = new Date()): Promise<
     const check = checkTransition(article.status, "published", {
       rightsGrantStatus: grant?.status ?? null,
       allMediaLicensed: await allMediaLicensed(article.id),
+      licenceCoverage: await licenceCoverageFor(article, grant),
     });
     if (!check.ok) {
       console.warn(`Scheduled article ${article.slug} not published: ${check.reason}`);
       continue;
     }
-    await applyStatus(article, "published", null, { ip: null, userAgent: "cron" }, {});
+    try {
+      await applyStatus(article, "published", null, { ip: null, userAgent: "cron" }, {});
+    } catch (error) {
+      // Moved by an editor since the list was read; the rest still go out
+      console.warn(`Scheduled article ${article.slug} not published: ${(error as Error).message}`);
+      continue;
+    }
     published.push(article.slug);
   }
   return published;

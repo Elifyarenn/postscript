@@ -26,6 +26,7 @@ import { writeAudit } from "@/lib/audit";
 import { canAccessEditorPanel, canSignRightsGrant, needsAuthorAgreement, type Actor } from "@/lib/auth/rbac";
 import { hashDocument } from "@/lib/agreement/normalise";
 import { formatContractDateTime } from "@/lib/agreement/render";
+import { checkLicenceCoverage, type CoverageResult } from "@/lib/licence-coverage";
 import { env } from "@/lib/env";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { sendMail } from "@/services/mail-queue";
@@ -342,6 +343,29 @@ export async function findLiveApproval(articleId: string): Promise<RightsGrant |
     )
     .limit(1);
   return rows[0] ?? null;
+}
+
+/**
+ * Whether the live licence covers the article's current text (D-347). Asked
+ * only on the edges that publish; the rule itself is `checkLicenceCoverage`.
+ */
+export async function licenceCoverageFor(
+  article: Pick<Article, "id" | "bodyMarkdown">,
+  grant: RightsGrant | null,
+): Promise<CoverageResult> {
+  if (!grant || grant.status !== "signed") {
+    return { ok: false, reason: "Bu eser için geçerli bir yayın izni yok." };
+  }
+  const versions = await db
+    .select({
+      version: articleVersions.version,
+      bodyMarkdown: articleVersions.bodyMarkdown,
+      changeKind: articleVersions.changeKind,
+      createdAt: articleVersions.createdAt,
+    })
+    .from(articleVersions)
+    .where(eq(articleVersions.articleId, article.id));
+  return checkLicenceCoverage(grant, article.bodyMarkdown, versions);
 }
 
 async function findArticle(articleId: string): Promise<Article> {

@@ -630,3 +630,57 @@ describe("a new contract version", () => {
     expect(error.status).toBe(409);
   });
 });
+
+describe("the licence must cover the text it publishes (D-347)", () => {
+  async function approved() {
+    const setup = await scenario();
+    await toAwaitingRights(setup.editor, setup.admin, setup.article.id);
+    await approveAsWriter(setup.writer, setup.article.id);
+    return setup;
+  }
+
+  it("still publishes a text reached by a recorded correction", async () => {
+    const { admin, editor, article } = await approved();
+    await updateArticle(
+      editor,
+      article.id,
+      { title: article.title, bodyMarkdown: "# Başlık\n\nGövde metni, düzeltildi.", authorId: article.authorId, changeKind: "correction" },
+      noMeta,
+    );
+
+    const scheduled = await transitionArticle(admin, article.id, "scheduled", noMeta);
+    expect(scheduled.status).toBe("scheduled");
+  });
+
+  it("refuses a text that changed with no version on record", async () => {
+    const { admin, article } = await approved();
+    // A write that bypassed the service: no snapshot, no new approval
+    await db.update(articles).set({ bodyMarkdown: "# Başlık\n\nBaşka bir metin." }).where(eq(articles.id, article.id));
+
+    const error = await captureError(transitionArticle(admin, article.id, "scheduled", noMeta));
+    expect(error.status).toBe(409);
+    expect(error.message).toMatch(/yayın izni verdiği metinle aynı değil/);
+  });
+
+  it("does not let the scheduled job publish a text that moved after scheduling", async () => {
+    const { admin, article } = await approved();
+    await transitionArticle(admin, article.id, "scheduled", noMeta, { scheduledAt: new Date(Date.now() + 1000) });
+    await db.update(articles).set({ bodyMarkdown: "# Başlık\n\nSonradan değişti." }).where(eq(articles.id, article.id));
+
+    expect(await publishScheduledArticles(new Date(Date.now() + 60_000))).toEqual([]);
+    const [row] = await db.select().from(articles).where(eq(articles.id, article.id));
+    expect(row!.status).toBe("scheduled");
+  });
+
+  it("lets only one of two simultaneous transitions through", async () => {
+    const { admin, article } = await approved();
+    const results = await Promise.allSettled([
+      transitionArticle(admin, article.id, "scheduled", noMeta),
+      transitionArticle(admin, article.id, "scheduled", noMeta),
+    ]);
+
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    const refused = results.find((result) => result.status === "rejected") as PromiseRejectedResult;
+    expect(isAppError(refused.reason) && refused.reason.status).toBe(409);
+  });
+});

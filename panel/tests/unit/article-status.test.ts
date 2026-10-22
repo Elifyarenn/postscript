@@ -15,6 +15,7 @@ import type { ArticleStatus } from "@/db/schema";
 const clean = {
   rightsGrantStatus: "signed" as const,
   allMediaLicensed: true,
+  licenceCoverage: { ok: true as const },
 };
 
 describe("allowed edges", () => {
@@ -111,6 +112,28 @@ describe("media license guard", () => {
     });
     expect(result.ok).toBe(false);
     expect(result.ok === false && result.reason).toMatch(/lisans/i);
+  });
+});
+
+describe("licence coverage guard (D-347)", () => {
+  it("refuses to publish when coverage was not checked at all", () => {
+    const { licenceCoverage: _, ...unchecked } = clean;
+    expect(checkTransition("awaiting_rights", "scheduled", unchecked).ok).toBe(false);
+    expect(checkTransition("scheduled", "published", unchecked).ok).toBe(false);
+  });
+
+  it("passes the coverage refusal through", () => {
+    const result = checkTransition("scheduled", "published", {
+      ...clean,
+      licenceCoverage: { ok: false, reason: "Metin farklı." },
+    });
+    expect(result).toEqual({ ok: false, reason: "Metin farklı." });
+  });
+
+  it("is not asked on edges that do not publish", () => {
+    const { licenceCoverage: _, ...unchecked } = clean;
+    expect(checkTransition("published", "withdrawn", { ...unchecked, withdrawnReason: "Telif" }).ok).toBe(true);
+    expect(checkTransition("draft", "in_review", unchecked).ok).toBe(true);
   });
 });
 
