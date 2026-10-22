@@ -61,7 +61,8 @@ describe("a published picture's answer", () => {
     });
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("public, max-age=3600");
-    expect(response.headers.get("vercel-cdn-cache-control")).toBe("max-age=3600");
+    // The CDN keeps it a day; the browser, which no purge reaches, an hour (D-352)
+    expect(response.headers.get("vercel-cdn-cache-control")).toBe("max-age=86400");
     expect(response.headers.get("vercel-cache-tag")).toBe(`${issueCacheTag(issue.id)},${pageCacheTag(page.id)}`);
   });
 });

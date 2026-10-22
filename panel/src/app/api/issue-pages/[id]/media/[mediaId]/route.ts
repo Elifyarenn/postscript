@@ -13,7 +13,7 @@
  * shared cache must not decide which one. A picture of a published issue is
  * the same for everyone and its bytes never change under a media id (a
  * replaced picture is a new media row), so the browser and the CDN may keep
- * it for an hour, tagged so that closing the issue or the page deletes the
+ * it (the browser an hour, the CDN a day, D-352), tagged so that closing the issue or the page deletes the
  * CDN's copy at once (D-343). Anything not public stays no-store.
  */
 import { NextResponse } from "next/server";

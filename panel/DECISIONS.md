@@ -13828,3 +13828,19 @@ oturumsuz `s-maxage=60` ile, form anahtarı ve "Çıkış" olmadan; arama istek 
 sayı 404; bilinmeyen kopya 404; üye istek başına sayfayı hesabıyla alır. `02-access-control`
 e2e geçti; `01-registration`'daki tek hata bu adımdan bağımsız ve önceden var: hesap sayfasında
 artık olmayan "Kullanıcı" etiketini arıyor (hesap sayfası bu adımda değişmedi).
+
+## D-352 — Yayımlanmış sayının görselleri CDN'de bir gün
+
+**Bağlam:** Faz 0 ölçümü (2026-10-22): sayı sayfası görseli CDN'de yokken 3,3 sn (fonksiyon
+R2'den okuyup aktarıyor), varken 0,39 sn. Vercel'in "Fast Origin Transfer" kotası 10 GB'ın
+6,92'sinde; bu aktarımın büyük kısmı görseller. CDN kopyası bir saatte düşüyordu (D-343).
+
+**Karar:** `vercel-cdn-cache-control` bir saatten **bir güne** (`CDN_PICTURE_SECONDS`).
+Tarayıcının `cache-control`'ü bir saatte kaldı (D-308): tarayıcıdaki kopyayı hiçbir temizleme
+silemez, CDN'dekini etiketle siler. Bir medya kimliğinin baytları değişmez, sayı ya da sayfa
+kapanınca etiket temizlemesi zaten çalışıyor (D-343). Temizleme başarısız olursa kalan kopya en
+geç bir günde düşer; bu 5651 m. 9'un 24 saatlik kaldırma süresinin içinde.
+
+**Hukuk:** Yeni kişisel veri yok. Migration yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test. `picture-cache.test.ts`: tarayıcı bir saat, CDN bir gün.

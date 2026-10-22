@@ -8,16 +8,25 @@
  * copies at once: an issue taken off the air is closed to everyone (D-317), a
  * page taken out of an issue is gone (a removal request, 5651 m. 9).
  *
- * The CDN keeps a copy for an hour at most, the same hour a reader's own
- * browser already may (D-308), so a purge that fails can leave a closed
- * picture visible for no longer than that.
+ * A reader's own browser keeps a copy for an hour (D-308); the CDN keeps it a
+ * day (D-352), so a purge that fails can leave a closed picture on the CDN for
+ * no longer than that.
  */
 import "server-only";
 import { dangerouslyDeleteByTag } from "@vercel/functions";
 import { refreshPublicPages } from "@/lib/revalidate";
 
-/** How long the CDN may keep a published picture, in seconds. */
+/** How long a reader's browser may keep a published picture, in seconds. */
 export const PUBLIC_PICTURE_SECONDS = 3600;
+
+/**
+ * How long the CDN may keep it (D-352). The bytes under a media id never
+ * change and every closing purges by tag, so the CDN can keep a picture far
+ * longer than a browser, which nothing can purge. A day is the ceiling because
+ * a purge can fail: the copy left behind then still goes within the 24 hours
+ * 5651 m. 9 gives a removal.
+ */
+export const CDN_PICTURE_SECONDS = 86_400;
 
 export function issueCacheTag(issueId: string): string {
   return `issue-${issueId}`;
@@ -31,7 +40,7 @@ export function pageCacheTag(pageId: string): string {
 export function publicPictureHeaders(issueId: string, pageId: string): Record<string, string> {
   return {
     "cache-control": `public, max-age=${PUBLIC_PICTURE_SECONDS}`,
-    "vercel-cdn-cache-control": `max-age=${PUBLIC_PICTURE_SECONDS}`,
+    "vercel-cdn-cache-control": `max-age=${CDN_PICTURE_SECONDS}`,
     "vercel-cache-tag": `${issueCacheTag(issueId)},${pageCacheTag(pageId)}`,
   };
 }
