@@ -10,11 +10,13 @@ import { articles, issues, users, writerAreas, type User } from "@/db/schema";
 import { isAppError } from "@/lib/errors";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import {
+  countArticlesByCategory,
   countArticlesByStatus,
   createArticle,
   createArticleAsWriter,
   listArticles,
   listArticlesForWriter,
+  NO_CATEGORY,
   transitionArticle,
   updateArticle,
 } from "@/services/articles";
@@ -169,6 +171,26 @@ describe("one issue per list", () => {
 
     const own = await listArticlesForWriter(writer, second.id);
     expect(own.map((row) => row.title)).toEqual(["İkinci sayıda"]);
+  });
+
+  it("filters by category, with articles without one as their own choice", async () => {
+    const { admin, first, leftDraft } = await scenario();
+    await db.update(articles).set({ category: null }).where(eq(articles.id, leftDraft.id));
+
+    const categories = await countArticlesByCategory(actorOf(admin), { issueId: first.id });
+    expect(categories).toEqual([
+      { category: AREA, total: 1 },
+      { category: null, total: 1 },
+    ]);
+
+    const inArea = await listArticles(actorOf(admin), { issueId: first.id, category: AREA });
+    expect(inArea.items.map((row) => row.title)).toEqual(["Basılan yazı"]);
+    const without = await listArticles(actorOf(admin), { issueId: first.id, category: NO_CATEGORY });
+    expect(without.items.map((row) => row.title)).toEqual(["Yarım kalan"]);
+
+    const counts = await countArticlesByStatus(actorOf(admin), { issueId: first.id, category: NO_CATEGORY });
+    expect(counts.get("draft")).toBe(1);
+    expect(counts.get("published")).toBeUndefined();
   });
 });
 

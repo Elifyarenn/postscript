@@ -176,11 +176,16 @@ export type ArticleFilters = {
   issueId: string;
   status?: ArticleStatus;
   authorId?: string;
+  /** A category as written on the article, or `NO_CATEGORY` for those without one. */
+  category?: string;
   q?: string;
   sort?: ArticleSort;
   limit?: number;
   offset?: number;
 };
+
+/** The category filter's value for articles with no category; not a name anyone types. */
+export const NO_CATEGORY = "__none__";
 
 /** The editor's scope plus the filters, shared by the list and its counts. */
 async function editorListConditions(actor: Actor, filters: Omit<ArticleFilters, "status">): Promise<SQL[]> {
@@ -188,6 +193,11 @@ async function editorListConditions(actor: Actor, filters: Omit<ArticleFilters, 
 
   const conditions: SQL[] = [isNull(articles.deletedAt), eq(articles.issueId, filters.issueId)];
   if (filters.authorId) conditions.push(eq(articles.authorId, filters.authorId));
+  if (filters.category) {
+    conditions.push(
+      filters.category === NO_CATEGORY ? isNull(articles.category) : eq(articles.category, filters.category),
+    );
+  }
   const search = titleSearch(filters.q);
   if (search) conditions.push(search);
 
@@ -294,6 +304,25 @@ export async function countArticlesByStatus(
     .where(and(...conditions))
     .groupBy(articles.status);
   return new Map(rows.map((row) => [row.status, row.total]));
+}
+
+/**
+ * The categories one issue's articles in the editor's scope are filed under,
+ * with how many each holds; `null` is the articles without one. Categories
+ * are free text, so the filter offers only what is really there.
+ */
+export async function countArticlesByCategory(
+  actor: Actor,
+  filters: Omit<ArticleFilters, "status" | "category" | "sort" | "limit" | "offset">,
+): Promise<{ category: string | null; total: number }[]> {
+  if (!canAccessEditorPanel(actor)) throw forbidden();
+  const conditions = await editorListConditions(actor, filters);
+  return db
+    .select({ category: articles.category, total: count() })
+    .from(articles)
+    .where(and(...conditions))
+    .groupBy(articles.category)
+    .orderBy(asc(articles.category));
 }
 
 /** The issues a writer has articles in, for their list's issue picker (D-330). */

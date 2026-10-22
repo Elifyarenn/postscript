@@ -5,8 +5,10 @@ import { users } from "@/db/schema";
 import { guardPanel } from "@/lib/auth/guard";
 import {
   ARTICLE_SORTS,
+  countArticlesByCategory,
   countArticlesByStatus,
   listArticles,
+  NO_CATEGORY,
   parseArticleSort,
 } from "@/services/articles";
 import { listIssues } from "@/services/issues";
@@ -87,6 +89,7 @@ export default async function EditorArticlesPage({
     status?: string;
     issueId?: string;
     authorId?: string;
+    category?: string;
     q?: string;
     sort?: string;
     page?: string;
@@ -111,7 +114,14 @@ export default async function EditorArticlesPage({
   const sort = parseArticleSort(filters.sort);
   const q = filters.q?.trim() || undefined;
   const page = Math.max(1, Number.parseInt(filters.page ?? "1", 10) || 1);
-  const listFilters = { issueId: selected?.id ?? "", authorId: filters.authorId || undefined, q };
+  const scopeFilters = { issueId: selected?.id ?? "", authorId: filters.authorId || undefined, q };
+
+  // Only a category that is really in the list is taken from the address
+  const categories = selected ? await countArticlesByCategory(actor, scopeFilters) : [];
+  const category = categories.some((row) => (row.category ?? NO_CATEGORY) === filters.category)
+    ? filters.category
+    : undefined;
+  const listFilters = { ...scopeFilters, category };
 
   const [list, statusCounts, writers, areas, mainEditor] = await Promise.all([
     selected
@@ -138,6 +148,7 @@ export default async function EditorArticlesPage({
     issueId: selected?.id,
     status,
     authorId: filters.authorId || undefined,
+    category,
     q,
     sort: sort === "updated" ? undefined : sort,
   };
@@ -182,6 +193,17 @@ export default async function EditorArticlesPage({
                 </Select>
               </Field>
 
+              <Field label="Kategori" htmlFor="filterCategory">
+                <Select id="filterCategory" name="category" defaultValue={category ?? ""}>
+                  <option value="">Tüm kategoriler</option>
+                  {categories.map((row) => (
+                    <option key={row.category ?? NO_CATEGORY} value={row.category ?? NO_CATEGORY}>
+                      {row.category ?? "Kategorisiz"} ({row.total})
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+
               <Field label="Yazar" htmlFor="authorId">
                 <Select id="authorId" name="authorId" defaultValue={filters.authorId ?? ""}>
                   <option value="">Tüm yazarlar</option>
@@ -220,8 +242,8 @@ export default async function EditorArticlesPage({
 
           {articles.length === 0 ? (
             <EmptyState>
-              {status
-                ? "Bu durumda ve kapsamınızda makale yok."
+              {status || category
+                ? "Bu filtreye uyan ve kapsamınıza giren makale yok."
                 : "Kapsamınıza giren makale yok."}
             </EmptyState>
           ) : (

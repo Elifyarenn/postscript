@@ -13603,3 +13603,24 @@ sayfa çevrilmez; yakınlaştırınca düz görünüm, sığdırınca kitap ayn�
 görünümü ve çevirmeyi kapatma; telefonda tek sayfa ekranı doldurur ve çevrilir; "hareketi
 azalt"ta kitap yok. Ekran görüntüleriyle çift sayfa, köşe kıvrılması ve telefon görünümü
 gözle kontrol edildi.
+
+## D-346 — Makale kuyruğunda kategori filtresi
+
+**Karar:** `/editor/articles` ("Kategoriye düşen yazılar", adminde yayın kuyruğu)
+filtresine "Kategori" seçimi eklendi. Seçenekler sabit liste değil: kategori serbest
+metin olduğu için, seçili sayıda editörün kapsamına giren yazıların gerçekten taşıdığı
+kategoriler (`countArticlesByCategory`), her birinin yanında sayısıyla. Kategorisi boş
+yazılar "Kategorisiz" seçeneğiyle (`NO_CATEGORY`) ayrıca bulunur.
+
+- Kategori editörü yine yalnızca kendi alanlarını görür; filtre kapsamı daraltır,
+  genişletmez (koşul `editorListConditions`'a eklendi, kapsam koşulu aynen duruyor).
+- Adresten gelen `category` yalnızca listede gerçekten varsa kabul edilir; yoksa
+  yok sayılır (ayrı bir zod şeması yerine seçeneklere karşı doğrulama).
+- Durum seçeneklerindeki sayılar seçilen kategoriye göre, kategori seçeneklerindeki
+  sayılar ise kategori dışındaki filtrelere (yazar, arama) göre sayılır. Sayfalama
+  bağlantıları kategoriyi korur.
+
+**Hukuk:** Yeni kişisel veri yok; aydınlatma metni değişmedi. Migration yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Entegrasyon testi: kategori sayımı,
+kategoriye ve "Kategorisiz"e göre liste, kategoriye göre durum sayımı.
