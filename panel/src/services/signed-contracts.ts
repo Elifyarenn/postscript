@@ -602,20 +602,23 @@ export async function uploadCountersigned(
     uploadedBy: actor.id,
   });
   const now = new Date();
+  const sha256 = sha256Hex(input.buffer);
   await db
     .update(signedContracts)
-    .set({ countersignedMediaId: file.id, countersignedAt: now, countersignedBy: actor.id, updatedAt: now })
+    .set({ countersignedMediaId: file.id, countersignedSha256: sha256, countersignedAt: now, countersignedBy: actor.id, updatedAt: now })
     .where(eq(signedContracts.id, row.id));
 
+  // A second upload replaces the pointer, never the earlier file: the audit
+  // entry keeps which copy and which hash it replaced (D-349)
   await writeAudit({
     actorId: actor.id,
     action: "signed_contract.countersigned",
     entityType: "signed_contracts",
     entityId: row.id,
-    before: { countersignedMediaId: row.countersignedMediaId },
+    before: { countersignedMediaId: row.countersignedMediaId, sha256: row.countersignedSha256 },
     after: {
       countersignedMediaId: file.id,
-      sha256: createHash("sha256").update(input.buffer).digest("hex"),
+      sha256,
       userId: row.userId,
     },
     ip: meta.ip,

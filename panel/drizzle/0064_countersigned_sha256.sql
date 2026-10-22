@@ -1,0 +1,1 @@
+ALTER TABLE "signed_contracts" ADD COLUMN "countersigned_sha256" text;

@@ -826,6 +826,11 @@ export const signedContracts = pgTable(
      * upload above is kept as it was.
      */
     countersignedMediaId: uuid("countersigned_media_id").references(() => media.id, { onDelete: "restrict" }),
+    /**
+     * sha256 of that copy's bytes (D-349). It used to live only in the audit
+     * log, so the daily check had nothing to compare the current file with.
+     */
+    countersignedSha256: text("countersigned_sha256"),
     countersignedAt: timestamp("countersigned_at", { withTimezone: true }),
     countersignedBy: uuid("countersigned_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: createdAt(),

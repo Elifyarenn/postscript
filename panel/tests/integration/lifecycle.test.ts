@@ -7,7 +7,7 @@
  * a content change revokes the approval, and a withdrawn work answers 410.
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
 import { articleMedia, articles, issues, media, rightsGrants, users } from "@/db/schema";
 import { publishAgreementVersion, createVersionFromTemplate } from "@/services/agreements";
@@ -590,8 +590,12 @@ describe("public issue listing", () => {
     await transitionArticle(admin, article.id, "scheduled", noMeta);
     const published = await transitionArticle(admin, article.id, "published", noMeta);
 
-    // Clearing the signed choice is what an older row looks like
+    // Clearing the signed choice is what an older row looks like. A signed
+    // grant's terms are fixed in the database now (D-349), so the old row is
+    // made with its guard off, as the rows from before the guard were
+    await db.execute(sql`alter table rights_grants disable trigger rights_grants_guard`);
     await db.update(rightsGrants).set({ bylineChoice: null });
+    await db.execute(sql`alter table rights_grants enable trigger rights_grants_guard`);
 
     const payload = await getPublicArticle(published.slug);
     expect(payload.author?.name).toBe("İsimsiz");

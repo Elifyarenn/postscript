@@ -13693,3 +13693,48 @@ o kopyanın kontrolü D-349'daki kolonla gelir.
 değişmiş ve silinmiş dosya onaylanmaz ve kaydedilir; sağlam dosya eskisi gibi onaylanır;
 günlük iş sayar, kaydeder, adminlere bir kez bildirir; ZIP değişen dosyayı işaretler ve
 `SHA256SUMS.txt` taşır.
+
+## D-349 — Kanıt kayıtları veritabanında korunur; karşı imzalı kopyanın özeti kolonda
+
+**Bağlam:** Faz 0 ruhsat bütünlüğü incelemesi (P3, P4). Değiştirilemezlik yalnızca
+`audit_log` ve `role_changes` için veritabanında zorlanıyordu (0001). Sözleşme, izin ve
+sürüm kayıtlarını yalnızca uygulama kodu koruyordu: bir hata ya da elle yazılan SQL kanıtı
+sessizce değiştirebilirdi. Dergi tarafından imzalanmış kopyanın (`countersigned_*`, D-290)
+özeti yalnızca denetim kaydındaydı; yeniden yüklemede gösterici değişiyordu.
+
+**Karar:**
+- **0064:** `signed_contracts.countersigned_sha256`. Yüklemede yazılır; yeniden yüklemede
+  denetim kaydı eski kopyanın kimliğini ve özetini `before` içinde tutar. Günlük doğrulama
+  (D-348) bu kopyayı da kontrol eder.
+- **0065 (`evidence_guards`, elle yazılan özel migration; 0001 gibi):**
+  - Önce eski karşı imzalı kopyaların özeti **denetim kaydından** doldurulur; dosyadan
+    yeniden hesaplanmaz, çünkü kontrolün şüphe edebilmesi gereken şey dosyanın kendisi.
+  - Sonra yedi tabloya `BEFORE UPDATE/DELETE` tetikleyicisi eklenir
+    (`restrict_violation` ile ret):
+
+| Tablo | Yasak | Serbest kalan |
+|---|---|---|
+| `signed_contracts` | Silme; dosya, özet, kişi, sürüm, belge, yükleme anı değişikliği; karar verilmiş yüklemenin durum değişikliği; özetsiz karşı imzalı kopya | Bekleyen yüklemenin kararı, karşı imzalı kopyanın değişmesi (özetiyle) |
+| `rights_grants` | `signed`/`revoked`/`declined` olanı silme; şartlarını, metnini, özetini, imza bilgisini değiştirme; `revoked`/`declined`'dan çıkış; `signed`'dan `revoked` dışına geçiş | Bekleyen onayın her şeyi, `signed → revoked`, hatırlatma, PDF bağlantısının boşalması |
+| `agreement_acceptances` | Silme; `superseded_at` dışında her değişiklik; `superseded_at`'in ikinci kez değişmesi | Eski metne ait diye işaretlenmesi |
+| `contributor_documents` | Postalanmış (`mailed_at` dolu) belgeyi silme, metnini/özetini/şablonunu/sahibini değiştirme, `mailed_at`'i değiştirme | Postalanmamış belge (taslak) serbest; eser/test/sayı bağlantılarının `SET NULL` ile boşalması |
+| `contributor_document_works` | Postalanmış belgenin eserlerini silme, özetini değiştirme | Postalanmamış belgeninkiler |
+| `article_versions` | Silme ve güncelleme (5187 saklama açık) | Silinen kullanıcının `changed_by`'ının boşalması |
+| `agreement_versions` | İmzalı yüklemesi olan sürümün metnini/özetini değiştirme | Diğer her şey (yayımlama, güncel işareti) |
+
+- Kodda bu kuralları çiğneyen bir akış yok; her tetikleyici, akışların bugün yaptığı
+  değişiklikler taranarak yazıldı. Testlerin tablo boşaltması tetikleyicileri zaten kapatıyor.
+- Silinmesi tetikleyiciye takılacak üst kayıtlar (makale, sözleşme sürümü) kodda zaten hiç
+  sert silinmiyor (yumuşak silme). Bir gün sert silme gerekirse önce bu karar okunmalı.
+
+**Üretime alma:** Migration'lar push'tan önce uygulanmalı (D-079): kod `countersigned_sha256`
+kolonunu okuyor. Neon dal kotası dolu olduğu için D-078 dal denemesi yapılmadı; SQL yalnızca
+standart plpgsql ve `to_jsonb` kullanıyor, PGlite'ta (gerçek PostgreSQL motoru) bütün test
+paketiyle çalıştı.
+
+**Hukuk:** Yeni kişisel veri yok; aydınlatma metni değişmedi.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Entegrasyon (`evidence-guards.test.ts`, 10 test):
+her tablo için yasak değişikliğin reddi ve bilinçli akışların (bekleyen yüklemenin kararı,
+iznin geri alınması, kabulün eskimesi, taslak belgenin yeniden çizilip silinmesi, karşı
+imzalı kopyanın değişmesi, silinen kullanıcının adının düşmesi) sürdüğü.

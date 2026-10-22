@@ -442,6 +442,20 @@
       "when": 1792583375135,
       "tag": "0063_sad_gideon",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1792677141199,
+      "tag": "0064_countersigned_sha256",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1792677142714,
+      "tag": "0065_evidence_guards",
+      "breakpoints": true
     }
   ]
 }

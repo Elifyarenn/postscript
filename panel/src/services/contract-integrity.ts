@@ -58,20 +58,36 @@ export async function recordIntegrityFailure(
 }
 
 /**
- * The daily run: every signed upload, whatever its status. The admins get one
+ * The daily run: every signed upload, whatever its status, and every
+ * countersigned copy. The admins get one
  * notification listing how many failed, not one per file.
  */
 export async function verifySignedContractFiles(): Promise<{ checked: number; failed: number }> {
   const rows = await db
-    .select({ id: signedContracts.id, fileMediaId: signedContracts.fileMediaId, fileSha256: signedContracts.fileSha256 })
+    .select({
+      id: signedContracts.id,
+      fileMediaId: signedContracts.fileMediaId,
+      fileSha256: signedContracts.fileSha256,
+      countersignedMediaId: signedContracts.countersignedMediaId,
+      countersignedSha256: signedContracts.countersignedSha256,
+    })
     .from(signedContracts);
 
+  // The member's upload, and the copy signed by both sides where its hash is
+  // on file (D-349); one predating the column without an audit hash is skipped
+  const files = rows.flatMap((row) => [
+    { id: row.id, mediaId: row.fileMediaId, sha256: row.fileSha256 },
+    ...(row.countersignedMediaId && row.countersignedSha256
+      ? [{ id: row.id, mediaId: row.countersignedMediaId, sha256: row.countersignedSha256 }]
+      : []),
+  ]);
+
   let failed = 0;
-  for (const row of rows) {
-    const check = await verifyStoredFile(row.fileMediaId, row.fileSha256);
+  for (const file of files) {
+    const check = await verifyStoredFile(file.mediaId, file.sha256);
     if (check.ok) continue;
     failed += 1;
-    await recordIntegrityFailure(row.id, row.fileMediaId, row.fileSha256, check, "daily_check");
+    await recordIntegrityFailure(file.id, file.mediaId, file.sha256, check, "daily_check");
   }
 
   if (failed > 0) {
@@ -90,5 +106,5 @@ export async function verifySignedContractFiles(): Promise<{ checked: number; fa
     }
   }
 
-  return { checked: rows.length, failed };
+  return { checked: files.length, failed };
 }
