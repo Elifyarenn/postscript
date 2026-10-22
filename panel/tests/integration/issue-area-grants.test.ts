@@ -125,7 +125,7 @@ describe("a temporary area for one issue", () => {
     expect(topic.category).toBe(extra);
   });
 
-  it("is given by an admin only, to an active writer, for an area not already theirs", async () => {
+  it("is given by an admin only, to an active writer or an admin, for an area not already theirs", async () => {
     const { admin, first, writer, extra } = await scenario();
     const input = { issueId: first.id, userId: writer.id, areaId: await areaId(extra) };
 
@@ -133,10 +133,14 @@ describe("a temporary area for one issue", () => {
     expect(await statusOf(grantIssueArea(actorOf(admin), { ...input, areaId: await areaId(OWN) }, noMeta))).toBe(409);
     const reader = await createUser({ role: "user" });
     expect(await statusOf(grantIssueArea(actorOf(admin), { ...input, userId: reader.id }, noMeta))).toBe(409);
-    expect(await statusOf(grantIssueArea(actorOf(admin), { ...input, userId: admin.id }, noMeta))).toBe(409);
 
     await grantIssueArea(actorOf(admin), input, noMeta);
     expect(await statusOf(grantIssueArea(actorOf(admin), input, noMeta))).toBe(409);
     expect(mailbox.outbox).toHaveLength(1);
+
+    // An admin writes everywhere already; the grant files their article on the screen (D-356)
+    await grantIssueArea(actorOf(admin), { ...input, userId: admin.id }, noMeta);
+    expect((await listIssueAreaGrantsForUser(actorOf(admin), admin.id)).map((row) => row.areaName)).toEqual([extra]);
+    expect(mailbox.outbox).toHaveLength(2);
   });
 });

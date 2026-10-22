@@ -10,11 +10,11 @@
  */
 import "server-only";
 import { TEST_WRITER_EMAILS } from "@/lib/test-accounts";
-import { and, asc, desc, eq, inArray, isNull, notInArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, notInArray, or } from "drizzle-orm";
 import { db } from "@/db/client";
 import { articles, type Article, issueAreaGrants, issues, users, writerAreas, type Issue } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
-import { canManageIssueAreaGrants, canWriteInAnyArea, isActiveWriter, type Actor } from "@/lib/auth/rbac";
+import { canManageIssueAreaGrants, isActiveWriter, type Actor } from "@/lib/auth/rbac";
 import { countWords } from "@/lib/word-count";
 import { env } from "@/lib/env";
 import { conflict, forbidden, notFound } from "@/lib/errors";
@@ -164,7 +164,11 @@ export async function listIssueAreaGrantsForIssue(actor: Actor, issueId: string)
   }));
 }
 
-/** Who may be given a temporary area: active writers who are not admins (D-304). */
+/**
+ * Who may be given a temporary area: active writers, and the admins (D-356).
+ * An admin already writes in every area (D-304); the grant only files their
+ * article on this screen with the rest.
+ */
 export async function listTemporaryAreaCandidates(actor: Actor) {
   await assertMayManage(actor);
   const rows = await db
@@ -181,8 +185,10 @@ export async function listTemporaryAreaCandidates(actor: Actor) {
     .where(
       and(
         isNull(users.deletedAt),
-        eq(users.writerStatus, "active"),
-        inArray(users.role, ["writer", "editor"]),
+        or(
+          and(eq(users.writerStatus, "active"), inArray(users.role, ["writer", "editor"])),
+          eq(users.role, "admin"),
+        ),
         // Not offered to a test writer (D-333)
         notInArray(users.email, [...TEST_WRITER_EMAILS]),
       ),
@@ -255,8 +261,6 @@ export async function grantIssueArea(
     .limit(1);
   if (!person) throw notFound("Kullanıcı bulunamadı.");
   if (!isActiveWriter(person)) throw conflict("Yalnızca aktif bir yazara geçici alan verilebilir.");
-  // An admin already writes in every area (D-304)
-  if (canWriteInAnyArea(person)) throw conflict("Adminler zaten her alanda yazabilir.");
   if (person.writerArea === area.name || person.writerArea2 === area.name) {
     throw conflict("Bu alan yazarın kendi alanı; geçici alan gerekmez.");
   }

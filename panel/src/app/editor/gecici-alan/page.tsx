@@ -154,9 +154,11 @@ export default async function TemporaryAreaPage({
                             {candidates.map((writer) => (
                               <option key={writer.id} value={writer.id}>
                                 {writer.penName ?? writer.displayName}
-                                {[writer.writerArea, writer.writerArea2].filter(Boolean).length > 0
-                                  ? ` (${[writer.writerArea, writer.writerArea2].filter(Boolean).join(", ")})`
-                                  : ""}
+                                {writer.role === "admin"
+                                  ? " (admin · her alanda yazabilir)"
+                                  : [writer.writerArea, writer.writerArea2].filter(Boolean).length > 0
+                                    ? ` (${[writer.writerArea, writer.writerArea2].filter(Boolean).join(", ")})`
+                                    : ""}
                               </option>
                             ))}
                           </Select>

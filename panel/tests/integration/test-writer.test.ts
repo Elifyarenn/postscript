@@ -40,8 +40,9 @@ describe("a test writer (D-333)", () => {
     const everyone = await listUsers(actorOf(admin), { segment: "all" });
     expect(everyone.map((row) => row.id)).toContain(tester.id);
 
+    // The admin is offered too (D-356); the test writer is not
     const candidates = await listTemporaryAreaCandidates(actorOf(admin));
-    expect(candidates.map((row) => row.id)).toEqual([real.id]);
+    expect(candidates.map((row) => row.id).sort()).toEqual([admin.id, real.id].sort());
   });
 
   it("matches the address whatever its case", () => {

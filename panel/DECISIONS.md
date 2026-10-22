@@ -13961,3 +13961,26 @@ kilide bakmıyordu; değişen yalnızca ekran.
 **Doğrulama:** Kapı: typecheck, lint, test. E2E, gruplar hâlinde (her grup kendi tohumu ve
 derlemesiyle): 01–03 (13), 04 (2), 05–06 (4), 07 (1), 07b (1), 07c–08 (12), 10 (7), 11 (17) —
 hepsi geçti.
+
+## D-356 — Adminler de geçici alan ekranında seçilebilir
+
+**Bağlam:** Ürün sahibi Gotizm sayısı için adminlere geçici alan veremedi ve
+"admin'leri geçici alan ekranında da göster" dedi. D-304'ten beri admin her etkin
+alanda yazabildiği için yazar listesinde yer almıyordu; servis de adminine verilen
+alanı "Adminler zaten her alanda yazabilir." diye reddediyordu.
+
+**Karar:**
+
+- `/editor/gecici-alan` yazar listesine adminler de girer, adlarının yanında
+  "(admin · her alanda yazabilir)" yazar. Test yazarı (D-333) yine yok.
+- `grantIssueArea` admini reddetmez. Diğer kurallar aynı: yalnızca açık sayı, etkin
+  alan, bir kişiye bir sayıda aynı alan bir kez; verildiği anda e-posta gider.
+- Bu kayıt admine yeni bir yetki vermez (D-304 aynen geçerli); işlevi, adminin o
+  alandaki yazısının geçici alan ekranında diğerleriyle birlikte, kelime toplamına
+  katılarak görünmesidir.
+
+**Hukuk:** Yeni kişisel veri yok; aydınlatma metni değişmedi. Migration yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test. `issue-area-grants.test.ts`: admin
+kendine geçici alan verir, e-posta gider; `test-writer.test.ts`: aday listesinde
+admin var, test yazarı yok.
