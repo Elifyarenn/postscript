@@ -9,6 +9,7 @@ import type { ServerAction } from "@/components/form";
 import { Card, Table, Td, Th } from "@/components/ui";
 import { SignedContractUploadForm, signedUploadStatusLabel } from "@/components/signed-contract";
 import { DOCUMENT_KIND_LABELS, DOCUMENT_STATUS_LABELS } from "@/lib/contributor-documents";
+import { LICENCE_PLAIN_TERMS } from "@emails/templates";
 import type { ContributorDocumentItem } from "@/services/contributor-documents";
 import type { OwnSignedContract } from "@/services/signed-contracts";
 
@@ -37,8 +38,11 @@ export function OwnDocumentsCard({
         imzalayın ve imzalı hâlini o belgenin satırından yükleyin
         {upload && prepared > 0 ? ` (${prepared} belge, her biri için bir dosya)` : ""}. Ruhsat formu
         sizin ve derginin imzasıyla yürürlüğe girer; yüklediğiniz kopya arşivlenir ve formla aynı olduğu
-        kontrol edilir, panel onayı bir şart değildir.
+        kontrol edilir, panel onayı bir şart değildir. Her sayfanın altındaki paraf alanını parafe edin ve
+        ıslak imzalı aslını saklayın.
       </p>
+      {/* The same words as the mail that carries the forms (D-358) */}
+      <p className="mb-3 text-sm">{LICENCE_PLAIN_TERMS}</p>
       <Table>
         <thead>
           <tr>

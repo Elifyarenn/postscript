@@ -14038,3 +14038,53 @@ sayıya 409 alır. `category-budget.test.ts`: editör yolu ve adminin kendi yaz�
 1600'ü aşabilir, yazar aşamaz; adminin 2000 kelimesi varken yazar 1600 kelimeyi
 yine yazabilir. `editor-categories.test.ts`: kategori editörü
 teslimden 10 gün sonra 2000 kelimeyle düzenler ve ana editöre gönderir.
+
+## D-358 — Ruhsat formu v7/v8: editör düzeltmeleri yayına kadar kapsamda, nüsha, asıl ve paraf
+
+**Bağlam:** Ruhsat formu (v5/v6) ıslak imzaya uygunluk için incelendi. Ürün sahibinin
+kararları: (1) Dergi tarafı **Fatma Tuanna Demir olarak kalır**; tüzel kişiliği o
+kuracak, formun taraf kısmı değişmez. (2) 18 yaşından küçük katkı sağlayan **hiç
+alınmıyor**; veli imza bloğu eklenmez. (3) "Editörün düzeltmelerini de kapla, editör
+yayın için düzeltme yapabilir, yayına kadar." (4) Önerilen diğer maddeler uygulanır.
+(5) "Hukuk danışmanına soru yok artık, beraber halledeceğiz": bundan sonra hukuki
+konular ürün sahibiyle birlikte karara bağlanır, ayrı danışman notu hazırlanmaz.
+
+**Karar:** Yeni şablonlar: tek eser `eser-bazli-kullanim-ruhsati-formu-v7.md` (sürüm 7),
+sayı formu `-v8.md` (sürüm 8). v5/v6'dan farkları yalnızca:
+
+- **Madde 3, "Editoryal düzeltmeler" paragrafı:** editörler, eser yayımlanana kadar
+  yayına hazırlık için Madde 1'de özeti gösterilen metinde yazım, noktalama, dil ve
+  biçim düzeltmesi yapabilir (Genel Sözleşme m. 4.2); bunlar Panel'de "Düzeltme"
+  olarak kaydedilir, düzeltilmiş metin ruhsat kapsamındadır, özetin değişmesi ruhsatı
+  etkilemez. Anlam, üslup, içerik veya yapı değişikliği kapsam dışıdır (FSEK m. 16);
+  onun için m. 10 uyarınca yeni form düzenlenir. Yayından sonra bu paragrafa dayanılarak
+  metin değiştirilmez. Kod zaten bu ayrımı yapıyor: yayın kapısı (D-347) izinden sonraki
+  her sürümün `correction` olmasını istiyor; editör ekranı "Düzeltme / İçerik
+  değişikliği" seçtiriyor.
+- **Madde 12.6–12.8:** form aynı form özetini taşıyan ayrı nüshalar hâlinde imzalanabilir,
+  nüshalar birlikte tek ruhsattır; her taraf kendi ıslak imzalı aslını saklar ve
+  uyuşmazlıkta ibraz eder; her sayfa parafe edilir, eksik paraf tek başına geçerliliği
+  etkilemez.
+- **PDF:** sözleşme ve ruhsat belgelerinin her sayfasında altbilginin üstünde
+  "Paraf — Katkı Sağlayan: ____ PostScript Dergisi: ____" satırı (`initialsLine`).
+  Metin özetine girmez; belge metni değişmez.
+- **Sade dil açıklaması (`LICENCE_PLAIN_TERMS`):** belgeleri götüren e-postada ve
+  "Belgelerim" kartında: bedelsiz, tüm dünya, telif süresi boyunca (yaşam + 70 yıl),
+  tek taraflı değiştirilemez, yayımlanmış eser ayrılınca da arşivden kalkmaz, mali
+  haklar yazarda, başka yerde yayımlanabilir, editör düzeltmesi yayına kadar, anlam
+  değişikliği onaya bağlı. Ayrıca paraf ve aslı saklama hatırlatması.
+
+**Mevcut belgeler:** Gönderilmiş ya da imzalanmış v5/v6 formlarına dokunulmaz; D-340'taki
+kural gereği henüz gönderilmemiş eski sürümlü formlar "Belgeleri hazırla"da v7/v8 ile
+yeniden çizilir. Islak imzalanmış eski formlarda editör düzeltmesi Genel Sözleşme m. 4.2
+ve §7.5'teki mevcut uygulamayla sürer.
+
+**Değiştirilmeyenler (ürün sahibinin kararı):** taraf ve imza bloğu "PostScript Dergisi
+adına Fatma Tuanna Demir"; veli imza bloğu yok. Ticari kullanım ile Genel Sözleşme
+m. 1.3/6.1 ilişkisi D-340'taki gibi; varsayılan "Hariç".
+
+**Hukuk:** Yeni kişisel veri yok; aydınlatma metni imzalı taranmış belgeleri zaten
+anlatıyor, değişmedi. Migration yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Birim: v7/v8 düzeltme paragrafını ve
+12.6–12.8'i içerir; teslim formunun değişmeyen maddeleri aynı kalır; m. 10 aynen.

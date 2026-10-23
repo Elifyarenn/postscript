@@ -65,6 +65,8 @@ export type PdfDocumentInput = {
   sections: PdfSection[];
   /** Rendered small at the bottom of every page. */
   footerNote: string;
+  /** A line to initial, above the footer of every page (D-358). */
+  initialsLine?: string;
 };
 
 export async function renderDocumentPdf(input: PdfDocumentInput): Promise<Buffer> {
@@ -117,6 +119,16 @@ export async function renderDocumentPdf(input: PdfDocumentInput): Promise<Buffer
       color: rgb(0.45, 0.45, 0.45),
       maxWidth: usableWidth - 60,
     });
+
+    if (input.initialsLine) {
+      target.drawText(input.initialsLine, {
+        x: MARGIN,
+        y: MARGIN / 2 + 14,
+        size: 8,
+        font: bodyFont,
+        color: rgb(0.25, 0.25, 0.25),
+      });
+    }
 
     const label = `${index + 1} / ${pages.length}`;
     target.drawText(label, {

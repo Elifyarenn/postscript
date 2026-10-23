@@ -137,6 +137,27 @@ describe("the licence forms in use (D-340)", () => {
   });
 });
 
+describe("editor corrections, counterparts and initials (D-358)", () => {
+  const forms = [LICENCE_FORM_FILE, LICENCE_GROUP_FORM_FILE].map((file) => readFileSync(contracts(file), "utf8"));
+
+  it("covers the editors' corrections until publication, and nothing that changes the meaning", () => {
+    for (const text of forms) {
+      expect(text).toMatch(/Dergi editörleri, eser yayımlanana kadar, eseri yayına hazırlamak amacıyla .* yazım, noktalama, dil ve biçim düzeltmeleri yapabilir/);
+      expect(text).toContain("düzeltilmiş metin bu ruhsatın kapsamındadır");
+      expect(text).toMatch(/içeriğini, anlamını, üslubunu veya yapısını değiştiren müdahaleler .* bu form kapsamında değildir/);
+      expect(text).toContain("Eser yayımlandıktan sonra bu paragrafa dayanılarak metinde değişiklik yapılmaz.");
+    }
+  });
+
+  it("is signed in counterparts, each side keeps its original, every page is initialled", () => {
+    for (const text of forms) {
+      expect(text).toMatch(/12\.6\. Bu form, aynı form özetini \(SHA-256\) taşıyan ayrı nüshalar hâlinde imzalanabilir/);
+      expect(text).toMatch(/12\.7\. Her taraf kendi imzaladığı ıslak imzalı aslı saklar/);
+      expect(text).toMatch(/12\.8\. Taraflar formun her sayfasının altındaki paraf alanını parafe eder/);
+    }
+  });
+});
+
 describe("article 10 of the licence forms in use (D-341)", () => {
   it("changes a signed form only by both parties in writing; no cancellation by the magazine alone", () => {
     for (const file of [LICENCE_FORM_FILE, LICENCE_GROUP_FORM_FILE]) {

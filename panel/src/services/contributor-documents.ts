@@ -1078,6 +1078,8 @@ async function pdfOf(row: ContributorDocument): Promise<{ fileName: string; body
     title: `postscript ${DOCUMENT_KIND_LABELS[row.kind]}`,
     sections: [{ body: stripMarkdown(row.renderedMarkdown) }],
     footerNote: `Belge no ${row.id} — metin özeti (SHA-256) ${row.textHash.slice(0, 16)}…`,
+    // Every wet-signed page is initialled by both sides (D-358)
+    initialsLine: "Paraf — Katkı Sağlayan: ______________      PostScript Dergisi: ______________",
   });
   const name = row.kind === "general_agreement" ? `genel-katki-saglayan-sozlesmesi-v${row.templateVersion}` : `eser-ruhsati-${row.id.slice(0, 8)}`;
   return { fileName: `${name}.pdf`, body };

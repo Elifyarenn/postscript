@@ -662,6 +662,17 @@ export function submissionLastDay(input: {
 }
 
 /**
+ * What a licence form means, in plain words, wherever it is handed out (D-358):
+ * the form says it in its own articles, this says it before anyone signs.
+ */
+export const LICENCE_PLAIN_TERMS =
+  "Ruhsat formunu imzalamadan önce bilmeniz gerekenler: ruhsat bedelsizdir, tüm dünyada ve telif süresi " +
+  "boyunca (yaşamınız ve ölümünüzden sonra 70 yıl) geçerlidir. İmzalandıktan sonra tek taraflı değiştirilemez " +
+  "ve yayımlanmış eseriniz dergiden ayrılsanız da arşivden kaldırılmaz. Mali haklarınız sizde kalır; eserinizi " +
+  "başka yerlerde de yayımlayabilirsiniz. Editörler eseriniz yayımlanana kadar yazım, noktalama, dil ve biçim " +
+  "düzeltmeleri yapabilir; anlamı değiştiren her değişiklik için onayınız istenir.";
+
+/**
  * The contributor's prepared documents, sent only when an admin asks (D-285).
  * The PDFs travel as attachments; the link leads to the same copies in the panel.
  */
@@ -685,7 +696,12 @@ export function contributorDocumentsSent(input: {
       {
         type: "paragraph",
         text:
-          "Belgeleri yazdırıp el yazısıyla imzalayın. Aynı belgeleri panelde de görüp indirebilirsiniz.",
+          "Belgeleri yazdırıp el yazısıyla imzalayın ve her sayfanın altındaki paraf alanını parafe edin. " +
+          "Islak imzalı aslını saklayın. Aynı belgeleri panelde de görüp indirebilirsiniz.",
+      },
+      {
+        type: "paragraph",
+        text: LICENCE_PLAIN_TERMS,
       },
       { type: "action", lead: "Belgelerinizin bulunduğu sayfa:", url: input.url, label: "Belgelerimi aç" },
     ],
