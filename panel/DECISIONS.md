@@ -14088,3 +14088,46 @@ anlatıyor, değişmedi. Migration yok.
 
 **Doğrulama:** Kapı: typecheck, lint, test. Birim: v7/v8 düzeltme paragrafını ve
 12.6–12.8'i içerir; teslim formunun değişmeyen maddeleri aynı kalır; m. 10 aynen.
+
+## D-359 — Kodda duran eserler de ruhsat alır: Malikâne oyunu (Sayı 2, Semra Nur İlhan)
+
+**Bağlam:** Ürün sahibi: "Semra Nur İlhan'ın testinin ruhsatı oluşmuyor, oyun
+yapmıştık ya." 2. sayıda Semra Nur İlhan'ın eseri Malikâne oyunu ("Lanetli Malikâneden
+Çıkabilecek Misin?", D-263–D-266). Oyun bir yazı ya da test kaydı değil, sitenin okuduğu
+`data/malikane-oyunu.txt` dosyası. Ruhsat hazırlama (D-276, D-300, D-339) yalnızca
+yazıları ve yazarı belirtilmiş testleri eser sayıyordu; "Bir sayının ruhsat formlarını
+hazırla"da Sayı 2 + Semra Nur İlhan seçilince bulunacak eser yoktu, form oluşmuyordu.
+
+**Karar:**
+- Yeni eser türü: **kodda tanımlı eser** (`src/lib/code-works.ts`, `CODE_WORKS`). Her
+  kayıt sabit bir anahtar, sayı numarası, yazarın e-posta adresi, başlık, dosya ve tür
+  etiketi taşır. Tek kayıt: `malikane-oyunu`, Sayı 2, yazar oyunun önizleme izni verilen
+  hesap (`MANOR_GAME_PREVIEW_EMAILS`, semrailhan@outlook.com), tür "Etkileşimli hikâye
+  oyunu (sahne, seçim ve son metinleri)".
+- Formun metin özeti ve kelime sayısı sitenin sunduğu dosyadan alınır; özet, okuyucunun
+  gördüğü metnin özetidir. Yayın adı tercihi olmadığı için form yazarı adıyla anar (D-284,
+  testlerdeki gibi).
+- Veri (migration `0066`, yalnızca ekleyici): `contributor_documents.work_key` ve
+  `contributor_document_works.work_key`, ikisi de boş olabilir; aynı eser için aynı şablon
+  sürümünde ikinci form ve ikinci sayı formu kaydı tekil indeksle engellenir. Tek eserlik
+  formda listelerin göstereceği başlık `works_label`'a yazılır (birleşecek satırı yok).
+- Sayı formu (D-339), yeniden çizim (D-340), "zaten hazır" ve "imzalı kopyası olan
+  değişmez" kuralları yazı ve testlerle aynı. Yazar listesi ("Bir sayının ruhsat
+  formlarını hazırla" kişi seçimi) kodda eseri olanı da gösterir; genel sözleşmede katkı
+  türü "Yazar" olur.
+- Sayı 2 ya da yazarın hesabı yoksa form çizilmez; hesap silinmişse gerekçesiyle atlanır.
+- Vercel: `/admin/**` derlemesine `data/malikane-oyunu.txt` eklendi (form oradan çizilir).
+
+**Hukuk (D-084):** Aydınlatma metninin "Sözleşme" satırına, sitede metin dosyası olarak
+yayımlanan bir eserin yazarının hesabının e-postayla esere bağlandığı ve formun o eser için
+de hazırlandığı eklendi. Yeni veri kategorisi yok (aynı kayıtlar). Depodaki metin, canlıda
+bekleyen yeni aydınlatma metni sürümüyle birlikte yönetici tarafından yayınlanır.
+
+**Canlıya geçiş (D-079):** Kod `work_key` kolonunu okuduğu için **önce migration 0066
+üretime uygulanmalı, sonra push**. Ardından admin `/admin/agreements` → "Bir sayının
+ruhsat formlarını hazırla" → Sayı 2 + Semra Nur İlhan.
+
+**Doğrulama:** Kapı: typecheck, lint, test. `contributor-documents.test.ts` (D-359):
+Sayı 2 ve yazarın hesabı varken kapsamlı hazırlama tek form çizer (hazır, başlık listede,
+`work_key`, tür etiketi, özet dosyanın özeti, PDF açılır), kapsamsız yeniden hazırlama
+ikinci form yapmaz; sayı ya da hesap yokken form çizilmez.

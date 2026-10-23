@@ -3,6 +3,8 @@
  * version, one licence form per work on its author's account, nothing guessed,
  * nothing sent, no work touched — and only the owner and an admin can read them.
  */
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
@@ -600,6 +602,42 @@ describe("waiting for signed copies (D-291)", () => {
 
     await db.update(users).set({ isIllustrator: true }).where(eq(users.id, s.complete.id));
     expect(await listed()).toBe(true);
+  });
+});
+
+describe("a work kept in the code: the manor game (D-359)", () => {
+  it("gets its form in issue 2 on its author's account, from the file the site serves", async () => {
+    const s = await scenario();
+    const { CODE_WORKS } = await import("@/lib/code-works");
+    const game = CODE_WORKS.find((work) => work.key === "malikane-oyunu")!;
+    const author = await createUser({ role: "writer", writerStatus: "active", email: game.authorEmail });
+    const [second] = await db.insert(issues).values({ number: 2, title: "Gotizm", status: "planning" }).returning();
+
+    // Only that issue and that person, as the admin's "one issue" button does
+    await prepareContributorDocuments(actorOf(s.admin), noMeta, { issueId: second!.id, userId: author.id });
+    const own = await listOwnContributorDocuments(actorOf(author));
+    const licence = own.find((row) => row.kind === "work_licence")!;
+    expect(licence.status).toBe("prepared");
+    expect(licence.articleTitle).toBe(game.title);
+
+    const [row] = await db.select().from(contributorDocuments).where(eq(contributorDocuments.id, licence.id));
+    expect(row!.workKey).toBe("malikane-oyunu");
+    expect(row!.articleId).toBeNull();
+    expect(row!.quizId).toBeNull();
+    expect(row!.renderedMarkdown).toContain(game.typeLabel);
+    const text = readFileSync(path.join(process.cwd(), game.file), "utf8");
+    expect(row!.workContentHash).toBe(articleHash(text));
+
+    // Preparing again, unscoped, makes no second form
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    expect((await db.select().from(contributorDocuments)).filter((doc) => doc.workKey === "malikane-oyunu")).toHaveLength(1);
+    expect((await contributorDocumentPdf(actorOf(author), licence.id)).body.subarray(0, 4).toString()).toBe("%PDF");
+  });
+
+  it("is not drawn while issue 2 or its author's account does not exist", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    expect((await db.select().from(contributorDocuments)).some((doc) => doc.workKey !== null)).toBe(false);
   });
 });
 

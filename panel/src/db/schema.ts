@@ -891,12 +891,17 @@ export const contributorDocuments = pgTable(
     articleId: uuid("article_id").references(() => articles.id, { onDelete: "set null" }),
     /** Or the quiz it is for, when the work is an issue's quiz (D-300). */
     quizId: uuid("quiz_id").references((): AnyPgColumn => issueQuizzes.id, { onDelete: "set null" }),
+    /** Or a work kept in the code, not in a table: its key in `CODE_WORKS` (D-359). */
+    workKey: text("work_key"),
     /**
      * A licence form for several works of one issue (D-339): the works are in
      * `contributor_document_works`, `article_id`/`quiz_id` stay empty.
      */
     issueId: uuid("issue_id").references((): AnyPgColumn => issues.id, { onDelete: "restrict" }),
-    /** What the lists call such a form: "Sayı 2: A; B", fixed when it is drawn. */
+    /**
+     * What the lists call such a form: "Sayı 2: A; B", fixed when it is drawn;
+     * also the title of a code work's single form, which has no row to join (D-359).
+     */
     worksLabel: text("works_label"),
     /** The contract version number, or the licence form template version. */
     templateVersion: text("template_version").notNull(),
@@ -938,6 +943,9 @@ export const contributorDocuments = pgTable(
     uniqueIndex("contributor_documents_quiz_licence_unique")
       .on(t.quizId, t.templateVersion)
       .where(sql`${t.kind} = 'work_licence' and ${t.quizId} is not null`),
+    uniqueIndex("contributor_documents_work_key_licence_unique")
+      .on(t.workKey, t.templateVersion)
+      .where(sql`${t.kind} = 'work_licence' and ${t.workKey} is not null`),
   ],
 );
 
@@ -958,6 +966,8 @@ export const contributorDocumentWorks = pgTable(
     position: integer("position").notNull(),
     articleId: uuid("article_id").references(() => articles.id, { onDelete: "set null" }),
     quizId: uuid("quiz_id").references((): AnyPgColumn => issueQuizzes.id, { onDelete: "set null" }),
+    /** Or a work kept in the code (D-359). */
+    workKey: text("work_key"),
     /** SHA-256 of the work's body as it stood when the form was drawn. */
     contentHash: text("content_hash"),
     createdAt: createdAt(),
@@ -966,6 +976,7 @@ export const contributorDocumentWorks = pgTable(
     index("contributor_document_works_document_idx").on(t.documentId),
     uniqueIndex("contributor_document_works_article_unique").on(t.articleId).where(sql`${t.articleId} is not null`),
     uniqueIndex("contributor_document_works_quiz_unique").on(t.quizId).where(sql`${t.quizId} is not null`),
+    uniqueIndex("contributor_document_works_work_key_unique").on(t.workKey).where(sql`${t.workKey} is not null`),
   ],
 );
 

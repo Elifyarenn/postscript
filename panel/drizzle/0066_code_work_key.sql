@@ -1,0 +1,4 @@
+ALTER TABLE "contributor_document_works" ADD COLUMN "work_key" text;--> statement-breakpoint
+ALTER TABLE "contributor_documents" ADD COLUMN "work_key" text;--> statement-breakpoint
+CREATE UNIQUE INDEX "contributor_document_works_work_key_unique" ON "contributor_document_works" USING btree ("work_key") WHERE "contributor_document_works"."work_key" is not null;--> statement-breakpoint
+CREATE UNIQUE INDEX "contributor_documents_work_key_licence_unique" ON "contributor_documents" USING btree ("work_key","template_version") WHERE "contributor_documents"."kind" = 'work_licence' and "contributor_documents"."work_key" is not null;

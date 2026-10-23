@@ -91,6 +91,8 @@ const nextConfig: NextConfig = {
     // The preview's faces and stock photos (D-247): only the page that draws them
     // and the designers' pages kept in code (D-274), which the import reads
     "/editor/issues/**": ["./assets/issue-preview/**", "./assets/issue-design/**"],
+    // The manor game's text is a work with a licence form, drawn on the admin's pages (D-359)
+    "/admin/**": ["./data/malikane-oyunu.txt"],
   },
   outputFileTracingExcludes: {
     // drizzle-kit's input for the next `db:generate`, never read at runtime; they

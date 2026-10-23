@@ -2,9 +2,10 @@
  * Documents prepared for the contributors to sign by hand (D-276): the
  * Genel Katkı Sağlayan Sözleşmesi of the current version for every
  * contributor, and an Eser Bazlı Kullanım Ruhsatı Formu for every work, on
- * the account of the work's own author. A work is an article, or an issue's
- * quiz whose author the admin has named (D-300). An author's works in one
- * issue share one form when there are more than one (D-339).
+ * the account of the work's own author. A work is an article, an issue's
+ * quiz whose author the admin has named (D-300), or a work kept in the code
+ * such as the manor game (D-359). An author's works in one issue share one
+ * form when there are more than one (D-339).
  *
  * Preparing is all this does. Nothing is sent (mail goes out only when an
  * admin asks for it per person, `mailContributorDocuments`, D-285), no
@@ -73,6 +74,7 @@ import {
 } from "@/lib/contributor-documents";
 import { conflict, forbidden, notFound } from "@/lib/errors";
 import { parseOutcomes, parseQuestions, quizWorkText } from "@/lib/issue-quiz";
+import { CODE_WORKS, codeWorkByKey, type CodeWork } from "@/lib/code-works";
 import { renderDocumentPdf } from "@/lib/pdf";
 import { env } from "@/lib/env";
 import { enqueueMails, sendMail, type OutgoingMail } from "@/services/mail-queue";
@@ -222,8 +224,22 @@ function quizWork(row: typeof issueQuizzes.$inferSelect): LicensedWork {
   };
 }
 
+function codeWork(entry: CodeWork): LicensedWork {
+  return {
+    id: entry.key,
+    title: entry.title,
+    body: readFileSync(path.join(process.cwd(), entry.file), "utf8"),
+    typeLabel: entry.typeLabel,
+    describe: (words) => `Dergi sitesinde yayımlanan metin (${entry.file}), ${words} kelime`,
+  };
+}
+
 /** The work a licence document is for, as it stands now; null when it is gone. */
 async function workOf(row: ContributorDocument): Promise<LicensedWork | null> {
+  if (row.workKey) {
+    const entry = codeWorkByKey(row.workKey);
+    return entry ? codeWork(entry) : null;
+  }
   if (row.quizId) {
     const [quiz] = await db.select().from(issueQuizzes).where(eq(issueQuizzes.id, row.quizId)).limit(1);
     return quiz ? quizWork(quiz) : null;
@@ -235,16 +251,19 @@ async function workOf(row: ContributorDocument): Promise<LicensedWork | null> {
 /** The works an issue form names, as they stand now, in the form's order (D-339). */
 async function groupWorksOf(documentId: string): Promise<GroupWork[]> {
   const rows = await db
-    .select({ article: articles, quiz: issueQuizzes })
+    .select({ article: articles, quiz: issueQuizzes, workKey: contributorDocumentWorks.workKey })
     .from(contributorDocumentWorks)
     .leftJoin(articles, eq(contributorDocumentWorks.articleId, articles.id))
     .leftJoin(issueQuizzes, eq(contributorDocumentWorks.quizId, issueQuizzes.id))
     .where(eq(contributorDocumentWorks.documentId, documentId))
     .orderBy(contributorDocumentWorks.position);
   const works: GroupWork[] = [];
-  for (const { article, quiz } of rows) {
-    if (quiz) {
-      works.push({ ...quizWork(quiz), articleId: null, quizId: quiz.id, bylineChoice: null });
+  for (const { article, quiz, workKey } of rows) {
+    const entry = workKey ? codeWorkByKey(workKey) : undefined;
+    if (entry) {
+      works.push({ ...codeWork(entry), articleId: null, quizId: null, workKey: entry.key, bylineChoice: null });
+    } else if (quiz) {
+      works.push({ ...quizWork(quiz), articleId: null, quizId: quiz.id, workKey: null, bylineChoice: null });
     } else if (article) {
       const [grant] = await db
         .select({ bylineChoice: rightsGrants.bylineChoice })
@@ -252,7 +271,7 @@ async function groupWorksOf(documentId: string): Promise<GroupWork[]> {
         .where(and(eq(rightsGrants.articleId, article.id), eq(rightsGrants.status, "signed")))
         .orderBy(desc(rightsGrants.signedAt))
         .limit(1);
-      works.push({ ...articleWork(article), articleId: article.id, quizId: null, bylineChoice: grant?.bylineChoice ?? null });
+      works.push({ ...articleWork(article), articleId: article.id, quizId: null, workKey: null, bylineChoice: grant?.bylineChoice ?? null });
     }
   }
   return works;
@@ -332,6 +351,7 @@ async function licenceValues(
 type GroupWork = LicensedWork & {
   articleId: string | null;
   quizId: string | null;
+  workKey: string | null;
   bylineChoice: "real_name" | "pen_name" | null;
 };
 
@@ -508,9 +528,25 @@ export async function prepareContributorDocuments(
       )
       .orderBy(issueQuizzes.createdAt, issueQuizzes.id)
   ).flatMap(({ quiz }) => (quiz.authorId ? [quiz] : []));
+  // Works kept in the code, by their issue's number and their author's address (D-359)
+  const codeIssues = await db
+    .select({ id: issues.id, number: issues.number })
+    .from(issues)
+    .where(and(isNull(issues.deletedAt), inArray(issues.number, [...new Set(CODE_WORKS.map((work) => work.issueNumber))])));
+  const codeAuthors = await db
+    .select()
+    .from(users)
+    .where(inArray(sql`lower(${users.email})`, [...new Set(CODE_WORKS.map((work) => work.authorEmail))]));
+  const codeWorks = CODE_WORKS.flatMap((entry) => {
+    const issue = codeIssues.find((row) => row.number === entry.issueNumber);
+    const author = codeAuthors.find((row) => row.email.trim().toLowerCase() === entry.authorEmail);
+    if (!issue || (scope.issueId && scope.issueId !== issue.id) || (scope.userId && scope.userId !== author?.id)) return [];
+    return [{ entry, issueId: issue.id, author }];
+  });
   const authorIds = new Set([
     ...works.flatMap((work) => (work.authorId ? [work.authorId] : [])),
     ...quizzes.map((quiz) => quiz.authorId!),
+    ...codeWorks.flatMap(({ author }) => (author ? [author.id] : [])),
   ]);
 
   /* ---- Contributors: writers, çizerler, and anyone who wrote a work ---- */
@@ -540,9 +576,18 @@ export async function prepareContributorDocuments(
         .where(and(eq(contributorDocuments.kind, "work_licence"), withoutSignedCopy, notMailed))
     ).map((row) => row.id),
   );
-  const inScope = new Set([...works.map((work) => work.id), ...quizzes.map((quiz) => quiz.id)]);
+  const inScope = new Set([
+    ...works.map((work) => work.id),
+    ...quizzes.map((quiz) => quiz.id),
+    ...codeWorks.map(({ entry }) => entry.key),
+  ]);
   const formWorks = await db
-    .select({ documentId: contributorDocumentWorks.documentId, articleId: contributorDocumentWorks.articleId, quizId: contributorDocumentWorks.quizId })
+    .select({
+      documentId: contributorDocumentWorks.documentId,
+      articleId: contributorDocumentWorks.articleId,
+      quizId: contributorDocumentWorks.quizId,
+      workKey: contributorDocumentWorks.workKey,
+    })
     .from(contributorDocumentWorks);
   const outdated = existing
     .filter(
@@ -550,8 +595,10 @@ export async function prepareContributorDocuments(
         row.kind === "work_licence" &&
         row.templateVersion !== (row.issueId ? LICENCE_GROUP_TEMPLATE_VERSION : LICENCE_FORM_TEMPLATE_VERSION) &&
         free.has(row.id) &&
-        (inScope.has(row.articleId ?? row.quizId ?? "") ||
-          formWorks.some((work) => work.documentId === row.id && inScope.has(work.articleId ?? work.quizId ?? ""))),
+        (inScope.has(row.articleId ?? row.quizId ?? row.workKey ?? "") ||
+          formWorks.some(
+            (work) => work.documentId === row.id && inScope.has(work.articleId ?? work.quizId ?? work.workKey ?? ""),
+          )),
     )
     .map((row) => row.id);
   if (outdated.length) {
@@ -580,6 +627,11 @@ export async function prepareContributorDocuments(
       .filter((row) => row.kind === "work_licence" && !row.issueId && row.quizId)
       .map((row) => [row.quizId, row]),
   );
+  const codeLicenceOf = new Map(
+    existing
+      .filter((row) => row.kind === "work_licence" && !row.issueId && row.workKey)
+      .map((row) => [row.workKey, row]),
+  );
 
   const save = async (
     kind: ContributorDocumentKind,
@@ -588,6 +640,9 @@ export async function prepareContributorDocuments(
       userId: string;
       articleId: string | null;
       quizId?: string | null;
+      workKey?: string | null;
+      /** A code work's title, for the lists (D-359). */
+      worksLabel?: string | null;
       id?: string;
       templateVersion: string;
       contentHash?: string | null;
@@ -622,6 +677,8 @@ export async function prepareContributorDocuments(
         agreementVersionId: version.id,
         articleId: values.articleId,
         quizId: values.quizId ?? null,
+        workKey: values.workKey ?? null,
+        worksLabel: values.worksLabel ?? null,
         createdBy: actor.id,
         ...fields,
       })
@@ -678,7 +735,7 @@ export async function prepareContributorDocuments(
       continue;
     }
     const bylineChoice = bylineOf.get(work.id) ?? null;
-    candidates.push({ work: { ...articleWork(work), articleId: work.id, quizId: null, bylineChoice }, author, issueId: work.issueId });
+    candidates.push({ work: { ...articleWork(work), articleId: work.id, quizId: null, workKey: null, bylineChoice }, author, issueId: work.issueId });
   }
   for (const quiz of quizzes) {
     const author = byId.get(quiz.authorId!);
@@ -691,7 +748,19 @@ export async function prepareContributorDocuments(
       continue;
     }
     // A quiz carries no byline choice: the form names its author (D-284)
-    candidates.push({ work: { ...quizWork(quiz), articleId: null, quizId: quiz.id, bylineChoice: null }, author, issueId: quiz.issueId });
+    candidates.push({ work: { ...quizWork(quiz), articleId: null, quizId: quiz.id, workKey: null, bylineChoice: null }, author, issueId: quiz.issueId });
+  }
+  for (const { entry, issueId, author } of codeWorks) {
+    if (!author || author.deletedAt) {
+      skip("Kodda tanımlı eserin yazarının hesabı bulunamadı: ruhsat hazırlanmadı");
+      continue;
+    }
+    if (!needsAuthorAgreement(author)) {
+      skip(ADMIN_SKIP);
+      continue;
+    }
+    // Like a quiz, it carries no byline choice: the form names its author (D-284)
+    candidates.push({ work: { ...codeWork(entry), articleId: null, quizId: null, workKey: entry.key, bylineChoice: null }, author, issueId });
   }
 
   // A work an issue form names is on that form, whatever the form's state
@@ -700,13 +769,21 @@ export async function prepareContributorDocuments(
       documentId: contributorDocumentWorks.documentId,
       articleId: contributorDocumentWorks.articleId,
       quizId: contributorDocumentWorks.quizId,
+      workKey: contributorDocumentWorks.workKey,
     })
     .from(contributorDocumentWorks)
     .orderBy(contributorDocumentWorks.position);
-  const onGroup = new Set(grouped.flatMap((row) => [row.articleId, row.quizId]).filter((id): id is string => Boolean(id)));
+  const onGroup = new Set(
+    grouped.flatMap((row) => [row.articleId, row.quizId, row.workKey]).filter((id): id is string => Boolean(id)),
+  );
   // A single form nobody holds yet (`free` above: not mailed, not queued, no
   // signed copy) gives way to the issue form; one its owner holds keeps its work (D-314)
-  const singleOf = (work: GroupWork) => (work.quizId ? quizLicenceOf.get(work.quizId) : licenceOf.get(work.articleId));
+  const singleOf = (work: GroupWork) =>
+    work.workKey
+      ? codeLicenceOf.get(work.workKey)
+      : work.quizId
+        ? quizLicenceOf.get(work.quizId)
+        : licenceOf.get(work.articleId);
   const issueForms = existing.filter(
     (row) => row.kind === "work_licence" && row.issueId,
   );
@@ -741,6 +818,8 @@ export async function prepareContributorDocuments(
         userId: author.id,
         articleId: work.articleId,
         quizId: work.quizId,
+        workKey: work.workKey,
+        worksLabel: work.workKey ? work.title : null,
         templateVersion: LICENCE_FORM_TEMPLATE_VERSION,
         contentHash: result.contentHash,
       },
@@ -768,7 +847,7 @@ export async function prepareContributorDocuments(
     const reviewWorks = review
       ? grouped
           .filter((row) => row.documentId === review.id)
-          .flatMap((row) => group.filter(({ work }) => work.id === (row.articleId ?? row.quizId)))
+          .flatMap((row) => group.filter(({ work }) => work.id === (row.articleId ?? row.quizId ?? row.workKey)))
       : [];
     if (!review && open.length < 2) {
       // One work alone keeps the single form
@@ -823,6 +902,7 @@ export async function prepareContributorDocuments(
           position: index + 1,
           articleId: work.articleId,
           quizId: work.quizId,
+          workKey: work.workKey,
           contentHash: result.contentHashes[index] ?? null,
         })),
       );
@@ -1017,7 +1097,8 @@ export async function viewContributorDocument(actor: Actor, id: string): Promise
       .from(issueQuizzes)
       .where(eq(issueQuizzes.authorId, owner!.id))
       .limit(1);
-    const values = await generalValues(version, owner!, Boolean(authored ?? quizzed));
+    const coded = CODE_WORKS.some((work) => work.authorEmail === owner!.email.trim().toLowerCase());
+    const values = await generalValues(version, owner!, Boolean(authored ?? quizzed) || coded);
     return { ...base, markdown: previewTemplate(version.bodyMarkdown, values, OPTIONAL, gap).markdown, isPreview: true, unavailable: null };
   }
 
@@ -1535,6 +1616,7 @@ export async function listLicenceScopeOptions(actor: Actor): Promise<LicenceScop
         or(
           sql`exists (select 1 from ${articles} where ${articles.authorId} = ${users.id} and ${articles.deletedAt} is null)`,
           sql`exists (select 1 from ${issueQuizzes} where ${issueQuizzes.authorId} = ${users.id})`,
+          inArray(sql`lower(${users.email})`, [...new Set(CODE_WORKS.map((work) => work.authorEmail))]),
         ),
       ),
     )
