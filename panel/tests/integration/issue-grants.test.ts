@@ -8,7 +8,7 @@ import { db, type Database } from "@/db/client";
 import { articles, issueSubmissionGrants, issues, users, type User } from "@/db/schema";
 import { isAppError } from "@/lib/errors";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
-import { assertCanReadArticle, createArticleAsWriter } from "@/services/articles";
+import { assertCanReadArticle, createArticleAsWriter, transitionArticle } from "@/services/articles";
 import { createIssue } from "@/services/issues";
 import {
   grantIssueSubmission,
@@ -19,7 +19,7 @@ import { selectableWriterCategories } from "@/services/editor-categories";
 import { listIssuesOpenWithoutTopic } from "@/services/topics";
 import { DEFAULT_WRITER_AREAS } from "@/lib/writer-areas";
 import { resetTables, seedDefaultWriterAreas, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
-import { actorOf, createUser, noMeta } from "../helpers/factories";
+import { actorOf, createUser, noMeta, publishContract } from "../helpers/factories";
 
 let database: Database;
 const mailbox = new MemoryMailAdapter();
@@ -149,6 +149,38 @@ describe("an admin writing their own article (D-304)", () => {
     );
     expect(article.authorId).toBe(admin.id);
     expect(article.category).toBe(areas[areas.length - 1]);
+  });
+
+  it("writes into any unpublished issue and hands in after its window closed (D-357)", async () => {
+    const { admin } = await scenario();
+    // The hand-in records a declaration against the published contract, as in production
+    await publishContract(actorOf(admin));
+    const later = await createIssue(actorOf(admin), { number: 2, title: "Gotizm" }, noMeta);
+    const day = 86_400_000;
+    await db
+      .update(issues)
+      .set({
+        submissionOpensAt: new Date(Date.now() - 20 * day),
+        submissionClosesAt: new Date(Date.now() - 10 * day),
+      })
+      .where(eq(issues.id, later.id));
+
+    const article = await createArticleAsWriter(
+      actorOf(admin),
+      { title: "Geç gelen", category: DEFAULT_WRITER_AREAS[0], issueId: later.id, bodyMarkdown: "Bir iki üç." },
+      noMeta,
+    );
+    expect(article.issueId).toBe(later.id);
+    const sent = await transitionArticle(actorOf(admin), article.id, "in_review", noMeta);
+    expect(sent.status).toBe("in_review");
+
+    // A writer is still bound to the window
+    const writer = await writerWithArea();
+    expect(
+      await statusOf(
+        createArticleAsWriter(actorOf(writer), { title: "Yazar", category: "Sanat & Edebiyat", issueId: later.id }, noMeta),
+      ),
+    ).toBe(409);
   });
 
   it("still keeps a writer to their own area", async () => {

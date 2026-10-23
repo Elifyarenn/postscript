@@ -43,24 +43,6 @@ export function usesIssueWindows(issue: IssuePeriods): boolean {
   return issue.submissionOpensAt !== null || issue.topicOpensAt !== null;
 }
 
-/** How long after the delivery deadline a category editor may still edit texts (D-336). */
-export const EDITOR_EDIT_GRACE_MS = 2 * 86_400_000;
-
-/**
- * The last moment a category editor may edit an article of this issue, or
- * null when the issue has no delivery window (issue 1) and so no limit.
- */
-export function editorEditClosesAt(issue: IssuePeriods): Date | null {
-  if (!issue.submissionClosesAt) return null;
-  return new Date(issue.submissionClosesAt.getTime() + EDITOR_EDIT_GRACE_MS);
-}
-
-/** Inclusive, like the windows themselves. */
-export function isEditorEditingOpen(issue: IssuePeriods, now: Date): boolean {
-  const closesAt = editorEditClosesAt(issue);
-  return closesAt === null || now.getTime() <= closesAt.getTime();
-}
-
 /** How long before the delivery deadline the last-day reminder goes out (D-336). */
 export const LAST_DAY_REMINDER_MS = 86_400_000;
 

@@ -16,7 +16,6 @@ import { getActiveIssue } from "@/services/active-issue";
 import { isIssueClosed, pickListIssue } from "@/lib/active-issue";
 import { formatWordCount } from "@/lib/word-count";
 import { IssuePicker, issueLabel } from "@/components/issue-picker";
-import { categoryBudgetForForm } from "@/services/category-budget";
 import {
   getEditorAssignment,
   getMainEditor,
@@ -138,8 +137,6 @@ export default async function EditorArticlesPage({
     getMainEditor(),
   ]);
   const articles = list.items;
-  // Shown for the active issue, the form's default; the server checks the issue chosen (D-331)
-  const budgetData = activeIssue ? await categoryBudgetForForm(activeIssue.id) : null;
   const pageCount = Math.max(1, Math.ceil(list.total / PAGE_SIZE));
   const inIssue = [...statusCounts.values()].reduce((sum, value) => sum + value, 0);
   const openIssues = issues.filter((issue) => !isIssueClosed(issue));
@@ -371,7 +368,6 @@ export default async function EditorArticlesPage({
                   id="bodyMarkdown"
                   name="bodyMarkdown"
                   rows={10}
-                  budget={budgetData ? { ...budgetData, categoryFieldId: "category" } : undefined}
                 />
               </Field>
             </>

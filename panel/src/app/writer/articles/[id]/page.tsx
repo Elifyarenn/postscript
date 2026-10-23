@@ -54,8 +54,8 @@ export default async function WriterArticleDetailPage({
   ]);
 
   const preview = await renderMarkdown(article.bodyMarkdown);
-  // The category's total in this issue, shown live under the body (D-331)
-  const budgetData = await categoryBudgetForForm(article.issueId, article.id);
+  // The category's total in this issue, shown live under the body (D-331); an admin has none (D-357)
+  const budgetData = canWriteInAnyArea({ ...user }) ? null : await categoryBudgetForForm(article.issueId, article.id);
   const budget = budgetData
     ? {
         ...budgetData,

@@ -13984,3 +13984,57 @@ alanı "Adminler zaten her alanda yazabilir." diye reddediyordu.
 **Doğrulama:** Kapı: typecheck, lint, test. `issue-area-grants.test.ts`: admin
 kendine geçici alan verir, e-posta gider; `test-writer.test.ts`: aday listesinde
 admin var, test yazarı yok.
+
+## D-357 — Adminler sınırsız yazar; editörlerin süre ve kelime sınırı kalktı
+
+**Bağlam:** Ürün sahibi: "biz adminler 2. sayıya yazı yükleyeceğiz ama olmuyor;
+adminlerin yazar panelinde ne karakter sınırı ne zaman sınırı olsun, istedikleri
+zaman istedikleri uzunlukta istedikleri sayıya yazı gönderebilsinler" ve
+"editörlere herhangi bir sınır varsa kaldır; yazı düzenleyip ana editöre
+gönderemiyorlar". Engeller: kategori başına 1600 kelime (D-331) her kayıtta
+herkese uygulanıyordu; admin yalnızca aktif sayıya (D-330) ve yalnızca yazı kabul
+dönemi açıkken (D-261) gönderebiliyordu; kategori editörü teslim bitişinden 2 gün
+sonra yazıyı düzenleyemiyordu (D-336). Canlı veri okunamadığı için hangisinin
+takıldığı doğrulanamadı; hepsi kaldırıldı.
+
+**Karar — admin, yazar panelinde (D-304'ün devamı):**
+
+- Yayımlanmamış (`planning`, `in_production`) her sayıya yazı açar; aktif sayı
+  şartı yok. Konulu yazıda da konunun sayısı yalnızca yayımlanmamış olmalı.
+- "İncelemeye gönder" yazı kabul döneminden bağımsız; konusuz gönderdiğinde ana
+  editöre bildirim gitmez (adminler konu bekleyen sayılmaz, D-304).
+- 1600 kelime toplamına tabi değil; formda toplam gösterilmez.
+- Yayımlanmış sayı hâlâ kapalı (D-330; 5187 saklama belirsizliği nedeniyle
+  yayımlanmış içerik değişmez). Metin üst sınırı 200.000 karakter (~25.000+
+  kelime) yalnızca kötüye kullanıma karşı teknik sınır olarak kaldı.
+
+**Karar — editörler:**
+
+- Kategori editörünün "teslimden 2 gün sonra düzenleyemez" sınırı (D-336) kalktı;
+  `editorEditWindow` ve yazı sayfasındaki süre uyarısı silindi. Son gün hatırlatma
+  e-postası (D-336'nın diğer yarısı) aynen duruyor.
+- Editör yolundan (yeni makale kaydı, düzenleme, kategori/sayı değişikliği) 1600
+  kelime denetimi kalktı; editör formlarında toplam gösterilmez.
+- Kalan tek şey yetki, sınır değil: kategori editörü yine yalnızca kendi
+  alanlarındaki yazıları düzenler ve ana editöre gönderir (D-071, D-059). Bu
+  CLAUDE.md'deki sunucu tarafı yetki kuralıdır, kaldırılmadı.
+
+**Yazarlar için değişmeyen:** 1600 kelime toplamı, aktif sayı ve yazı kabul dönemi
+yazarlar için aynen geçerli.
+
+**Admin yazıları toplamdan düşülür** (ürün sahibi: "admin yazıları 1600 toplamından
+düşülsün"): `categoryWordTotals` yazarı admin olan yazıları saymaz; böylece
+adminin uzun yazısı o kategoride yazarların payını doldurmaz. Formlarda gösterilen
+toplam da aynı fonksiyondan gelir. Yazarı olmayan ya da editör/yazar rolündeki
+kişinin yazısı sayılmaya devam eder; editörün yazara ait bir metni düzenlemesiyle
+artan kelimeler de toplama girer (editör yalnızca engellenmez).
+
+**Hukuk:** Yeni kişisel veri yok; aydınlatma metni değişmedi. Gönderim beyanı
+(D-238) ve yayın izni kontrolü (D-268) admin için de aynen çalışır. Migration yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test. `issue-grants.test.ts`: admin aktif
+olmayan, dönemi 10 gün önce kapanmış sayıya yazı açar ve gönderir; yazar aynı
+sayıya 409 alır. `category-budget.test.ts`: editör yolu ve adminin kendi yazısı
+1600'ü aşabilir, yazar aşamaz; adminin 2000 kelimesi varken yazar 1600 kelimeyi
+yine yazabilir. `editor-categories.test.ts`: kategori editörü
+teslimden 10 gün sonra 2000 kelimeyle düzenler ve ana editöre gönderir.

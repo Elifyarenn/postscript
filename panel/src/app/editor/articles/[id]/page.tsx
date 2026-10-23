@@ -6,7 +6,6 @@ import { guardPanel } from "@/lib/auth/guard";
 import {
   allowedTargetsForActor,
   assertCanReadArticle,
-  editorEditWindow,
   findArticleById,
   listArticleVersions,
   listComments,
@@ -21,9 +20,7 @@ import { renderMarkdown } from "@/lib/markdown";
 import { ActionButton, PanelForm } from "@/components/form";
 import { ArticleBodyTextarea } from "@/components/article-body-textarea";
 import { countWords, formatWordCount } from "@/lib/word-count";
-import { categoryBudgetForForm } from "@/services/category-budget";
 import { isIssueClosed } from "@/lib/active-issue";
-import { formatPeriodMoment } from "@/lib/issue-periods";
 import {
   Alert,
   Card,
@@ -66,8 +63,6 @@ export default async function EditorArticleDetailPage({
   // A category editor may only open articles in their own areas (D-059)
   await assertCanReadArticle(actor, article);
   const targets = await allowedTargetsForActor(actor, article);
-  // Only a category editor has a deadline; null for the main editor and admins (D-336)
-  const editWindow = await editorEditWindow(actor, article);
 
   // The media card is gone from this page (D-080), but the licence check stays:
   // media attached earlier still blocks publishing until it is licensed.
@@ -90,15 +85,6 @@ export default async function EditorArticleDetailPage({
 
   const preview = await renderMarkdown(article.bodyMarkdown);
   const withoutTopic = await isArticleWithoutTopic(article);
-  // The category's total in this issue, shown live under the body (D-331)
-  const budgetData = await categoryBudgetForForm(article.issueId, article.id);
-  const budget = budgetData
-    ? {
-        ...budgetData,
-        categoryFieldId: "category",
-        stored: { words: countWords(article.bodyMarkdown), category: article.category },
-      }
-    : undefined;
 
   // The main editor's open request to the category editor: the last status
   // change, while the article is still on the category editor's desk (D-331)
@@ -171,23 +157,6 @@ export default async function EditorArticleDetailPage({
         <Card>
           <h2 className="mb-4 font-serif text-lg">Makale</h2>
 
-          {editWindow && (
-            <div className="mb-4">
-              {editWindow.open ? (
-                <Alert tone="info">
-                  Kategori editörü olarak bu yazıyı {formatPeriodMoment(editWindow.closesAt)} tarihine
-                  kadar düzenleyebilirsiniz (yazı teslim süresinin bitiminden 2 gün sonrası).
-                </Alert>
-              ) : (
-                <Alert tone="warning">
-                  Sayı {editWindow.issueNumber} için editör düzenleme süresi{" "}
-                  {formatPeriodMoment(editWindow.closesAt)} itibarıyla sona erdi. Değişiklik için ana
-                  editöre ya da yöneticiye başvurun.
-                </Alert>
-              )}
-            </div>
-          )}
-
           <PanelForm action={updateArticleAction} csrfToken={csrfToken} submitLabel="Kaydet">
               <>
                 <input type="hidden" name="articleId" value={article.id} />
@@ -248,7 +217,6 @@ export default async function EditorArticleDetailPage({
                     name="bodyMarkdown"
                     rows={16}
                     defaultValue={article.bodyMarkdown}
-                    budget={budget}
                   />
                 </Field>
 

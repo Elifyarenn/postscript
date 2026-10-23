@@ -6,17 +6,26 @@
  * other and cannot both slip under the limit.
  */
 import "server-only";
-import { and, eq, isNull, ne } from "drizzle-orm";
+import { and, eq, isNull, ne, or } from "drizzle-orm";
 import { db } from "@/db/client";
-import { articles, issues } from "@/db/schema";
+import { articles, issues, users } from "@/db/schema";
 import type { Executor } from "@/lib/audit";
 import { budgetRefusal, checkCategoryBudget, CATEGORY_WORD_LIMIT } from "@/lib/category-budget";
 import { countWords } from "@/lib/word-count";
 import { conflict, notFound } from "@/lib/errors";
 
-/** A withdrawn article has left the issue; every other one counts, drafts too. */
+/**
+ * A withdrawn article has left the issue; every other one counts, drafts too,
+ * except the admins' own: they write outside the total (D-357). Needs the
+ * author joined as `users`.
+ */
 function inBudget(issueId: string) {
-  return and(eq(articles.issueId, issueId), isNull(articles.deletedAt), ne(articles.status, "withdrawn"));
+  return and(
+    eq(articles.issueId, issueId),
+    isNull(articles.deletedAt),
+    ne(articles.status, "withdrawn"),
+    or(isNull(users.id), ne(users.role, "admin")),
+  );
 }
 
 /** Words per category in one issue, leaving one article out when given. */
@@ -28,6 +37,7 @@ export async function categoryWordTotals(
   const rows = await executor
     .select({ id: articles.id, category: articles.category, bodyMarkdown: articles.bodyMarkdown })
     .from(articles)
+    .leftJoin(users, eq(articles.authorId, users.id))
     .where(inBudget(issueId));
   const totals = new Map<string, number>();
   for (const row of rows) {

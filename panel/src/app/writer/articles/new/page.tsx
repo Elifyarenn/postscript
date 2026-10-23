@@ -5,6 +5,7 @@ import { selectableWriterCategories } from "@/services/editor-categories";
 import { temporaryAreasByIssue } from "@/services/issue-area-grants";
 import { listIssuesOpenWithoutTopic, listWriterIssues } from "@/services/topics";
 import { getActiveIssue } from "@/services/active-issue";
+import { isIssueClosed } from "@/lib/active-issue";
 import { categoryBudgetForForm } from "@/services/category-budget";
 import { readCsrfToken } from "@/lib/csrf";
 import { PanelForm } from "@/components/form";
@@ -40,10 +41,11 @@ export default async function WriterNewArticlePage({
     temporaryAreasByIssue(user.id),
     getActiveIssue(),
   ]);
-  // The category totals of the issue the article will go into (D-331)
-  const budgetData = activeIssue ? await categoryBudgetForForm(activeIssue.id) : null;
-  const entries = allEntries.filter(({ issue }) => issue.id === activeIssue?.id);
-  const openIssues = allOpenIssues.filter((issue) => issue.id === activeIssue?.id);
+  // The category totals of the issue the article will go into (D-331); an admin has none (D-357)
+  const budgetData = activeIssue && !anyArea ? await categoryBudgetForForm(activeIssue.id) : null;
+  // An admin writes into any issue not yet published (D-357); a writer into the active one
+  const entries = allEntries.filter(({ issue }) => (anyArea ? !isIssueClosed(issue) : issue.id === activeIssue?.id));
+  const openIssues = anyArea ? allOpenIssues : allOpenIssues.filter((issue) => issue.id === activeIssue?.id);
 
   // Areas given for one issue only (D-306): offered with that issue's number;
   // the server checks the area against the issue the article goes into
@@ -92,7 +94,11 @@ export default async function WriterNewArticlePage({
           <Field
             label="Konu"
             htmlFor="target"
-            hint={`Yazı aktif sayıya (Sayı ${activeIssue?.number ?? "—"}) bağlanır; sonradan başka sayıya taşınmaz.`}
+            hint={
+              anyArea
+                ? "Admin olarak yayımlanmamış her sayıya, istediğiniz zaman yazabilirsiniz."
+                : `Yazı aktif sayıya (Sayı ${activeIssue?.number ?? "—"}) bağlanır; sonradan başka sayıya taşınmaz.`
+            }
           >
             <Select id="target" name="target" required defaultValue={chosen ? `topic:${chosen.proposal.id}` : ""}>
               <option value="" disabled>
@@ -105,7 +111,8 @@ export default async function WriterNewArticlePage({
               ))}
               {openIssues.map((issue) => (
                 <option key={issue.id} value={`issue:${issue.id}`}>
-                  Sayı {issue.number} · {issue.title} (konusuz; ana editöre bildirilir)
+                  Sayı {issue.number} · {issue.title}
+                  {anyArea ? "" : " (konusuz; ana editöre bildirilir)"}
                 </option>
               ))}
             </Select>

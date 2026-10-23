@@ -39,6 +39,7 @@ import {
   canAccessEditorPanel,
   canPerformTransition,
   canReadArticle,
+  canWriteInAnyArea,
   isActiveWriter,
   needsAuthorAgreement,
   type Actor,
@@ -53,7 +54,6 @@ import { allMediaLicensed } from "./media";
 import { hasAcceptedCurrentAgreement } from "./agreements";
 import { getEditorAssignment, getMainEditor, selectableWriterCategories } from "./editor-categories";
 import { acceptedTopicForNewArticle, assertArticleDeliveryAllowed } from "./topics";
-import { editorEditClosesAt, formatPeriodMoment, isEditorEditingOpen, usesIssueWindows } from "@/lib/issue-periods";
 import { isIssueClosed } from "@/lib/active-issue";
 import { countWords } from "@/lib/word-count";
 import { assertActiveIssueForNewArticle, getActiveIssue } from "./active-issue";
@@ -390,35 +390,6 @@ async function assertEditorCoversArticle(
 }
 
 /**
- * A category editor edits an issue's texts until two days after its delivery
- * deadline (D-336). The main editor and the admins finish the issue after
- * that, so they are not held to it; an issue without windows has no deadline.
- */
-export async function editorEditWindow(
-  actor: Actor,
-  article: Pick<Article, "issueId">,
-  now: Date = new Date(),
-): Promise<{ issueNumber: number; closesAt: Date; open: boolean } | null> {
-  if (actor.role === "admin") return null;
-  const assignment = await getEditorAssignment(actor.id);
-  if (assignment.isMainEditor) return null;
-  const rows = await db.select().from(issues).where(eq(issues.id, article.issueId)).limit(1);
-  const issue = rows[0];
-  const closesAt = issue ? editorEditClosesAt(issue) : null;
-  if (!issue || !closesAt) return null;
-  return { issueNumber: issue.number, closesAt, open: isEditorEditingOpen(issue, now) };
-}
-
-async function assertEditorEditingOpen(actor: Actor, article: Pick<Article, "issueId">): Promise<void> {
-  const window = await editorEditWindow(actor, article);
-  if (!window || window.open) return;
-  throw conflict(
-    `Sayı ${window.issueNumber} için editör düzenleme süresi ${formatPeriodMoment(window.closesAt)} ` +
-      "itibarıyla sona erdi. Değişiklik için ana editöre ya da yöneticiye başvurun.",
-  );
-}
-
-/**
  * The status targets this actor may actually trigger, for the status panel.
  * The state machine says which edges exist; this says which of them the
  * signed-in reviewer may pull (D-059).
@@ -475,13 +446,8 @@ export async function createArticle(
 
   const slug = await uniqueSlug(input.title, (candidate) => slugExists(candidate));
 
-  // The category's 1600 words are checked under the issue's lock (D-331)
+  // Editors are not held to the category's word total (D-357)
   const article = await db.transaction(async (tx) => {
-    await assertCategoryBudget(tx, {
-      issueId: input.issueId!,
-      category: input.category ?? null,
-      body: input.bodyMarkdown ?? "",
-    });
     const [row] = await tx
       .insert(articles)
       .values({
@@ -541,11 +507,21 @@ async function writerTargetIssue(
   actor: Actor,
   input: { topicProposalId?: string | null; issueId?: string | null },
 ): Promise<{ issueId: string; topic: { id: string; category: string | null } | null }> {
+  // An admin writes into any issue not yet published, whenever they like (D-357)
+  const anyIssue = canWriteInAnyArea(actor);
   if (input.topicProposalId) {
     const topic = await acceptedTopicForNewArticle(actor, input.topicProposalId);
     // A topic of any other issue, including a published one, is refused (D-330)
-    await assertActiveIssueForNewArticle(topic.issueId);
+    if (anyIssue) await assertLiveIssue(topic.issueId);
+    else await assertActiveIssueForNewArticle(topic.issueId);
     return { issueId: topic.issueId, topic: { id: topic.id, category: topic.category } };
+  }
+  if (anyIssue) {
+    // No issue chosen: the active one, as for everyone
+    const issueId = input.issueId ?? (await getActiveIssue())?.id;
+    if (!issueId) throw badRequest("Yazının sayısını seçin.", { issueId: ["Sayı seçilmeli."] });
+    await assertLiveIssue(issueId);
+    return { issueId, topic: null };
   }
   // Without a topic the article goes into the active issue on its own (D-330);
   // an issue the form sent is only accepted when it is that one
@@ -604,8 +580,10 @@ export async function createArticleAsWriter(
   const slug = await resolveSlug(input.slug, input.title);
 
   const article = await db.transaction(async (tx) => {
-    // The category's 1600 words are checked under the issue's lock (D-331)
-    await assertCategoryBudget(tx, { issueId: target.issueId, category, body: input.bodyMarkdown ?? "" });
+    // The category's 1600 words are checked under the issue's lock (D-331); not for an admin (D-357)
+    if (!canWriteInAnyArea(actor)) {
+      await assertCategoryBudget(tx, { issueId: target.issueId, category, body: input.bodyMarkdown ?? "" });
+    }
     const [row] = await tx
       .insert(articles)
       .values({
@@ -733,14 +711,16 @@ export async function updateArticleAsWriter(
         ? await uniqueSlug(input.title, (candidate) => slugExists(candidate, articleId))
         : existing.slug;
 
-  // The old count of this article is left out of the total, not added twice (D-331)
+  // The old count of this article is left out of the total, not added twice (D-331); not for an admin (D-357)
   const updated = await db.transaction(async (tx) => {
-    await assertCategoryBudget(tx, {
-      issueId: existing.issueId,
-      category,
-      body: input.bodyMarkdown ?? existing.bodyMarkdown,
-      existing,
-    });
+    if (!canWriteInAnyArea(actor)) {
+      await assertCategoryBudget(tx, {
+        issueId: existing.issueId,
+        category,
+        body: input.bodyMarkdown ?? existing.bodyMarkdown,
+        existing,
+      });
+    }
     const [row] = await tx
       .update(articles)
       .set({
@@ -803,7 +783,6 @@ export async function updateArticle(
   // A plain category editor may only rewrite what falls into their own areas,
   // exactly as on the read side (D-071)
   await assertEditorCoversArticle(actor, existing);
-  await assertEditorEditingOpen(actor, existing);
 
   const authorChanged = Boolean(input.authorId) && input.authorId !== existing.authorId;
   if (authorChanged) {
@@ -855,14 +834,8 @@ export async function updateArticle(
   // A field the form did not send keeps its stored value. `category` and
   // `dueDate` used to fall back to null instead, so a partial update silently
   // wiped them while `issueId` next to them was preserved.
-  // Checked where the article lands: a move counts it in full there (D-331)
+  // Editors are held to neither the word total nor a deadline (D-357)
   const updated = await db.transaction(async (tx) => {
-    await assertCategoryBudget(tx, {
-      issueId: input.issueId ?? existing.issueId,
-      category: nextCategory,
-      body: input.bodyMarkdown ?? existing.bodyMarkdown,
-      existing,
-    });
     const [row] = await tx
       .update(articles)
       .set({
@@ -1117,7 +1090,7 @@ export async function transitionArticle(
   // the window: that is the editor's request, not a new delivery.
   let withoutTopic = false;
   if (to === "in_review" && article.authorId === actor.id && article.status === "draft") {
-    ({ withoutTopic } = await assertArticleDeliveryAllowed(article));
+    ({ withoutTopic } = await assertArticleDeliveryAllowed(article, new Date(), canWriteInAnyArea(actor)));
   }
 
   // The declaration rests on the contract, so there is nothing to declare until

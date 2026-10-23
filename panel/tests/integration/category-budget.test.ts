@@ -104,21 +104,34 @@ describe("the 1600-word category total (D-331)", () => {
     await updateArticleAsWriter(actorOf(ada), big.id, { title: "Bin", bodyMarkdown: words(900), category: AREA }, noMeta);
   });
 
-  it("checks a category or issue change at the destination", async () => {
-    const { admin, first, second, ada, bora } = await scenario();
+  it("holds neither the editors nor an admin writing their own (D-357)", async () => {
+    const { admin, first, ada, bora } = await scenario();
     await createArticleAsWriter(actorOf(ada), { title: "Dolu", bodyMarkdown: words(1600), category: AREA }, noMeta);
     const other = await createArticleAsWriter(actorOf(bora), { title: "Taşınacak", bodyMarkdown: words(10), category: OTHER }, noMeta);
 
+    const moved = await updateArticle(actorOf(admin), other.id, { title: other.title, category: AREA }, noMeta);
+    expect(moved.category).toBe(AREA);
+    await createArticle(actorOf(admin), { title: "Editörden", issueId: first.id, category: AREA, bodyMarkdown: "bir" }, noMeta);
+    const own = await createArticleAsWriter(
+      actorOf(admin),
+      { title: "Adminden", issueId: first.id, bodyMarkdown: words(2000), category: AREA },
+      noMeta,
+    );
+    await updateArticleAsWriter(actorOf(admin), own.id, { title: "Adminden", bodyMarkdown: words(2500), category: AREA }, noMeta);
+
+    // A writer is still held: the editors' words count (1611), the admin's 4500 do not
     expect(
-      (await failure(updateArticle(actorOf(admin), other.id, { title: other.title, category: AREA }, noMeta)))?.status,
+      (await failure(createArticleAsWriter(actorOf(ada), { title: "Bir fazla", bodyMarkdown: words(1), category: AREA }, noMeta)))?.status,
     ).toBe(409);
+  });
+
+  it("leaves the admins' own articles out of the total (D-357)", async () => {
+    const { admin, ada } = await scenario();
+    await createArticleAsWriter(actorOf(admin), { title: "Adminden", bodyMarkdown: words(2000), category: AREA }, noMeta);
+    await createArticleAsWriter(actorOf(ada), { title: "Tam", bodyMarkdown: words(1600), category: AREA }, noMeta);
     expect(
-      (await failure(createArticle(actorOf(admin), { title: "Editörden", issueId: first.id, category: AREA, bodyMarkdown: "bir" }, noMeta)))
-        ?.status,
+      (await failure(createArticleAsWriter(actorOf(ada), { title: "Bir fazla", bodyMarkdown: words(1), category: AREA }, noMeta)))?.status,
     ).toBe(409);
-    // The other issue's category is empty, so the move is fine there
-    const moved = await updateArticle(actorOf(admin), other.id, { title: other.title, issueId: second.id, category: AREA }, noMeta);
-    expect(moved.issueId).toBe(second.id);
   });
 
   it("lets a category already over the limit be shortened, and cuts nothing", async () => {

@@ -577,6 +577,7 @@ export async function reopenRejectedTopic(
 export async function assertArticleDeliveryAllowed(
   article: Pick<Article, "id" | "issueId" | "authorId">,
   now: Date = new Date(),
+  anyTime = false,
 ): Promise<{ withoutTopic: boolean }> {
   const rows = await db.select().from(issues).where(eq(issues.id, article.issueId)).limit(1);
   const issue = rows[0];
@@ -586,7 +587,8 @@ export async function assertArticleDeliveryAllowed(
   if (isIssueClosed(issue)) {
     throw conflict(`Sayı ${issue.number} yayımlandı; bu sayıya yazı gönderilemez.`);
   }
-  if (!usesIssueWindows(issue)) return { withoutTopic: false };
+  // An admin hands in whenever they like, topic or not (D-357)
+  if (anyTime || !usesIssueWindows(issue)) return { withoutTopic: false };
 
   const state = periodState(submissionPeriod(issue), now);
   if (state !== "open") {
