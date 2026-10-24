@@ -7,7 +7,7 @@ import { pickListIssue } from "@/lib/active-issue";
 import { IssuePicker } from "@/components/issue-picker";
 import { listIssues } from "@/services/issues";
 import { listPendingApprovals } from "@/services/rights";
-import { getEditorAssignment } from "@/services/editor-categories";
+import { getEditorAssignment, listMainEditors } from "@/services/editor-categories";
 import { listIssueCalendar } from "@/services/topics";
 import { IssueCalendar } from "@/components/issue-calendar";
 import { Alert, Card, EmptyState, PageHeader, StatusBadge } from "@/components/ui";
@@ -20,7 +20,9 @@ export const metadata = { title: "Editör paneli" };
  * The editor dashboard shows only the review queues the signed-in reviewer can
  * act on (D-059): a category editor sees the `in_review` articles of their own
  * areas, a main editor adds the second review stage, and an admin sees the
- * publication queues (`ready_for_publishing`, `awaiting_rights`, `scheduled`).
+ * second review stage and the publication queues (`ready_for_publishing`,
+ * `awaiting_rights`, `scheduled`), plus the category stage while nobody is the
+ * main editor (D-369).
  */
 export default async function EditorDashboard({
   searchParams,
@@ -34,9 +36,15 @@ export default async function EditorDashboard({
   const actor = { ...user };
   const isAdmin = user.role === "admin";
   const assignment = isAdmin ? null : await getEditorAssignment(user.id);
+  // Without a main editor the second review stage, and an area nobody holds,
+  // fall to the admin (`canReviewMainStage`); their queues have to show here (D-369)
+  const mainEditors = isAdmin ? await listMainEditors() : [];
+  const noMainEditor = isAdmin && mainEditors.length === 0;
 
   const queues: { status: ArticleStatus; label: string }[] = isAdmin
     ? [
+        ...(noMainEditor ? [{ status: "in_review" as const, label: "Kategori onayı bekliyor" }] : []),
+        { status: "pending_admin_approval", label: "Ana editör onayı bekliyor" },
         { status: "ready_for_publishing", label: "Yayın kuyruğu" },
         { status: "awaiting_rights", label: "Devir formu bekleniyor" },
         { status: "scheduled", label: "Yayına planlandı" },
@@ -76,6 +84,21 @@ export default async function EditorDashboard({
       <div className="space-y-6">
         {/* The running issue's windows, first thing on the page (D-264) */}
         <IssueCalendar issues={calendar} now={now} />
+
+        {noMainEditor && (
+          <Alert tone="warning" title="Ana editör atanmamış">
+            Ana editör onayı ve hiçbir editöre atanmamış alanlardaki incelemeler sizde. Ana editörü bir
+            editörün kullanıcı sayfasından atayabilirsiniz.
+          </Alert>
+        )}
+
+        {mainEditors.length > 1 && (
+          <Alert tone="warning" title="Birden fazla ana editör var">
+            {mainEditors.map((row) => row.displayName).join(", ")} ana editör olarak işaretli. Ana editör tek
+            kişidir; onay kuyruğu {mainEditors[0]!.displayName} adına gösteriliyor. Fazla olanların ana
+            editörlüğünü kaldırın.
+          </Alert>
+        )}
 
         {!isAdmin && assignment && assignment.assignedAreas.length === 0 && (
           <Alert tone="warning" title="Alan atanmamış">

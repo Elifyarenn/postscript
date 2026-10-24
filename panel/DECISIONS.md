@@ -14483,3 +14483,34 @@ yavaşlayacaktı. Sayfa ayrıca yedi bağımsız sorguyu sırayla bekliyordu.
 **Doğrulama:** `contributor-documents.test.ts`: D-314'ün eski gönderim tanıma testi geçiyor
 (toplu ve tek kişilik); yeni test (D-368): e-postası zaten bağlı belgeler, onları adlandıran
 eski tarz bir denetim satırı ve eşleşebilecek ikinci bir iş varken yerinde kalır.
+
+## D-369 — Tek ana editör; ana editör yokken onay kuyrukları admin panosunda
+
+**Bağlam:** 2026-10-24 incelemesinin 10. maddesi. Ana editör yoksa ikinci onay aşaması
+(`pending_admin_approval`) ve hiçbir editöre atanmamış alanlardaki incelemeler adminindir
+(`canReviewMainStage`, `canReviewCategoryStage`). Ama admin panosu (`/editor`) yalnızca yayın
+kuyruklarını sayıyordu: ana editör atanmamışken yazılar kimsenin ekranında görünmeden
+birikiyordu. Ayrıca `is_main_editor` birden fazla hesapta olabiliyordu ve `getMainEditor`
+sırasız `limit(1)` ile birini seçiyordu; işaret rolü editör olmayan hesapta da sayılıyordu.
+
+**Karar:**
+- Admin panosunda "Ana editör onayı bekliyor" sayacı **her zaman** var. Ana editör yoksa
+  "Kategori onayı bekliyor" sayacı da eklenir ve "Ana editör atanmamış" uyarısı çıkar.
+  Birden fazla ana editör işaretliyse adlarıyla uyarı çıkar.
+- `listMainEditors()`: rolü editör, silinmemiş, işaretli hesaplar, en eski hesap önce.
+  `getMainEditor()` bunun ilki; sonuç artık satır sırasına bağlı değil. İşaret yalnızca
+  editörde sayılır (etiketlerle aynı kural, D-312).
+- `setEditorDuties` ikinci bir ana editörü **reddeder** (409, mevcut ana editörün adıyla);
+  sessizce devretmez. Ana editörün kendi görevlerini yeniden kaydetmek serbest; önce eskisinin
+  işareti kaldırılırsa yenisi atanabilir.
+- Veritabanında kısmi tekil indeks **bilerek eklenmedi**: canlıda şu an iki işaretli hesap
+  varsa migration başarısız olur ve bunu canlı veritabanını okuyamadan bilemiyoruz. Kural
+  serviste; varsa fazlası panoda uyarıyla görünür. İki adminin aynı saniyede iki farklı
+  editörü işaretlemesi yarışı kabul edildi.
+
+**Hukuk (D-084):** Yeni veri yok; aydınlatma metni değişmedi.
+
+**Doğrulama:** `editor-categories.test.ts` (D-369, 2): ikinci ana editör 409 ve birincinin
+adı; birincinin görevleri yeniden kaydedilebilir; birincinin işareti kalkınca ikinci atanır.
+Editör olmayan hesaptaki işaret sayılmaz, birden çok işaretlide en eski hesap seçilir.
+Migration yok.

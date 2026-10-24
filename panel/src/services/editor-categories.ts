@@ -12,7 +12,7 @@
  * second review stage; a plain editor only sees the areas assigned here.
  */
 import "server-only";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { editorCategories, users, writerAreas, type EditorCategory } from "@/db/schema";
 import { writeAudit, type Executor } from "@/lib/audit";
@@ -93,17 +93,27 @@ export async function listEditorAreasWithHolders(): Promise<EditorAreaRow[]> {
 }
 
 /**
- * The main editor, for the queue waiting on their second approval (D-152).
- * Null when nobody carries the flag yet. The id comes along so the list can
- * lead to their account (D-233).
+ * Everyone carrying the main editor flag as an editor, earliest account
+ * first (D-369). There should be one; the admin's dashboard warns about none
+ * or several, since the flag predates the rule that refuses a second.
  */
-export async function getMainEditor(): Promise<{ id: string; displayName: string } | null> {
-  const rows = await db
+export async function listMainEditors(): Promise<{ id: string; displayName: string }[]> {
+  return db
     .select({ id: users.id, displayName: users.displayName })
     .from(users)
-    .where(and(eq(users.isMainEditor, true), isNull(users.deletedAt)))
-    .limit(1);
-  return rows[0] ?? null;
+    // The flag counts only for an editor, as on the badges (D-312)
+    .where(and(eq(users.isMainEditor, true), eq(users.role, "editor"), isNull(users.deletedAt)))
+    .orderBy(asc(users.createdAt), asc(users.id));
+}
+
+/**
+ * The main editor, for the queue waiting on their second approval (D-152).
+ * Null when nobody carries the flag yet. The id comes along so the list can
+ * lead to their account (D-233). The earliest when several do, so the answer
+ * no longer depends on the database's row order (D-369).
+ */
+export async function getMainEditor(): Promise<{ id: string; displayName: string } | null> {
+  return (await listMainEditors())[0] ?? null;
 }
 
 /** The areas an editor already holds, keyed by slot. */
@@ -188,6 +198,17 @@ export async function setEditorDuties(
     throw conflict(
       `"${area.name}" alanı başka bir editöre atanmış. Her alanın tek bir editörü olabilir.`,
     );
+  }
+
+  // One main editor: the second review stage and the main editor's tools
+  // belong to one person, so a second flag is refused, not swapped in (D-369)
+  if (input.isMainEditor && !target.isMainEditor) {
+    const other = (await listMainEditors()).find((row) => row.id !== target.id);
+    if (other) {
+      throw conflict(
+        `${other.displayName} zaten ana editör; ana editör tek kişidir. Önce onun ana editörlüğünü kaldırın.`,
+      );
+    }
   }
 
   const duties = await db.transaction(async (tx) => {

@@ -11,7 +11,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
 import { articles, editorCategories, issues, users } from "@/db/schema";
-import { setEditorDuties } from "@/services/editor-categories";
+import { getMainEditor, listMainEditors, setEditorDuties } from "@/services/editor-categories";
 import {
   addComment,
   createArticle,
@@ -685,5 +685,43 @@ describe("the category editor without limits (D-357)", () => {
 
     const sent = await transitionArticle(actorOf(editor), article.id, "pending_admin_approval", noMeta);
     expect(sent.status).toBe("pending_admin_approval");
+  });
+});
+
+describe("one main editor (D-369)", () => {
+  const duties = (isMainEditor: boolean) => ({ areaId: null, areaId2: null, areaId3: null, isMainEditor });
+
+  it("refuses a second main editor and names the first; the first may be saved again", async () => {
+    const admin = await createUser({ role: "admin" });
+    const first = await createUser({ role: "editor", displayName: "Efe Ana" });
+    const second = await createUser({ role: "editor" });
+
+    await setEditorDuties(actorOf(admin), first.id, duties(true), noMeta);
+    const error = await captureError(setEditorDuties(actorOf(admin), second.id, duties(true), noMeta));
+    expect(error?.status).toBe(409);
+    expect(error?.message).toContain("Efe Ana");
+    expect((await listMainEditors()).map((row) => row.id)).toEqual([first.id]);
+
+    // Saving the main editor's own duties again is not a second main editor
+    await setEditorDuties(actorOf(admin), first.id, duties(true), noMeta);
+
+    // Once the first steps down, the second may take it
+    await setEditorDuties(actorOf(admin), first.id, duties(false), noMeta);
+    await setEditorDuties(actorOf(admin), second.id, duties(true), noMeta);
+    expect((await getMainEditor())?.id).toBe(second.id);
+  });
+
+  it("counts the flag for editors only, and picks the earliest account when several carry it", async () => {
+    const older = await createUser({ role: "editor" });
+    const newer = await createUser({ role: "editor" });
+    const writer = await createUser({ role: "writer", writerStatus: "active" });
+    await db.update(users).set({ createdAt: new Date("2026-01-01T00:00:00Z") }).where(eq(users.id, older.id));
+    // Set straight in the database: the state the rule now refuses, as it may exist from before
+    await db.update(users).set({ isMainEditor: true }).where(eq(users.id, newer.id));
+    await db.update(users).set({ isMainEditor: true }).where(eq(users.id, older.id));
+    await db.update(users).set({ isMainEditor: true }).where(eq(users.id, writer.id));
+
+    expect((await listMainEditors()).map((row) => row.id)).toEqual([older.id, newer.id]);
+    expect((await getMainEditor())?.id).toBe(older.id);
   });
 });
