@@ -27,6 +27,8 @@ import { errorJson } from "@/lib/api";
 import { forbidden, notFound } from "@/lib/errors";
 
 const SIGNED_URL_SECONDS = 300;
+/** 30 days in the viewer's browser only; `private` keeps shared caches out (D-363). */
+const PROFILE_IMAGE_CACHE = "private, max-age=2592000, immutable";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -46,6 +48,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
     // By where the system stored the file too, not by the editable label alone (D-248)
     const isContract = isContractDocument(row);
+    // Set below once the file is known to be someone's profile picture or cover photo
+    let profileImage = false;
 
     if (isContract) {
       const allowed =
@@ -70,13 +74,16 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       const allowed =
         canAccessAdminPanel(context.user) || (await ownsApplicationSample(context.user.id, row.id));
       if (!allowed) throw forbidden();
-    } else if (
+    } else {
       // A profile picture or cover photo is shown to every signed-in member (D-141)
-      !(await isProfileImage(row.id)) &&
-      !canAccessEditorPanel(context.user) &&
-      !(await ownsApplicationSample(context.user.id, row.id))
-    ) {
-      throw forbidden();
+      profileImage = await isProfileImage(row.id);
+      if (
+        !profileImage &&
+        !canAccessEditorPanel(context.user) &&
+        !(await ownsApplicationSample(context.user.id, row.id))
+      ) {
+        throw forbidden();
+      }
     }
 
     const body = await getStorage().get({ bucket: "media", key: row.storageKey });
@@ -86,8 +93,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       headers: {
         "content-type": row.mime,
         "content-length": String(body.length),
-        // Private: these are contracts and drafts, never CDN material
-        "cache-control": "private, no-store",
+        // Private either way: these are contracts and drafts, never CDN material.
+        // A profile picture is kept in the member's own browser instead (D-363):
+        // a new upload gets a new id and the old file is deleted, so the bytes
+        // behind one id never change, and a removed picture's address is no
+        // longer on any page. Without this every avatar in a feed was a
+        // function call and three queries on each visit.
+        "cache-control": profileImage ? PROFILE_IMAGE_CACHE : "private, no-store",
         "content-disposition": "inline",
       },
     });

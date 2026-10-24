@@ -69,7 +69,7 @@ export function Avatar({
     >
       {imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- served by our own media route, not optimised
-        <img src={imageUrl} alt="" className="size-full object-cover" />
+        <img src={imageUrl} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
       ) : (
         username.charAt(0)
       )}

@@ -87,7 +87,7 @@ export default async function NotificationsPage({
               <span className="notice-avatar" aria-hidden>
                 {handle && avatars.has(handle) ? (
                   // eslint-disable-next-line @next/next/no-img-element -- served by our own media route, as in Avatar
-                  <img src={avatars.get(handle)} alt="" />
+                  <img src={avatars.get(handle)} alt="" loading="lazy" decoding="async" />
                 ) : handle ? (
                   handle.charAt(0)
                 ) : (

@@ -14275,3 +14275,38 @@ yok; hesap silinince dosyalar gider, kayıtlar kalır; kaldırılan kayıt 1 yı
 silinmez, dolunca silinir, duran çizime dokunulmaz. `rbac.test.ts`:
 `canReviewIllustrations` admin ve ana editöre açık, kategori editörüne, yazara, dondurulmuş
 ya da yasaklı ana editöre kapalı.
+
+## D-363 — Profil görselleri izleyenin tarayıcısında 30 gün tutulur
+
+**Bağlam:** 2026-10-24 incelemesinin 4. maddesi. Topluluk akışı, bildirimler ve mesaj
+listesi her avatarı `/api/media/:id` adresinden alıyor; rota her istekte oturumu, `media`
+satırını ve `isProfileImage` sorgusunu çalıştırıp dosyayı depodan okuyor ve
+`private, no-store` dönüyordu. 20 farklı yazarlı bir akış her açılışta 20'den fazla
+fonksiyon çağrısı ve ~60 sorgu demekti; aynı avatarlar her sayfada yeniden indiriliyordu
+(Hobby CPU sınırı, D-308).
+
+**Karar:**
+- Rota, dosya **birinin güncel profil fotoğrafı ya da kapak fotoğrafıysa**
+  `cache-control: private, max-age=2592000, immutable` döner (30 gün, yalnızca izleyenin
+  tarayıcısı; CDN ve ortak önbellek tutmaz). Diğer her dosya (sözleşme, ruhsat, başvuru
+  örneği, kütüphane medyası) eskisi gibi `private, no-store`.
+- **Neden güvenli:** yeni yükleme yeni bir `media` satırı ve kimlik alır, eskisi silinir
+  (`setProfileImage` → `discard`); bir kimliğin arkasındaki baytlar hiç değişmez. Kaldırılan
+  ya da değiştirilen fotoğrafın adresi artık hiçbir sayfada yoktur; önbellekteki kopya
+  yalnızca o adresi zaten bilen tarayıcıda kalır, sunucu o adrese 404 döner.
+- Yetki değişmedi: oturumsuz istek 401, profil görselini yalnızca giriş yapmış üyeler alır
+  (D-141). `public` önbellek ya da CDN bilerek kullanılmadı: görseller üyelere açık,
+  herkese değil.
+- Avatar `<img>`'leri (`Avatar`, bildirim listesi) `loading="lazy"` ve
+  `decoding="async"` aldı: ekran dışındaki avatar ekrana yaklaşınca istenir. Profil
+  sayfasının kapak fotoğrafı ilk görünen öğe olduğu için tembel yüklenmez.
+- Kapsam dışı: profil görsellerini herkese açık R2 kopyasından vermek (D-353 gibi) KVKK
+  metni değişikliği ve "yalnızca üyeler" kuralının değişmesi demek; ürün kararı ister.
+
+**Hukuk (D-084):** Yeni veri, amaç, aktarım veya saklama yok. Tarayıcının HTTP önbelleği
+sitenin tuttuğu bir kayıt değil, çerez ya da yerel depolama da değil; aydınlatma metni
+değişmedi.
+
+**Doğrulama:** `media-cache.test.ts` (4): başka üyeye profil fotoğrafı `private`,
+`max-age=2592000`, `immutable`, `public` değil; değiştirilen fotoğraf yeni kimlik alır, eski
+adres 404; oturumsuz 401; kütüphane medyası `private, no-store`. Migration yok.
