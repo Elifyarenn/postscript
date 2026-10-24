@@ -24,6 +24,7 @@ import {
   isNotNull,
   isNull,
   lt,
+  max,
   ne,
   notExists,
   or,
@@ -314,7 +315,7 @@ export async function openConversation(actor: Actor, rawUsername: string): Promi
   if (conversation) {
     const [mine, theirs, myReceipts] = await Promise.all([
       db
-        .select({ clearedAt: conversationStates.clearedAt })
+        .select({ clearedAt: conversationStates.clearedAt, lastReadAt: conversationStates.lastReadAt })
         .from(conversationStates)
         .where(and(eq(conversationStates.conversationId, conversation.id), eq(conversationStates.userId, me.id)))
         .limit(1),
@@ -359,7 +360,21 @@ export async function openConversation(actor: Actor, rawUsername: string): Promi
       };
     });
 
-    await markRead(db, conversation.id, me.id, new Date());
+    // Written only when the other member said something since the last read:
+    // the screen re-opens on every change it notices (D-364), and an unchanged
+    // thread used to cost a write each time. `>=`, because a message's time
+    // comes back cut to the millisecond and one in the same millisecond as the
+    // last read must still count as new.
+    const myLastReadAt = mine[0]?.lastReadAt ?? null;
+    // `rows` is oldest first by now (reversed above), so the latest is the last match
+    let latestFromOther: (typeof rows)[number] | undefined;
+    for (const row of rows) if (row.senderId !== me.id) latestFromOther = row;
+    if (
+      latestFromOther &&
+      (myLastReadAt === null || latestFromOther.createdAt.getTime() >= myLastReadAt.getTime())
+    ) {
+      await markRead(db, conversation.id, me.id, new Date());
+    }
   }
 
   return {
@@ -406,6 +421,49 @@ const afterRead = or(isNull(conversationStates.lastReadAt), gt(directMessages.cr
 /** A message the reader did not send; an anonymised sender counts as someone else. */
 function fromOthers(meId: string) {
   return or(isNull(directMessages.senderId), ne(directMessages.senderId, meId));
+}
+
+/**
+ * What an open conversation screen shows, reduced to one string (D-364). The
+ * screen asks for this instead of re-rendering itself on a timer, and redraws
+ * only when it changed: a new message in any of the member's conversations
+ * (the list beside the thread shows those), a message removed from this one,
+ * or the other member reading it (the ticks, D-188). It writes nothing.
+ * A member the screen may not open answers 404, as `openConversation` does.
+ */
+export async function conversationFingerprint(actor: Actor, rawUsername: string): Promise<string> {
+  const me = await requireMember(actor);
+  const other = await findParticipantByUsername(rawUsername);
+  if (!other?.username || other.id === me.id) throw notFound("Üye bulunamadı.");
+  if (await hasBlocked(other.id, me.id)) throw notFound("Üye bulunamadı.");
+
+  const conversation = await findConversation(me.id, other.id);
+  const [latest, thread, theirs] = await Promise.all([
+    db
+      .select({ value: max(conversations.lastMessageAt) })
+      .from(conversations)
+      .where(or(eq(conversations.memberAId, me.id), eq(conversations.memberBId, me.id))),
+    conversation
+      ? db
+          .select({ value: count() })
+          .from(directMessages)
+          .where(and(eq(directMessages.conversationId, conversation.id), isNull(directMessages.deletedAt)))
+      : Promise.resolve([]),
+    conversation
+      ? db
+          .select({ lastReadAt: conversationStates.lastReadAt })
+          .from(conversationStates)
+          .where(and(eq(conversationStates.conversationId, conversation.id), eq(conversationStates.userId, other.id)))
+          .limit(1)
+      : Promise.resolve([]),
+  ]);
+
+  return [
+    latest[0]?.value?.toISOString() ?? "",
+    conversation?.id ?? "",
+    thread[0]?.value ?? 0,
+    theirs[0]?.lastReadAt?.toISOString() ?? "",
+  ].join("|");
 }
 
 /**

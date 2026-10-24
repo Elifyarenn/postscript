@@ -14310,3 +14310,43 @@ değişmedi.
 **Doğrulama:** `media-cache.test.ts` (4): başka üyeye profil fotoğrafı `private`,
 `max-age=2592000`, `immutable`, `public` değil; değiştirilen fotoğraf yeni kimlik alır, eski
 adres 404; oturumsuz 401; kütüphane medyası `private, no-store`. Migration yok.
+
+## D-364 — Açık sohbet ekranı parmak izine bakar, yalnızca değişince yeniden çizilir
+
+**Bağlam:** 2026-10-24 incelemesinin 5. maddesi. Açık bir özel mesaj sohbeti `AutoRefresh`
+ile 20 saniyede bir `router.refresh()` yapıyordu: layout, üç sayaç, `openConversation`
+(~9 okuma) ve `listConversations` dahil sayfanın tamamı (15–17 sorgu) yeniden çiziliyor,
+yeni mesaj olmasa da her seferinde bir "okundu" UPDATE'i yazılıyordu. Açık sekme dakikada
+3 tam render demekti ve Neon'un uykuya geçmesini engelliyordu (D-308).
+
+**Karar:**
+- `conversationFingerprint` (servis) ekranın gösterdiğini tek bir metne indirger: üyenin
+  bütün sohbetlerindeki en son mesaj zamanı (`conversations.last_message_at`; yandaki
+  liste de bunu gösterir), bu sohbetin silinmemiş mesaj sayısı (kaldırılan mesaj) ve karşı
+  tarafın son okuma zamanı (okundu işaretleri, D-188). Hiçbir şey yazmaz; erişemeyeceği
+  sohbette `openConversation` gibi 404.
+- `GET /api/direct-messages/fingerprint?with=<kullanıcı adı>` (oturum şart, `no-store`) bu
+  değeri verir — sohbet odasının `/api/community/messages` yoklamasıyla aynı desen.
+- Sayfa çizilirken parmak izini **her şeyi okumadan önce** alır ve `ConversationWatcher`'a
+  verir. İzleyici 20 saniyede bir (yalnızca görünür sekmede; sekmeye dönünce hemen) sorar,
+  değer farklıysa `router.refresh()` yapar. Önce alınması bilinçli: arada gelen mesaj
+  sonraki bakışta farkı doğurur, yeni bir değerin arkasına saklanmaz. Mesaj gönderen sayfa
+  kendini yeniden çizdiği için yeni değer onunla gelir, ikinci bir çizim olmaz. Yanıt
+  parmak izi değilse (engellendi, oturum bitti) yine yeniden çizer ki sayfa nedenini
+  göstersin.
+- `openConversation` "okundu"yu yalnızca karşı taraftan son okumadan bu yana mesaj varsa
+  yazar. Karşılaştırma `>=`: mesaj zamanı milisaniyeye kırpılarak döner, aynı
+  milisaniyedeki mesaj yeni sayılmalı.
+- `AutoRefresh` bileşeni tek kullanıcısını kaybettiği için silindi.
+- Bir bakış artık: oturum + üye + karşı taraf + engel + sohbet + üç küçük okuma; render
+  yok, yazma yok.
+
+**Hukuk (D-084):** Yeni veri, amaç, aktarım veya saklama yok. "Konuşmayı en son okuduğunuz
+zaman" anlamı değişmedi (yeni mesajı okuduğunuz an). Aydınlatma metni değişmedi.
+
+**Doğrulama:** `direct-messages.test.ts` (D-364, 5 test): hiçbir şey değişmezken parmak izi
+aynı ve haber yokken açmak okundu kaydını değiştirmez; karşı taraf yazınca değişir ve
+açmak okundu yapar (okunmamış 1 → 0); başka sohbete mesaj gelince değişir; karşı taraf
+okuyunca ve mesaj kaldırılınca değişir; bilinmeyen üye, kendisi ve engelleyen üye için 404.
+Testi yazarken bulunan hata: listenin yerinde ters çevrilmesi yüzünden ilk sürüm karşı
+tarafın en eski mesajına bakıyordu; düzeltildi, test bunu yakalıyor. Migration yok.

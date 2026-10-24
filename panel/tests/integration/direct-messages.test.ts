@@ -4,9 +4,10 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
-import { conversations, directMessages, trafficLogs } from "@/db/schema";
+import { conversationStates, conversations, directMessages, trafficLogs } from "@/db/schema";
 import {
   clearConversation,
+  conversationFingerprint,
   DIRECT_MESSAGES_PER_MINUTE,
   listConversations,
   openConversation,
@@ -317,5 +318,73 @@ describe("reports and retention", () => {
       .set({ deletedAt: new Date("2025-01-01T00:00:00Z") })
       .where(eq(directMessages.id, sent.id));
     expect(await pruneDeletedDirectMessages(new Date("2026-09-13T00:00:00Z"))).toBe(1);
+  });
+});
+
+describe("the open conversation's fingerprint (D-364)", () => {
+  async function stateOf(userId: string) {
+    const rows = await db.select().from(conversationStates).where(eq(conversationStates.userId, userId));
+    return rows[0] ?? null;
+  }
+
+  it("stays the same while nothing changes, and opening writes no read mark without news", async () => {
+    const { lunae, velvet } = await openPair();
+    await send(lunae, "velvet", "selam");
+    await openConversation(actorOf(velvet), "lunae");
+    const readAt = (await stateOf(velvet.id))!.lastReadAt;
+
+    const first = await conversationFingerprint(actorOf(velvet), "lunae");
+    await openConversation(actorOf(velvet), "lunae");
+    expect(await conversationFingerprint(actorOf(velvet), "lunae")).toBe(first);
+    // Nothing new from lunae, so the second opening left the read mark alone
+    expect((await stateOf(velvet.id))!.lastReadAt?.getTime()).toBe(readAt?.getTime());
+  });
+
+  it("changes when the other member writes, and opening then marks it read", async () => {
+    const { lunae, velvet } = await openPair();
+    await send(lunae, "velvet", "selam");
+    await openConversation(actorOf(velvet), "lunae");
+    const before = await conversationFingerprint(actorOf(velvet), "lunae");
+
+    await send(lunae, "velvet", "orada mısın?");
+    expect(await conversationFingerprint(actorOf(velvet), "lunae")).not.toBe(before);
+    expect(await unreadConversationCount(actorOf(velvet))).toBe(1);
+
+    await openConversation(actorOf(velvet), "lunae");
+    expect(await unreadConversationCount(actorOf(velvet))).toBe(0);
+  });
+
+  it("changes when a message arrives in another conversation, for the list beside the thread", async () => {
+    const { lunae, velvet } = await openPair();
+    const third = await member("ruhi");
+    await send(lunae, "velvet", "selam");
+    // Pushed back, so the next message cannot share its millisecond
+    await db.update(conversations).set({ lastMessageAt: new Date("2026-01-01T00:00:00Z") });
+    const before = await conversationFingerprint(actorOf(velvet), "lunae");
+
+    await send(third, "velvet", "merhaba");
+    expect(await conversationFingerprint(actorOf(velvet), "lunae")).not.toBe(before);
+  });
+
+  it("changes when the other member reads the thread, and when a message is removed", async () => {
+    const { lunae, velvet } = await openPair();
+    await send(velvet, "lunae", "selam");
+    const before = await conversationFingerprint(actorOf(velvet), "lunae");
+
+    await openConversation(actorOf(lunae), "velvet");
+    const afterRead = await conversationFingerprint(actorOf(velvet), "lunae");
+    expect(afterRead).not.toBe(before);
+
+    await db.update(directMessages).set({ deletedAt: new Date() });
+    expect(await conversationFingerprint(actorOf(velvet), "lunae")).not.toBe(afterRead);
+  });
+
+  it("answers 404 for an unknown member, oneself, and a member who blocked the asker", async () => {
+    const { lunae, velvet } = await openPair();
+    expect((await captureError(conversationFingerprint(actorOf(velvet), "yok_boyle"))).status).toBe(404);
+    expect((await captureError(conversationFingerprint(actorOf(velvet), "velvet"))).status).toBe(404);
+
+    await blockMember(actorOf(lunae), "velvet");
+    expect((await captureError(conversationFingerprint(actorOf(velvet), "lunae"))).status).toBe(404);
   });
 });

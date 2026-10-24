@@ -7,6 +7,7 @@ import { isAppError } from "@/lib/errors";
 import { communityBadge } from "@/lib/auth/rbac";
 import { getMemberSettings } from "@/services/social";
 import {
+  conversationFingerprint,
   listConversations,
   MAX_DIRECT_MESSAGE_LENGTH,
   openConversation,
@@ -15,16 +16,15 @@ import { ActionButton, PanelForm } from "@/components/form";
 import { Alert, StatusBadge, Textarea } from "@/components/ui";
 import { Avatar, memberName } from "@/components/social";
 import { ConversationColumn, MessageThread } from "@/components/messages";
-import { AutoRefresh } from "@/components/auto-refresh";
+import { ConversationWatcher } from "@/components/conversation-watcher";
 import { blockAction, clearConversationAction, sendDirectMessageAction, unblockAction } from "../../actions";
 
 export const metadata = { title: "Mesajlar" };
 
 /**
- * How often an open conversation looks for new messages. Each look renders the
- * whole page on the server and marks the conversation read, so 5 seconds was
- * billed as heavily as a busy page; one's own message still appears at once,
- * because sending refreshes the page itself.
+ * How often an open conversation looks for new messages. A look is a small
+ * read now, and the page is redrawn only when something changed (D-364);
+ * one's own message still appears at once, because sending redraws the page.
  */
 const REFRESH_MS = 20_000;
 
@@ -46,21 +46,24 @@ export default async function ConversationPage({
   const { username } = await getMemberSettings({ ...user });
   if (!username) redirect("/social/messages");
 
-  // Opened first: opening marks the conversation read, and the list below
+  const target = decodeURIComponent(rawUsername);
+  const missing = (error: unknown): never => {
+    if (isAppError(error) && (error.status === 404 || error.status === 400)) notFound();
+    throw error;
+  };
+  // Taken before anything is read: a message arriving meanwhile then makes the
+  // watcher's next look differ and redraw, instead of hiding behind a newer value (D-364)
+  const fingerprint = await conversationFingerprint({ ...user }, target).catch(missing);
+  // Opened next: opening marks the conversation read, and the list below
   // should already show it that way
-  const view = await openConversation({ ...user }, decodeURIComponent(rawUsername)).catch(
-    (error: unknown) => {
-      if (isAppError(error) && (error.status === 404 || error.status === 400)) notFound();
-      throw error;
-    },
-  );
+  const view = await openConversation({ ...user }, target).catch(missing);
   const conversations = await listConversations({ ...user });
   const other = view.other;
   const fields = { username: other.username };
 
   return (
     <>
-      <AutoRefresh intervalMs={REFRESH_MS} />
+      <ConversationWatcher username={other.username} fingerprint={fingerprint} intervalMs={REFRESH_MS} />
 
       <div className="dm-layout has-info">
         <ConversationColumn conversations={conversations} activeUsername={other.username} />
