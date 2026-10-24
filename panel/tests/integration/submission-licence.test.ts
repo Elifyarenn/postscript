@@ -12,12 +12,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
-import { agreementVersions, articles, rightsGrants, users } from "@/db/schema";
+import { agreementVersions, articleVersions, articles, rightsGrants, users } from "@/db/schema";
 import { hasAcceptedCurrentAgreement, publishAgreementVersion } from "@/services/agreements";
 import { hashDocument } from "@/lib/agreement/normalise";
 import {
   createArticle,
   createArticleAsWriter,
+  saveAndSubmitArticleAsWriter,
   transitionArticle,
   updateArticleAsWriter,
 } from "@/services/articles";
@@ -302,5 +303,71 @@ describe("works submitted before the contract was accepted", () => {
     );
     expect(error?.status).toBe(409);
     expect(await findLiveApproval(article.id)).toBeNull();
+  });
+});
+
+describe("submitting from the edit form (D-360)", () => {
+  it("saves the text on screen and declares that text, not the last stored one", async () => {
+    const { writerActor } = await scenario();
+    const draft = await draftOf(writerActor, "Kaydetmeden Gönderim", "Kayıtlı gövde.");
+
+    const sent = await saveAndSubmitArticleAsWriter(
+      writerActor,
+      draft.id,
+      { title: "Kaydetmeden Gönderim", bodyMarkdown: "Ekrandaki gövde.", category: "Sanat & Edebiyat" },
+      noMeta,
+    );
+
+    expect(sent.status).toBe("in_review");
+    expect(sent.bodyMarkdown).toBe("Ekrandaki gövde.");
+    const grant = await findLiveApproval(draft.id);
+    expect(grant?.acceptedBodyMarkdown).toBe("Ekrandaki gövde.");
+    expect(grant?.formTextHash).toBe(articleHash("Ekrandaki gövde."));
+  });
+
+  it("keeps the saved text when the submission itself is refused", async () => {
+    const { writerActor } = await scenario({ accept: false });
+    const draft = await draftOf(writerActor, "Reddedilen Gönderim", "Kayıtlı gövde.");
+
+    const error = await captureError(
+      saveAndSubmitArticleAsWriter(
+        writerActor,
+        draft.id,
+        { title: "Reddedilen Gönderim", bodyMarkdown: "Yeni yazılan gövde.", category: "Sanat & Edebiyat" },
+        noMeta,
+      ),
+    );
+    // The refusal keeps its status and says the text was saved
+    expect(error?.status).toBe(409);
+    expect(error?.message).toContain("Yazı kaydedildi");
+    expect(error?.message).toContain("yazar sözleşmesini kabul");
+
+    const [row] = await db.select().from(articles).where(eq(articles.id, draft.id));
+    expect(row!.status).toBe("draft");
+    expect(row!.bodyMarkdown).toBe("Yeni yazılan gövde.");
+    const versions = await db.select().from(articleVersions).where(eq(articleVersions.articleId, draft.id));
+    expect(versions.some((version) => version.bodyMarkdown === "Yeni yazılan gövde.")).toBe(true);
+    expect(await findLiveApproval(draft.id)).toBeNull();
+  });
+
+  it("sends nothing when the save is refused", async () => {
+    const { writerActor } = await scenario();
+    const draft = await draftOf(writerActor, "Geçersiz Kayıt", "Kayıtlı gövde.");
+
+    const error = await captureError(
+      saveAndSubmitArticleAsWriter(
+        writerActor,
+        draft.id,
+        { title: "Geçersiz Kayıt", bodyMarkdown: "Yeni gövde.", category: "Tanımsız Alan" },
+        noMeta,
+      ),
+    );
+    expect(error?.status).toBe(400);
+    expect(error?.message).not.toContain("Yazı kaydedildi");
+
+    const [row] = await db.select().from(articles).where(eq(articles.id, draft.id));
+    expect(row!.status).toBe("draft");
+    expect(row!.bodyMarkdown).toBe("Kayıtlı gövde.");
+    expect(await findLiveApproval(draft.id)).toBeNull();
   });
 });

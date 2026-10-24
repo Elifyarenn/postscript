@@ -18,6 +18,7 @@ import {
   startTransition,
   useActionState,
   useContext,
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -215,12 +216,15 @@ function SubmitButton({
   disabled,
   className,
   ariaLabel,
+  intent,
 }: {
   children: ReactNode;
   variant?: "primary" | "secondary" | "danger";
   disabled?: boolean;
   className?: string;
   ariaLabel?: string;
+  /** Posted as `intent`, so the action can tell which button sent the form. */
+  intent?: string;
 }) {
   const pending = useSubmitPending();
   return (
@@ -230,6 +234,8 @@ function SubmitButton({
       disabled={pending || disabled}
       className={className}
       aria-label={ariaLabel}
+      name={intent ? "intent" : undefined}
+      value={intent}
     >
       {pending ? "Gönderiliyor…" : children}
     </Button>
@@ -244,6 +250,8 @@ export function PanelForm({
   requireValid = false,
   submitClassName,
   submitContent,
+  secondarySubmit,
+  warnUnsaved = false,
   children,
 }: {
   action: ServerAction;
@@ -263,22 +271,45 @@ export function PanelForm({
    * the checklist says rather than contradicting it.
    */
   requireValid?: boolean;
+  /**
+   * A second button after the main one, posting the same fields with
+   * `intent=<intent>`. The main button stays first, so Enter in a field keeps
+   * pressing it rather than this one (D-360).
+   */
+  secondarySubmit?: { label: string; intent: string; variant?: "primary" | "secondary" | "danger" };
+  /** Asks before the tab is closed or reloaded while typed changes are unsaved. */
+  warnUnsaved?: boolean;
   children?: ReactNode;
 }) {
   const form = useActionForm(action);
   const { state } = form;
   const [valid, setValid] = useState(!requireValid);
+  const dirty = useRef(false);
+
+  // A success has saved what was typed; a failure keeps the fields, so it stays unsaved
+  useEffect(() => {
+    if (state && !isFailedResult(state)) dirty.current = false;
+  }, [state]);
+
+  // Only the browser's own prompt can stop a tab being closed or reloaded
+  useEffect(() => {
+    if (!warnUnsaved) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      if (dirty.current) event.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [warnUnsaved]);
 
   return (
     <ActionForm
       form={form}
       className="space-y-4"
       noValidate={false}
-      onInput={
-        requireValid
-          ? (event) => setValid(event.currentTarget.checkValidity())
-          : undefined
-      }
+      onInput={(event) => {
+        dirty.current = true;
+        if (requireValid) setValid(event.currentTarget.checkValidity());
+      }}
     >
       {/* Double submit token; the action compares it with the cookie */}
       <input type="hidden" name="csrfToken" value={csrfToken} />
@@ -310,6 +341,11 @@ export function PanelForm({
         >
           {submitContent ?? submitLabel}
         </SubmitButton>
+        {secondarySubmit && (
+          <SubmitButton variant={secondarySubmit.variant ?? "primary"} intent={secondarySubmit.intent}>
+            {secondarySubmit.label}
+          </SubmitButton>
+        )}
       </div>
     </ActionForm>
   );

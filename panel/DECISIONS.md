@@ -14131,3 +14131,37 @@ ruhsat formlarını hazırla" → Sayı 2 + Semra Nur İlhan.
 Sayı 2 ve yazarın hesabı varken kapsamlı hazırlama tek form çizer (hazır, başlık listede,
 `work_key`, tür etiketi, özet dosyanın özeti, PDF açılır), kapsamsız yeniden hazırlama
 ikinci form yapmaz; sayı ya da hesap yokken form çizilmez.
+
+## D-360 — "İncelemeye gönder" ekrandaki metni kaydedip gönderir
+
+**Bağlam:** Performans ve kullanılabilirlik incelemesinde (2026-10-24) bulundu. Yazarın yazı
+sayfasında "İncelemeye gönder" ayrı bir formdu ve yalnızca yazının kimliğini gönderiyordu.
+Yazar metni değiştirip kaydetmeden gönderdiğinde inceleme zincirine son *kaydedilen* metin
+gidiyordu; sayfa yenilenince yazı `in_review` olduğu için düzenleme formu kapanıyor,
+yazılanlar geri gelmiyordu. Beyan (D-238) de yazarın ekranda gördüğü metne değil, eski metne
+bağlanıyordu.
+
+**Karar:**
+- "Taslağı kaydet" ve "İncelemeye gönder" artık **aynı formun** iki düğmesi. Gönder düğmesi
+  `intent=submit` taşır; action `saveAndSubmitArticleAsWriter` servisini çağırır: önce
+  `updateArticleAsWriter` (doğrulama, kelime bütçesi, sürüm kaydı, D-248 onay iptali aynen),
+  sonra `transitionArticle(..., "in_review")`. Ayrı `submitArticleAction` kalktı.
+- Kayıt geçip gönderim reddedilirse (sözleşme yok, teslim dönemi kapalı…) kayıt **kalır**;
+  hata kodu korunur, mesaj "Yazı kaydedildi, ancak incelemeye gönderilemedi: …" diye başlar.
+  Kayıt reddedilirse hiçbir şey gönderilmez.
+- Enter tuşu formun ilk düğmesine basar; ilk düğme "Taslağı kaydet" kaldı, yanlışlıkla
+  gönderim olmaz. Beyan metni (D-238) düğmelerin hemen üstünde, tıklamadan önce görünür.
+- Kaydedilmemiş değişiklik varken sekme kapatılır ya da yenilenirse tarayıcı sorar
+  (`PanelForm`'un `warnUnsaved` seçeneği; yalnızca bu formda açık). Panel içi bağlantılarla
+  geçiş bu uyarıyı tetiklemez; yerel taslak (localStorage) ayrı bir adım.
+- Uçtan uca işlem tek transaction değil: kayıt ile geçiş ayrı adımlar ve bu bilinçli — reddedilen
+  gönderimde yazarın metni kaybolmasın diye kayıt geri alınmaz.
+
+**Hukuk (D-084):** Yeni kişisel veri, amaç, aktarım veya saklama süresi yok. Beyan artık
+yazarın gönderdiği anda ekranda olan metne bağlanıyor; bu D-238'in amacına daha yakın.
+Aydınlatma metni değişmedi.
+
+**Doğrulama:** `submission-licence.test.ts` (D-360): ekrandaki metin kaydedilir ve beyan o
+metnin hash'ine bağlanır; sözleşmesiz yazarda gönderim 409 ile reddedilir ama yeni metin ve
+sürümü kalır, mesaj "Yazı kaydedildi" der; tanımsız alanla kayıt reddedilince metin ve durum
+değişmez, beyan oluşmaz. Migration yok.

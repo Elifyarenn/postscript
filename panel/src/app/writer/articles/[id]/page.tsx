@@ -17,7 +17,7 @@ import { countWords, formatWordCount } from "@/lib/word-count";
 import { categoryBudgetForForm } from "@/services/category-budget";
 import { Alert, Card, EmptyState, Field, Input, PageHeader, Select, StatusBadge, Table, Td, Th } from "@/components/ui";
 import { formatDate, formatDateTime } from "@/lib/utils";
-import { submitArticleAction, updateArticleAsWriterAction } from "../../actions";
+import { updateArticleAsWriterAction } from "../../actions";
 
 export const metadata = { title: "Yazı" };
 
@@ -86,7 +86,14 @@ export default async function WriterArticleDetailPage({
             <Card>
               <h2 className="mb-4 font-serif text-lg">Yazı</h2>
 
-              <PanelForm action={updateArticleAsWriterAction} csrfToken={csrfToken} submitLabel="Taslağı kaydet">
+              <PanelForm
+                action={updateArticleAsWriterAction}
+                csrfToken={csrfToken}
+                submitLabel="Taslağı kaydet"
+                submitVariant="secondary"
+                secondarySubmit={{ label: "İncelemeye gönder", intent: "submit" }}
+                warnUnsaved
+              >
                 <>
                   <input type="hidden" name="articleId" value={article.id} />
 
@@ -149,32 +156,32 @@ export default async function WriterArticleDetailPage({
                       placeholder="Girişi yeniden yazdım"
                     />
                   </Field>
-                </>
-              </PanelForm>
-            </Card>
 
-            <Card>
-              <h2 className="mb-4 font-serif text-lg">İncelemeye gönder</h2>
-              <p className="mb-4 text-sm text-muted">
-                Yazı, seçtiğiniz kategorinin editörüne düşer; editör onayladıktan
-                sonra ana editör, son olarak yönetici inceleyecektir.
-              </p>
-              {/* The declaration itself, so it has to be visible before the click (D-238);
-                  an admin has no contract to point at (D-305) */}
-              {needsAuthorAgreement(user) ? (
-                <p className="mb-4 text-sm">
-                  Göndererek bu yazının{" "}
-                  <Link href="/writer/agreement" className="text-accent underline">
-                    yazar sözleşmesindeki
-                  </Link>{" "}
-                  koşullarla yayımlanmasına izin verirsiniz. İzin, derginin yazıyı
-                  yayımlama taahhüdü değildir.
-                </p>
-              ) : (
-                <p className="mb-4 text-sm">Göndererek bu yazının dergide yayımlanmasına izin verirsiniz.</p>
-              )}
-              <PanelForm action={submitArticleAction} csrfToken={csrfToken} submitLabel="İncelemeye gönder">
-                <input type="hidden" name="articleId" value={article.id} />
+                  {/* Inside the edit form, so "İncelemeye gönder" saves the text on
+                      screen first instead of sending the last stored one (D-360) */}
+                  <section className="space-y-2 border-t border-line pt-4">
+                    <h3 className="font-serif text-base">İncelemeye gönder</h3>
+                    <p className="text-sm text-muted">
+                      Gönderdiğinizde metin önce kaydedilir. Yazı, seçtiğiniz kategorinin
+                      editörüne düşer; editör onayladıktan sonra ana editör, son olarak
+                      yönetici inceleyecektir.
+                    </p>
+                    {/* The declaration itself, so it has to be visible before the click (D-238);
+                        an admin has no contract to point at (D-305) */}
+                    {needsAuthorAgreement(user) ? (
+                      <p className="text-sm">
+                        Göndererek bu yazının{" "}
+                        <Link href="/writer/agreement" className="text-accent underline">
+                          yazar sözleşmesindeki
+                        </Link>{" "}
+                        koşullarla yayımlanmasına izin verirsiniz. İzin, derginin yazıyı
+                        yayımlama taahhüdü değildir.
+                      </p>
+                    ) : (
+                      <p className="text-sm">Göndererek bu yazının dergide yayımlanmasına izin verirsiniz.</p>
+                    )}
+                  </section>
+                </>
               </PanelForm>
             </Card>
           </>

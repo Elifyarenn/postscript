@@ -45,7 +45,7 @@ import {
   type Actor,
 } from "@/lib/auth/rbac";
 import { env } from "@/lib/env";
-import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
+import { AppError, badRequest, conflict, forbidden, isAppError, notFound } from "@/lib/errors";
 import { sendMail } from "@/services/mail-queue";
 import { triggerRevalidate } from "@/lib/revalidate";
 import { slugify, uniqueSlug } from "@/lib/slug";
@@ -760,6 +760,32 @@ export async function updateArticleAsWriter(
   });
 
   return updated!;
+}
+
+/**
+ * The author's "İncelemeye gönder": saves what the form holds, then sends it
+ * to the review chain (D-360). Submitting used to post the article id alone,
+ * so text typed since the last save was dropped, and the page then locked the
+ * form. The save comes first and stays even when the submission is refused,
+ * so a refusal never costs the author their text; the error says so.
+ */
+export async function saveAndSubmitArticleAsWriter(
+  actor: Actor,
+  articleId: string,
+  rawInput: unknown,
+  meta: RequestMeta,
+): Promise<Article> {
+  await updateArticleAsWriter(actor, articleId, rawInput, meta);
+  try {
+    return await transitionArticle(actor, articleId, "in_review", meta, {});
+  } catch (error) {
+    if (!isAppError(error)) throw error;
+    throw new AppError(
+      error.code,
+      `Yazı kaydedildi, ancak incelemeye gönderilemedi: ${error.message}`,
+      error.details,
+    );
+  }
 }
 
 /** Statuses whose article is part of an issue's published record (D-330). */

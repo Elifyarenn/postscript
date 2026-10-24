@@ -14,7 +14,7 @@ import { uploadSignedContract } from "@/services/signed-contracts";
 import {
   createArticleAsWriter,
   declineWorkAndReturnForRevision,
-  transitionArticle,
+  saveAndSubmitArticleAsWriter,
   updateArticleAsWriter,
 } from "@/services/articles";
 import { approveWork, confirmUncoveredSubmissions } from "@/services/rights";
@@ -184,19 +184,28 @@ export async function updateArticleAsWriterAction(
     const meta = await requestMetadata();
 
     const articleId = text(formData, "articleId");
-    const saved = await updateArticleAsWriter(
-      { ...user },
-      articleId,
-      {
-        title: text(formData, "title"),
-        summary: optionalText(formData, "summary"),
-        bodyMarkdown: text(formData, "bodyMarkdown"),
-        slug: optionalText(formData, "slug"),
-        category: optionalText(formData, "category"),
-        changeNote: optionalText(formData, "changeNote"),
-      },
-      meta,
-    );
+    const input = {
+      title: text(formData, "title"),
+      summary: optionalText(formData, "summary"),
+      bodyMarkdown: text(formData, "bodyMarkdown"),
+      slug: optionalText(formData, "slug"),
+      category: optionalText(formData, "category"),
+      changeNote: optionalText(formData, "changeNote"),
+    };
+
+    // Both buttons post the same form, so a submit carries the text on screen (D-360)
+    if (text(formData, "intent") === "submit") {
+      try {
+        await saveAndSubmitArticleAsWriter({ ...user }, articleId, input, meta);
+      } finally {
+        // A refused submit has still saved, and the page has to show that version
+        revalidatePath(`/writer/articles/${articleId}`);
+        revalidatePath("/writer/articles");
+      }
+      return { success: "Yazı kaydedildi ve incelemeye gönderildi. Kategori editörünüz onaylayana dek bekleyecek." };
+    }
+
+    const saved = await updateArticleAsWriter({ ...user }, articleId, input, meta);
 
     revalidatePath(`/writer/articles/${articleId}`);
     revalidatePath("/writer/articles");
@@ -235,25 +244,6 @@ export async function confirmUncoveredSubmissionsAction(
           ? "Teyit bekleyen yazı kalmadı."
           : `${count} yazı için yayın izni beyanı kaydedildi.`,
     };
-  });
-}
-
-/** Sends the author's draft to the review chain: `draft → in_review` (D-059). */
-export async function submitArticleAction(
-  _state: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  return runAction(async () => {
-    await assertCsrfFromForm(formData);
-    const { user } = await requireRole("writer");
-    const meta = await requestMetadata();
-
-    const articleId = text(formData, "articleId");
-    await transitionArticle({ ...user }, articleId, "in_review", meta, {});
-
-    revalidatePath(`/writer/articles/${articleId}`);
-    revalidatePath("/writer/articles");
-    return { success: "Yazı incelemeye gönderildi. Kategori editörünüz onaylayana dek bekleyecek." };
   });
 }
 
