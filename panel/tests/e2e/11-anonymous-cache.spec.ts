@@ -108,3 +108,22 @@ test.describe("member with a session", () => {
     expect(imprint!.headers()["cache-control"]).toMatch(/no-store|private/);
   });
 });
+
+test.describe("visitor whose session cookie opens nothing (D-365)", () => {
+  test("loses the dead cookie on the first page and gets the shared copies after", async ({ page, context, baseURL }) => {
+    const host = new URL(baseURL!).hostname;
+    await context.addCookies([{ name: "ps_session", value: "bitmis-bir-oturum", domain: host, path: "/" }]);
+
+    // With the cookie the visitor is still sent to the per-request page
+    const first = await page.goto("/");
+    expect(first!.headers()["cache-control"]).toMatch(/no-store|private/);
+
+    // The page asks the server to delete the cookie as soon as it runs
+    await expect
+      .poll(async () => (await context.cookies()).some((cookie) => cookie.name === "ps_session"))
+      .toBe(false);
+
+    const next = await page.goto("/kategoriler");
+    expect(next!.headers()["cache-control"]).toMatch(/s-maxage=60/);
+  });
+});

@@ -19,6 +19,7 @@ import {
   confirmEmailChange,
 } from "@/services/auth";
 import {
+  clearStaleSessionCookie,
   createSession,
   destroyCurrentSession,
   getAuthContext,
@@ -32,7 +33,7 @@ import {
   verifyLoginCode,
   TWO_FACTOR_COOKIE,
 } from "@/services/two-factor";
-import { assertCsrfFromForm } from "@/lib/csrf";
+import { assertCsrf, assertCsrfFromForm } from "@/lib/csrf";
 import { BOT_TOKEN_FIELD } from "@/lib/bot-token";
 import { runAction, text, checkbox, type ActionState } from "@/lib/action";
 import { clearAttempts } from "@/lib/rate-limit";
@@ -207,6 +208,21 @@ export async function logoutAction(formData: FormData): Promise<void> {
   await assertCsrfFromForm(formData);
   await destroyCurrentSession();
   redirect("/login");
+}
+
+/**
+ * Deletes a session cookie that opens nothing any more (D-365), so the next
+ * page comes from the cached anonymous copy. Called by the page itself, not
+ * by a form, yet it is a mutation and carries the token like one (D-072).
+ * It never touches a working session: `clearStaleSessionCookie` checks again.
+ */
+export async function clearStaleSessionAction(csrfToken: string): Promise<void> {
+  try {
+    await assertCsrf(csrfToken);
+    await clearStaleSessionCookie();
+  } catch {
+    // Nothing for the reader to do: the cookie stays and the page works as before
+  }
 }
 
 export async function verifyEmailAction(

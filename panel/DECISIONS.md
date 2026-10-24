@@ -14350,3 +14350,43 @@ açmak okundu yapar (okunmamış 1 → 0); başka sohbete mesaj gelince değişi
 okuyunca ve mesaj kaldırılınca değişir; bilinmeyen üye, kendisi ve engelleyen üye için 404.
 Testi yazarken bulunan hata: listenin yerinde ters çevrilmesi yüzünden ilk sürüm karşı
 tarafın en eski mesajına bakıyordu; düzeltildi, test bunu yakalıyor. Migration yok.
+
+## D-365 — Artık oturum açmayan `ps_session` çerezi silinir, ziyaretçi önbelleğe döner
+
+**Bağlam:** 2026-10-24 incelemesinin 6. maddesi. Oturumsuz ziyaretçiyi önbellekteki
+kopyaya gönderen kural (D-351, `next.config.ts` rewrites) yalnızca `ps_session` çerezinin
+**var olup olmadığına** bakıyor. Oturum 7 gün hareketsizlikte geçersizleşiyor
+(`SESSION_IDLE_DAYS`) ama çerez 30 gün yaşıyor (`SESSION_MAX_AGE_DAYS`); başka cihazdan
+"her yerden çık", iptal ya da hesap silme de çerezi silmiyor ve sayfa render sırasında
+çerez silemiyor. Böyle bir okur 23 güne kadar her sayfada fonksiyon + Neon + `SiteShell`
+maliyeti ödüyor, D-351'in kazancı kayboluyordu.
+
+**Karar:**
+- `hasStaleSessionCookie()` (session.ts): çerez var ama `getAuthContext()` null. Aynı
+  istekte zaten çalışan, önbelleklenmiş oturum okumasını kullanır; ek sorgu yok.
+- `StaleSessionCleaner` (sunucu bileşeni) yalnızca çerezli ziyaretçinin düştüğü istek
+  başına sayfalara konur: ana sayfa, kategoriler, hakkında, künye ve `/magazine` layout'u
+  (yazılar, sayılar, yazarlar). **Önbellekteki `/anon/*` kopyalarına konmaz**: çerez okumak
+  onları önbellekten çıkarırdı (build çıktısında hepsi hâlâ ●).
+- Çerez ölüyse sayfaya küçük bir istemci bileşeni (`ClearStaleSession`) gelir ve bir kez
+  `clearStaleSessionAction(csrfToken)` çağırır. Form olmasa da bir mutasyon olduğu için
+  çift gönderimli token'ı taşır (D-072). Action oturumu **yeniden doğrular**
+  (`clearStaleSessionCookie`): arada başka sekmede giriş yapılmış ve çerez yenilenmişse
+  dokunmaz. Hata okura gösterilmez; çerez kalır, sayfa eskisi gibi çalışır.
+- Sonraki sayfa çerezsiz istenir ve önbellekteki kopyadan gelir.
+- Okuyucu (`/magazine/issues/:n/oku`) ve yasal metin sayfaları kapsanmadı: okuyucuya çoğunlukla
+  sayının sayfasından (kapsanıyor) gelinir; kvkk/kullanım şartları oturum okumuyor.
+- Kapsam dışı: çerez ömrünü hareketsizlik süresine indirip her kullanımda yenilemek. Çerez
+  render sırasında yazılamadığı için bu, her sayfada bir action ya da proxy işi demek;
+  proxy'ye veritabanı işi koymamak D-308'in kararı.
+
+**Hukuk (D-084):** Yeni çerez, veri ya da süre yok; yalnızca var olan `ps_session` çerezi
+oturum bittiğinde daha erken siliniyor. Aydınlatma metnindeki "Oturum süresince" ifadesiyle
+uyumlu; metin değişmedi.
+
+**Doğrulama:** `stale-session.test.ts` (6): çerezsiz ziyaretçiye dokunulmaz; çalışan
+oturumun çerezi asla silinmez; başka yerden çıkılmış, 7 günü aşmış ve hiçbir oturuma denk
+gelmeyen çerez silinir; token tutmazsa çerez kalır. E2E `11-anonymous-cache.spec.ts`
+(D-365): ölü çerezle ana sayfa istek başına gelir, çerez tarayıcıdan silinir, sonraki
+sayfa önbellekteki kopyadır; dosyanın 18 testi geçti (oturumlu üyenin istek başına sayfası
+dahil). Migration yok.

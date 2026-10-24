@@ -1,5 +1,6 @@
 import { pageMetadata } from "@/lib/seo";
 import { getAuthContext } from "@/lib/auth/session";
+import { StaleSessionCleaner } from "@/components/stale-session";
 import { ImprintView } from "@/components/public-views/imprint";
 
 export const metadata = pageMetadata({
@@ -16,5 +17,10 @@ export const metadata = pageMetadata({
  */
 export default async function ImprintPage() {
   const context = await getAuthContext();
-  return <ImprintView isAdmin={context?.user.role === "admin"} />;
+  return (
+    <>
+      <StaleSessionCleaner />
+      <ImprintView isAdmin={context?.user.role === "admin"} />
+    </>
+  );
 }

@@ -139,6 +139,34 @@ export async function listSessions(userId: string) {
     .orderBy(desc(sessions.lastSeenAt));
 }
 
+/**
+ * A `ps_session` cookie that opens no session any more (D-365): idle past
+ * `SESSION_IDLE_DAYS`, signed out elsewhere, revoked, or of a deleted account.
+ * The cookie lives `SESSION_MAX_AGE_DAYS`, longer than the idle limit, and a
+ * page cannot delete a cookie while it renders. Left in place it kept the
+ * visitor off the cached anonymous pages (D-351): the rewrite only asks
+ * whether the cookie is there.
+ */
+export async function hasStaleSessionCookie(): Promise<boolean> {
+  const cookieStore = await cookies();
+  if (!cookieStore.get(SESSION_COOKIE)?.value) return false;
+  return (await getAuthContext()) === null;
+}
+
+/**
+ * Deletes the session cookie when it opens nothing, from a server action.
+ * Checked again here rather than trusting the page: a sign-in in another tab
+ * may have replaced the cookie since, and a working session must survive.
+ * Returns whether it deleted.
+ */
+export async function clearStaleSessionCookie(): Promise<boolean> {
+  const cookieStore = await cookies();
+  if (!cookieStore.get(SESSION_COOKIE)?.value) return false;
+  if ((await loadAuthContext()) !== null) return false;
+  cookieStore.delete(SESSION_COOKIE);
+  return true;
+}
+
 /* ------------------------------------------------------------------ */
 /* Reading the current session                                         */
 /* ------------------------------------------------------------------ */

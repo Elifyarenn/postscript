@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { getAuthContext } from "@/lib/auth/session";
+import { StaleSessionCleaner } from "@/components/stale-session";
 import { SiteShell } from "@/components/site-shell";
 
 /**
@@ -13,5 +14,10 @@ import { SiteShell } from "@/components/site-shell";
 export default async function MagazineLayout({ children }: { children: ReactNode }) {
   const context = await getAuthContext();
 
-  return <SiteShell user={context?.user ?? null}>{children}</SiteShell>;
+  return (
+    <SiteShell user={context?.user ?? null}>
+      <StaleSessionCleaner />
+      {children}
+    </SiteShell>
+  );
 }
