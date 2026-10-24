@@ -14454,3 +14454,32 @@ altında yalnızca dakika, dolan sürenin etiketi ve kenar. `admin-mail.test.ts`
 açıklama yok) ve sonraki çalışmalarda tekrar yok; 24 saat sonra ilk çalışmada "doldu"
 konusu; sonuçlanmış bildirime e-posta yok. İlk e-postanın bağlantısı kuyruğa gidiyor.
 `mail-templates.test.ts`: yeni şablonun HTML ve metin kontrolleri. Migration yok.
+
+## D-368 — Sözleşmeler sayfası: e-posta eşleştirmesi erken durur, sorgular paralel
+
+**Bağlam:** 2026-10-24 incelemesinin 9. maddesi. `/admin/agreements` her açılışta
+`listContributorDocuments` → `syncDocumentMails` çalıştırıyordu (D-314). Eşleştirmenin 2. ve 3.
+adımı, belgelerin henüz e-posta işini taşımadığı dönemden kalan gönderimler için: her
+açılışta `contributor_documents` gönderim kuyruğu işlerini bütün sütunlarıyla okuyor ve
+`audit_log`'u yalnızca `action` ile (indeksi olmayan kolon) tarayıp her satır için ayrıca
+`mail_jobs`'a soruyordu (N+1). Denetim kaydı her panel işlemiyle büyüdüğü için sayfa giderek
+yavaşlayacaktı. Sayfa ayrıca yedi bağımsız sorguyu sırayla bekliyordu.
+
+**Karar:**
+- Eşleştirme önce **hiç e-posta işine bağlanmamış, gönderilmemiş belgeleri** okur (küçük
+  küme). Yoksa 2. ve 3. adım hiç çalışmaz; olağan açılış burada biter.
+- Varsa 3. adım denetim kaydını yalnızca o belgelerin sahipleriyle sorar
+  (`entity_type = 'users' and entity_id in (…) and action = …`): mevcut
+  `audit_log_entity_idx` kullanılır, tablo taranmaz. Belgelerinin hepsi bağlı olan bir
+  gönderim için `mail_jobs` sorgusu atlanır. 2. adım yalnızca bu sahiplerin toplu
+  işlerine bakar ve kuyruktan yalnızca gereken sütunları okur.
+- Davranış aynı: eski gönderimler hâlâ tanınır (D-314 testi değişmeden geçer), bağlı bir
+  belge başka bir işe kaydırılmaz. 1. adım (kuyruğun yazamadığı "gönderildi" bilgisi) aynen.
+- Sayfanın yedi okuması `Promise.all` ile birlikte.
+- Migration yok: `audit_log(action)` indeksi gerekmedi, entity indeksi yetiyor.
+
+**Hukuk (D-084):** Veri, amaç ve süre değişmedi; aydınlatma metni değişmedi.
+
+**Doğrulama:** `contributor-documents.test.ts`: D-314'ün eski gönderim tanıma testi geçiyor
+(toplu ve tek kişilik); yeni test (D-368): e-postası zaten bağlı belgeler, onları adlandıran
+eski tarz bir denetim satırı ve eşleşebilecek ikinci bir iş varken yerinde kalır.

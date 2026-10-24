@@ -77,13 +77,16 @@ export default async function AdminAgreementsPage() {
   const actor = { ...user };
   const csrfToken = (await readCsrfToken()) ?? "";
 
-  const versions = await listAgreementVersions(actor);
-  const report = await acceptanceReport(actor);
-  const signed = await listSignedContracts(actor);
-  const documents = await listContributorDocuments(actor);
-  const unlicensed = await listUnlicensedFormerWriterWorks(actor);
-  const licenceScopes = await listLicenceScopeOptions(actor);
-  const commercialUse = await licenceCommercialUse();
+  // Independent reads, side by side: one after another they were seven round trips (D-368)
+  const [versions, report, signed, documents, unlicensed, licenceScopes, commercialUse] = await Promise.all([
+    listAgreementVersions(actor),
+    acceptanceReport(actor),
+    listSignedContracts(actor),
+    listContributorDocuments(actor),
+    listUnlicensedFormerWriterWorks(actor),
+    listLicenceScopeOptions(actor),
+    licenceCommercialUse(),
+  ]);
   const reviewCount = documents.filter((row) => row.status === "needs_review").length;
   // Mailed documents are their owners' now: listed apart, never sent or cleared again (D-314)
   const sentDocuments = documents.filter((row) => row.mailState === "sent");

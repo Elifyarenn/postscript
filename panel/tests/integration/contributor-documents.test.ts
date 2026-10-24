@@ -6,7 +6,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
 import {
   agreementVersions,
@@ -810,6 +810,49 @@ describe("mailed and unmailed documents kept apart (D-314)", () => {
     expect((await queueAllContributorDocuments(actorOf(s.admin), noMeta)).documents).toBe(
       listed.filter((row) => row.status === "prepared" && row.mailState !== "sent").length,
     );
+  });
+
+  // D-368: the matching now reads only around documents no mail is linked to
+  it("leaves documents that already carry their mail where they are", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const own = (await db.select().from(contributorDocuments)).filter(
+      (row) => row.userId === s.illustrator.id && row.status === "prepared",
+    );
+    expect(own.length).toBeGreaterThan(0);
+
+    const [linkedJob] = await db
+      .insert(mailJobs)
+      .values({ kind: "contributor_documents", recipient: s.illustrator.email, subject: "İlk", textBody: null, status: "sent", sentAt: new Date() })
+      .returning({ id: mailJobs.id });
+    await db
+      .update(contributorDocuments)
+      .set({ mailJobId: linkedJob!.id, mailedAt: new Date() })
+      .where(inArray(contributorDocuments.id, own.map((row) => row.id)));
+
+    // An old-style send naming the same documents, with a mail it could be matched to
+    await db.insert(mailJobs).values({
+      kind: "contributor_documents",
+      recipient: s.illustrator.email,
+      subject: "İkinci",
+      textBody: null,
+      status: "sent",
+      sentAt: new Date(),
+    });
+    await db.insert(auditLog).values({
+      actorId: s.admin.id,
+      action: "contributor_documents.mailed",
+      entityType: "users",
+      entityId: s.illustrator.id,
+      after: { documentIds: own.map((row) => row.id) },
+    });
+
+    await listContributorDocuments(actorOf(s.admin));
+    const after = await db
+      .select({ mailJobId: contributorDocuments.mailJobId })
+      .from(contributorDocuments)
+      .where(inArray(contributorDocuments.id, own.map((row) => row.id)));
+    expect(after.every((row) => row.mailJobId === linkedJob!.id)).toBe(true);
   });
 });
 

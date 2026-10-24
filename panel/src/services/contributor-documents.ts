@@ -43,6 +43,7 @@ import {
   writerApplications,
   type AgreementVersion,
   type ContributorDocument,
+  type MailJob,
   type User,
 } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
@@ -1380,7 +1381,7 @@ async function syncDocumentMails(): Promise<void> {
       .where(and(eq(contributorDocuments.mailJobId, job.jobId), isNull(contributorDocuments.mailedAt)));
   }
 
-  const link = async (job: typeof mailJobs.$inferSelect, documentIds: string[]) => {
+  const link = async (job: Pick<MailJob, "id" | "status" | "sentAt" | "createdAt">, documentIds: string[]) => {
     if (documentIds.length === 0) return;
     await db
       .update(contributorDocuments)
@@ -1395,13 +1396,31 @@ async function syncDocumentMails(): Promise<void> {
   };
   const unclaimed = sql`not exists (select 1 from ${contributorDocuments} where ${contributorDocuments.mailJobId} = ${mailJobs.id})`;
 
+  // Steps 2 and 3 can only link a document no mail is linked to yet. Asked
+  // first, so the usual load, where every sent document already carries its
+  // job, stops here instead of reading the outbox and the whole audit trail
+  // once per page view (D-368).
+  const unlinked = await db
+    .select({ id: contributorDocuments.id, userId: contributorDocuments.userId })
+    .from(contributorDocuments)
+    .where(and(isNull(contributorDocuments.mailJobId), isNull(contributorDocuments.mailedAt)));
+  if (unlinked.length === 0) return;
+  const unlinkedIds = new Set(unlinked.map((row) => row.id));
+  const ownerIds = [...new Set(unlinked.map((row) => row.userId))];
+
   const bulk = await db
-    .select()
+    .select({
+      id: mailJobs.id,
+      status: mailJobs.status,
+      sentAt: mailJobs.sentAt,
+      createdAt: mailJobs.createdAt,
+      dedupeKey: mailJobs.dedupeKey,
+    })
     .from(mailJobs)
     .where(and(eq(mailJobs.kind, "contributor_documents"), like(mailJobs.dedupeKey, "contributor_documents:%"), unclaimed));
   for (const job of bulk) {
     const [, userId, key] = job.dedupeKey!.split(":");
-    if (!userId || !key || !UUID.test(userId)) continue;
+    if (!userId || !key || !UUID.test(userId) || !ownerIds.includes(userId)) continue;
     const candidates = await db
       .select()
       .from(contributorDocuments)
@@ -1421,16 +1440,26 @@ async function syncDocumentMails(): Promise<void> {
     if (match) await link(job, match.map((row) => row.id));
   }
 
+  // By the owners, through the audit trail's entity index, not by the action alone
   const single = await db
     .select({ at: auditLog.createdAt, userId: auditLog.entityId, after: auditLog.after, email: users.email })
     .from(auditLog)
     .innerJoin(users, eq(auditLog.entityId, users.id))
-    .where(eq(auditLog.action, "contributor_documents.mailed"));
+    .where(
+      and(
+        eq(auditLog.entityType, "users"),
+        inArray(auditLog.entityId, ownerIds),
+        eq(auditLog.action, "contributor_documents.mailed"),
+      ),
+    );
   for (const sent of single) {
     const ids = (sent.after as { documentIds?: unknown } | null)?.documentIds;
     if (!Array.isArray(ids) || ids.length === 0) continue;
+    const named = ids.filter((id): id is string => typeof id === "string" && UUID.test(id));
+    // A send whose documents are all linked already has nothing left to match
+    if (!named.some((id) => unlinkedIds.has(id))) continue;
     const [job] = await db
-      .select()
+      .select({ id: mailJobs.id, status: mailJobs.status, sentAt: mailJobs.sentAt, createdAt: mailJobs.createdAt })
       .from(mailJobs)
       .where(
         and(
@@ -1444,7 +1473,7 @@ async function syncDocumentMails(): Promise<void> {
       )
       .orderBy(mailJobs.createdAt)
       .limit(1);
-    if (job) await link(job, ids.filter((id): id is string => typeof id === "string" && UUID.test(id)));
+    if (job) await link(job, named);
   }
 }
 
