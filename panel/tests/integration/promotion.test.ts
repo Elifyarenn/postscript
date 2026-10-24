@@ -5,7 +5,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
-import { auditLog, roleChanges, sessions } from "@/db/schema";
+import { auditLog, roleChanges, sessions, users } from "@/db/schema";
 import {
   changeRole,
   checkWriterEligibility,
@@ -14,6 +14,7 @@ import {
   setBanned,
   setWriterStatus,
 } from "@/services/users";
+import { ELIGIBILITY_RULE_LABELS } from "@/lib/writer-eligibility";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import { isAppError } from "@/lib/errors";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
@@ -80,6 +81,20 @@ describe("eligibility", () => {
     expect(result.eligible).toBe(false);
     expect(result.problems).toContain("kvkk_not_accepted");
     expect(result.messages).toContain("KVKK aydınlatma metni onaylanmamış.");
+  });
+
+  // D-366: the admin's checklist had no KVKK row, so this account showed every tick green
+  it("gives the admin's checklist a row for every condition it can fail", async () => {
+    const candidate = await createUser({ emailVerified: false, kvkkConsent: false });
+    await db.update(users).set({ isBanned: true, birthDate: null }).where(eq(users.id, candidate.id));
+    const failing = checkWriterEligibility(await reloadUser(candidate.id)).problems;
+
+    const minor = await createUser({ birthDate: "2015-01-01" });
+    failing.push(...checkWriterEligibility(minor).problems);
+
+    for (const problem of failing) expect(ELIGIBILITY_RULE_LABELS[problem]).toBeTruthy();
+    expect(Object.keys(ELIGIBILITY_RULE_LABELS).sort()).toEqual([...new Set(failing)].sort());
+    expect(ELIGIBILITY_RULE_LABELS.kvkk_not_accepted).toBe("KVKK aydınlatma metni onaylanmış");
   });
 });
 

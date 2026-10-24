@@ -8,6 +8,7 @@ import { guardPanel } from "@/lib/auth/guard";
 import { panelRoleBadges } from "@/lib/auth/rbac";
 import { isAppError } from "@/lib/errors";
 import { checkPromotionReadiness, findUserById, getUserOverview } from "@/services/users";
+import { ELIGIBILITY_RULES } from "@/lib/writer-eligibility";
 import { calculateAge } from "@/lib/age";
 import { whatsappHref } from "@/lib/whatsapp";
 import { profileHref } from "@/lib/profile-link";
@@ -56,13 +57,8 @@ import {
 
 export const metadata = { title: "Kullanıcı" };
 
-/** The precondition list §9 asks for: every rule with a tick or a cross. */
-const RULES = [
-  { id: "email_not_verified", label: "E-posta adresi doğrulanmış" },
-  { id: "birth_date_missing", label: "Doğum tarihi girilmiş" },
-  { id: "under_age", label: "18 yaşını doldurmuş" },
-  { id: "banned", label: "Yasaklı değil" },
-] as const;
+/** The precondition list §9 asks for: every rule with a tick or a cross, the same as the service (D-366). */
+const RULES = ELIGIBILITY_RULES;
 
 export default async function AdminUserDetailPage({
   params,

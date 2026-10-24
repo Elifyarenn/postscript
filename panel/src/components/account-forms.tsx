@@ -6,6 +6,7 @@
  */
 import Link from "next/link";
 import Image from "next/image";
+import { ELIGIBILITY_RULES } from "@/lib/writer-eligibility";
 import { PanelForm, ActionButton } from "./form";
 import {
   Card,
@@ -223,13 +224,8 @@ export function WriterApplicationCard({
   const open = latest && !["signed", "editor_rejected", "admin_rejected"].includes(latest.status);
   const ready = problems.length === 0;
 
-  const RULES: [string, string][] = [
-    ["email_not_verified", "E-posta adresi doğrulanmış"],
-    ["birth_date_missing", "Doğum tarihi girilmiş"],
-    ["under_age", "18 yaşını doldurmuş"],
-    ["kvkk_consent_missing", "Güncel KVKK onayı verilmiş"],
-    ["banned", "Yasaklı değil"],
-  ];
+  // The service's own list; this one looked for "kvkk_consent_missing", a code never returned (D-366)
+  const RULES = ELIGIBILITY_RULES.map((rule): [string, string] => [rule.id, rule.label]);
 
   return (
     <Card>

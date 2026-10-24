@@ -14390,3 +14390,32 @@ gelmeyen çerez silinir; token tutmazsa çerez kalır. E2E `11-anonymous-cache.s
 (D-365): ölü çerezle ana sayfa istek başına gelir, çerez tarayıcıdan silinir, sonraki
 sayfa önbellekteki kopyadır; dosyanın 18 testi geçti (oturumlu üyenin istek başına sayfası
 dahil). Migration yok.
+
+## D-366 — Yazar terfi kontrol listesi servisin koşullarından gelir; KVKK satırı iki ekranda da doğru
+
+**Bağlam:** 2026-10-24 incelemesinin 7. maddesi. `checkWriterEligibility` beş koşul denetliyor
+(e-posta, doğum tarihi, 18 yaş, KVKK onayı, yasak; D-070 KVKK'yı geri getirdi). Ama:
+- Admin kullanıcı ekranının listesinde (`admin/users/[id]`) KVKK satırı **yoktu**: onayı
+  olmayan hesapta dört yeşil tik ve altında "Yazar terfisi için ön koşullar sağlanmıyor"
+  birlikte görünüyordu.
+- Üyenin "Yazar olma başvurusu" kartı (`account-forms.tsx`) KVKK için
+  `kvkk_consent_missing` kodunu arıyordu; servis `kvkk_not_accepted` döndürdüğü için KVKK
+  satırı **her zaman yeşildi**.
+
+**Karar:**
+- Koşul kodları ve satır metinleri tek yerde: `src/lib/writer-eligibility.ts`
+  (`EligibilityProblem`, `ELIGIBILITY_RULE_LABELS`, `ELIGIBILITY_RULES`). Etiketler
+  `Record<EligibilityProblem, string>`: yeni bir koşul eklenip bir ekrandan unutulursa
+  typecheck kırılır. Veritabanına bağlı değil, hesap ekranı da kullanabilir. Servis türü
+  oradan alır ve dışarı verir.
+- İki ekran da bu listeyi gösterir; KVKK satırı "KVKK aydınlatma metni onaylanmış", yaş
+  satırı `MINIMUM_WRITER_AGE`'den.
+- Terfinin kendisi değişmedi: servis zaten KVKK'yı denetliyor ve reddediyordu; düzelen yalnızca
+  ekranın söylediği.
+
+**Hukuk (D-084):** Kural değişmedi (CLAUDE.md: e-posta doğrulanmış, ≥ 18, KVKK onayı,
+yasaklı değil). Yeni veri yok; aydınlatma metni değişmedi.
+
+**Doğrulama:** `promotion.test.ts` (D-366): her şeyi eksik bir hesapla ve reşit olmayan bir
+hesapla üretilebilen bütün koşul kodlarının listede satırı var, listede fazladan satır yok,
+KVKK satırının metni doğru. Migration yok.

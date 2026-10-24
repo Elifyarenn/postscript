@@ -46,6 +46,7 @@ import {
   type WriterApplicationStatus,
 } from "@/db/schema";
 import { calculateAge, isAdult, MINIMUM_WRITER_AGE, parseIsoDate } from "@/lib/age";
+import type { EligibilityProblem } from "@/lib/writer-eligibility";
 import type { UserListRow, UserSegment } from "@/lib/user-segments";
 import { normalisePhone } from "@/lib/phone";
 import { recordRoleChange, writeAudit } from "@/lib/audit";
@@ -67,12 +68,7 @@ import type { RequestMeta } from "./auth";
 /* Writer eligibility (§6)                                             */
 /* ------------------------------------------------------------------ */
 
-export type EligibilityProblem =
-  | "email_not_verified"
-  | "birth_date_missing"
-  | "under_age"
-  | "kvkk_not_accepted"
-  | "banned";
+export type { EligibilityProblem };
 
 const PROBLEM_LABELS: Record<EligibilityProblem, string> = {
   email_not_verified: "E-posta adresi doğrulanmamış.",
