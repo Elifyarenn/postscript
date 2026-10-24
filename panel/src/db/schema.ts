@@ -2217,6 +2217,47 @@ export const auditLog = pgTable(
 );
 
 /* ------------------------------------------------------------------ */
+/* illustrations: drawings a çizer hands in from their panel (D-362)    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A drawing a çizer uploaded for the magazine to look at. Kept apart from the
+ * `media` library on purpose: nothing here can be attached to an article or
+ * published, and handing a drawing in licenses nothing (FSEK); a drawing that
+ * goes into an issue still needs its own signed licence form.
+ *
+ * Removing one deletes the file and keeps the row (who handed in what, when,
+ * and its hash) for a year; `storage_key` then points at nothing.
+ */
+export const illustrations = pgTable(
+  "illustrations",
+  {
+    id: id(),
+    illustratorId: uuid("illustrator_id")
+      .notNull()
+      .references(() => users.id),
+    title: text("title").notNull(),
+    note: text("note"),
+    /** The issue the çizer drew it for, when they said. */
+    issueId: uuid("issue_id").references(() => issues.id, { onDelete: "set null" }),
+    storageKey: text("storage_key").notNull(),
+    mime: text("mime").notNull(),
+    size: integer("size").notNull(),
+    width: integer("width"),
+    height: integer("height"),
+    sha256: text("sha256").notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+    deletedAt: deletedAt(),
+    deletedBy: uuid("deleted_by").references(() => users.id, { onDelete: "set null" }),
+  },
+  (t) => [
+    index("illustrations_illustrator_idx").on(t.illustratorId, t.createdAt),
+    index("illustrations_created_at_idx").on(t.createdAt),
+  ],
+);
+
+/* ------------------------------------------------------------------ */
 /* Inferred types                                                      */
 /* ------------------------------------------------------------------ */
 
@@ -2229,6 +2270,7 @@ export type IssuePage = typeof issuePages.$inferSelect;
 export type RightsGrant = typeof rightsGrants.$inferSelect;
 export type WriterApplication = typeof writerApplications.$inferSelect;
 export type MediaRow = typeof media.$inferSelect;
+export type Illustration = typeof illustrations.$inferSelect;
 export type CommunityComment = typeof communityComments.$inferSelect;
 export type CommunityMessage = typeof communityMessages.$inferSelect;
 export type BannedWord = typeof bannedWords.$inferSelect;

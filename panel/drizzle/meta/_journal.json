@@ -463,6 +463,13 @@
       "when": 1792798524046,
       "tag": "0066_code_work_key",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1792833544896,
+      "tag": "0067_illustrations",
+      "breakpoints": true
     }
   ]
 }

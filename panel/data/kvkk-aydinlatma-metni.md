@@ -33,6 +33,7 @@ ortaklık adına tek başına temsile yetkilidir.
 | Sayıya özel geçici alan | Yönetimin size kendi alanınız dışındaki bir alanı yalnızca bir sayı için verdiğinin kaydı: hangi sayı, hangi alan, veren yönetici ve tarih. Verildiğinde e-posta adresinize bildirim gönderilir |
 | Görev işareti | Hesabınızın dergiye çizen bir hesap (çizer) veya dergi adına yetkili olarak işaretlenmiş olması. Bu işaretler bir rol değildir; hangi görevi üstlendiğinizi kaydeder. Daha önce verilmiş hukuk danışmanı ve asistan işaretleri artık kullanılmaz; hesap kaydında değiştirilmeden durur |
 | İçerik | Dergiye gönderilen eserler ve sürümleri, yazı üzerindeki editör notları |
+| Çizimler | Çizer panelinden yüklediğiniz çizim dosyaları; verdiğiniz ad, varsa not ve hangi sayı için olduğu; dosyanın türü, boyutu, piksel ölçüsü ve SHA-256 özeti; yükleme zamanı; kaldırıldıysa kaldırma zamanı ve kaldıran hesap. Yükleme ve kaldırma panel işlem kaydına IP adresinizle yazılır |
 | Topluluk | Yazılara yapılan yorumlar, topluluk sohbeti mesajları, paylaştığınız gönderiler ve yanıtlar ile bunların gönderim zamanı; beğendiğiniz ve yeniden paylaştığınız gönderiler; takip ettiğiniz ve sizi takip eden hesaplar, engellediğiniz hesaplar, katıldığınız topluluklar, kaydettiğiniz yazı ve gönderiler, size gönderilen panel içi bildirimler |
 | İçerik bildirimi | Bildirdiğiniz içeriğin türü ve o anki metni, seçtiğiniz bildirim türü, varsa açıklamanız, bildirimin sonucu; bildirilen içeriğin sahibi olduğunuzda bu bilgiler sizinle ilişkilendirilir |
 | Özel mesajlar | Gönderdiğiniz ve aldığınız özel mesajlar ve gönderim zamanları, konuşmayı en son okuduğunuz ve sildiğiniz zaman, özel mesaj tercihiniz, okundu bilgisi tercihiniz |
@@ -94,6 +95,7 @@ saklanmaz**.
 | Dergi ekibindeyseniz (yazar, editör, çizer, yetkili) dergi işleriyle ilgili size telefonla veya WhatsApp üzerinden ulaşılabilmesi (paneldeki bağlantı WhatsApp'ı veya telefon aramasını yöneticinin ya da ana editörün kendi cihazında numaranızla açar; mesajı o kişi gönderir); telefon numaranız eksikse bunu tamamlamanızın e-postayla hatırlatılması. Numaranızı yalnızca yöneticiler ve ana editör görür | (c) Sözleşmenin ifası, (f) Meşru menfaat |
 | Yazar profilinin ve eserin dergide yayımlanması, künyede ad veya mahlas belirtilmesi | (c) Sözleşmenin ifası |
 | Çizer olarak işaretlenmiş hesapların Hakkında sayfasında mahlas veya topluluk adıyla listelenmesi | (c) Sözleşmenin ifası |
+| Çizer panelinden yüklediğiniz çizimlerin dergi için değerlendirilmesi: yalnızca size, yöneticilere ve ana editöre gösterilmesi, yüklendiğinin yöneticilere ve ana editöre panel bildirimiyle haber verilmesi. Yükleme sitede yayımlama değildir ve yayın izni yerine geçmez | (c) Sözleşmenin ifası, (f) Meşru menfaat |
 | Yorum ve topluluk sohbeti işlevlerinin sunulması | (c) Sözleşmenin ifası |
 | Daha önce kaydedilmiş ekip avatarlarının ve ekip formu yanıtlarının saklanması; ekip sayfasının hazırlanması; avatarın görünen isim, ekip rolü ve form yanıtlarıyla birlikte derginin sitesinde veya sosyal medya hesaplarında ekip tanıtımı için kullanılması (yayımlama yalnızca ilgili ekip üyesinin onayıyla yapılır) | (f) Meşru menfaat; yayımlama bakımından (a) açık rıza |
 | Topluluk profilinin gösterilmesi; gönderi, yanıt, beğeni, yeniden paylaşım, takip, engelleme, kaydetme ve bildirim işlevlerinin sunulması | (c) Sözleşmenin ifası |
@@ -119,7 +121,7 @@ sistemlerle verilen bir karar bulunmamaktadır.
 Kişisel verileriniz tamamen elektronik ortamda toplanır:
 
 - **Doğrudan sizden:** Kayıt formu, yazarlık başvuru formu, profil ekranı,
-  sözleşme ekranı, yazıyı editöre gönderme işlemi, yorum ve sohbet alanları, topluluk
+  sözleşme ekranı, yazıyı editöre gönderme işlemi, çizer panelindeki çizim yükleme formu, yorum ve sohbet alanları, topluluk
   ayarları ve topluluk ekranlarındaki takip, engelleme ve kaydetme düğmeleri.
 - **Kullanım sırasında otomatik olarak:** Oturum çerezi aracılığıyla tutulan
   oturum kaydı ile sunucu tarafında oluşan IP adresi, tarayıcı bilgisi ve işlem
@@ -182,7 +184,7 @@ sağlayıcıların yurt dışındaki sistemlerinde tutulmaktadır:
 |---|---|---|---|
 | Vercel Inc. (ABD merkezli; uygulama sunucusu: fra1, Frankfurt; istekler ziyaretçiye en yakın Vercel ağ noktasından geçer) | Uygulamanın barındırılması | Almanya | Bölüm 2'deki veriler, işlem sırasında |
 | Neon Inc. (ABD merkezli; sunucu: AWS eu-central-1, Frankfurt) | Veritabanı | Almanya | Bölüm 2'deki tüm veriler |
-| Cloudflare, Inc. (ABD merkezli; R2 nesne depolama Avrupa Birliği veri yerleşimi garantili, Turnstile bot doğrulaması) | Görsel, PDF ve belge depolama; kayıt formlarında bot doğrulaması | Avrupa Birliği (depolama) | Profil görseli, ekip avatarı görselleri, örnek çalışma dosyaları, sözleşme PDF'leri; bot doğrulamasında IP adresi ve tarayıcı sinyalleri |
+| Cloudflare, Inc. (ABD merkezli; R2 nesne depolama Avrupa Birliği veri yerleşimi garantili, Turnstile bot doğrulaması) | Görsel, PDF ve belge depolama; kayıt formlarında bot doğrulaması | Avrupa Birliği (depolama) | Profil görseli, ekip avatarı görselleri, örnek çalışma dosyaları, çizer panelinden yüklenen çizimler, sözleşme PDF'leri; bot doğrulamasında IP adresi ve tarayıcı sinyalleri |
 | Resend, Inc. (ABD merkezli; gönderim sunucusu: AWS ap-northeast-1, Tokyo) | Doğrulama ve bildirim e-postalarının gönderimi | Japonya | E-posta adresi, görünen ad, e-posta içeriği |
 | Spotify AB | Çalma listesi çaları (yalnızca üyeler açtığında yüklenir) | İsveç | Çaları açtığınızda IP adresi ve tarayıcı bilgisi; aktarım tarayıcınızdan doğrudan yapılır |
 | Google LLC (ABD merkezli; Firebase Cloud Firestore, veri konumu: [FIRESTORE KONUMU]) | Yöneticinin iş takip ajandasının cihazlar arasında eşitlenmesi | [FIRESTORE KONUMU] | Dergi ekibindeyseniz ad, mahlas, ekip görevleri ve tarihleri; size verilen dergi işlerine ilişkin yönetici notları |
@@ -200,6 +202,7 @@ esas alınarak gerçekleştirilmektedir.
 | E-posta içeriği (gönderim kuyruğunda) | Gönderilene kadar; gönderildiği anda silinir. Doğrulama, e-posta değişikliği ve şifre sıfırlama e-postalarının içeriği kesin olarak gönderilemediğinde veya bağlantının süresi dolduğunda da hemen silinir; diğer e-postalar gönderilemezse yeniden gönderilebilmesi için en çok 30 gün tutulur. |
 | E-posta gönderim kayıtları (alıcı, konu, tür, durum, zamanlar) | Gönderim tamamlandıktan veya kesin olarak başarısız olduktan sonra 30 gün |
 | Profil ve kapak fotoğrafı | Siz kaldırana kadar. Yenisini yüklediğinizde eskisi hemen silinir; hesabınız silindiğinde dosyalar da silinir. |
+| Çizimler | Siz veya bir yönetici kaldırana kadar; kaldırıldığında dosya hemen silinir. Hesabınız silindiğinde dosyalar da silinir. Kaldırılan çizimin kaydı (ad, not, özet, zamanlar) kaldırmadan 1 yıl sonra kalıcı olarak silinir. Dergide yayımlanan bir çizim, ayrıca imzalanan ruhsat formuna göre yayın arşivinin parçası olur |
 | Ekip avatarı ve ekip formu yanıtları (seçimler, görsel, görünen isim, ekip rolü, söz, ad/mahlas tercihi, burç) | Hesabınız silinene veya Bölüm 9'daki yolla silinmesini isteyene kadar; ikisi de kaydı ve görseli kalıcı olarak siler. Yönetimin daha önce indirdiği kopyalar sistemin dışında kalır; bunların silinmesini de aynı yolla isteyebilirsiniz. |
 | Tamamlanmamış (e-postası doğrulanmamış) kayıtlar | 7 gün |
 | E-posta doğrulama bağlantıları | 24 saat |
@@ -222,7 +225,7 @@ esas alınarak gerçekleştirilmektedir.
 | Yayımlanmış eserler ve künyedeki ad veya mahlas | Yayın arşivinin parçası olarak süresiz |
 
 Hesabınızı sildirdiğinizde ad, e-posta, doğum tarihi, telefon, kullanıcı adı,
-biyografi ve profil görseliniz anonimleştirilir, ekip avatarınız silinir; takip, engelleme, kaydetme,
+biyografi ve profil görseliniz anonimleştirilir, ekip avatarınız ve yüklediğiniz çizim dosyaları silinir; takip, engelleme, kaydetme,
 beğeni, yeniden paylaşım, susturma ve topluluk üyeliği kayıtlarınız silinir. Gönderileriniz,
 gönderdiğiniz özel mesajlar ve anonim mesajlarınız topluluktan
 kalkar ve silinmiş içerik gibi 1 yıl sonra kalıcı olarak silinir. Yayın izni beyanları, sözleşme kayıtları ve

@@ -14204,3 +14204,74 @@ sayfası yazarın metnini, yazarın eski sayfası editörün metnini silmez ve r
 sürüm bırakmaz; durum değişikliği sonrası eski sayfa 409; eski sayfadan "kaydet ve gönder"
 ne kaydeder ne gönderir; değer verilmezse denetim yok; tarih olmayan değer 400.
 Migration yok.
+
+## D-362 — Çizer paneli: çizim yükleme ("Çizimlerim")
+
+**İstek (ürün sahibi, 2026-10-24):** "medya kısmını komple değiştireceğiz onu atla onun
+yerine çizer paneli yapıp çizim yükleyeceğiz." Çizerin paneli (D-288) yalnızca sözleşme ve
+belgeleri tutuyordu; çizimini dergiye iletecek bir yol yoktu.
+
+**Karar:**
+- **Ayrı tablo, medya kütüphanesinden bağımsız:** `illustrations` (migration `0067`,
+  yalnızca yeni tablo). Medya kütüphanesi baştan değişeceği için ona bağlanmadı; buradaki
+  hiçbir kayıt yazıya eklenemez, sitede yayımlanamaz. Dosyalar aynı özel bucket'ta
+  (`media`), `illustrations/` önekiyle.
+- **Kim yükler:** çizer işareti (D-151) olan, e-postası doğrulanmış, yasaklı olmayan hesap
+  (`canAccessIllustratorPanel`; işaret her istekte hesaptan okunur). Yazar olan çizer de
+  `/cizer` üzerinden yükler. Sözleşme şartı yok: yükleme bir izin değil (aşağıda).
+- **Dosya:** JPEG, PNG, WEBP; tür baytlardan anlaşılır, bildirilen türle uyuşmazsa ret.
+  En çok **4 MB** (D-254 ile aynı gerekçe: Vercel 4,5 MB üstü isteği kodumuz çalışmadan
+  keser); sınır tarayıcıda da denetlenir (`ImageFileInput`, D-301 deseni). GIF, PDF, SVG
+  yok (SVG betik taşıyabilir). Çizer başına en çok 200 duran çizim. Ad zorunlu; not ve
+  "hangi sayı için" isteğe bağlı (yalnızca yayımlanmamış, `admin_only` olmayan sayılar).
+- **Kim görür:** çizerin kendisi, adminler ve ana editör (`canReviewIllustrations`, saf
+  fonksiyon; e-posta kuyruğuyla aynı kural, D-330). Kategori editörü, başka çizer ve
+  diğer herkes için dosya **404** (kimin ne çizdiği kimlikten anlaşılmasın). Dosya
+  `GET /api/illustrations/:id` ile `private, no-store`, `nosniff`; `?indir` ekle indirilir.
+- **Ekranlar:** `/cizer/cizimler` (yükleme formu + kendi çizimleri, kaldırma) ve
+  `/editor/cizimler` (çizere göre gruplu liste; adminin ve ana editörün menüsünde
+  "Çizimler"). Yüklemede adminlere ve ana editöre panel bildirimi; e-posta yok.
+- **Kaldırma yolu:** çizer kendi çizimini, admin herkesinkini kaldırır (onay penceresiyle).
+  Ana editör yalnızca görür ve indirir. Kaldırınca dosya depodan hemen silinir; satır
+  (ad, not, SHA-256, zamanlar, kaldıran) **1 yıl** kalır, günlük bakım
+  (`prune_illustrations`) sonra siler. Yükleme ve kaldırma `audit_log`'a IP ile yazılır
+  (trafik kaydı). İçerik herkese açık olmadığı için 5651 yer sağlayıcı bildirim akışına
+  girmez; admin kaldırması yeterli yol.
+- **Hesap silinince** (`anonymise`) çizim dosyaları da silinir, satırlar kaldırılmış
+  sayılır ve aynı 1 yıllık süreye girer. KVKK dışa aktarımına `illustrations` eklendi
+  (depolama anahtarı hariç); ham `sql` değil, sorgu kurucusuyla (D-078).
+
+**Hukuk (FSEK, D-084):** Yükleme **yayın izni değildir**: çizer çizimini değerlendirme
+için iletir, haklar çizerde kalır. Dergide kullanılacak bir çizim için yazılardaki gibi
+eser bazlı ruhsat formu gerekir; çizimi ruhsat formuna bağlamak (eser türü olarak çizim)
+ayrı bir adım, bu adımda yapılmadı. Bu açıklama yükleme formunda, düğmeden önce yazıyor.
+Değerlendirme için kopyanın saklanmasının ayrıca yazılı izin isteyip istemediği hukuki
+bir sorudur; danışman yok (bkz. no-legal-adviser), muhafazakâr uygulama: yalnızca dar bir
+ekip görür, çizer istediği an kaldırır ve dosya silinir.
+
+**KVKK:** Aydınlatma metnine eklendi — §2 "Çizimler" veri kalemi, §3 değerlendirme amacı
+((c) sözleşmenin ifası, (f) meşru menfaat), §4 toplama yöntemi (çizim yükleme formu),
+§6.2 Cloudflare R2 satırında "çizer panelinden yüklenen çizimler", §7 saklama süresi ve
+hesap silme paragrafı. Yeni yurt dışı sağlayıcı yok. Depodaki metin, bekleyen yeni sürümle
+birlikte yönetici tarafından yayınlanır.
+
+**Canlıya geçiş (D-079):** Kod `illustrations` tablosunu okuduğu için **önce migration
+0067 üretime uygulanmalı, sonra push**. Migration yalnızca `CREATE TABLE` + FK + indeks;
+mevcut satırlara dokunmaz.
+
+**Bilerek yapılmayanlar:** çizimi yazıya/sayfaya bağlama, editör notu ya da kabul/ret
+durumu, ruhsat formunda çizim eser türü, 4 MB üstü için doğrudan depoya yükleme
+(presigned URL; R2 CORS ayarı gerektirir), küçük önizleme (liste tam dosyayı tembel
+yüklüyor).
+
+**Doğrulama:** `illustrations.test.ts` (11): kayıt, boyut, hash, depolama ve denetim
+satırı; işaretsiz, doğrulanmamış ve yasaklı hesap 403, hiçbir şey yazılmaz; PDF, GIF,
+tür uyuşmazlığı ve 4 MB üstü ret; boş ad, yayımlanmış sayı ve örnek sayı ret; bildirim
+admin ve ana editöre gider, kategori editörüne gitmez; dosyayı çizer/admin/ana editör
+açar, başka çizer/kategori editörü/yazar 404, inceleme listesi kategori editörüne 403;
+çizer kaldırınca dosya gider, kayıt ve denetim kalır, ikinci kaldırma 404; admin
+kaldırır, ana editör ve başka çizer kaldıramaz; dışa aktarımda var, depolama anahtarı
+yok; hesap silinince dosyalar gider, kayıtlar kalır; kaldırılan kayıt 1 yıl dolmadan
+silinmez, dolunca silinir, duran çizime dokunulmaz. `rbac.test.ts`:
+`canReviewIllustrations` admin ve ana editöre açık, kategori editörüne, yazara, dondurulmuş
+ya da yasaklı ana editöre kapalı.

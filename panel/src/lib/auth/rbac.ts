@@ -82,6 +82,16 @@ export function canManageMailQueue(actor: Actor, assignment?: Pick<EditorAssignm
 }
 
 /**
+ * The drawings çizers hand in (D-362) go to the people who put an issue
+ * together: the admins and the main editor. A category editor reviews
+ * articles in their areas and has no drawing to judge.
+ */
+export function canReviewIllustrations(actor: Actor, assignment?: Pick<EditorAssignment, "isMainEditor"> | null): boolean {
+  if (canAccessAdminPanel(actor)) return true;
+  return canAccessEditorPanel(actor) && assignment?.isMainEditor === true;
+}
+
+/**
  * Where the PANEL button on the front page leads (D-086). Built on the same
  * checks the panel guards run, so the button never points at a door that would
  * answer 403; a plain reader, a banned or an unverified account gets none.

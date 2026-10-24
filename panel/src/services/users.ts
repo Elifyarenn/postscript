@@ -59,6 +59,7 @@ import { slugify } from "@/lib/slug";
 import * as templates from "@emails/templates";
 import { removeProfileImages } from "./profile-images";
 import { removeTeamAvatarOf } from "./team-avatars";
+import { exportIllustrationsOf, removeIllustrationsOfAccount } from "./illustrations";
 import { PEN_NAME_TAKEN, penNameProblem } from "./social";
 import type { RequestMeta } from "./auth";
 
@@ -944,6 +945,8 @@ async function anonymise(user: User): Promise<void> {
   await removeProfileImages(user.id);
   // The team avatar is the member's own creation and leaves with the account (D-194)
   await removeTeamAvatarOf(user.id);
+  // A çizer's drawings were never published; their files go too (D-362)
+  await removeIllustrationsOfAccount(user.id);
 
   await db
     .update(users)
@@ -1122,5 +1125,7 @@ export async function exportUserData(actor: Actor, targetUserId: string) {
       createdAt: user.createdAt,
     },
     related: rows,
+    // Read through the query builder, outside the SQL above (D-078, D-362)
+    illustrations: await exportIllustrationsOf(targetUserId),
   };
 }

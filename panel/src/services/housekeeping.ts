@@ -18,6 +18,7 @@ import { pruneDeletedCommunityContent } from "@/services/community";
 import { pruneDeletedDirectMessages } from "@/services/direct-messages";
 import { pruneDeletedPosts } from "@/services/posts";
 import { pruneResolvedReports } from "@/services/reports";
+import { pruneRemovedIllustrations } from "@/services/illustrations";
 import { processMailQueue, pruneMailJobs } from "@/services/mail-queue";
 import { announceOpenedIssueWindows } from "@/services/issue-mail";
 import { verifySignedContractFiles } from "@/services/contract-integrity";
@@ -116,6 +117,8 @@ export const DAILY_TASKS: readonly HousekeepingTask[] = [
   { name: "prune_direct_messages", run: pruneDeletedDirectMessages },
   { name: "prune_anon_messages", run: pruneDeletedAnonMessages },
   { name: "prune_reports", run: pruneResolvedReports },
+  // A removed drawing's record, a year after the removal (D-362)
+  { name: "prune_illustrations", run: pruneRemovedIllustrations },
   {
     name: "prune_auth_attempts",
     run: async (now) => {

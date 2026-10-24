@@ -93,6 +93,8 @@ export const ADMIN_NAV: NavGroup[] = [
       { href: "/editor/topics", label: "Konu önerileri" },
       { href: "/editor/gecici-alan", label: "Geçici alan" },
       { href: "/editor/approvals", label: "Eser Onayı takibi" },
+      // Drawings the çizers handed in (D-362)
+      { href: "/editor/cizimler", label: "Çizimler" },
       { href: "/editor/media", label: "Medya kütüphanesi" },
     ],
   },
@@ -141,6 +143,7 @@ export function editorNav(reviewsTopics: boolean, contactsTeam = false, mainEdit
             items: [
               { href: "/editor/gecici-alan", label: "Geçici alan" },
               { href: "/editor/mail", label: "E-posta kuyruğu" },
+              { href: "/editor/cizimler", label: "Çizimler" },
             ],
           },
         ]
@@ -167,13 +170,14 @@ export function writerNav(locked: boolean, signsContract = true): NavGroup[] {
   ];
 }
 
-/** The illustrator panel: the contract and the documents only (D-288). */
+/** The illustrator panel: the contract and the documents (D-288), and the drawings (D-362). */
 export function illustratorNav(): NavGroup[] {
   return [
     {
       label: "Tasarımcı",
       items: [
         { href: "/cizer", label: "Sözleşmem ve belgelerim" },
+        { href: "/cizer/cizimler", label: "Çizimlerim" },
         { href: "/account", label: "Hesabım" },
       ],
     },
