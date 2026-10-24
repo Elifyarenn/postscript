@@ -14,6 +14,7 @@ import { env } from "@/lib/env";
 import { unauthorized } from "@/lib/errors";
 import { processMailQueue } from "@/services/mail-queue";
 import { announceOpenedIssueWindows } from "@/services/issue-mail";
+import { remindOpenReports } from "@/services/reports";
 
 // Two sends a second leave room for about 400 mails in one run
 export const maxDuration = 300;
@@ -25,7 +26,10 @@ export async function GET(request: Request) {
 
   // A topic or delivery window that opened since the last run is queued first (D-270, D-272)
   const announced = await announceOpenedIssueWindows();
+  // A report nearing its 24 hours: an outside scheduler running this every few
+  // minutes is what makes the reminder timely; the daily run alone may be late (D-367)
+  const reportReminders = await remindOpenReports();
   // Counts only: the response is kept in Vercel's logs
   const result = await processMailQueue({ budgetMs: 240_000, limit: 1000 });
-  return NextResponse.json({ ok: true, announced, ...result }, { headers: { "cache-control": "no-store" } });
+  return NextResponse.json({ ok: true, announced, reportReminders, ...result }, { headers: { "cache-control": "no-store" } });
 }

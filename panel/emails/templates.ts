@@ -361,6 +361,49 @@ export function adminReportReceived(input: {
   });
 }
 
+/** A report still open after `REPORT_REMINDER_HOURS`, once per report and admin (D-367). */
+export function adminReportReminder(input: {
+  target: string;
+  category: string;
+  /** The 24 hour limit, in Turkey's time. */
+  deadline: string;
+  overdue: boolean;
+  url: string;
+}): Template {
+  return renderMail({
+    kind: "admin_report_reminder",
+    subject: input.overdue
+      ? "postscript · İçerik bildiriminin 24 saati doldu"
+      : "postscript · Bir içerik bildirimi hâlâ açık: süre dolmak üzere",
+    heading: input.overdue ? "Bildirimin süresi doldu" : "Bildirim hâlâ açık",
+    greeting: "Merhaba,",
+    blocks: [
+      {
+        type: "paragraph",
+        text: input.overdue
+          ? "Bir içerik bildirimi 24 saat içinde sonuçlandırılmadı."
+          : "Bir içerik bildirimi hâlâ sonuçlandırılmadı.",
+      },
+      {
+        type: "details",
+        rows: [
+          ["Bildirilen", input.target],
+          ["Bildirim türü", input.category],
+          ["Son süre", input.deadline],
+        ],
+      },
+      {
+        type: "action",
+        lead:
+          "5651 sayılı Kanun gereği bildirim en geç 24 saat içinde sonuçlandırılmalıdır. " +
+          "İçerik ve hesaplar yalnızca panelde görünür:",
+        url: input.url,
+        label: "Bildirimi incele",
+      },
+    ],
+  });
+}
+
 /** Tells an admin an application passed the editor and needs their decision (D-098). */
 export function adminApplicationAwaiting(input: { url: string }): Template {
   return renderMail({

@@ -93,3 +93,9 @@ MAIL_SAMPLES.submissionLastDay = [
   { displayName: "Ada", issueLabel: "Sayı 2 · Gotizm", closesAt: "14 Ekim 18:00", topics: "Karanlık <mimari>", url: "https://example.com/writer/topics" },
 ];
 ADDED_AFTER_LAYOUT.add("submissionLastDay");
+
+MAIL_SAMPLES.adminReportReminder = [
+  { target: "Gönderi", category: "Hakaret, tehdit veya taciz", deadline: "25 Eki 2026 14:30", overdue: false, url: "https://example.com/admin/community/reports" },
+  { target: "Yorum <b>x</b>", category: "Diğer", deadline: "24 Eki 2026 09:00", overdue: true, url: "https://example.com/admin/community/reports" },
+];
+ADDED_AFTER_LAYOUT.add("adminReportReminder");

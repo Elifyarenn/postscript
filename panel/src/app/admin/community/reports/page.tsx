@@ -29,7 +29,7 @@ export default async function CommunityReportsPage() {
           <h2 className="mb-1 font-serif text-lg">İçerik bildirimleri ({openReports.length} açık)</h2>
           <p className="mb-4 text-sm text-muted">
             Üyelerin &ldquo;Bildir&rdquo; ile gönderdiği şikâyetler, en eskisi üstte. 5651 sayılı Kanun
-            gereği en geç 24 saat içinde sonuçlandırılmalı; süresi geçenler işaretlidir. Bir karar,
+            gereği en geç 24 saat içinde sonuçlandırılmalı; her bildirimde kalan süre yazar, 6 saatten az kalanlar ve süresi geçenler renklidir. 18 saati geçen bildirim için yöneticilere bir kez daha e-posta gider. Bir karar,
             aynı içerikle ilgili bütün açık bildirimleri kapatır ve bildirenlere sonucu bildirir.
           </p>
 
@@ -49,9 +49,17 @@ export default async function CommunityReportsPage() {
                     <span className="font-semibold">{REPORT_TARGET_LABELS[report.targetType]}</span>
                     <span>· {REPORT_CATEGORY_LABELS[report.category]}</span>
                     <span className="text-muted">· {formatDateTime(report.createdAt)}</span>
-                    {report.overdue && (
-                      <span className="font-semibold text-danger">24 saat geçti</span>
-                    )}
+                    {/* Time left, not only once it ran out (D-367) */}
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-0.5 font-semibold",
+                        report.clock.state === "overdue" && "bg-danger text-white",
+                        report.clock.state === "urgent" && "bg-warning-soft text-warning",
+                        report.clock.state === "ok" && "bg-surface text-muted",
+                      )}
+                    >
+                      {report.clock.label}
+                    </span>
                   </div>
                   <p className="text-sm whitespace-pre-wrap">{report.snapshot}</p>
                   {report.reason && (

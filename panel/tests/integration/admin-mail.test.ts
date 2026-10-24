@@ -6,8 +6,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
-import { users } from "@/db/schema";
-import { reportContent } from "@/services/reports";
+import { contentReports, users } from "@/db/schema";
+import { remindOpenReports, reportContent } from "@/services/reports";
 import { editorDecideApplication, submitWriterApplication } from "@/services/writer-applications";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import { MemoryStorageAdapter, setStorageAdapter } from "@/lib/storage";
@@ -58,7 +58,8 @@ describe("a new content report", () => {
     expect(mail?.subject).toContain("24 saat");
     expect(mail?.text).toContain("Bildirilen: Hesap");
     expect(mail?.text).toContain("Bildirim türü: Reklam veya spam");
-    expect(mail?.text).toContain("/admin/community");
+    // The queue itself, not the community overview (D-367)
+    expect(mail?.text).toContain("/admin/community/reports");
     for (const secret of ["hedefhesap", "gizli biyografi", "özel açıklama", "Bildiren Üye", "bildiren@example.com"]) {
       expect(mail?.text).not.toContain(secret);
     }
@@ -106,5 +107,62 @@ describe("an application reaching the admin's stage", () => {
     await editorDecideApplication(actorOf(editor), application.id, "reject", "Uygun değil.", noMeta);
 
     expect(mailbox.lastTo("yonetim@example.com")).toBeUndefined();
+  });
+});
+
+describe("a report still open (D-367)", () => {
+  async function openReport() {
+    await createUser({ role: "admin", email: "yonetim1@example.com" });
+    await createUser({ role: "admin", email: "yonetim2@example.com" });
+    const reporter = await createUser();
+    const reported = await createUser();
+    await db.update(users).set({ username: "hedefhesap" }).where(eq(users.id, reported.id));
+    await reportContent(
+      actorOf(reporter),
+      { targetType: "member", targetId: reported.id, category: "spam", reason: "özel açıklama" },
+      noMeta,
+    );
+    mailbox.clear();
+    const [report] = await db.select().from(contentReports);
+    return report!;
+  }
+
+  const hoursAfter = (date: Date, hours: number) => new Date(date.getTime() + hours * 3_600_000);
+
+  it("mails nobody before eighteen hours", async () => {
+    const report = await openReport();
+    expect(await remindOpenReports(hoursAfter(report.createdAt, 17))).toBe(0);
+    expect(mailbox.outbox).toHaveLength(0);
+  });
+
+  it("reminds every admin once with the deadline, the kinds only, however often it runs", async () => {
+    const report = await openReport();
+    const later = hoursAfter(report.createdAt, 19);
+
+    expect(await remindOpenReports(later)).toBe(1);
+    const mail = mailbox.lastTo("yonetim1@example.com");
+    expect(mail?.subject).toContain("hâlâ açık");
+    expect(mail?.text).toContain("Son süre:");
+    expect(mail?.text).toContain("/admin/community/reports");
+    expect(mail?.text).not.toContain("özel açıklama");
+    expect(mailbox.lastTo("yonetim2@example.com")).toBeDefined();
+
+    mailbox.clear();
+    await remindOpenReports(hoursAfter(report.createdAt, 20));
+    await remindOpenReports(hoursAfter(report.createdAt, 30));
+    expect(mailbox.outbox).toHaveLength(0);
+  });
+
+  it("says the time ran out when it first runs after the twenty-four hours", async () => {
+    const report = await openReport();
+    await remindOpenReports(hoursAfter(report.createdAt, 26));
+    expect(mailbox.lastTo("yonetim1@example.com")?.subject).toContain("24 saati doldu");
+  });
+
+  it("leaves a settled report alone", async () => {
+    const report = await openReport();
+    await db.update(contentReports).set({ status: "dismissed", resolvedAt: new Date() });
+    expect(await remindOpenReports(hoursAfter(report.createdAt, 19))).toBe(0);
+    expect(mailbox.outbox).toHaveLength(0);
   });
 });

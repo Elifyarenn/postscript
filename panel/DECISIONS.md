@@ -14419,3 +14419,38 @@ yasaklı değil). Yeni veri yok; aydınlatma metni değişmedi.
 **Doğrulama:** `promotion.test.ts` (D-366): her şeyi eksik bir hesapla ve reşit olmayan bir
 hesapla üretilebilen bütün koşul kodlarının listede satırı var, listede fazladan satır yok,
 KVKK satırının metni doğru. Migration yok.
+
+## D-367 — İçerik bildiriminde kalan süre görünür; 18 saatte hatırlatma e-postası
+
+**Bağlam:** 2026-10-24 incelemesinin 8. maddesi. 5651 m. 9 kaldırma başvurusuna 24 saat
+veriyor (D-090). Bildirim kuyruğu (`/admin/community/reports`) yalnızca süre **geçtikten
+sonra** "24 saat geçti" yazıyordu; `reportDeadline` vardı ama kalan süre hiçbir yerde
+görünmüyordu, süre dolmadan hatırlatma yoktu. İlk e-postanın bağlantısı da kuyruğa değil
+`/admin/community` genel sayfasına gidiyordu.
+
+**Karar:**
+- `reportClock` (`src/lib/reports.ts`, saf): her açık bildirimde "21 sa 30 dk kaldı" / "45 dk
+  kaldı" / "Süre 3 sa 5 dk önce doldu". 6 saat ve daha az kalınca uyarı renginde, süre
+  dolunca kırmızı; kenar `isReportOverdue` ile aynı (tam son an henüz geç değil).
+- `remindOpenReports` (servis): 18 saati geçmiş her açık bildirim için adminlere **bir kez**
+  hatırlatma e-postası (`adminReportReminder`): tür, bildirim türü ve son süre; içerik, açıklama
+  ve hesaplar yine yazılmaz (D-098). Tekrarı kuyruğun `dedupe_key`'i önler
+  (`report-reminder:<bildirim>:<admin>`); `mailAdmins` bunun için admin başına anahtar alır.
+  24 saat geçtikten sonra ilk kez çalışırsa konu "24 saati doldu" der.
+- Çalıştığı yerler: günlük bakım (`remind_open_reports`, kuyruktan önce) ve
+  `/api/cron/mail`. **Uyarı:** Hobby planda Vercel Cron günde bir kez (03:00 UTC) çalışıyor;
+  hatırlatmanın zamanında gitmesi, `/api/cron/mail`'i birkaç dakikada bir çağıran dış bir
+  zamanlayıcıya bağlı (D-269'da öngörülen; `CRON_SECRET` ile). Kurulmadıkça hatırlatma
+  günde bir gelir; ekrandaki süre rozeti her durumda doğru.
+- Yeni bildirim e-postasının bağlantısı `/admin/community/reports`.
+
+**Hukuk (D-084):** Yeni veri yok; yöneticilere giden e-postanın içeriği ve sayısı değişti.
+Aydınlatma metninde içerik bildirimi paragrafı güncellendi: 18 saatte hatırlatma e-postası,
+e-postada son sürenin de yer alması.
+
+**Doğrulama:** `ranking.test.ts` (D-367, 3): kalan süre etiketi, 6 saat sınırı, bir saatin
+altında yalnızca dakika, dolan sürenin etiketi ve kenar. `admin-mail.test.ts` (D-367, 4):
+18 saatten önce e-posta yok; 19. saatte her admine bir e-posta (son süre, kuyruk bağlantısı,
+açıklama yok) ve sonraki çalışmalarda tekrar yok; 24 saat sonra ilk çalışmada "doldu"
+konusu; sonuçlanmış bildirime e-posta yok. İlk e-postanın bağlantısı kuyruğa gidiyor.
+`mail-templates.test.ts`: yeni şablonun HTML ve metin kontrolleri. Migration yok.

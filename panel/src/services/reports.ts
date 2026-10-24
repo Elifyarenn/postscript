@@ -7,7 +7,7 @@
  * Deciding one report decides every open report about the same content.
  */
 import "server-only";
-import { and, asc, desc, eq, isNull, lt, ne, or, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, lt, lte, ne, or, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { db } from "@/db/client";
@@ -29,9 +29,13 @@ import {
   isReportOverdue,
   REPORT_CATEGORIES,
   REPORT_CATEGORY_LABELS,
+  REPORT_REMINDER_HOURS,
   REPORT_TARGET_LABELS,
+  reportClock,
+  reportDeadline,
 } from "@/lib/reports";
 import { trafficCutoff } from "@/lib/traffic";
+import { formatDateTime } from "@/lib/utils";
 import { assertMayPost } from "./community";
 import { notify } from "./notifications";
 import { mailAdmins } from "./staff-mail";
@@ -216,7 +220,8 @@ export async function reportContent(
     templates.adminReportReceived({
       target: REPORT_TARGET_LABELS[input.targetType],
       category: REPORT_CATEGORY_LABELS[input.category],
-      url: `${env().APP_URL}/admin/community`,
+      // The queue itself, not the community overview it used to open (D-367)
+      url: `${env().APP_URL}/admin/community/reports`,
     }),
   );
 
@@ -268,7 +273,47 @@ export async function listReports(actor: Actor, state: "open" | "closed", limit 
   return rows.map((row) => ({
     ...row,
     overdue: row.status === "open" && isReportOverdue(row.createdAt, now),
+    clock: reportClock(row.createdAt, now),
   }));
+}
+
+/**
+ * The second mail about a report still open after `REPORT_REMINDER_HOURS`
+ * (D-367), so the 24 hours of 5651 m. 9 do not run out unseen. Once per report
+ * and admin, however often it runs: the daily run and the outbox route both
+ * call it. The mail names the kinds alone, like the first (D-098).
+ */
+export async function remindOpenReports(now: Date = new Date()): Promise<number> {
+  const due = await db
+    .select({
+      id: contentReports.id,
+      targetType: contentReports.targetType,
+      category: contentReports.category,
+      createdAt: contentReports.createdAt,
+    })
+    .from(contentReports)
+    .where(
+      and(
+        eq(contentReports.status, "open"),
+        lte(contentReports.createdAt, new Date(now.getTime() - REPORT_REMINDER_HOURS * 3_600_000)),
+      ),
+    )
+    .orderBy(asc(contentReports.createdAt))
+    .limit(50);
+
+  for (const report of due) {
+    await mailAdmins(
+      templates.adminReportReminder({
+        target: REPORT_TARGET_LABELS[report.targetType],
+        category: REPORT_CATEGORY_LABELS[report.category],
+        deadline: formatDateTime(reportDeadline(report.createdAt)),
+        overdue: isReportOverdue(report.createdAt, now),
+        url: `${env().APP_URL}/admin/community/reports`,
+      }),
+      { dedupeKey: (adminId) => `report-reminder:${report.id}:${adminId}` },
+    );
+  }
+  return due.length;
 }
 
 export const resolveReportSchema = z.strictObject({

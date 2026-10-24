@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mergeTimeline, rankExplorePosts, rankSuggestions } from "@/lib/ranking";
-import { isReportOverdue, reportDeadline } from "@/lib/reports";
+import { isReportOverdue, reportClock, reportDeadline } from "@/lib/reports";
 
 const at = (iso: string) => new Date(iso);
 
@@ -51,5 +51,24 @@ describe("report deadline (5651 m. 9)", () => {
     expect(reportDeadline(created).toISOString()).toBe("2026-09-14T08:00:00.000Z");
     expect(isReportOverdue(created, at("2026-09-14T08:00:00Z"))).toBe(false);
     expect(isReportOverdue(created, at("2026-09-14T08:00:01Z"))).toBe(true);
+  });
+});
+
+describe("a report's clock in the queue (D-367)", () => {
+  const created = at("2026-09-13T08:00:00Z");
+
+  it("shows the time left, plain while there is room", () => {
+    expect(reportClock(created, at("2026-09-13T10:30:00Z"))).toEqual({ state: "ok", label: "21 sa 30 dk kaldı" });
+  });
+
+  it("turns urgent with six hours or less left, minutes alone under an hour", () => {
+    expect(reportClock(created, at("2026-09-14T02:00:00Z")).state).toBe("urgent");
+    expect(reportClock(created, at("2026-09-14T01:59:00Z")).state).toBe("ok");
+    expect(reportClock(created, at("2026-09-14T07:15:00Z"))).toEqual({ state: "urgent", label: "45 dk kaldı" });
+  });
+
+  it("says how long ago the time ran out, from the same edge as isReportOverdue", () => {
+    expect(reportClock(created, at("2026-09-14T08:00:00Z")).state).toBe("urgent");
+    expect(reportClock(created, at("2026-09-14T11:05:00Z"))).toEqual({ state: "overdue", label: "Süre 3 sa 5 dk önce doldu" });
   });
 });

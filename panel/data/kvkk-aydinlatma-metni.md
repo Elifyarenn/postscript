@@ -57,9 +57,10 @@ yalnızca o mesajın metni incelemeye gönderilir. Doğum tarihiniz, özel
 mesajlaşmanın 18 yaşını doldurmuş üyelerle sınırlı olduğunu denetlemek için de
 kullanılır; karşı tarafa gösterilmez.
 
-Bir içerik bildirimi yapıldığında yöneticilere e-postayla haber verilir. Bu
-e-postada yalnızca bildirilen içeriğin türü (gönderi, yorum, mesaj, hesap) ve
-bildirim türü yer alır; içeriğin metni, bildiren ve bildirilen hesap e-postaya
+Bir içerik bildirimi yapıldığında yöneticilere e-postayla haber verilir; bildirim
+18 saat içinde sonuçlanmamışsa aynı içerikte bir hatırlatma e-postası daha gider.
+Bu e-postalarda yalnızca bildirilen içeriğin türü (gönderi, yorum, mesaj, hesap),
+bildirim türü ve 24 saatlik sürenin dolacağı zaman yer alır; içeriğin metni, bildiren ve bildirilen hesap e-postaya
 yazılmaz, yalnızca panelde görünür. Yönetim onayı bekleyen bir yazarlık
 başvurusu için gönderilen e-postada da başvuru sahibinin bilgileri yer almaz.
 

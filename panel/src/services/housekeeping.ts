@@ -17,7 +17,7 @@ import { publishScheduledArticles } from "@/services/articles";
 import { pruneDeletedCommunityContent } from "@/services/community";
 import { pruneDeletedDirectMessages } from "@/services/direct-messages";
 import { pruneDeletedPosts } from "@/services/posts";
-import { pruneResolvedReports } from "@/services/reports";
+import { pruneResolvedReports, remindOpenReports } from "@/services/reports";
 import { pruneRemovedIllustrations } from "@/services/illustrations";
 import { processMailQueue, pruneMailJobs } from "@/services/mail-queue";
 import { announceOpenedIssueWindows } from "@/services/issue-mail";
@@ -133,6 +133,8 @@ export const DAILY_TASKS: readonly HousekeepingTask[] = [
   { name: "verify_contract_files", run: verifySignedContractFiles },
   // Published issue pictures in the public bucket, when it is set (D-353)
   { name: "sync_public_media", run: () => reconcileAllPublicMedia() },
+  // Before the queue runs, so the mail goes out in the same run (D-367)
+  { name: "remind_open_reports", run: remindOpenReports },
   // Last, so the reminders queued above go out in the same run; retries left over from the day too
   { name: "process_mail_queue", run: () => processMailQueue({ budgetMs: 120_000, limit: 1000 }) },
 ];

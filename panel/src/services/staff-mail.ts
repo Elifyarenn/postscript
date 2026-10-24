@@ -17,10 +17,14 @@ import type { Template } from "@emails/templates";
  * the change it announces has been saved, and a failed lookup must not turn
  * a saved report into an error on the member's screen.
  */
-export async function mailAdmins(message: Template): Promise<void> {
+export async function mailAdmins(
+  message: Template,
+  /** One job per key: a reminder for the same report reaches each admin once (D-367). */
+  options: { dedupeKey?: (adminId: string) => string } = {},
+): Promise<void> {
   try {
     const admins = await db
-      .select({ email: users.email })
+      .select({ id: users.id, email: users.email })
       .from(users)
       .where(
         and(
@@ -31,7 +35,9 @@ export async function mailAdmins(message: Template): Promise<void> {
         ),
       );
 
-    await queueMails(admins.map((admin) => ({ to: admin.email, ...message })));
+    await queueMails(
+      admins.map((admin) => ({ to: admin.email, ...message, dedupeKey: options.dedupeKey?.(admin.id) })),
+    );
   } catch (error) {
     // First line only: driver errors carry the query parameters (addresses) after it
     const reason = (error instanceof Error ? error.message : String(error)).split("\n")[0];
