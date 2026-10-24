@@ -14165,3 +14165,42 @@ Aydınlatma metni değişmedi.
 metnin hash'ine bağlanır; sözleşmesiz yazarda gönderim 409 ile reddedilir ama yeni metin ve
 sürümü kalır, mesaj "Yazı kaydedildi" der; tanımsız alanla kayıt reddedilince metin ve durum
 değişmez, beyan oluşmaz. Migration yok.
+
+## D-361 — Eski sayfadan yapılan kayıt reddedilir (yazar–editör eşzamanlı düzenleme)
+
+**Bağlam:** 2026-10-24 incelemesinin 2. maddesi. Yazar `draft`/`revision_requested`
+durumundaki yazısını, editör ise aynı yazıyı her durumda düzenleyebiliyor. İki kayıt da
+yalnızca `id` ile yazılıyordu (`updateArticleAsWriter`, `updateArticle`): sayfayı önce açıp
+sonra kaydeden, arada öbürünün yaptığını sessizce siliyordu. Silinen metin sürüm geçmişinde
+kalsa da kimse fark etmiyordu; yazarın beyanı (D-238, D-360) da yanlış metne bağlanabiliyordu.
+
+**Karar:**
+- İki düzenleme formu da sayfanın çizildiği andaki `updated_at` değerini gizli
+  `expectedUpdatedAt` alanında taşır. Servis, yazma transaction'ında satırı `FOR UPDATE`
+  ile kilitler ve değeri karşılaştırır (`assertArticleUnchanged`). Farklıysa **409**, hiçbir
+  şey yazılmaz, sürüm oluşmaz; mesaj metnin kopyalanıp sayfanın yenilenmesini söyler.
+- Durum geçişi de `updated_at`'i değiştirdiği için "değişiklik" sayılır: yazı incelemeye
+  gidip geri döndüyse eski sayfadan kayıt reddedilir.
+- Yazarın "İncelemeye gönder"i (D-360) aynı denetimden geçer; eski sayfadan gönderimde ne
+  kayıt ne gönderim olur, mesaj "kaydedildi" demez.
+- Formu olmayan çağrı (betik, test) değer vermezse denetlenmez; değer verilip tarih
+  değilse 400.
+- Karşılaştırma JavaScript `Date` üzerinden milisaniye düzeyinde: iki taraf da aynı
+  dönüşümden geçtiği için mikro saniye farkı sorun çıkarmaz. Ham `sql` yok; `FOR UPDATE`
+  Drizzle kurucusuyla ve üretimde zaten kullanılan biçimde (D-331), bu yüzden D-078 Neon dalı
+  denemesi gerekmedi.
+- Kilit sırası: yazar kaydında önce sayının kilidi (kelime bütçesi, D-331), sonra yazının;
+  diğer yazı yazımlarıyla aynı sıra.
+- Editör formuna da kaydedilmemiş değişiklik uyarısı (`warnUnsaved`, D-360) eklendi.
+- Kapsam dışı (ürün kararı): yazar `revision_requested`'ta düzenlerken editörün gövdeyi
+  düzenlemesini tümden kapatmak. Bu denetim çakışmayı yakalıyor; düzenleme hakları değişmedi.
+
+**Hukuk (D-084):** Yeni kişisel veri, amaç, aktarım veya saklama süresi yok. Aydınlatma
+metni değişmedi.
+
+**Doğrulama:** `article-concurrency.test.ts` (7 test): değişmemiş sayfadan kayıt geçer, aynı
+eski sayfadan ikinci kayıt 409 ve metin korunur, yenilenmiş sayfa geçer; editörün eski
+sayfası yazarın metnini, yazarın eski sayfası editörün metnini silmez ve reddedilen kayıt
+sürüm bırakmaz; durum değişikliği sonrası eski sayfa 409; eski sayfadan "kaydet ve gönder"
+ne kaydeder ne gönderir; değer verilmezse denetim yok; tarih olmayan değer 400.
+Migration yok.

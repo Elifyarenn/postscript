@@ -191,6 +191,7 @@ export async function updateArticleAsWriterAction(
       slug: optionalText(formData, "slug"),
       category: optionalText(formData, "category"),
       changeNote: optionalText(formData, "changeNote"),
+      expectedUpdatedAt: optionalText(formData, "expectedUpdatedAt"),
     };
 
     // Both buttons post the same form, so a submit carries the text on screen (D-360)

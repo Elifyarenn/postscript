@@ -33,7 +33,7 @@ import {
   revisionTarget,
 } from "@/lib/article-status";
 import { AUTHOR_TOLD_STATUSES } from "@/lib/article-history";
-import { writeAudit } from "@/lib/audit";
+import { writeAudit, type Executor } from "@/lib/audit";
 import {
   canAccessAdminPanel,
   canAccessEditorPanel,
@@ -92,6 +92,8 @@ export const articleInputSchema = z.strictObject({
    * A content change revokes the writer's approval and asks for a new one.
    */
   changeKind: z.enum(["correction", "content_change"]).optional(),
+  /** The `updated_at` the form was drawn from; see `assertArticleUnchanged` (D-361). */
+  expectedUpdatedAt: z.iso.datetime().optional().nullable(),
 });
 
 /**
@@ -119,7 +121,39 @@ export const writerArticleInputSchema = z.strictObject({
    * dashes — a list they could open but not use.
    */
   changeNote: z.string().trim().max(300).optional().nullable(),
+  /** The `updated_at` the form was drawn from; see `assertArticleUnchanged` (D-361). */
+  expectedUpdatedAt: z.iso.datetime().optional().nullable(),
 });
+
+/**
+ * Refuses a save made from a form drawn before the article last changed
+ * (D-361). The writer may edit a text sent back for revision while an editor
+ * edits the same one; saving by id alone let the later click overwrite the
+ * other's work without either seeing it. The row is locked first, so two saves
+ * from the same moment cannot both pass. A caller with no form behind it
+ * (a script, a test) passes nothing and is not checked.
+ */
+async function assertArticleUnchanged(
+  tx: Executor,
+  articleId: string,
+  expectedUpdatedAt: string | null | undefined,
+): Promise<void> {
+  if (!expectedUpdatedAt) return;
+  const [row] = await tx
+    .select({ updatedAt: articles.updatedAt })
+    .from(articles)
+    .where(eq(articles.id, articleId))
+    .for("update");
+  if (!row) throw notFound("Makale bulunamadı.");
+  // Both sides went through a JavaScript Date, so both are cut to milliseconds
+  if (row.updatedAt.getTime() !== new Date(expectedUpdatedAt).getTime()) {
+    throw conflict(
+      "Bu yazı siz sayfayı açtıktan sonra değişti (başka biri kaydetti ya da durumu değişti); " +
+        "kaydınız yazılmadı. Metninizi bir yere kopyalayın, sayfayı yenileyip son sürümü görün " +
+        "ve değişikliğinizi onun üzerine yeniden yapın.",
+    );
+  }
+}
 
 /* ------------------------------------------------------------------ */
 /* Lookups                                                             */
@@ -721,6 +755,8 @@ export async function updateArticleAsWriter(
         existing,
       });
     }
+    // After the issue lock the budget takes, the same order as every other article write
+    await assertArticleUnchanged(tx, articleId, input.expectedUpdatedAt);
     const [row] = await tx
       .update(articles)
       .set({
@@ -862,6 +898,7 @@ export async function updateArticle(
   // wiped them while `issueId` next to them was preserved.
   // Editors are held to neither the word total nor a deadline (D-357)
   const updated = await db.transaction(async (tx) => {
+    await assertArticleUnchanged(tx, articleId, input.expectedUpdatedAt);
     const [row] = await tx
       .update(articles)
       .set({

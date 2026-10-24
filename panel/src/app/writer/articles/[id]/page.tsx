@@ -96,6 +96,8 @@ export default async function WriterArticleDetailPage({
               >
                 <>
                   <input type="hidden" name="articleId" value={article.id} />
+                  {/* A save from a page drawn before an editor's last save is refused (D-361) */}
+                  <input type="hidden" name="expectedUpdatedAt" value={article.updatedAt.toISOString()} />
 
                   <Field label="Başlık" htmlFor="title">
                     <Input id="title" name="title" defaultValue={article.title} required />

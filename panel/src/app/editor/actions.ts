@@ -107,6 +107,7 @@ export async function updateArticleAction(
         changeKind: text(formData, "changeKind") === "content_change"
           ? "content_change"
           : "correction",
+        expectedUpdatedAt: optionalText(formData, "expectedUpdatedAt"),
       },
       meta,
     );

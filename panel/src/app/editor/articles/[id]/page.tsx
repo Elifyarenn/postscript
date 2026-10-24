@@ -157,9 +157,11 @@ export default async function EditorArticleDetailPage({
         <Card>
           <h2 className="mb-4 font-serif text-lg">Makale</h2>
 
-          <PanelForm action={updateArticleAction} csrfToken={csrfToken} submitLabel="Kaydet">
+          <PanelForm action={updateArticleAction} csrfToken={csrfToken} submitLabel="Kaydet" warnUnsaved>
               <>
                 <input type="hidden" name="articleId" value={article.id} />
+                {/* A save from a page drawn before the writer's last save is refused (D-361) */}
+                <input type="hidden" name="expectedUpdatedAt" value={article.updatedAt.toISOString()} />
 
                 <Field label="Başlık" htmlFor="title">
                   <Input id="title" name="title" defaultValue={article.title} required />
