@@ -11,7 +11,12 @@ import { remindOpenReports, reportContent } from "@/services/reports";
 import { editorDecideApplication, submitWriterApplication } from "@/services/writer-applications";
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import { MemoryStorageAdapter, setStorageAdapter } from "@/lib/storage";
-import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
+import {
+  resetTables,
+  seedDefaultWriterAreas,
+  setupTestDatabase,
+  teardownTestDatabase,
+} from "../helpers/db";
 import { actorOf, createUser, noMeta } from "../helpers/factories";
 
 let database: Database;
@@ -30,6 +35,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await resetTables(database);
+  await seedDefaultWriterAreas();
   mailbox.clear();
   storage.clear();
 });
@@ -80,7 +86,14 @@ describe("an application reaching the admin's stage", () => {
     const applicant = await createUser({ email: "aday@example.com", displayName: "Aday Kişi" });
     return submitWriterApplication(
       actorOf(applicant),
-      { sample: { buffer: Buffer.from("%PDF-1.4\n% ornek"), fileName: "ornek.pdf" }, note: null },
+      {
+        engagement: "long_term",
+        interestAreas: ["Pop Culture"],
+        phone: "0532 111 22 33",
+        hasExperience: false,
+        sample: { buffer: Buffer.from("%PDF-1.4\n% ornek"), fileName: "ornek.pdf" },
+        note: null,
+      },
       noMeta,
     );
   }

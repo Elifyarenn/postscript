@@ -23,8 +23,10 @@ import {
   media,
   users,
   writerApplications,
+  writerAreas,
   type Role,
   type WriterApplication,
+  type WriterApplicationEngagement,
   type WriterApplicationStatus,
 } from "@/db/schema";
 import { writeAudit, recordRoleChange } from "@/lib/audit";
@@ -38,6 +40,7 @@ import { env } from "@/lib/env";
 import { badRequest, conflict, forbidden, isAppError, notFound, rateLimited } from "@/lib/errors";
 import { sendMail } from "@/services/mail-queue";
 import { buildStorageKey, getStorage } from "@/lib/storage";
+import { normalisePhone } from "@/lib/phone";
 import { getCurrentAgreement } from "./agreements";
 import { checkWriterEligibility, findUserById } from "./users";
 import { mailAdmins } from "./staff-mail";
@@ -131,9 +134,45 @@ export async function latestApplication(userId: string): Promise<WriterApplicati
 /* Submitting                                                          */
 /* ------------------------------------------------------------------ */
 
-export const writerApplicationSchema = z.strictObject({
-  note: z.string().trim().max(2000).optional().nullable(),
-});
+/**
+ * The questions every application answers (D-375). The sample rule depends on
+ * `engagement` and is checked next to the file, in `submitWriterApplication`.
+ */
+export const writerApplicationSchema = z
+  .strictObject({
+    engagement: z.enum(["long_term", "one_time"], {
+      error: "Uzun süreli mi tek seferlik mi yazmak istediğinizi seçin.",
+    }),
+    interestAreas: z
+      .array(z.string().trim().min(1))
+      .min(1, "İlgilendiğiniz en az bir kategoriyi seçin."),
+    phone: z
+      .string({ error: "İletişim numaranızı yazın." })
+      .trim()
+      .min(1, "İletişim numaranızı yazın.")
+      .max(20, "Telefon numarası geçersiz.")
+      .regex(/^\+?[0-9\s()-]*$/, "Telefon numarası yalnızca rakam içerebilir.")
+      .refine((value) => {
+        const digits = value.replace(/\D/g, "").length;
+        return digits >= 10 && digits <= 15;
+      }, "Telefon numarası geçersiz."),
+    hasExperience: z.boolean({ error: "Yazı deneyiminiz olup olmadığını işaretleyin." }),
+    experience: z.string().trim().max(2000).optional().nullable(),
+    note: z.string().trim().max(2000).optional().nullable(),
+  })
+  .refine((value) => !value.hasExperience || Boolean(value.experience), {
+    path: ["experience"],
+    message: "Deneyiminizi kısaca anlatın.",
+  });
+
+export type WriterApplicationAnswers = {
+  engagement?: string | null;
+  interestAreas?: string[];
+  phone?: string | null;
+  hasExperience?: boolean | null;
+  experience?: string | null;
+  note?: string | null;
+};
 
 /** Validates and stores a sample work file, returning its private media row. */
 async function storeSample(userId: string, file: { buffer: Buffer; fileName: string }) {
@@ -167,7 +206,7 @@ async function storeSample(userId: string, file: { buffer: Buffer; fileName: str
 
 export async function submitWriterApplication(
   actor: Actor,
-  input: { sample?: { buffer: Buffer; fileName: string } | null; note?: string | null },
+  input: WriterApplicationAnswers & { sample?: { buffer: Buffer; fileName: string } | null },
   meta: RequestMeta,
 ): Promise<WriterApplication> {
   if (!canSubmitApplication(actor)) {
@@ -195,38 +234,87 @@ export async function submitWriterApplication(
     );
   }
 
-  const parsed = writerApplicationSchema.safeParse({ note: input.note });
+  const parsed = writerApplicationSchema.safeParse({
+    engagement: input.engagement ?? undefined,
+    interestAreas: input.interestAreas ?? [],
+    phone: input.phone ?? undefined,
+    hasExperience: input.hasExperience ?? undefined,
+    experience: input.experience,
+    note: input.note,
+  });
   if (!parsed.success) {
-    throw badRequest("Başvuru bilgileri geçersiz.", z.flattenError(parsed.error).fieldErrors);
+    const fields = z.flattenError(parsed.error).fieldErrors;
+    // The first problem in words, so the form says what to fix
+    const first = Object.values(fields).flat()[0] ?? parsed.error.issues[0]?.message;
+    throw badRequest(first ?? "Başvuru bilgileri geçersiz.", fields);
   }
+  const answers = parsed.data;
 
-  // The sample is optional (D-370); when given, it is stored before the row
+  // Only areas that are open today; a stale or forged name is refused
+  const activeAreas = await db
+    .select({ name: writerAreas.name })
+    .from(writerAreas)
+    .where(eq(writerAreas.isActive, true))
+    .orderBy(writerAreas.sortOrder);
+  const chosen = new Set(answers.interestAreas);
+  if ([...chosen].some((name) => !activeAreas.some((area) => area.name === name))) {
+    throw badRequest("Seçilen kategorilerden biri artık yok. Sayfayı yenileyip tekrar seçin.");
+  }
+  const interestAreas = activeAreas.map((area) => area.name).filter((name) => chosen.has(name));
+
+  // A long-term writer is judged on a sample; for one piece it stays optional (D-370, D-375)
+  if (answers.engagement === "long_term" && !input.sample) {
+    throw badRequest("Uzun süreli yazarlık başvurusunda örnek yazı göndermek zorunludur.", {
+      sampleFile: ["Örnek yazınızı ekleyin."],
+    });
+  }
   const sample = input.sample ? await storeSample(user.id, input.sample) : null;
+  const phone = normalisePhone(answers.phone);
 
-  const [application] = await db
-    .insert(writerApplications)
-    .values({
-      userId: user.id,
-      status: "submitted",
-      sampleMediaId: sample?.id ?? null,
-      note: parsed.data.note ?? null,
-      submittedAt: new Date(),
-    })
-    .returning();
+  // The number lives on the account, where the admin's WhatsApp link reads it
+  // (D-231); the application keeps no second copy of it
+  const application = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .insert(writerApplications)
+      .values({
+        userId: user.id,
+        status: "submitted",
+        sampleMediaId: sample?.id ?? null,
+        note: answers.note || null,
+        engagement: answers.engagement,
+        interestAreas,
+        hasExperience: answers.hasExperience,
+        experience: answers.hasExperience ? answers.experience! : null,
+        submittedAt: new Date(),
+      })
+      .returning();
+    if (phone !== user.phone) {
+      await tx.update(users).set({ phone, updatedAt: new Date() }).where(eq(users.id, user.id));
+    }
+    return row!;
+  });
 
   await writeAudit({
     actorId: user.id,
     action: "writer_application.submitted",
     entityType: "writer_applications",
-    entityId: application!.id,
-    after: { mime: sample?.mime ?? null, size: sample?.size ?? null, note: application!.note },
+    entityId: application.id,
+    after: {
+      mime: sample?.mime ?? null,
+      size: sample?.size ?? null,
+      note: application.note,
+      engagement: application.engagement,
+      interestAreas,
+      hasExperience: application.hasExperience,
+      phoneChanged: phone !== user.phone,
+    },
     ip: meta.ip,
   });
 
   const message = templates.applicationSubmitted({ displayName: user.displayName });
   await sendMail({ to: user.email, ...message });
 
-  return application!;
+  return application;
 }
 
 /* ------------------------------------------------------------------ */
@@ -481,6 +569,11 @@ export type ApplicationListItem = {
   applicantName: string | null;
   applicantEmail: string | null;
   applicantRole: Role | null;
+  applicantPhone: string | null;
+  engagement: WriterApplicationEngagement | null;
+  interestAreas: string[] | null;
+  hasExperience: boolean | null;
+  experience: string | null;
   editorName: string | null;
   editorReviewedAt: Date | null;
   adminName: string | null;
@@ -525,6 +618,11 @@ function applicationListQuery() {
       applicantName: users.displayName,
       applicantEmail: users.email,
       applicantRole: users.role,
+      applicantPhone: users.phone,
+      engagement: writerApplications.engagement,
+      interestAreas: writerApplications.interestAreas,
+      hasExperience: writerApplications.hasExperience,
+      experience: writerApplications.experience,
       editorName: reviewers.displayName,
       editorReviewedAt: writerApplications.editorReviewedAt,
       adminName: admins.displayName,

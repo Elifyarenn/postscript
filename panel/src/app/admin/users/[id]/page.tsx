@@ -18,6 +18,7 @@ import { listGrantableIssues, listIssueGrantsForUser } from "@/services/issue-gr
 import { listAreaGrantableIssues, listIssueAreaGrantsForUser } from "@/services/issue-area-grants";
 import { listEditorAreasWithHolders, listEditorCategories } from "@/services/editor-categories";
 import { getApplicationProcess, type ApplicationListItem } from "@/services/writer-applications";
+import { ApplicationAnswers } from "@/components/application-answers";
 import { AgreementRenderError } from "@/lib/agreement/render";
 import { readCsrfToken } from "@/lib/csrf";
 import { renderMarkdown } from "@/lib/markdown";
@@ -733,6 +734,8 @@ export default async function AdminUserDetailPage({
                   <StatusBadge status={pipeline.latest.status} />
                   {pipeline.earlierCount > 0 && <span>Önceki başvuru: {pipeline.earlierCount}</span>}
                 </div>
+
+                <ApplicationAnswers application={pipeline.latest} />
 
                 <ol className="mb-5 space-y-3 text-sm">
                   {applicationStages(pipeline.latest).map((stage) => {

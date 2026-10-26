@@ -70,6 +70,12 @@ export const writerApplicationStatusEnum = pgEnum("writer_application_status", [
   "admin_rejected",
 ]);
 
+/** What kind of writing the applicant asks for (D-375); it decides whether a sample is required. */
+export const writerApplicationEngagementEnum = pgEnum("writer_application_engagement", [
+  "long_term",
+  "one_time",
+]);
+
 export const announcementAudienceEnum = pgEnum("announcement_audience", [
   "writers",
   "editors",
@@ -405,6 +411,14 @@ export const writerApplications = pgTable(
     sampleMediaId: uuid("sample_media_id").references(() => media.id, { onDelete: "set null" }),
     /** The applicant's own words about their sample work. */
     note: text("note"),
+    /** Long-term or one-time writing; null on applications from before D-375. */
+    engagement: writerApplicationEngagementEnum("engagement"),
+    /** Names of the writer areas the applicant is interested in, as they were when applying. */
+    interestAreas: text("interest_areas").array(),
+    /** Whether the applicant says they have writing experience; null before D-375. */
+    hasExperience: boolean("has_experience"),
+    /** The applicant's description of that experience, only when `has_experience`. */
+    experience: text("experience"),
     /** The latest reviewer's note; set by whichever reviewer decided last. */
     reviewNote: text("review_note"),
     submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
@@ -2295,6 +2309,7 @@ export type WriterStatus = (typeof writerStatusEnum.enumValues)[number];
 export type EditorStatus = (typeof editorStatusEnum.enumValues)[number];
 export type GrantStatus = (typeof grantStatusEnum.enumValues)[number];
 export type WriterApplicationStatus = (typeof writerApplicationStatusEnum.enumValues)[number];
+export type WriterApplicationEngagement = (typeof writerApplicationEngagementEnum.enumValues)[number];
 export type LicenseType = (typeof licenseTypeEnum.enumValues)[number];
 export type Post = typeof posts.$inferSelect;
 export type ContentReport = typeof contentReports.$inferSelect;

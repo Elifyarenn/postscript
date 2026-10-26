@@ -8,6 +8,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ELIGIBILITY_RULES } from "@/lib/writer-eligibility";
 import { PanelForm, ActionButton } from "./form";
+import { WriterApplicationForm } from "./writer-application-form";
 import {
   Card,
   EmptyState,
@@ -30,7 +31,6 @@ import {
   revokeOtherSessionsAction,
   revokeSessionAction,
   selfFreezeDutyAction,
-  submitWriterApplicationAction,
   updateProfileAction,
 } from "@/app/account/actions";
 import { PasswordField } from "./password-field";
@@ -209,9 +209,15 @@ export function WriterApplicationCard({
   messages,
   latest,
   cooldown,
+  areas,
+  phone,
 }: {
   csrfToken: string;
   role: SessionUser["role"];
+  /** The active writer area names the form offers (D-375). */
+  areas: string[];
+  /** The account's saved number, the form's default. */
+  phone: string | null;
   /** Machine ids of the unmet prerequisites, if any (see `checkWriterEligibility`). */
   problems: string[];
   /** Human readable versions of the same list, for the warning box. */
@@ -341,33 +347,11 @@ export function WriterApplicationCard({
       {!latest && !cooldown.withinCooldown && ready && (
         <>
           <p className="mb-4 text-sm text-muted">
-            İsterseniz örnek bir yazınızı (PDF veya DOCX, en fazla 20 MB) ekleyin. Başvuru önce
-            editörlerimize, ardından yönetime gider; onaylanırsa sözleşme imzasına davet
-            edilirsiniz.
+            Aşağıdaki soruları yanıtlayın. Başvuru önce editörlerimize, ardından yönetime
+            gider; onaylanırsa sözleşme imzasına davet edilirsiniz.
           </p>
 
-          <PanelForm
-            action={submitWriterApplicationAction}
-            csrfToken={csrfToken}
-            submitLabel="Yazar Olma İsteği Gönder"
-          >
-            <Field label="Örnek eser dosyası (isteğe bağlı)" htmlFor="sampleFile">
-              <Input
-                id="sampleFile"
-                name="sampleFile"
-                type="file"
-                accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              />
-            </Field>
-            <Field label="Not (isteğe bağlı)" htmlFor="note">
-              <Textarea
-                id="note"
-                name="note"
-                maxLength={2000}
-                placeholder="Örnek eseriniz hakkında birkaç cümle…"
-              />
-            </Field>
-          </PanelForm>
+          <WriterApplicationForm csrfToken={csrfToken} areas={areas} phone={phone} />
         </>
       )}
     </Card>

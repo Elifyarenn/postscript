@@ -124,6 +124,13 @@ export async function submitWriterApplicationAction(
       { ...user },
       {
         sample,
+        engagement: optionalText(formData, "engagement"),
+        interestAreas: formData.getAll("interestAreas").filter((v): v is string => typeof v === "string"),
+        phone: optionalText(formData, "phone"),
+        // "yes" / "no" radios; no answer stays null and the service asks for it
+        hasExperience:
+          formData.get("hasExperience") === "yes" ? true : formData.get("hasExperience") === "no" ? false : null,
+        experience: optionalText(formData, "experience"),
         note: optionalText(formData, "note"),
       },
       meta,

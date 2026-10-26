@@ -14701,3 +14701,52 @@ E2E `03-promotion.spec.ts` yeni karta göre yazıldı (reşit olmayanda yaş ko�
 onayından sonra başvuranın adından kullanıcı sayfasına gidip adımları denetler. SEED.reader
 artık e2e'de yazar olmuyor; ona dayanan bir senaryo yoktu (04'teki yorum güncellendi).
 Migration yok.
+
+## D-375 — Yazarlık başvurusunda zorunlu sorular
+
+**Bağlam:** Kullanıcı: "yazarlık isteği gönderme kısmında zorunlu sorular soracağız: uzun
+süreli mi tek seferlik mi; uzun süreliyse örnek yazı zorunlu, tek seferlikse isteğe bağlı,
+diğer her şey zorunlu; ilgilendiği kategoriler (11 kategori, birden fazla seçim); iletişim
+numarası; deneyim var/yok, varsa deneyim girebileceği bir alan".
+
+**Karar:**
+- `writer_applications`'a dört kolon (migration `0069_writer_application_questions`):
+  `engagement` (`writer_application_engagement`: `long_term` | `one_time`),
+  `interest_areas text[]` (kategori adları, başvuru anındaki hâliyle), `has_experience`
+  (boolean), `experience` (metin). Hepsi boş olabilir: D-375'ten önceki başvurularda yoktur,
+  ekranlar o satırları göstermez.
+- "11 kategori" = etkin `writer_areas` (D-059'daki gibi ayrı kategori tablosu yok). Seçenekler
+  sıralı etkin alanlardan gelir; en az bir seçim zorunlu; etkin olmayan ya da uydurma bir ad
+  400. Saklanan sıra alanların kendi sırasıdır. `users.interests` gibi `text[]`: aynı sürücü
+  yolu canlıda zaten çalışıyor (D-078).
+- İletişim numarası zorunlu (10–15 rakam, profil formuyla aynı karakter kuralı) ve
+  hesabın `users.phone` alanına yazılır (başvuru satırıyla aynı işlemde); başvuruda ikinci
+  bir kopya tutulmaz. Form hesaptaki numarayla dolu gelir. Kullanıcı sayfasındaki WhatsApp
+  bağlantısı (D-231) bu alanı zaten okuyor.
+- Deneyim: "Var" / "Yok" zorunlu; "Var" ise açıklama zorunlu (en çok 2000), "Yok" ise
+  gönderilen metin atılır.
+- Örnek yazı: `long_term`'de zorunlu (400, dosya depolamaya yazılmadan önce), `one_time`'da
+  isteğe bağlı (D-370 kuralı yalnızca tek seferlikte kaldı).
+- Başvuru notu isteğe bağlı kaldı: istenen "zorunlu" listesi soruları kapsıyor, not soru
+  değil; muhafazakâr seçenek mevcut davranışı değiştirmemek.
+- Kurallar `submitWriterApplication`'da (`writerApplicationSchema`, zod); form
+  (`WriterApplicationForm`, istemci bileşeni) yalnızca kolaylık: dosya alanı uzun süreli
+  seçilince `required` olur, deneyim kutusu "Var" seçilince açılır.
+- Yanıtlar `ApplicationAnswers` ile `/editor/applications`, `/admin/applications` ve kullanıcı
+  sayfasındaki "Yazarlık süreci" kartında görünür; üçü de yalnızca admine açık. Denetim
+  kaydına tür, kategoriler, deneyim var/yok ve numaranın değişip değişmediği yazılır; numara ve
+  deneyim metni yazılmaz.
+
+**Hukuk (D-084):** Yeni kişisel veri: yazarlık türü, ilgi kategorileri, deneyim bilgisi;
+telefon başvuruda zorunlu oldu. Aydınlatma metninde "İletişim" ve "Yazarlık" satırları
+güncellendi (numaranın hesaba kaydedildiği, yanıtları yalnızca yöneticilerin gördüğü dahil).
+Amaç ("Yazarlık başvurusunun alınması ve değerlendirilmesi") ve hukuki sebep değişmedi.
+Yeni metin sürümünü bir yöneticinin yayımlaması gerekir.
+
+**Doğrulama:** `writer-applications.test.ts` (D-375, 6): yanıtlar ve numara hesaba kaydedilir,
+kategoriler alan sırasına girer; tek seferlikte dosyasız kabul; uzun sürelide dosyasız 400;
+her eksik zorunlu yanıt kendi mesajıyla 400 ve hiçbir satır yazılmaz; etkin olmayan kategori
+400; "Yok" denince deneyim metni atılır. E2E `07-writer-application.spec.ts` soruları
+doldurur, uzun sürelide dosya alanının zorunlu olduğunu ve yanıtların kullanıcı sayfasında
+göründüğünü denetler. Migration `0069` canlıya push'tan **önce** uygulanmalı (başvuru
+listeleri yeni kolonları okuyor).

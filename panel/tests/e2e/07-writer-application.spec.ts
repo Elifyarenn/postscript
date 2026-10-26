@@ -32,6 +32,14 @@ test("a reader applies, gets reviewed twice, and becomes a writer once the signe
   await page.waitForURL("**/account");
 
   await expect(page.getByRole("heading", { name: "Yazar olma başvurusu" })).toBeVisible();
+  // The required questions (D-375); long-term writing makes the sample required
+  await page.getByLabel(/^Uzun süreli/).check();
+  await expect(page.getByLabel("Örnek yazı dosyası", { exact: true })).toHaveAttribute("required", "");
+  await page.getByLabel("Bilim & Teknoloji").check();
+  await page.getByLabel("Tarih & Dünya").check();
+  await page.getByLabel("İletişim numarası").fill("0532 111 22 33");
+  await page.getByLabel("Var", { exact: true }).check();
+  await page.getByLabel("Deneyiminiz").fill("Okul gazetesinde yazdım.");
   await page.locator('input[name="sampleFile"]').setInputFiles(SAMPLE);
   await page.getByLabel("Not (isteğe bağlı)").fill("Dergide yayımlanabilecek bir örnek yazı.");
   await page.getByRole("button", { name: "Yazar Olma İsteği Gönder" }).click();
@@ -67,6 +75,9 @@ test("a reader applies, gets reviewed twice, and becomes a writer once the signe
   await page.getByRole("link", { name: "Aylin Aday" }).first().click();
   await page.waitForURL("**/admin/users/**");
   await expect(page.getByRole("heading", { name: "Yazarlık süreci" })).toBeVisible();
+  // The answers are on the card for the reviewer
+  await expect(page.getByRole("definition").filter({ hasText: "Uzun süreli" })).toBeVisible();
+  await expect(page.getByRole("definition").filter({ hasText: "Okul gazetesinde yazdım." })).toBeVisible();
   await expect(page.getByRole("listitem").filter({ hasText: "Yönetim onayı — tamamlandı" })).toBeVisible();
   await expect(page.getByRole("listitem").filter({ hasText: "İmzalı sözleşme — sırada" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Yazar yap" })).toHaveCount(0);

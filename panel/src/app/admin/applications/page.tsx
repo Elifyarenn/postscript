@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { guardPanel } from "@/lib/auth/guard";
+import { ApplicationAnswers } from "@/components/application-answers";
 import { listApplicationsByStatus } from "@/services/writer-applications";
 import { readCsrfToken } from "@/lib/csrf";
 import { PanelForm } from "@/components/form";
@@ -87,6 +88,8 @@ export default async function AdminApplicationsPage() {
                       </a>
                     )}
                   </div>
+
+                  <ApplicationAnswers application={application} />
 
                   {application.note && (
                     <p className="mb-4 whitespace-pre-wrap rounded-md border border-line bg-surface p-3 text-sm">

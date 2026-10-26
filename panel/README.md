@@ -250,7 +250,11 @@ Onayda eski oturumların tümü kapatılır (D-036).
 ### Yazar başvuru süreci
 
 Kayıtlı okuyucu, hesap sayfasındaki "Yazar Olma İsteği Gönder" butonuyla
-başvurur; örnek bir eser dosyası (PDF/DOCX, en fazla 20 MB) yükler. Butonun
+başvurur. Zorunlu sorular (D-375): uzun süreli mi tek seferlik mi yazmak
+istediği, ilgilendiği kategoriler (etkin yazar alanları, birden çok seçim), iletişim
+numarası (hesabın `phone` alanına yazılır) ve yazı deneyimi var/yok (varsa
+açıklaması). Örnek eser dosyası (PDF/DOCX, en fazla 20 MB) uzun süreli yazarlıkta
+zorunlu, tek seferlikte isteğe bağlıdır. Butonun
 etkin olması için e-posta doğrulanmış, doğum tarihi girilmiş ve ≥ 18 yaş, KVKK
 onayı verilmiş olmalıdır; eksikler butonun yanında listelenir. Başvuru sayısı
 son 30 günde birdir (her sonuca karşı bekleme süresi aynıdır).

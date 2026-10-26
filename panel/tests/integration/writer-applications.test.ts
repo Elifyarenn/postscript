@@ -24,7 +24,12 @@ import { approveSignedContract, uploadSignedContract } from "@/services/signed-c
 import { MemoryMailAdapter, setMailAdapter } from "@/lib/mail/transport";
 import { MemoryStorageAdapter, setStorageAdapter } from "@/lib/storage";
 import { isAppError } from "@/lib/errors";
-import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
+import {
+  resetTables,
+  seedDefaultWriterAreas,
+  setupTestDatabase,
+  teardownTestDatabase,
+} from "../helpers/db";
 import {
   actorOf,
   createUser,
@@ -51,6 +56,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await resetTables(database);
+  await seedDefaultWriterAreas();
   mailbox.clear();
   storage.clear();
 });
@@ -67,11 +73,22 @@ async function captureError(promise: Promise<unknown>) {
 
 const SAMPLE_PDF = Buffer.from("%PDF-1.4\n% ornek eser icerigi");
 
+/** Every required answer of the application form (D-375), for a long-term writer. */
+const ANSWERS = {
+  engagement: "long_term",
+  interestAreas: ["Bilim & Teknoloji", "Tarih & Dünya"],
+  phone: "0532 111 22 33",
+  hasExperience: false,
+  experience: null,
+} as const;
+
+const SAMPLE = { buffer: SAMPLE_PDF, fileName: "ornek-eser.pdf" };
+
 /** A ready, plain reader (verified, adult, consented) submitting a sample. */
 async function submitAs(user: User, note = "örnek eser notu") {
   return submitWriterApplication(
     actorOf(user),
-    { sample: { buffer: SAMPLE_PDF, fileName: "ornek-eser.pdf" }, note },
+    { ...ANSWERS, interestAreas: [...ANSWERS.interestAreas], sample: SAMPLE, note },
     noMeta,
   );
 }
@@ -95,17 +112,104 @@ describe("submitting", () => {
     expect(mailbox.lastTo("aday@example.com")?.subject).toContain("alındı");
   });
 
-  it("accepts an application without a sample file", async () => {
+  it("stores the answers and saves the contact number on the account", async () => {
+    const applicant = await createUser({ email: "yanitlar@example.com" });
+
+    const application = await submitWriterApplication(
+      actorOf(applicant),
+      {
+        ...ANSWERS,
+        // Picked out of order; stored in the areas' own order
+        interestAreas: ["Tarih & Dünya", "Bilim & Teknoloji"],
+        hasExperience: true,
+        experience: "Okul gazetesinde iki yıl yazdım.",
+        sample: SAMPLE,
+      },
+      noMeta,
+    );
+
+    expect(application.engagement).toBe("long_term");
+    expect(application.interestAreas).toEqual(["Bilim & Teknoloji", "Tarih & Dünya"]);
+    expect(application.hasExperience).toBe(true);
+    expect(application.experience).toBe("Okul gazetesinde iki yıl yazdım.");
+    expect((await reloadUser(applicant.id)).phone).toBe("05321112233");
+  });
+
+  it("accepts a one-time application without a sample file", async () => {
     const applicant = await createUser({ email: "dosyasiz@example.com" });
 
     const application = await submitWriterApplication(
       actorOf(applicant),
-      { sample: null, note: "dosya eklemedim" },
+      { ...ANSWERS, interestAreas: ["Pop Culture"], engagement: "one_time", sample: null },
       noMeta,
     );
 
     expect(application.status).toBe("submitted");
+    expect(application.engagement).toBe("one_time");
     expect(application.sampleMediaId).toBeNull();
+  });
+
+  it("refuses a long-term application without a sample file", async () => {
+    const applicant = await createUser({ email: "uzun-dosyasiz@example.com" });
+
+    const error = await captureError(
+      submitWriterApplication(
+        actorOf(applicant),
+        { ...ANSWERS, interestAreas: ["Pop Culture"], sample: null },
+        noMeta,
+      ),
+    );
+    expect(error.status).toBe(400);
+    expect(error.message).toMatch(/örnek yazı göndermek zorunludur/);
+  });
+
+  it("refuses each missing required answer with its own message", async () => {
+    const applicant = await createUser({ email: "eksik@example.com" });
+    const base = { ...ANSWERS, interestAreas: ["Pop Culture"], sample: SAMPLE };
+
+    const cases: [Record<string, unknown>, RegExp][] = [
+      [{ engagement: null }, /Uzun süreli mi tek seferlik mi/],
+      [{ interestAreas: [] }, /en az bir kategoriyi/],
+      [{ phone: null }, /İletişim numaranızı/],
+      [{ phone: "12345" }, /Telefon numarası geçersiz/],
+      [{ hasExperience: null }, /deneyiminiz olup olmadığını/],
+      [{ hasExperience: true, experience: "  " }, /Deneyiminizi kısaca anlatın/],
+    ];
+    for (const [change, message] of cases) {
+      const error = await captureError(
+        submitWriterApplication(actorOf(applicant), { ...base, ...change }, noMeta),
+      );
+      expect(error.status, JSON.stringify(change)).toBe(400);
+      expect(error.message, JSON.stringify(change)).toMatch(message);
+    }
+    // Nothing was stored along the way
+    expect(await db.select().from(writerApplications)).toHaveLength(0);
+  });
+
+  it("refuses a category that is not an active area", async () => {
+    const applicant = await createUser({ email: "sahte-alan@example.com" });
+
+    const error = await captureError(
+      submitWriterApplication(
+        actorOf(applicant),
+        { ...ANSWERS, interestAreas: ["Uydurma Kategori"], sample: SAMPLE },
+        noMeta,
+      ),
+    );
+    expect(error.status).toBe(400);
+    expect(error.message).toMatch(/kategorilerden biri artık yok/);
+  });
+
+  it("drops the experience text when the applicant has none", async () => {
+    const applicant = await createUser({ email: "deneyimsiz@example.com" });
+
+    const application = await submitWriterApplication(
+      actorOf(applicant),
+      { ...ANSWERS, interestAreas: ["Pop Culture"], experience: "yazılmış ama yok dendi", sample: SAMPLE },
+      noMeta,
+    );
+    expect(application.hasExperience).toBe(false);
+    expect(application.experience).toBeNull();
   });
 
   it("refuses when a prerequisite is missing, naming the missing ones", async () => {
@@ -130,7 +234,12 @@ describe("submitting", () => {
     const error = await captureError(
       submitWriterApplication(
         actorOf(applicant),
-        { sample: { buffer: Buffer.from("duz metin dosyasi"), fileName: "notlar.txt" }, note: null },
+        {
+          ...ANSWERS,
+          interestAreas: ["Pop Culture"],
+          sample: { buffer: Buffer.from("duz metin dosyasi"), fileName: "notlar.txt" },
+          note: null,
+        },
         noMeta,
       ),
     );

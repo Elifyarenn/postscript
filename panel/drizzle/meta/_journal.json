@@ -477,6 +477,13 @@
       "when": 1793053481723,
       "tag": "0068_illustration_licences",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1793057889664,
+      "tag": "0069_writer_application_questions",
+      "breakpoints": true
     }
   ]
 }

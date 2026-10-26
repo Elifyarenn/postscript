@@ -21,6 +21,7 @@ import {
 import { formatDate } from "@/lib/utils";
 import { checkWriterEligibility } from "@/services/users";
 import { cooldownInfo, latestApplication } from "@/services/writer-applications";
+import { listWriterAreasWithQuota } from "@/services/writer-areas";
 import { countRecoveryCodesLeft, generateTotpSecret, otpauthUri } from "@/services/two-factor";
 import QRCode from "qrcode";
 import { cancelDeletionAction, requestDeletionAction } from "./actions";
@@ -63,12 +64,14 @@ export default async function AccountPage({
 
   // The writer application block: prerequisites, cooldown and current status
   const eligibility = checkWriterEligibility(profile);
-  const [cooldown, latest, documents, signedUploads] = await Promise.all([
+  const [cooldown, latest, documents, signedUploads, areas] = await Promise.all([
     cooldownInfo(profile.id),
     latestApplication(profile.id),
     // Only the account's own contract and licence forms (D-276), and their signed copies (D-289)
     listOwnContributorDocuments({ ...context.user }),
     listOwnSignedContracts({ ...context.user }),
+    // The categories the application form asks about (D-375)
+    listWriterAreasWithQuota(),
   ]);
 
   return (
@@ -114,6 +117,8 @@ export default async function AccountPage({
           messages={eligibility.messages}
           latest={latest}
           cooldown={cooldown}
+          areas={areas.map((area) => area.name)}
+          phone={profile.phone}
         />
 
         <ProfileCard
