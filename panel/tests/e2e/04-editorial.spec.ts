@@ -150,8 +150,7 @@ test("takes an article through the review chain to publication and withdraws it"
 
   /* ---------- a reader reads it ---------- */
 
-  // SEED.reader is a writer by now (03 promoted it), so the plain reader here
-  // is the other ordinary account
+  // Any plain reader will do; the minor account has no other role in this run
   await logout(page);
   await submitLogin(page, SEED.minor);
   await waitForHome(page);

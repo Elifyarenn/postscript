@@ -13,7 +13,6 @@ import {
   changeRole,
   deleteUserAsAdmin,
   exportUserData,
-  promoteToWriter,
   setBanned,
   setBirthDateAsAdmin,
   setEditorStatus,
@@ -74,24 +73,6 @@ import { badRequest } from "@/lib/errors";
 /* ------------------------------------------------------------------ */
 /* Users                                                               */
 /* ------------------------------------------------------------------ */
-
-export async function promoteToWriterAction(
-  _state: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  return runAction(async () => {
-    await assertCsrfFromForm(formData);
-    const { user } = await requireRole("admin");
-    const meta = await requestMetadata();
-
-    const targetId = text(formData, "userId");
-    await promoteToWriter({ ...user }, targetId, meta, optionalText(formData, "note") ?? undefined);
-
-    revalidatePath(`/admin/users/${targetId}`);
-    revalidatePath("/admin/users");
-    return { success: "Kullanıcı yazar rolüne yükseltildi." };
-  });
-}
 
 export async function changeRoleAction(
   _state: ActionState,
@@ -366,6 +347,7 @@ export async function adminApproveApplicationAction(
     );
 
     revalidatePath("/admin/applications");
+    revalidatePath("/admin/users/[id]", "page");
     return {
       success:
         "Başvuru onaylandı. Yazar sözleşmesi tanımlandı; başvuru sahibi imzaya davet edildi.",
@@ -391,6 +373,7 @@ export async function adminRejectApplicationAction(
     );
 
     revalidatePath("/admin/applications");
+    revalidatePath("/admin/users/[id]", "page");
     return { success: "Başvuru reddedildi." };
   });
 }

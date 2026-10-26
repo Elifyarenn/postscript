@@ -485,6 +485,7 @@ export type ApplicationListItem = {
   editorReviewedAt: Date | null;
   adminName: string | null;
   adminReviewedAt: Date | null;
+  signedAt: Date | null;
 };
 
 const reviewers = alias(users, "reviewers");
@@ -503,6 +504,14 @@ export async function listApplicationsByStatus(
   if (needsFinalizer && !canFinalizeApplications(actor)) throw forbidden();
   if (!needsFinalizer && !canReviewApplications(actor)) throw forbidden();
 
+  return applicationListQuery()
+    .where(inArray(writerApplications.status, statuses))
+    .orderBy(desc(writerApplications.submittedAt))
+    .limit(limit);
+}
+
+/** The shared select behind the queues and a user's own pipeline card. */
+function applicationListQuery() {
   return db
     .select({
       id: writerApplications.id,
@@ -520,12 +529,27 @@ export async function listApplicationsByStatus(
       editorReviewedAt: writerApplications.editorReviewedAt,
       adminName: admins.displayName,
       adminReviewedAt: writerApplications.adminReviewedAt,
+      signedAt: writerApplications.signedAt,
     })
     .from(writerApplications)
     .innerJoin(users, eq(writerApplications.userId, users.id))
     .leftJoin(reviewers, eq(writerApplications.editorBy, reviewers.id))
     .leftJoin(admins, eq(writerApplications.adminBy, admins.id))
-    .where(inArray(writerApplications.status, statuses))
-    .orderBy(desc(writerApplications.submittedAt))
-    .limit(limit);
+    .$dynamic();
+}
+
+/**
+ * A user's newest application with its reviewers, for the "Yazarlık süreci"
+ * card on the admin's user page (D-374), plus how many came before it.
+ */
+export async function getApplicationProcess(
+  actor: Actor,
+  userId: string,
+): Promise<{ latest: ApplicationListItem | null; earlierCount: number }> {
+  if (!canFinalizeApplications(actor)) throw forbidden();
+
+  const rows = await applicationListQuery()
+    .where(eq(writerApplications.userId, userId))
+    .orderBy(desc(writerApplications.submittedAt));
+  return { latest: rows[0] ?? null, earlierCount: Math.max(rows.length - 1, 0) };
 }

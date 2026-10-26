@@ -14,6 +14,7 @@ import {
   adminDecideApplication,
   cooldownInfo,
   editorDecideApplication,
+  getApplicationProcess,
   latestApplication,
   listApplicationsByStatus,
   submitWriterApplication,
@@ -294,6 +295,52 @@ describe("admin stage", () => {
       noMeta,
     );
     expect(decided.status).toBe("admin_rejected");
+  });
+});
+
+describe("the user page's process card (D-374)", () => {
+  it("returns the newest application with both reviewers and counts the earlier ones", async () => {
+    const admin = await createUser({ role: "admin", displayName: "Yönetici Kişi" });
+    const editor = await createUser({ role: "editor", displayName: "Editör Kişi" });
+    await publishContract(actorOf(admin));
+    const applicant = await createUser({ email: "surec@example.com" });
+
+    // An older, closed application from before the cooldown window
+    await db.insert(writerApplications).values({
+      userId: applicant.id,
+      status: "editor_rejected",
+      submittedAt: new Date(Date.now() - 60 * 86_400_000),
+    });
+
+    const application = await submitAs(applicant);
+    await editorDecideApplication(actorOf(editor), application.id, "approve", null, noMeta);
+    await adminDecideApplication(actorOf(admin), application.id, "approve", "uygun", noMeta);
+
+    const { latest, earlierCount } = await getApplicationProcess(actorOf(admin), applicant.id);
+    expect(latest!.id).toBe(application.id);
+    expect(latest!.status).toBe("admin_approved");
+    expect(latest!.editorName).toBe("Editör Kişi");
+    expect(latest!.adminName).toBe("Yönetici Kişi");
+    expect(latest!.reviewNote).toBe("uygun");
+    expect(earlierCount).toBe(1);
+  });
+
+  it("is empty for someone who never applied", async () => {
+    const admin = await createUser({ role: "admin" });
+    const reader = await createUser({ email: "basvurmadi@example.com" });
+
+    expect(await getApplicationProcess(actorOf(admin), reader.id)).toEqual({
+      latest: null,
+      earlierCount: 0,
+    });
+  });
+
+  it("is admin only", async () => {
+    const editor = await createUser({ role: "editor" });
+    const reader = await createUser({ email: "gizli@example.com" });
+
+    const error = await captureError(getApplicationProcess(actorOf(editor), reader.id));
+    expect(error.status).toBe(403);
   });
 });
 

@@ -347,10 +347,11 @@ doğum tarihi, e-posta, şifre ve KVKK onayı. Kayıt iki adımlıdır (D-067):
 form gönderilince e-posta adresine doğrulama bağlantısı gider ve hesap ancak
 bağlantı tıklandığında, doğrulanmış olarak oluşturulur. Yeni hesaba sunucu her
 zaman `user` (okuyucu) rolü atar; e-posta doğrulaması kimseyi yükseltmez.
-Yazar ve editör rolleri yalnızca yönetici panelinden verilir
-(`/admin/users` → terfi / rol değişimi / "Editor & Yazar" hibriti) veya yazar
-başvurusu pipeline'ından (`/admin/applications`) admin onayıyla geçer.
-(D-063, D-064)
+Okuyucu yazar başvurusu pipeline'ından (`/admin/applications`) yazar olur;
+kullanıcı sayfasında doğrudan "Yazar yap" düğmesi yoktur, yerine başvurunun
+aşamalarını gösteren "Yazarlık süreci" kartı vardır (D-374). Editör rolü ve
+"Editor & Yazar" hibriti yönetici panelinden verilir (`/admin/users` → rol
+değişimi). (D-063, D-064)
 
 ### İç duyurular ve okundu onayı
 
@@ -655,8 +656,10 @@ senaryolar §13.2'dekilerdir:
   bağlantı isteğinin hız sınırına takılması; yaygın şifre reddi; hatalı şifre
   ile bilinmeyen hesabın aynı yanıtı vermesi
 - `user` rolüyle `/writer`, `/editor`, `/admin` ve iç sayfalarına erişim → 403
-- 17 yaşındaki kullanıcıyı yazar yapma denemesi → reddedilir, gerekçe gösterilir
-- terfi → sözleşme onayı → `writer_status = active`
+- 17 yaşındaki kullanıcının "Yazarlık süreci" kartında yaş koşulu sağlanmadı
+  görünür; doğrudan terfi düğmesi yoktur (D-374)
+- başvuru → editör onayı → yönetim onayı → imzalı sözleşme doğrulaması →
+  `writer_status = active`
 - makale `accepted` → Eser Onayı açılır → onaysız `scheduled` denemesi
   reddedilir → onay → `scheduled` → `published`
 - editör "içerik değişikliği" ile kaydeder → onay iptal olur, yenisi açılır

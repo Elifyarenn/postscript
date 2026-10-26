@@ -508,6 +508,7 @@ export async function editorApproveApplicationAction(
     );
 
     revalidatePath("/editor/applications");
+    revalidatePath("/admin/users/[id]", "page");
     return { success: "Başvuru onaylandı; yönetim onayına gönderildi." };
   });
 }
@@ -530,6 +531,7 @@ export async function editorRejectApplicationAction(
     );
 
     revalidatePath("/editor/applications");
+    revalidatePath("/admin/users/[id]", "page");
     return { success: "Başvuru reddedildi." };
   });
 }

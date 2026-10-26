@@ -17,6 +17,7 @@ import { listAllWriterAreasWithQuota } from "@/services/writer-areas";
 import { listGrantableIssues, listIssueGrantsForUser } from "@/services/issue-grants";
 import { listAreaGrantableIssues, listIssueAreaGrantsForUser } from "@/services/issue-area-grants";
 import { listEditorAreasWithHolders, listEditorCategories } from "@/services/editor-categories";
+import { getApplicationProcess, type ApplicationListItem } from "@/services/writer-applications";
 import { AgreementRenderError } from "@/lib/agreement/render";
 import { readCsrfToken } from "@/lib/csrf";
 import { renderMarkdown } from "@/lib/markdown";
@@ -32,6 +33,7 @@ import {
   StatusBadge,
   Table,
   Td,
+  Textarea,
   Th,
 } from "@/components/ui";
 import { formatDate, formatDateTime } from "@/lib/utils";
@@ -42,7 +44,8 @@ import {
   grantIssueAreaAction,
   revokeIssueAreaAction,
   deleteUserAction,
-  promoteToWriterAction,
+  adminApproveApplicationAction,
+  adminRejectApplicationAction,
   revokeUserSessionsAction,
   setBannedAction,
   setBirthDateAction,
@@ -54,11 +57,126 @@ import {
   setWriterAreasAction,
   setWriterStatusAction,
 } from "../../actions";
+import { editorApproveApplicationAction, editorRejectApplicationAction } from "@/app/editor/actions";
 
 export const metadata = { title: "Kullanıcı" };
 
 /** The precondition list §9 asks for: every rule with a tick or a cross, the same as the service (D-366). */
 const RULES = ELIGIBILITY_RULES;
+
+type StageState = "done" | "current" | "rejected" | "waiting";
+
+/**
+ * The four steps of the writer application (D-374), read off one row. The
+ * review note belongs to whichever reviewer decided last, so it is shown on
+ * that reviewer's step only.
+ */
+function applicationStages(
+  application: ApplicationListItem,
+): { title: string; state: StageState; detail: ReactNode }[] {
+  const { status } = application;
+  const editorDecided = status !== "submitted";
+  const adminDecided = ["admin_approved", "admin_rejected", "signed"].includes(status);
+  const reviewNote = (shown: boolean) =>
+    shown && application.reviewNote ? (
+      <span className="mt-1 block whitespace-pre-wrap text-ink">{application.reviewNote}</span>
+    ) : null;
+  const decidedBy = (name: string | null, at: Date | null) =>
+    `${name ?? "—"} · ${at ? formatDateTime(at) : "—"}`;
+
+  return [
+    {
+      title: "Başvuru",
+      state: "done",
+      detail: (
+        <>
+          {formatDateTime(application.submittedAt)} ·{" "}
+          {application.sampleMediaId ? (
+            <a
+              href={`/api/media/${application.sampleMediaId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent underline"
+            >
+              Örnek eseri indir
+            </a>
+          ) : (
+            "Örnek eser eklenmedi"
+          )}
+          {application.note && (
+            <span className="mt-1 block whitespace-pre-wrap text-ink">{application.note}</span>
+          )}
+        </>
+      ),
+    },
+    {
+      title: "Editör incelemesi",
+      state: !editorDecided ? "current" : status === "editor_rejected" ? "rejected" : "done",
+      detail: !editorDecided ? (
+        "İnceleme bekliyor"
+      ) : (
+        <>
+          {status === "editor_rejected" ? "Reddedildi" : "Onaylandı"} ·{" "}
+          {decidedBy(application.editorName, application.editorReviewedAt)}
+          {reviewNote(!adminDecided)}
+        </>
+      ),
+    },
+    {
+      title: "Yönetim onayı",
+      state:
+        status === "editor_approved"
+          ? "current"
+          : status === "admin_rejected"
+            ? "rejected"
+            : adminDecided
+              ? "done"
+              : "waiting",
+      detail: !adminDecided ? (
+        status === "editor_approved" ? "Onay bekliyor" : "—"
+      ) : (
+        <>
+          {status === "admin_rejected" ? "Reddedildi" : "Onaylandı, sözleşme tanımlandı"} ·{" "}
+          {decidedBy(application.adminName, application.adminReviewedAt)}
+          {reviewNote(true)}
+        </>
+      ),
+    },
+    {
+      title: "İmzalı sözleşme",
+      state: status === "signed" ? "done" : status === "admin_approved" ? "current" : "waiting",
+      detail:
+        status === "signed"
+          ? `Doğrulandı, hesap yazar oldu · ${application.signedAt ? formatDateTime(application.signedAt) : "—"}`
+          : status === "admin_approved"
+            ? "Başvuru sahibinin imzalı sözleşmesi bekleniyor; Sözleşmeler sayfasında doğrulanınca hesap yazar olur."
+            : "—",
+    },
+  ];
+}
+
+const STAGE_MARK: Record<StageState, { symbol: string; className: string; label: string }> = {
+  done: {
+    symbol: "✓",
+    className: "border-accent bg-accent text-white",
+    label: "tamamlandı",
+  },
+  current: {
+    symbol: "•",
+    className: "border-accent bg-paper text-accent",
+    label: "sırada",
+  },
+  rejected: {
+    symbol: "✗",
+    className: "border-danger bg-danger-soft text-danger",
+    label: "reddedildi",
+  },
+  waiting: {
+    symbol: "",
+    className: "border-line bg-paper text-muted",
+    label: "bekliyor",
+  },
+};
 
 export default async function AdminUserDetailPage({
   params,
@@ -79,6 +197,7 @@ export default async function AdminUserDetailPage({
     throw error;
   }
   const readiness = await checkPromotionReadiness(target);
+  const pipeline = await getApplicationProcess({ ...user }, id);
   const areas = await listAllWriterAreasWithQuota();
 
   // Editor duty data: the areas this editor already holds and every area with
@@ -213,7 +332,7 @@ export default async function AdminUserDetailPage({
     { label: "Kayıt", value: formatDateTime(target.createdAt) },
   ];
 
-  // §9: the admin may look at the filled contract before promoting. This
+  // §9: the admin may look at the filled contract before approving. This
   // preview is never stored; it exists only to be read.
   let preview: { html: string; hash: string } | { error: string } | null = null;
   if (target.role === "user") {
@@ -600,60 +719,127 @@ export default async function AdminUserDetailPage({
           </Alert>
         )}
 
-        <Card>
-          <h2 className="mb-4 font-serif text-lg">Yazar terfisi</h2>
+        {(target.role === "user" || pipeline.latest) && (
+          <Card>
+            <h2 className="mb-1 font-serif text-lg">Yazarlık süreci</h2>
+            <p className="mb-4 text-sm text-muted">
+              Yazarlık başvuruyla olur: editör incelemesi, yönetim onayı, ardından başvuru
+              sahibinin imzalı sözleşmesi. Sözleşme doğrulanınca hesap yazar rolüne geçer.
+            </p>
 
-          {target.role !== "user" ? (
-            <Alert tone="info">Bu kullanıcı zaten &ldquo;{target.role}&rdquo; rolünde.</Alert>
-          ) : (
-            <>
-              <ul className="mb-5 space-y-2 text-sm">
-                {RULES.map((rule) => {
-                  const failed = readiness.problems.includes(rule.id);
-                  return (
-                    <li key={rule.id} className="flex items-start gap-2.5">
-                      <span
-                        aria-hidden
-                        className={
-                          failed
-                            ? "inline-flex size-4 shrink-0 items-center justify-center rounded-full border border-danger bg-danger-soft text-[10px] leading-none text-danger"
-                            : "inline-flex size-4 shrink-0 items-center justify-center rounded-full border border-accent bg-accent text-[10px] leading-none text-white"
-                        }
+            {pipeline.latest ? (
+              <>
+                <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-muted">
+                  <StatusBadge status={pipeline.latest.status} />
+                  {pipeline.earlierCount > 0 && <span>Önceki başvuru: {pipeline.earlierCount}</span>}
+                </div>
+
+                <ol className="mb-5 space-y-3 text-sm">
+                  {applicationStages(pipeline.latest).map((stage) => {
+                    const mark = STAGE_MARK[stage.state];
+                    return (
+                      <li key={stage.title} className="flex items-start gap-2.5">
+                        <span
+                          aria-hidden
+                          className={`mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full border text-[10px] leading-none ${mark.className}`}
+                        >
+                          {mark.symbol}
+                        </span>
+                        <span>
+                          <span className={stage.state === "waiting" ? "text-muted" : "font-medium"}>
+                            {stage.title}
+                          </span>
+                          <span className="sr-only"> — {mark.label}</span>
+                          <span className="block text-xs text-muted">{stage.detail}</span>
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ol>
+
+                {(pipeline.latest.status === "submitted" ||
+                  pipeline.latest.status === "editor_approved") && (
+                  <div className="grid gap-6 border-t border-line pt-4 lg:grid-cols-2">
+                    <PanelForm
+                      action={
+                        pipeline.latest.status === "submitted"
+                          ? editorApproveApplicationAction
+                          : adminApproveApplicationAction
+                      }
+                      csrfToken={csrfToken}
+                      submitLabel={
+                        pipeline.latest.status === "submitted"
+                          ? "Editör incelemesini onayla"
+                          : "Onayla ve sözleşme tanımla"
+                      }
+                    >
+                      <input type="hidden" name="applicationId" value={pipeline.latest.id} />
+                      <Field label="Not (isteğe bağlı)" htmlFor="application-approve-note">
+                        <Input id="application-approve-note" name="note" maxLength={1000} />
+                      </Field>
+                    </PanelForm>
+
+                    <PanelForm
+                      action={
+                        pipeline.latest.status === "submitted"
+                          ? editorRejectApplicationAction
+                          : adminRejectApplicationAction
+                      }
+                      csrfToken={csrfToken}
+                      submitLabel="Reddet"
+                      submitVariant="danger"
+                    >
+                      <input type="hidden" name="applicationId" value={pipeline.latest.id} />
+                      <Field
+                        label="Ret gerekçesi"
+                        htmlFor="application-reject-note"
+                        hint="Başvuru sahibine e-posta ile gider."
                       >
-                        {failed ? "✗" : "✓"}
-                      </span>
-                      <span className={failed ? "text-danger" : "text-ink"}>
-                        {rule.label}
-                        <span className="sr-only">{failed ? " — sağlanmadı" : " — sağlandı"}</span>
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
+                        <Textarea
+                          id="application-reject-note"
+                          name="note"
+                          required
+                          maxLength={1000}
+                        />
+                      </Field>
+                    </PanelForm>
+                  </div>
+                )}
+              </>
+            ) : (
+              <EmptyState>Yazar başvurusu yok.</EmptyState>
+            )}
 
-              {readiness.eligible ? (
-                <PanelForm
-                  action={promoteToWriterAction}
-                  csrfToken={csrfToken}
-                  submitLabel="Yazar yap"
-                >
-                  <input type="hidden" name="userId" value={target.id} />
-                  <Field label="Not" htmlFor="note" hint="Rol değişikliği kaydına yazılır.">
-                    <Input id="note" name="note" />
-                  </Field>
-                </PanelForm>
-              ) : (
-                <Alert tone="warning" title="Ön koşullar sağlanmıyor">
-                  <ul className="mt-1 list-disc pl-5">
-                    {readiness.messages.map((message) => (
-                      <li key={message}>{message}</li>
-                    ))}
-                  </ul>
-                </Alert>
-              )}
-            </>
-          )}
-        </Card>
+            {target.role === "user" && (
+              <div className="mt-5 border-t border-line pt-4">
+                <h3 className="mb-3 text-sm font-medium">Başvuru ön koşulları</h3>
+                <ul className="space-y-2 text-sm">
+                  {RULES.map((rule) => {
+                    const failed = readiness.problems.includes(rule.id);
+                    return (
+                      <li key={rule.id} className="flex items-start gap-2.5">
+                        <span
+                          aria-hidden
+                          className={
+                            failed
+                              ? "inline-flex size-4 shrink-0 items-center justify-center rounded-full border border-danger bg-danger-soft text-[10px] leading-none text-danger"
+                              : "inline-flex size-4 shrink-0 items-center justify-center rounded-full border border-accent bg-accent text-[10px] leading-none text-white"
+                          }
+                        >
+                          {failed ? "✗" : "✓"}
+                        </span>
+                        <span className={failed ? "text-danger" : "text-ink"}>
+                          {rule.label}
+                          <span className="sr-only">{failed ? " — sağlanmadı" : " — sağlandı"}</span>
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+          </Card>
+        )}
 
         {preview && (
           <Card>

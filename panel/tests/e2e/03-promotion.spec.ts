@@ -1,19 +1,16 @@
 /**
- * §13.2 — the writer promotion rules.
+ * §13.2 — the writer promotion rules, on the admin's user page.
  *
- *  - an account under 18 is refused, and the reason is shown
- *  - an eligible account is promoted to an active writer, and can use the
- *    writer panel right away (no agreement lock, D-050)
+ * Since D-374 there is no direct "Yazar yap" button: a reader becomes a
+ * writer only through the application pipeline (07-writer-application). The
+ * user page shows that pipeline as "Yazarlık süreci" with the preconditions.
+ *
+ *  - an account under 18 has the age rule crossed out, and nothing to press
+ *  - an eligible reader with no application shows every rule ticked, the
+ *    contract preview, and still no button to skip the pipeline
  */
 import { expect, test } from "@playwright/test";
-import {
-  loginElevated,
-  logout,
-  openPanelFromHome,
-  SEED,
-  submitLogin,
-  waitForHome,
-} from "./helpers";
+import { loginElevated, SEED } from "./helpers";
 
 test.describe.configure({ mode: "serial" });
 
@@ -27,20 +24,20 @@ async function openUser(page: import("@playwright/test").Page, email: string) {
   await page.locator("tbody tr").first().getByRole("link").click();
 }
 
-test("refuses to promote someone under eighteen, and says why", async ({ page }) => {
+test("shows an under-eighteen reader's crossed-out age rule, with no way to promote", async ({ page }) => {
   await loginElevated(page, "admin", SEED.admin);
 
   await openUser(page, SEED.minor.email);
 
-  await expect(page.getByText("Ön koşullar sağlanmıyor")).toBeVisible();
-  await expect(page.getByText("Kullanıcı 18 yaşından küçük.")).toBeVisible();
-  // The age rule is crossed out in the checklist as well
-  await expect(page.getByText("18 yaşını doldurmuş")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Yazarlık süreci" })).toBeVisible();
+  await expect(page.getByText("Yazar başvurusu yok.")).toBeVisible();
+  // The age rule is crossed out in the checklist
+  await expect(page.getByRole("listitem").filter({ hasText: "18 yaşını doldurmuş — sağlanmadı" })).toBeVisible();
   // There is no way to force it through: the button is not on the page at all
   await expect(page.getByRole("button", { name: "Yazar yap" })).toHaveCount(0);
 });
 
-test("promotes an eligible reader, who can use the panel right away", async ({ page }) => {
+test("shows an eligible reader's process without a direct promotion button", async ({ page }) => {
   await loginElevated(page, "admin", SEED.admin);
 
   await openUser(page, SEED.reader.email);
@@ -50,30 +47,13 @@ test("promotes an eligible reader, who can use the panel right away", async ({ p
   await expect(page.getByRole("definition").filter({ hasText: SEED.reader.email })).toBeVisible();
 
   // §9: every precondition is listed with a tick or a cross
+  await expect(page.getByRole("heading", { name: "Yazarlık süreci" })).toBeVisible();
   await expect(page.getByText("sağlanmadı")).toHaveCount(0);
 
-  // and the admin can read the filled contract before promoting
+  // and the admin can read the filled contract before approving an application
   await expect(page.getByRole("heading", { name: "Sözleşme önizlemesi" })).toBeVisible();
   await expect(page.getByText("Ada Yazar").or(page.getByText("Kerem Okur")).first()).toBeVisible();
 
-  await page.getByRole("button", { name: "Yazar yap" }).click();
-
-  // The promotion form is replaced by the "already a writer" notice, and the
-  // role change appears in the history: that record is what makes it legal
-  await expect(page.getByText("user → writer")).toBeVisible();
-  await expect(page.getByText(/zaten .writer. rolünde/)).toBeVisible();
-
-  await logout(page);
-
-  // The promoted account reaches the writer panel, already active — there is
-  // no contract lock to clear (D-050)
-  await submitLogin(page, SEED.reader);
-  await waitForHome(page);
-  await openPanelFromHome(page, "/writer");
-  await expect(page.getByRole("heading", { name: "Merhaba, Kerem Okur" })).toBeVisible();
-  await expect(page.getByText("Yazar sayfalarınız kilitli")).toHaveCount(0);
-
-  // §7.2: the approvals screen is reachable and unlocked
-  await page.goto("/writer/approvals");
-  await expect(page).toHaveURL(/\/writer\/approvals$/);
+  // Becoming a writer goes through the application, never a single click (D-374)
+  await expect(page.getByRole("button", { name: "Yazar yap" })).toHaveCount(0);
 });

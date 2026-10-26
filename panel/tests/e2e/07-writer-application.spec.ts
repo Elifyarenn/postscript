@@ -62,6 +62,14 @@ test("a reader applies, gets reviewed twice, and becomes a writer once the signe
   // The queue empties and the pipeline overview marks the contract as defined
   await expect(page.getByText("Onay bekleyen başvuru yok.")).toBeVisible();
   await expect(page.getByText("Sözleşme hazır")).toBeVisible();
+
+  // The applicant's name opens the user page, whose card shows where the pipeline stands (D-371, D-374)
+  await page.getByRole("link", { name: "Aylin Aday" }).first().click();
+  await page.waitForURL("**/admin/users/**");
+  await expect(page.getByRole("heading", { name: "Yazarlık süreci" })).toBeVisible();
+  await expect(page.getByRole("listitem").filter({ hasText: "Yönetim onayı — tamamlandı" })).toBeVisible();
+  await expect(page.getByRole("listitem").filter({ hasText: "İmzalı sözleşme — sırada" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Yazar yap" })).toHaveCount(0);
   await logout(page);
 
   // The applicant was invited to sign by e-mail

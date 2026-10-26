@@ -14664,3 +14664,40 @@ PANEL bağlantısı (`panelPathFor`, D-086) yalnızca admin, editör ve yazar ro
 
 **Doğrulama:** Kapı: typecheck, lint, test. `rbac.test.ts`: çizer işaretli okuyucu `/cizer`,
 çizer işaretli yazar `/writer`, yasaklı ya da e-postası doğrulanmamış çizer düğme almaz.
+
+## D-374 — Kullanıcı sayfasında "Yazarlık süreci"; "Yazar yap" düğmesi kalktı
+
+**Bağlam:** Kullanıcı: "yazarlık isteği gönderilen kişilerin sayfasına girildiğinde yazarlık
+süreci gibi bir alan olsun, yazar yap butonunu kaldır artık". `/admin/users/:id`'deki
+"Yazar terfisi" kartı ön koşul listesi ve doğrudan terfi eden "Yazar yap" düğmesinden
+oluşuyordu; başvurunun nerede olduğu bu sayfada görünmüyordu.
+
+**Karar:**
+- Kart "Yazarlık süreci" oldu. Okuyucu hesabında, ya da hesabın bir başvurusu varsa (yazar
+  olmuş başvuru sahibinde de) görünür. En yeni başvurunun durumu ve dört adımı: başvuru
+  (tarih, örnek eser bağlantısı ya da "eklenmedi", başvuru notu), editör incelemesi, yönetim
+  onayı (karar veren, tarih; ret gerekçesi son karar verenin adımında), imzalı sözleşme
+  (D-275 doğrulaması, `signed_at`). Önceki başvuru sayısı da yazılır.
+- Başvuru `submitted` ya da `editor_approved` iken o aşamanın onay/ret formu kartta;
+  `/editor/applications` ve `/admin/applications`'taki action'lar kullanılır, iş kuralı
+  `editorDecideApplication` / `adminDecideApplication`'da kaldı. Bu dört action kullanıcı
+  sayfasını da yeniler.
+- Veri tek serviste: `getApplicationProcess` (yalnızca admin, `canFinalizeApplications`);
+  kuyruklarla aynı sorguyu (`applicationListQuery`) paylaşır.
+- Ön koşul listesi okuyucuda kartın altında "Başvuru ön koşulları" olarak kaldı.
+- "Yazar yap" düğmesi ve `promoteToWriterAction` silindi: okuyucu yalnızca başvuruyla
+  yazar olur. `promoteToWriter` servisi ve testleri
+  (ön koşul kuralları) bırakıldı; hiçbir ekran onu çağırmıyor. Editörün "Editor & Yazar"
+  hibrit düğmesi (aynı etiketli) ayrı bir şey, yerinde. "Rol ve durum" kartındaki rol
+  seçicisi (`changeRole`, `role_changes` kaydıyla) değişmedi; istenmedi.
+
+**Hukuk (D-084):** Yeni veri yok; zaten admin ekranlarında görünen başvuru bilgileri tek
+sayfada toplandı. Aydınlatma metni değişmedi.
+
+**Doğrulama:** `writer-applications.test.ts` (D-374, 3): en yeni başvuru iki karar
+vericinin adı ve notuyla, önceki başvuru sayısı; başvurusuz hesap boş; editöre 403.
+E2E `03-promotion.spec.ts` yeni karta göre yazıldı (reşit olmayanda yaş koşulu
+"sağlanmadı", hiçbir hesapta "Yazar yap" yok); `07-writer-application.spec.ts` yönetim
+onayından sonra başvuranın adından kullanıcı sayfasına gidip adımları denetler. SEED.reader
+artık e2e'de yazar olmuyor; ona dayanan bir senaryo yoktu (04'teki yorum güncellendi).
+Migration yok.
