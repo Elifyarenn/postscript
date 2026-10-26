@@ -14536,3 +14536,19 @@ isteğe bağlı olunca da doğru. Metin değişmedi.
 **Doğrulama:** `writer-applications.test.ts` (dosyasız başvuru kabul edilir,
 `sampleMediaId` boş); dosyalı ve yanlış türlü testler yeni girdi biçimiyle geçer.
 Migration yok.
+
+## D-371 — Yazar başvurularında başvuranın adı kullanıcı sayfasına gider
+
+**Bağlam:** Kullanıcı: "yazar başvurularında başvuran kişinin bilgilerine giremiyorum".
+`/admin/applications` ve `/editor/applications` başvuranın adını düz metin gösteriyordu;
+`listApplicationsByStatus` kullanıcı kimliğini döndürmediği için bağlantı kurulamıyordu.
+
+**Karar:** `ApplicationListItem` `applicantId` taşır; iki sayfada başvuranın adı
+`/admin/users/:id` sayfasına bağlantıdır (sözleşme sayfalarındaki gibi). İki sayfa da zaten
+yalnızca admine açık (`guardPanel("admin")`, `guardAdminWithinEditor`), hedef sayfa da
+`guardPanel("admin")` ile korunuyor; yetki değişmedi, yeni veri gösterilmedi.
+
+**Hukuk (D-084):** Yeni veri yok; aydınlatma metni değişmedi.
+
+**Doğrulama:** `writer-applications.test.ts`: admin kuyruğundaki kayıt başvuranın kimliğini
+taşır. Migration yok.

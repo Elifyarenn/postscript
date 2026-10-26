@@ -477,6 +477,7 @@ export type ApplicationListItem = {
   submittedAt: Date;
   sampleMediaId: string | null;
   contractVersionId: string | null;
+  applicantId: string;
   applicantName: string | null;
   applicantEmail: string | null;
   applicantRole: Role | null;
@@ -511,6 +512,7 @@ export async function listApplicationsByStatus(
       submittedAt: writerApplications.submittedAt,
       sampleMediaId: writerApplications.sampleMediaId,
       contractVersionId: writerApplications.contractVersionId,
+      applicantId: users.id,
       applicantName: users.displayName,
       applicantEmail: users.email,
       applicantRole: users.role,

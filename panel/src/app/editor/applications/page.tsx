@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { guardAdminWithinEditor } from "@/lib/auth/guard";
 import { listApplicationsByStatus } from "@/services/writer-applications";
 import { readCsrfToken } from "@/lib/csrf";
@@ -41,7 +42,14 @@ export default async function EditorApplicationsPage() {
                 >
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <h3 className="font-medium">{application.applicantName}</h3>
+                      <h3 className="font-medium">
+                        <Link
+                          href={`/admin/users/${application.applicantId}`}
+                          className="underline"
+                        >
+                          {application.applicantName}
+                        </Link>
+                      </h3>
                       <p className="text-xs text-muted">
                         {application.applicantEmail} · başvuru{" "}
                         {formatDateTime(application.submittedAt)}

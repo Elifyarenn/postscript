@@ -183,6 +183,8 @@ describe("editor stage", () => {
     const adminQueue = await listApplicationsByStatus(actorOf(admin), ["editor_approved"]);
     expect(adminQueue).toHaveLength(1);
     expect(adminQueue[0]!.id).toBe(application.id);
+    // The admin pages link the applicant's name to /admin/users/:id
+    expect(adminQueue[0]!.applicantId).toBe(applicant.id);
 
     expect(mailbox.lastTo("gecen@example.com")?.subject).toContain("editör onayından geçti");
   });
