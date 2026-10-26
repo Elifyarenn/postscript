@@ -14552,3 +14552,92 @@ yalnızca admine açık (`guardPanel("admin")`, `guardAdminWithinEditor`), hedef
 
 **Doğrulama:** `writer-applications.test.ts`: admin kuyruğundaki kayıt başvuranın kimliğini
 taşır. Migration yok.
+
+## D-372 — Çizer ruhsatı: gönderilen çizimler için Eser Bazlı Kullanım Ruhsatı Formu (çizim)
+
+**İstek (ürün sahibi, 2026-10-27):** "Çizer paneli yapacağız; çizerler çizimlerini panele
+yükleyip isimlendirerek gönderecekler, sonra yazarlara imzalattığımız ruhsatın çizer
+versiyonunu oluşturacağız." Soru-cevapta: çizimler editöre değil **doğrudan admine** gider;
+dergiye çizim üzerinde ayrıca bir değişiklik izni (yazılardaki "editoryal düzeltmeler"
+paragrafının karşılığı) **gerekmez**, sistem yalnızca ruhsat oluşturmak için; bir çizerin
+aynı sayıdaki çizimleri **tek formda toplanır**.
+
+**Karar:**
+- **Yükleme ve adlandırma** D-362'den beri vardı (`/cizer/cizimler`). Artık her çizim bir
+  sayı için **gönderilir**: sayı seçimi zorunlu (zod `z.uuid`, select `required`). Seçilebilen
+  sayılar admin örnek sayısı dışında hepsi, **yayımlanmışlar dahil**: Sayı 1'in çizer
+  sayfalarındaki çizimlerin de ruhsatı gerekiyor. Düğme "Gönder". Sayısız eski çizimler
+  tek eserlik form alır (gruplanacak sayısı yok).
+- **Yalnızca adminler görür.** `canReviewIllustrations` artık yalnızca admin (D-362'de ana
+  editör de görüyordu); ana editöre ve editörlere dosya 404, liste 403. Yükleme bildirimi
+  yalnızca adminlere, `/admin/cizimler`'e götürür. Sayfa `/editor/cizimler`'den
+  `/admin/cizimler`'e taşındı (admin menüsünde "İçerik & Topluluk" altında); eski adres
+  oraya yönlendirir, eski bildirimler kırılmaz. Ana editör menüsünden "Çizimler" kalktı.
+- **Çizim bir eser türü** (D-300, D-359 deseni): ruhsat hazırlama (`prepareContributorDocuments`)
+  kaldırılmamış çizimleri de eser sayar. Ayrı şablon: tek eser
+  `eser-bazli-kullanim-ruhsati-formu-cizim-v9.md` (sürüm 9), sayı formu `-cizim-v10.md`
+  (sürüm 10). v7/v8'den farkları yalnızca: başlığa "(ÇİZİM)"; Madde 1'de "Ruhsata konu
+  dosya özeti (SHA-256)" ve özetin çizerin Panel'e kendisi yüklediği dosyayı tanımladığı
+  cümlesi; Madde 3'teki "Editoryal düzeltmeler" paragrafı **yok** (ürün sahibinin kararı).
+  Ruhsat kapsamı, işleme satırı (`ADAPTATION_SCOPE_TEXT`: kırpma, boyutlandırma, yerleşim,
+  teknik format), mecralar, süre, bedelsizlik, ticari kullanım (D-340), m. 10, nüsha/asıl/
+  paraf (D-358) ve imza blokları harfiyen aynı. Belge türü yine `work_licence` ("Eser Bazlı
+  Kullanım Ruhsatı Formu"): Genel Sözleşmenin andığı belge budur; e-posta, Belgelerim,
+  imzalı kopya yükleme ve arşiv akışları değişmeden çalışır.
+- **Form içeriği:** eserin türü "Çizim (görsel)"; teknik tanım dosyadan ("Panel'e yüklenen
+  çizim dosyası: PNG, 2480 × 3508 piksel, 3,2 MB"); özet yüklemede hesaplanan dosya
+  SHA-256'sı (`illustrations.sha256`); panel kaydı çizimin kimliği; katkı türü "Çizer";
+  yayın adı tercihi sorulmadığı için çizerin gerçek adı (D-284, testlerdeki gibi). Dosya
+  yüklendikten sonra değişmez, bu yüzden özet sabittir.
+- **Gruplama (D-339):** bir çizerin bir sayıdaki iki ya da daha çok çizimi tek sayı formunda.
+  Aynı kişinin aynı sayıdaki yazıları ayrı (metin) formdadır; çizim ve metin aynı forma
+  girmez (gruplama anahtarı kişi + sayı + tür). Tek çizim tek eserlik form alır. "Zaten
+  hazır", "incelemedeki form yeni eseri alır", "imzalı/gönderilmiş form değişmez" ve
+  eski şablonu yeniden çizme (D-340) kuralları aynı; bir formun çizim formu olduğu
+  eserlerinden (`illustration_id`) anlaşılır.
+- **Genel sözleşme:** yalnızca çizimi olan kişi "Çizer" olarak anılır; çizim onu "Yazar"
+  yapmaz (önceden her eser sahibi Yazar sayılıyordu).
+- **Admin akışı:** `/admin/agreements` → "Bir sayının ruhsat formlarını hazırla" (sayı +
+  isteğe bağlı kişi). Kişi listesine çizimi olan çizerler eklendi. Sonra mevcut "e-postayla
+  gönder" ve imzalı kopya akışı. `/admin/cizimler` sayfası bunu anlatır ve bağlantı verir.
+- **Kaldırma:** çizer, ruhsat formu kendisine **gönderilmiş ya da imzalı kopyası yüklenmiş**
+  bir çizimi kaldıramaz (409, "yöneticiye yazın"): o belge dosyayı özetiyle anıyor. Admin
+  kaldırabilir (kaldırma yolu, D-362). Kaldırılan çizimi anan, kimsenin elinde olmayan
+  (gönderilmemiş, kuyrukta değil, imzalı kopyası yok) form çizimle birlikte silinir; sayı
+  formu sonraki hazırlamada kalan çizimlerle yeniden çizilir. Silinen formların kimlikleri
+  `illustration.removed` denetim satırında.
+- **Veri (migration `0068`, yalnızca ekleyici):** `contributor_documents.illustration_id` ve
+  `contributor_document_works.illustration_id` (boş olabilir, FK `illustrations`, silinirse
+  `set null`); aynı çizim için aynı şablon sürümünde ikinci form ve ikinci sayı formu
+  kaydı kısmi tekil indeksle engellenir.
+
+**Hukuk (D-084):** FSEK: yükleme yine yayın izni değildir; izin çizerin ıslak imzalı
+formuyla doğar, mali haklar çizerde, hak devri yok. Değişiklik paragrafının çıkarılması
+ürün sahibinin kararı; kırpma ve boyutlandırma yazılardaki gibi işleme satırındaki sınırla
+kalır, içerik değişikliği FSEK m. 16 gereği çizerin onayına bağlıdır. KVKK: aydınlatma
+metninde "Çizimler" veri kalemi ("hangi sayı için gönderdiğiniz"), değerlendirme amacı
+satırı (yalnızca size ve yöneticilere gösterilir; ana editör çıkarıldı; ruhsat formu
+hazırlanması amacı eklendi), "Sözleşme" satırı (çizim formuna yazılan ad, tür, piksel,
+boyut, dosya özeti, panel kaydı) ve saklama satırı (gönderilmiş formu olan çizimi yalnızca
+yönetici kaldırır, gönderilmemiş form çizimle silinir) güncellendi. Yeni yurt dışı
+sağlayıcı ya da yeni veri kategorisi yok (aynı kayıtlar). Depodaki metin, bekleyen yeni
+sürümle birlikte yönetici tarafından yayınlanır.
+
+**Canlıya geçiş (D-079):** Kod `illustration_id` kolonlarını okuduğu için **önce migration
+0068 üretime uygulanmalı, sonra push**. Ardından admin `/admin/agreements` → "Bir sayının
+ruhsat formlarını hazırla" ile sayıyı (ve isteğe bağlı çizeri) seçer.
+
+**Bilerek yapılmayanlar:** çizimi yazıya/sayfaya bağlama, editör kabul/ret durumu, çizim
+için yayın adı (mahlas) tercihi, otomatik form hazırlama (admin basar, D-276).
+
+**Doğrulama:** Kapı: typecheck, lint, test. `contributor-documents.test.ts` (D-372): iki
+çizim tek çizim sayı formunda (sürüm 10, sıra, dosya özetleri, "(ÇİZİM)", katkı türü
+Çizer, teknik tanım, düzeltme paragrafı yok, PDF açılır, tekrar hazırlamada yeni form yok;
+genel sözleşmede "Yazar ve Çizer" değil); yazar-çizerin tek çizimi tek çizim formu
+(sürüm 9) alır, yazısı metin formunda kalır, admin önizlemesi çizim şablonundan; çizer
+gönderilmemiş formlu çizimi kaldırınca form silinir ve kalan çizim tek forma geçer;
+gönderilmiş formlu çizimi çizer kaldıramaz (409), admin kaldırır, form kalır; kişi
+listesinde çizer var, kaldırılmış çizime form çizilmez. `illustrations.test.ts`: sayısız
+gönderim 400, yayımlanmış sayı kabul, örnek sayı 400; bildirim yalnızca admine,
+`/admin/cizimler`; dosya ana editöre 404, liste ana editöre 403. `rbac.test.ts`:
+`canReviewIllustrations` yalnızca admin.

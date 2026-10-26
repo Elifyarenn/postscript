@@ -67,14 +67,19 @@ async function illustrator(overrides: Parameters<typeof createUser>[0] = {}): Pr
   return user;
 }
 
-function upload(user: User, options: { buffer?: Buffer; mime?: string; title?: string; issueId?: string | null } = {}) {
+async function upload(user: User, options: { buffer?: Buffer; mime?: string; title?: string; issueId?: string | null } = {}) {
   return uploadIllustration(
     actorOf(user),
     {
       buffer: options.buffer ?? png(1200, 800),
       declaredMime: options.mime ?? "image/png",
       fileName: "kapak.png",
-      fields: { title: options.title ?? "Kapak taslağı", note: "Sayı 2 kapağı için.", issueId: options.issueId ?? null },
+      fields: {
+        title: options.title ?? "Kapak taslağı",
+        note: "Sayı 2 kapağı için.",
+        // Every drawing names its issue (D-372)
+        issueId: options.issueId === undefined ? await testIssueId() : options.issueId,
+      },
     },
     noMeta,
   );
@@ -127,15 +132,17 @@ describe("handing a drawing in", () => {
     expect(storage.objects.size).toBe(0);
   });
 
-  it("refuses a missing title and an issue that is published or the admins' sample", async () => {
+  it("refuses a missing title, a missing issue and the admins' sample; a published issue is fine", async () => {
     const ece = await illustrator();
     expect((await captureError(upload(ece, { title: "  " }))).status).toBe(400);
+    expect((await captureError(upload(ece, { issueId: null }))).status).toBe(400);
 
+    // Its drawings still need their licence (D-372)
     const [published] = await db
       .insert(issues)
       .values({ number: 1, title: "Yayımlanmış", status: "published" })
       .returning({ id: issues.id });
-    expect((await captureError(upload(ece, { issueId: published!.id }))).status).toBe(400);
+    expect((await upload(ece, { issueId: published!.id })).issueId).toBe(published!.id);
 
     const [sample] = await db
       .insert(issues)
@@ -144,7 +151,7 @@ describe("handing a drawing in", () => {
     expect((await captureError(upload(ece, { issueId: sample!.id }))).status).toBe(400);
   });
 
-  it("tells the admins and the main editor in the panel, not a category editor", async () => {
+  it("tells the admins in the panel, not the main editor or a category editor (D-372)", async () => {
     const admin = await createUser({ role: "admin" });
     const main = await createUser({ role: "editor", editorStatus: "active" });
     await db.update(users).set({ isMainEditor: true }).where(eq(users.id, main.id));
@@ -154,14 +161,14 @@ describe("handing a drawing in", () => {
     await upload(ece);
 
     const told = await db.select().from(notifications).where(eq(notifications.kind, "illustration_uploaded"));
-    expect(told.map((row) => row.userId).sort()).toEqual([admin.id, main.id].sort());
-    expect(told.some((row) => row.userId === plain.id)).toBe(false);
-    expect(told[0]?.href).toBe("/editor/cizimler");
+    expect(told.map((row) => row.userId)).toEqual([admin.id]);
+    expect(told.some((row) => row.userId === plain.id || row.userId === main.id)).toBe(false);
+    expect(told[0]?.href).toBe("/admin/cizimler");
   });
 });
 
 describe("who sees a drawing", () => {
-  it("shows it to its çizer, the admins and the main editor; 404 for everyone else", async () => {
+  it("shows it to its çizer and the admins; 404 for everyone else, the main editor too (D-372)", async () => {
     const ece = await illustrator();
     const other = await illustrator({ displayName: "Çizer Mert" });
     const admin = await createUser({ role: "admin" });
@@ -171,18 +178,20 @@ describe("who sees a drawing", () => {
     const writer = await createUser({ role: "writer", writerStatus: "active" });
     const row = await upload(ece);
 
-    for (const allowed of [ece, admin, main]) {
+    for (const allowed of [ece, admin]) {
       const file = await readIllustrationFile(actorOf(allowed), row.id);
       expect(file.mime).toBe("image/png");
     }
-    for (const refused of [other, plain, writer]) {
+    for (const refused of [other, main, plain, writer]) {
       expect((await captureError(readIllustrationFile(actorOf(refused), row.id))).status).toBe(404);
     }
 
     expect((await listOwnIllustrations(actorOf(ece))).map((item) => item.id)).toEqual([row.id]);
     expect(await listOwnIllustrations(actorOf(other))).toEqual([]);
-    expect((await listIllustrationsForReview(actorOf(main))).map((item) => item.illustratorName)).toEqual(["Çizer Ece"]);
-    expect((await captureError(listIllustrationsForReview(actorOf(plain)))).status).toBe(403);
+    expect((await listIllustrationsForReview(actorOf(admin))).map((item) => item.illustratorName)).toEqual(["Çizer Ece"]);
+    for (const refused of [main, plain]) {
+      expect((await captureError(listIllustrationsForReview(actorOf(refused)))).status).toBe(403);
+    }
   });
 });
 

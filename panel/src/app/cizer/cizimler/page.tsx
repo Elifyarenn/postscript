@@ -22,12 +22,12 @@ export default async function IllustrationsPage() {
     <>
       <PageHeader
         title="Çizimlerim"
-        description="Dergi için hazırladığınız çizimleri buradan yükleyin; yöneticiler ve ana editör görür."
+        description="Dergi için hazırladığınız çizimleri buradan adlandırıp gönderin; yalnızca yöneticiler görür."
       />
 
       <div className="space-y-6">
         <Card>
-          <h2 className="mb-1 font-serif text-lg">Çizim yükle</h2>
+          <h2 className="mb-1 font-serif text-lg">Çizim gönder</h2>
           <p className="mb-4 text-sm text-muted">
             JPG, PNG ya da WEBP; en çok {MAX_ILLUSTRATION_MB} MB. Daha büyük bir dosyayı JPG ya da WEBP olarak
             küçültüp yükleyin.
@@ -35,22 +35,24 @@ export default async function IllustrationsPage() {
 
           {/* Said before the upload, as the writers' declaration is (D-238) */}
           <Alert tone="info" title="Yüklemek yayın izni değildir">
-            Çiziminizi değerlendirilmesi için dergiye iletirsiniz; yalnızca yöneticiler ve ana editör görür, sitede
-            yayımlanmaz. Bir çizim dergide kullanılacaksa onun için ayrıca ruhsat formu hazırlanır ve siz
-            imzalamadan yayımlanmaz. Haklarınız sizde kalır.
+            Çiziminizi seçtiğiniz sayı için yöneticiye iletirsiniz; yalnızca yöneticiler görür, sitede yayımlanmaz.
+            Yönetici bu sayıdaki çizimleriniz için tek bir ruhsat formu (çizim) hazırlar; form e-postanıza ve
+            Belgelerim&apos;e gelir, siz imzalamadan çiziminiz yayımlanmaz. Haklarınız sizde kalır.
           </Alert>
 
           <div className="mt-4">
-            <PanelForm action={uploadIllustrationAction} csrfToken={csrfToken} submitLabel="Yükle">
+            <PanelForm action={uploadIllustrationAction} csrfToken={csrfToken} submitLabel="Gönder">
               <Field label="Dosya" htmlFor="file">
                 <ImageFileInput id="file" maxMb={MAX_ILLUSTRATION_MB} />
               </Field>
               <Field label="Çizimin adı" htmlFor="title">
                 <Input id="title" name="title" required maxLength={200} />
               </Field>
-              <Field label="Hangi sayı için? (isteğe bağlı)" htmlFor="issueId">
-                <Select id="issueId" name="issueId" defaultValue="">
-                  <option value="">Belirtmiyorum</option>
+              <Field label="Hangi sayı için?" htmlFor="issueId">
+                <Select id="issueId" name="issueId" defaultValue="" required>
+                  <option value="" disabled>
+                    Sayı seçin
+                  </option>
                   {issueOptions.map((issue) => (
                     <option key={issue.id} value={issue.id}>
                       Sayı {issue.number} · {issue.title}

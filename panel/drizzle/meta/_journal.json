@@ -470,6 +470,13 @@
       "when": 1792833544896,
       "tag": "0067_illustrations",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1793053481723,
+      "tag": "0068_illustration_licences",
+      "breakpoints": true
     }
   ]
 }

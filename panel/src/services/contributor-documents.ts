@@ -3,9 +3,10 @@
  * Genel Katkı Sağlayan Sözleşmesi of the current version for every
  * contributor, and an Eser Bazlı Kullanım Ruhsatı Formu for every work, on
  * the account of the work's own author. A work is an article, an issue's
- * quiz whose author the admin has named (D-300), or a work kept in the code
- * such as the manor game (D-359). An author's works in one issue share one
- * form when there are more than one (D-339).
+ * quiz whose author the admin has named (D-300), a work kept in the code
+ * such as the manor game (D-359), or a drawing a çizer uploaded, on the çizim
+ * form (D-372). An author's works in one issue share one form when there are
+ * more than one (D-339); drawings and text works are never on the same form.
  *
  * Preparing is all this does. Nothing is sent (mail goes out only when an
  * admin asks for it per person, `mailContributorDocuments`, D-285), no
@@ -33,6 +34,7 @@ import {
   auditLog,
   contributorDocuments,
   contributorDocumentWorks,
+  illustrations,
   issueQuizzes,
   issues,
   mailJobs,
@@ -62,6 +64,11 @@ import {
   CONTRIBUTOR_AGREEMENT_FILE,
   contributionRoleLabel,
   DOCUMENT_KIND_LABELS,
+  ILLUSTRATION_FORM_FILE,
+  ILLUSTRATION_FORM_TEMPLATE_VERSION,
+  ILLUSTRATION_GROUP_FORM_FILE,
+  ILLUSTRATION_GROUP_TEMPLATE_VERSION,
+  illustrationFileDescription,
   LICENCE_COMMERCIAL_SETTING,
   LICENCE_FORM_FILE,
   LICENCE_FORM_TEMPLATE_VERSION,
@@ -200,7 +207,28 @@ type LicensedWork = {
   body: string;
   typeLabel: string;
   describe: (words: number) => string;
+  /** A drawing (D-372): the form names its file's own hash and size, not a text. */
+  file?: { sha256: string; description: string };
 };
+
+/** The form a work is drawn on, single or for an issue: the çizim form for a drawing (D-372). */
+function licenceTemplate(drawing: boolean, group: boolean): { file: string; version: string } {
+  if (drawing) {
+    return group
+      ? { file: ILLUSTRATION_GROUP_FORM_FILE, version: ILLUSTRATION_GROUP_TEMPLATE_VERSION }
+      : { file: ILLUSTRATION_FORM_FILE, version: ILLUSTRATION_FORM_TEMPLATE_VERSION };
+  }
+  return group
+    ? { file: LICENCE_GROUP_FORM_FILE, version: LICENCE_GROUP_TEMPLATE_VERSION }
+    : { file: LICENCE_FORM_FILE, version: LICENCE_FORM_TEMPLATE_VERSION };
+}
+
+/** A work's hash, words and technical line, whichever kind it is. */
+function workFacts(work: LicensedWork): { words: number; contentHash: string | null; technical: string | null } {
+  if (work.file) return { words: 0, contentHash: work.file.sha256, technical: work.file.description };
+  const words = wordCount(work.body);
+  return { words, contentHash: work.body.trim() ? articleHash(work.body) : null, technical: words > 0 ? work.describe(words) : null };
+}
 
 function articleWork(row: typeof articles.$inferSelect): LicensedWork {
   return {
@@ -235,8 +263,23 @@ function codeWork(entry: CodeWork): LicensedWork {
   };
 }
 
+function illustrationWork(row: typeof illustrations.$inferSelect): LicensedWork {
+  return {
+    id: row.id,
+    title: row.title,
+    body: "",
+    typeLabel: "Çizim (görsel)",
+    describe: () => "",
+    file: { sha256: row.sha256, description: illustrationFileDescription(row) },
+  };
+}
+
 /** The work a licence document is for, as it stands now; null when it is gone. */
 async function workOf(row: ContributorDocument): Promise<LicensedWork | null> {
+  if (row.illustrationId) {
+    const [drawing] = await db.select().from(illustrations).where(eq(illustrations.id, row.illustrationId)).limit(1);
+    return drawing ? illustrationWork(drawing) : null;
+  }
   if (row.workKey) {
     const entry = codeWorkByKey(row.workKey);
     return entry ? codeWork(entry) : null;
@@ -252,19 +295,22 @@ async function workOf(row: ContributorDocument): Promise<LicensedWork | null> {
 /** The works an issue form names, as they stand now, in the form's order (D-339). */
 async function groupWorksOf(documentId: string): Promise<GroupWork[]> {
   const rows = await db
-    .select({ article: articles, quiz: issueQuizzes, workKey: contributorDocumentWorks.workKey })
+    .select({ article: articles, quiz: issueQuizzes, drawing: illustrations, workKey: contributorDocumentWorks.workKey })
     .from(contributorDocumentWorks)
     .leftJoin(articles, eq(contributorDocumentWorks.articleId, articles.id))
     .leftJoin(issueQuizzes, eq(contributorDocumentWorks.quizId, issueQuizzes.id))
+    .leftJoin(illustrations, eq(contributorDocumentWorks.illustrationId, illustrations.id))
     .where(eq(contributorDocumentWorks.documentId, documentId))
     .orderBy(contributorDocumentWorks.position);
   const works: GroupWork[] = [];
-  for (const { article, quiz, workKey } of rows) {
+  for (const { article, quiz, drawing, workKey } of rows) {
     const entry = workKey ? codeWorkByKey(workKey) : undefined;
-    if (entry) {
-      works.push({ ...codeWork(entry), articleId: null, quizId: null, workKey: entry.key, bylineChoice: null });
+    if (drawing) {
+      works.push({ ...illustrationWork(drawing), ...noIds, illustrationId: drawing.id });
+    } else if (entry) {
+      works.push({ ...codeWork(entry), ...noIds, workKey: entry.key });
     } else if (quiz) {
-      works.push({ ...quizWork(quiz), articleId: null, quizId: quiz.id, workKey: null, bylineChoice: null });
+      works.push({ ...quizWork(quiz), ...noIds, quizId: quiz.id });
     } else if (article) {
       const [grant] = await db
         .select({ bylineChoice: rightsGrants.bylineChoice })
@@ -272,7 +318,7 @@ async function groupWorksOf(documentId: string): Promise<GroupWork[]> {
         .where(and(eq(rightsGrants.articleId, article.id), eq(rightsGrants.status, "signed")))
         .orderBy(desc(rightsGrants.signedAt))
         .limit(1);
-      works.push({ ...articleWork(article), articleId: article.id, quizId: null, workKey: null, bylineChoice: grant?.bylineChoice ?? null });
+      works.push({ ...articleWork(article), ...noIds, articleId: article.id, bylineChoice: grant?.bylineChoice ?? null });
     }
   }
   return works;
@@ -297,11 +343,11 @@ async function draftLicence(
   // The work's status is not a condition: every listed work gets its form (D-287)
 
   const { values, words, contentHash } = await licenceValues(version, terms, work, author, bylineChoice, formId, now);
-  if (words === 0) reasons.push("Eser metni boş");
+  if (!work.file && words === 0) reasons.push("Eser metni boş");
 
   let rendered: { markdown: string; hash: string } | null = null;
   try {
-    const filled = fillTemplate(readContract(LICENCE_FORM_FILE), values);
+    const filled = fillTemplate(readContract(licenceTemplate(Boolean(work.file), false).file), values);
     const hash = hashDocument(filled.markdown);
     rendered = { markdown: filled.markdown.replace("{{form.text_hash}}", hash), hash };
   } catch (error) {
@@ -320,21 +366,19 @@ async function licenceValues(
   formId: string,
   now: Date,
 ) {
-  const body = work.body;
-  const words = wordCount(body);
-  const contentHash = body.trim() ? articleHash(body) : null;
+  const { words, contentHash, technical } = workFacts(work);
 
   // The same person and publisher values the contract uses, under the form's names
-  const context = await buildAgreementContext(version, { ...author, contributionRole: "Yazar" });
+  const context = await buildAgreementContext(version, { ...author, contributionRole: work.file ? "Çizer" : "Yazar" });
   const values: Record<string, string | null> = {
     ...buildPlaceholders(context),
     "eser.baslik": work.title.trim() ? escapeForTemplate(work.title) : null,
     "eser.tur": work.typeLabel,
-    "eser.teknik_tanim": words > 0 ? work.describe(words) : null,
+    "eser.teknik_tanim": technical,
     "eser.content_hash": contentHash,
     "eser.id": work.id,
     "form.id": formId,
-    "form.template_version": LICENCE_FORM_TEMPLATE_VERSION,
+    "form.template_version": licenceTemplate(Boolean(work.file), false).version,
     "form.created_at": formatContractDate(now),
     ...licenceFormValues({
       terms,
@@ -353,8 +397,15 @@ type GroupWork = LicensedWork & {
   articleId: string | null;
   quizId: string | null;
   workKey: string | null;
+  illustrationId: string | null;
   bylineChoice: "real_name" | "pen_name" | null;
 };
+
+const noIds = { articleId: null, quizId: null, workKey: null, illustrationId: null, bylineChoice: null } as const;
+
+/** The work's own id, whichever column holds it. */
+const workIdOf = (row: { articleId: string | null; quizId: string | null; workKey: string | null; illustrationId: string | null }) =>
+  row.articleId ?? row.quizId ?? row.workKey ?? row.illustrationId ?? "";
 
 /** What the lists call an issue form: the issue and its works' titles. */
 function groupLabel(issueNumber: number, works: readonly GroupWork[]): string {
@@ -383,9 +434,9 @@ async function groupLicenceValues(
     return gap ? gap(reason) : "";
   };
 
+  const empty = works[0]?.file ? "Çizim dosyasının özeti yok" : "Eser metni boş";
   const entries = works.map((work, index) => {
-    const words = wordCount(work.body);
-    const contentHash = work.body.trim() ? articleHash(work.body) : null;
+    const { contentHash, technical } = workFacts(work);
     contentHashes.push(contentHash);
     const byline = licenceFormValues({
       terms,
@@ -397,14 +448,15 @@ async function groupLicenceValues(
       `### Eser ${index + 1}`,
       `Başlık\n${work.title.trim() ? escapeForTemplate(work.title) : missing("Eser başlığı boş")}`,
       `Tür\n${work.typeLabel}`,
-      `Eser tanımı / teknik bilgi\n${words > 0 ? work.describe(words) : missing("Eser metni boş")}`,
-      `Ruhsata konu dosya/metin özeti (SHA-256)\n${contentHash ?? missing("Eser metni boş")}`,
+      `Eser tanımı / teknik bilgi\n${technical ?? missing(empty)}`,
+      `${work.file ? "Ruhsata konu dosya özeti" : "Ruhsata konu dosya/metin özeti"} (SHA-256)\n${contentHash ?? missing(empty)}`,
       `Panel kaydı\n${work.id}`,
       `Yayın adı\n${byline ?? missing(reasonForPlaceholder("form.byline_label"))}`,
     ].join("\n\n");
   });
 
-  const context = await buildAgreementContext(version, { ...author, contributionRole: "Yazar" });
+  const drawings = Boolean(works[0]?.file);
+  const context = await buildAgreementContext(version, { ...author, contributionRole: drawings ? "Çizer" : "Yazar" });
   const values: Record<string, string | null> = {
     ...buildPlaceholders(context),
     ...licenceFormValues({
@@ -417,7 +469,7 @@ async function groupLicenceValues(
     "eserler.sayisi": String(works.length),
     "eserler.liste": entries.join("\n\n"),
     "form.id": formId,
-    "form.template_version": LICENCE_GROUP_TEMPLATE_VERSION,
+    "form.template_version": licenceTemplate(Boolean(works[0]?.file), true).version,
     "form.created_at": formatContractDate(now),
     // Filled after the fact: the hash covers the text with this field unfilled
     "form.text_hash": "{{form.text_hash}}",
@@ -441,7 +493,7 @@ async function draftGroupLicence(
 
   let rendered: { markdown: string; hash: string } | null = null;
   try {
-    const filled = fillTemplate(readContract(LICENCE_GROUP_FORM_FILE), values);
+    const filled = fillTemplate(readContract(licenceTemplate(Boolean(works[0]?.file), true).file), values);
     const hash = hashDocument(filled.markdown);
     rendered = { markdown: filled.markdown.replace("{{form.text_hash}}", hash), hash };
   } catch (error) {
@@ -544,11 +596,25 @@ export async function prepareContributorDocuments(
     if (!issue || (scope.issueId && scope.issueId !== issue.id) || (scope.userId && scope.userId !== author?.id)) return [];
     return [{ entry, issueId: issue.id, author }];
   });
-  const authorIds = new Set([
+  // Drawings the çizers still hold, on the çizim form (D-372); a removed one is no work
+  const drawings = await db
+    .select()
+    .from(illustrations)
+    .where(
+      and(
+        isNull(illustrations.deletedAt),
+        scope.issueId ? eq(illustrations.issueId, scope.issueId) : undefined,
+        scope.userId ? eq(illustrations.illustratorId, scope.userId) : undefined,
+      ),
+    )
+    .orderBy(illustrations.createdAt, illustrations.id);
+  // Who wrote a text work: the contract calls them Yazar, a drawing alone does not
+  const textAuthorIds = new Set([
     ...works.flatMap((work) => (work.authorId ? [work.authorId] : [])),
     ...quizzes.map((quiz) => quiz.authorId!),
     ...codeWorks.flatMap(({ author }) => (author ? [author.id] : [])),
   ]);
+  const authorIds = new Set([...textAuthorIds, ...drawings.map((drawing) => drawing.illustratorId)]);
 
   /* ---- Contributors: writers, çizerler, and anyone who wrote a work ---- */
   // A scoped run is about the works in scope: only their authors' contracts
@@ -581,6 +647,7 @@ export async function prepareContributorDocuments(
     ...works.map((work) => work.id),
     ...quizzes.map((quiz) => quiz.id),
     ...codeWorks.map(({ entry }) => entry.key),
+    ...drawings.map((drawing) => drawing.id),
   ]);
   const formWorks = await db
     .select({
@@ -588,18 +655,20 @@ export async function prepareContributorDocuments(
       articleId: contributorDocumentWorks.articleId,
       quizId: contributorDocumentWorks.quizId,
       workKey: contributorDocumentWorks.workKey,
+      illustrationId: contributorDocumentWorks.illustrationId,
     })
     .from(contributorDocumentWorks);
+  // An issue form is a çizim form when it names drawings; a single one when it names a drawing
+  const drawingForms = new Set(formWorks.flatMap((work) => (work.illustrationId ? [work.documentId] : [])));
+  const isDrawingForm = (row: ContributorDocument) => Boolean(row.illustrationId) || drawingForms.has(row.id);
   const outdated = existing
     .filter(
       (row) =>
         row.kind === "work_licence" &&
-        row.templateVersion !== (row.issueId ? LICENCE_GROUP_TEMPLATE_VERSION : LICENCE_FORM_TEMPLATE_VERSION) &&
+        row.templateVersion !== licenceTemplate(isDrawingForm(row), Boolean(row.issueId)).version &&
         free.has(row.id) &&
-        (inScope.has(row.articleId ?? row.quizId ?? row.workKey ?? "") ||
-          formWorks.some(
-            (work) => work.documentId === row.id && inScope.has(work.articleId ?? work.quizId ?? work.workKey ?? ""),
-          )),
+        (inScope.has(workIdOf(row)) ||
+          formWorks.some((work) => work.documentId === row.id && inScope.has(workIdOf(work)))),
     )
     .map((row) => row.id);
   if (outdated.length) {
@@ -633,6 +702,11 @@ export async function prepareContributorDocuments(
       .filter((row) => row.kind === "work_licence" && !row.issueId && row.workKey)
       .map((row) => [row.workKey, row]),
   );
+  const drawingLicenceOf = new Map(
+    existing
+      .filter((row) => row.kind === "work_licence" && !row.issueId && row.illustrationId)
+      .map((row) => [row.illustrationId, row]),
+  );
 
   const save = async (
     kind: ContributorDocumentKind,
@@ -642,7 +716,8 @@ export async function prepareContributorDocuments(
       articleId: string | null;
       quizId?: string | null;
       workKey?: string | null;
-      /** A code work's title, for the lists (D-359). */
+      illustrationId?: string | null;
+      /** A code work's or a drawing's title, for the lists (D-359, D-372). */
       worksLabel?: string | null;
       id?: string;
       templateVersion: string;
@@ -679,6 +754,7 @@ export async function prepareContributorDocuments(
         articleId: values.articleId,
         quizId: values.quizId ?? null,
         workKey: values.workKey ?? null,
+        illustrationId: values.illustrationId ?? null,
         worksLabel: values.worksLabel ?? null,
         createdBy: actor.id,
         ...fields,
@@ -705,7 +781,7 @@ export async function prepareContributorDocuments(
       summary.alreadyPrepared.general += 1;
       continue;
     }
-    const result = await draftGeneral(version, person, authorIds.has(person.id), versionReason);
+    const result = await draftGeneral(version, person, textAuthorIds.has(person.id), versionReason);
     await save("general_agreement", current, { userId: person.id, articleId: null, templateVersion: String(version.version) }, result);
   }
 
@@ -719,7 +795,8 @@ export async function prepareContributorDocuments(
   for (const row of signedChoices) if (!bylineOf.has(row.articleId)) bylineOf.set(row.articleId, row.bylineChoice);
 
   /* ---- Licence forms: one per work, or one per author and issue (D-339) ---- */
-  type Candidate = { work: GroupWork; author: User; issueId: string };
+  // A drawing handed in before the issue was asked for has none: it keeps a single form
+  type Candidate = { work: GroupWork; author: User; issueId: string | null };
   const candidates: Candidate[] = [];
   for (const work of works) {
     const author = work.authorId ? byId.get(work.authorId) : undefined;
@@ -736,7 +813,7 @@ export async function prepareContributorDocuments(
       continue;
     }
     const bylineChoice = bylineOf.get(work.id) ?? null;
-    candidates.push({ work: { ...articleWork(work), articleId: work.id, quizId: null, workKey: null, bylineChoice }, author, issueId: work.issueId });
+    candidates.push({ work: { ...articleWork(work), ...noIds, articleId: work.id, bylineChoice }, author, issueId: work.issueId });
   }
   for (const quiz of quizzes) {
     const author = byId.get(quiz.authorId!);
@@ -749,7 +826,7 @@ export async function prepareContributorDocuments(
       continue;
     }
     // A quiz carries no byline choice: the form names its author (D-284)
-    candidates.push({ work: { ...quizWork(quiz), articleId: null, quizId: quiz.id, workKey: null, bylineChoice: null }, author, issueId: quiz.issueId });
+    candidates.push({ work: { ...quizWork(quiz), ...noIds, quizId: quiz.id }, author, issueId: quiz.issueId });
   }
   for (const { entry, issueId, author } of codeWorks) {
     if (!author || author.deletedAt) {
@@ -761,7 +838,20 @@ export async function prepareContributorDocuments(
       continue;
     }
     // Like a quiz, it carries no byline choice: the form names its author (D-284)
-    candidates.push({ work: { ...codeWork(entry), articleId: null, quizId: null, workKey: entry.key, bylineChoice: null }, author, issueId });
+    candidates.push({ work: { ...codeWork(entry), ...noIds, workKey: entry.key }, author, issueId });
+  }
+  for (const drawing of drawings) {
+    const author = byId.get(drawing.illustratorId);
+    if (!author || author.deletedAt) {
+      skip("Çizimin sahibinin hesabı silinmiş: ruhsat hazırlanmadı");
+      continue;
+    }
+    if (!needsAuthorAgreement(author)) {
+      skip(ADMIN_SKIP);
+      continue;
+    }
+    // No byline choice is asked for a drawing: the form names the çizer (D-284)
+    candidates.push({ work: { ...illustrationWork(drawing), ...noIds, illustrationId: drawing.id }, author, issueId: drawing.issueId });
   }
 
   // A work an issue form names is on that form, whatever the form's state
@@ -771,34 +861,39 @@ export async function prepareContributorDocuments(
       articleId: contributorDocumentWorks.articleId,
       quizId: contributorDocumentWorks.quizId,
       workKey: contributorDocumentWorks.workKey,
+      illustrationId: contributorDocumentWorks.illustrationId,
     })
     .from(contributorDocumentWorks)
     .orderBy(contributorDocumentWorks.position);
-  const onGroup = new Set(
-    grouped.flatMap((row) => [row.articleId, row.quizId, row.workKey]).filter((id): id is string => Boolean(id)),
-  );
+  const onGroup = new Set(grouped.map(workIdOf).filter(Boolean));
   // A single form nobody holds yet (`free` above: not mailed, not queued, no
   // signed copy) gives way to the issue form; one its owner holds keeps its work (D-314)
   const singleOf = (work: GroupWork) =>
-    work.workKey
-      ? codeLicenceOf.get(work.workKey)
-      : work.quizId
-        ? quizLicenceOf.get(work.quizId)
-        : licenceOf.get(work.articleId);
+    work.illustrationId
+      ? drawingLicenceOf.get(work.illustrationId)
+      : work.workKey
+        ? codeLicenceOf.get(work.workKey)
+        : work.quizId
+          ? quizLicenceOf.get(work.quizId)
+          : licenceOf.get(work.articleId);
   const issueForms = existing.filter(
     (row) => row.kind === "work_licence" && row.issueId,
   );
 
+  // Drawings and text works of one person in one issue go on separate forms (D-372)
   const byKey = new Map<string, Candidate[]>();
+  const loose: Candidate[] = [];
   for (const candidate of candidates) {
-    const key = `${candidate.author.id}:${candidate.issueId}`;
+    if (!candidate.issueId) {
+      loose.push(candidate);
+      continue;
+    }
+    const key = `${candidate.author.id}:${candidate.issueId}:${candidate.work.file ? "drawing" : "text"}`;
     byKey.set(key, [...(byKey.get(key) ?? []), candidate]);
   }
-  const issueRows = byKey.size
-    ? await db
-        .select({ id: issues.id, number: issues.number })
-        .from(issues)
-        .where(inArray(issues.id, [...new Set(candidates.map((candidate) => candidate.issueId))]))
+  const issueIds = [...new Set(candidates.flatMap((candidate) => (candidate.issueId ? [candidate.issueId] : [])))];
+  const issueRows = issueIds.length
+    ? await db.select({ id: issues.id, number: issues.number }).from(issues).where(inArray(issues.id, issueIds))
     : [];
   const issueNumber = new Map(issueRows.map((row) => [row.id, row.number]));
 
@@ -820,18 +915,23 @@ export async function prepareContributorDocuments(
         articleId: work.articleId,
         quizId: work.quizId,
         workKey: work.workKey,
-        worksLabel: work.workKey ? work.title : null,
-        templateVersion: LICENCE_FORM_TEMPLATE_VERSION,
+        illustrationId: work.illustrationId,
+        worksLabel: work.workKey || work.illustrationId ? work.title : null,
+        templateVersion: licenceTemplate(Boolean(work.file), false).version,
         contentHash: result.contentHash,
       },
       result,
     );
   };
 
+  for (const candidate of loose) await saveSingle(candidate);
+
   for (const [key, group] of byKey) {
-    const [userId, issueId] = key.split(":") as [string, string];
+    const [userId, issueId, type] = key.split(":") as [string, string, "drawing" | "text"];
     const author = group[0]!.author;
-    const forms = issueForms.filter((row) => row.userId === userId && row.issueId === issueId);
+    const forms = issueForms.filter(
+      (row) => row.userId === userId && row.issueId === issueId && isDrawingForm(row) === (type === "drawing"),
+    );
     summary.alreadyPrepared.licence += forms.filter((row) => row.status === "prepared").length;
     // A work whose single form its owner already holds stays on that form
     const held = group.filter(({ work }) => {
@@ -848,7 +948,7 @@ export async function prepareContributorDocuments(
     const reviewWorks = review
       ? grouped
           .filter((row) => row.documentId === review.id)
-          .flatMap((row) => group.filter(({ work }) => work.id === (row.articleId ?? row.quizId ?? row.workKey)))
+          .flatMap((row) => group.filter(({ work }) => work.id === workIdOf(row)))
       : [];
     if (!review && open.length < 2) {
       // One work alone keeps the single form
@@ -868,7 +968,7 @@ export async function prepareContributorDocuments(
       renderedMarkdown: result.markdown,
       textHash: result.hash,
       worksLabel: number === null ? null : groupLabel(number, members),
-      templateVersion: LICENCE_GROUP_TEMPLATE_VERSION,
+      templateVersion: licenceTemplate(type === "drawing", true).version,
       updatedAt: now,
     };
     const replaced = members.flatMap((work) => {
@@ -904,6 +1004,7 @@ export async function prepareContributorDocuments(
           articleId: work.articleId,
           quizId: work.quizId,
           workKey: work.workKey,
+          illustrationId: work.illustrationId,
           contentHash: result.contentHashes[index] ?? null,
         })),
       );
@@ -1099,6 +1200,7 @@ export async function viewContributorDocument(actor: Actor, id: string): Promise
       .where(eq(issueQuizzes.authorId, owner!.id))
       .limit(1);
     const coded = CODE_WORKS.some((work) => work.authorEmail === owner!.email.trim().toLowerCase());
+    // A drawing does not make its çizer a Yazar (D-372); the çizer mark already says Çizer
     const values = await generalValues(version, owner!, Boolean(authored ?? quizzed) || coded);
     return { ...base, markdown: previewTemplate(version.bodyMarkdown, values, OPTIONAL, gap).markdown, isPreview: true, unavailable: null };
   }
@@ -1111,7 +1213,7 @@ export async function viewContributorDocument(actor: Actor, id: string): Promise
     values["form.text_hash"] = "(belge hazır olunca hesaplanır)";
     return {
       ...base,
-      markdown: previewTemplate(readContract(LICENCE_GROUP_FORM_FILE), values, new Set(), gap).markdown,
+      markdown: previewTemplate(readContract(licenceTemplate(Boolean(works[0]?.file), true).file), values, new Set(), gap).markdown,
       isPreview: true,
       unavailable: null,
     };
@@ -1129,7 +1231,7 @@ export async function viewContributorDocument(actor: Actor, id: string): Promise
   values["form.text_hash"] = "(belge hazır olunca hesaplanır)";
   return {
     ...base,
-    markdown: previewTemplate(readContract(LICENCE_FORM_FILE), values, new Set(), gap).markdown,
+    markdown: previewTemplate(readContract(licenceTemplate(Boolean(work.file), false).file), values, new Set(), gap).markdown,
     isPreview: true,
     unavailable: null,
   };
@@ -1623,7 +1725,7 @@ export async function queueUploadReminders(
 
 export type LicenceScopeOptions = {
   issues: { id: string; number: number; title: string }[];
-  /** Everyone with a work, who could be asked for a licence form. */
+  /** Everyone with a work or a drawing, who could be asked for a licence form. */
   authors: { id: string; displayName: string; email: string }[];
 };
 
@@ -1646,6 +1748,7 @@ export async function listLicenceScopeOptions(actor: Actor): Promise<LicenceScop
           sql`exists (select 1 from ${articles} where ${articles.authorId} = ${users.id} and ${articles.deletedAt} is null)`,
           sql`exists (select 1 from ${issueQuizzes} where ${issueQuizzes.authorId} = ${users.id})`,
           inArray(sql`lower(${users.email})`, [...new Set(CODE_WORKS.map((work) => work.authorEmail))]),
+          sql`exists (select 1 from ${illustrations} where ${illustrations.illustratorId} = ${users.id} and ${illustrations.deletedAt} is null)`,
         ),
       ),
     )

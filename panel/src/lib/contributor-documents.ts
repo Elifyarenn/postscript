@@ -37,6 +37,30 @@ export const LICENCE_GROUP_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu-v8.md"
 export const LICENCE_GROUP_TEMPLATE_VERSION = "8";
 
 /**
+ * The same two forms for a çizer's drawings (D-372): versions 7 and 8 with
+ * section 1 naming the uploaded file and without the editors' text
+ * corrections, which a drawing has no counterpart of. A çizer's drawings in
+ * one issue share the issue form, apart from any text works of theirs.
+ */
+export const ILLUSTRATION_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu-cizim-v9.md";
+export const ILLUSTRATION_FORM_TEMPLATE_VERSION = "9";
+export const ILLUSTRATION_GROUP_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu-cizim-v10.md";
+export const ILLUSTRATION_GROUP_TEMPLATE_VERSION = "10";
+
+/** "PNG, 2480 × 3508 piksel, 3,2 MB": what section 1 says of an uploaded drawing's file. */
+export function illustrationFileDescription(file: {
+  mime: string;
+  size: number;
+  width: number | null;
+  height: number | null;
+}): string {
+  const format = { "image/jpeg": "JPEG", "image/png": "PNG", "image/webp": "WEBP" }[file.mime] ?? file.mime;
+  const pixels = file.width && file.height ? `, ${file.width} × ${file.height} piksel` : "";
+  const megabytes = (file.size / (1024 * 1024)).toLocaleString("tr-TR", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+  return `Panel'e yüklenen çizim dosyası: ${format}${pixels}, ${megabytes} MB`;
+}
+
+/**
  * Whether new licence forms include commercial use (D-340): one
  * `site_settings` row the admin sets, "included" or "excluded". Without the
  * row the forms say "Hariç", which grants nothing beyond the free channels.

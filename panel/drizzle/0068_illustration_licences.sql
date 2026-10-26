@@ -1,0 +1,6 @@
+ALTER TABLE "contributor_document_works" ADD COLUMN "illustration_id" uuid;--> statement-breakpoint
+ALTER TABLE "contributor_documents" ADD COLUMN "illustration_id" uuid;--> statement-breakpoint
+ALTER TABLE "contributor_document_works" ADD CONSTRAINT "contributor_document_works_illustration_id_illustrations_id_fk" FOREIGN KEY ("illustration_id") REFERENCES "public"."illustrations"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "contributor_documents" ADD CONSTRAINT "contributor_documents_illustration_id_illustrations_id_fk" FOREIGN KEY ("illustration_id") REFERENCES "public"."illustrations"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "contributor_document_works_illustration_unique" ON "contributor_document_works" USING btree ("illustration_id") WHERE "contributor_document_works"."illustration_id" is not null;--> statement-breakpoint
+CREATE UNIQUE INDEX "contributor_documents_illustration_licence_unique" ON "contributor_documents" USING btree ("illustration_id","template_version") WHERE "contributor_documents"."kind" = 'work_licence' and "contributor_documents"."illustration_id" is not null;

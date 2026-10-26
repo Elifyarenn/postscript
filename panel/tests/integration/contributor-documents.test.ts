@@ -14,6 +14,7 @@ import {
   auditLog,
   contributorDocumentWorks,
   contributorDocuments,
+  illustrations,
   issues,
   mailJobs,
   rightsGrants,
@@ -31,6 +32,7 @@ import {
   contributorDocumentPdf,
   licenceCommercialUse,
   listContributorDocuments,
+  listLicenceScopeOptions,
   listOwnContributorDocuments,
   mailContributorDocuments,
   prepareContributorDocuments,
@@ -40,8 +42,12 @@ import {
 } from "@/services/contributor-documents";
 import { articleHash } from "@/services/rights";
 import { processMailQueue } from "@/services/mail-queue";
+import { removeIllustration } from "@/services/illustrations";
+import { MemoryStorageAdapter, setStorageAdapter } from "@/lib/storage";
 import {
   ADAPTATION_SCOPE_TEXT,
+  ILLUSTRATION_FORM_TEMPLATE_VERSION,
+  ILLUSTRATION_GROUP_TEMPLATE_VERSION,
   LICENCE_COMMERCIAL_SETTING,
   LICENCE_DURATION_TEXT,
   LICENCE_FORM_TEMPLATE_VERSION,
@@ -1105,5 +1111,132 @@ describe("commercial use and older templates (D-340)", () => {
 
     // Nothing more to draw again
     expect((await prepareContributorDocuments(actorOf(s.admin), noMeta)).redrawn).toBe(0);
+  });
+});
+
+describe("drawings on the çizim form (D-372)", () => {
+  const storage = new MemoryStorageAdapter();
+
+  async function drawing(illustratorId: string, title: string, issueId: string | null) {
+    const sha256 = hashDocument(`${illustratorId}:${title}`);
+    const storageKey = `illustrations/${title}.png`;
+    await storage.put({ bucket: "media", key: storageKey, body: Buffer.from("png"), mime: "image/png" });
+    const [row] = await db
+      .insert(illustrations)
+      .values({ illustratorId, title, issueId, storageKey, mime: "image/png", size: 3355443, width: 2480, height: 3508, sha256 })
+      .returning();
+    return row!;
+  }
+
+  async function drawingScenario() {
+    setStorageAdapter(storage);
+    storage.clear();
+    const s = await scenario();
+    const issueId = await testIssueId();
+    await db.update(users).set({ displayName: "Çizer Ece" }).where(eq(users.id, s.illustrator.id));
+    const cover = await drawing(s.illustrator.id, "Kapak", issueId);
+    const opener = await drawing(s.illustrator.id, "Açılış", issueId);
+    return { ...s, issueId, cover, opener };
+  }
+
+  const formsOf = async (userId: string) =>
+    (await db.select().from(contributorDocuments)).filter((row) => row.kind === "work_licence" && row.userId === userId);
+
+  it("puts a çizer's drawings in one issue on one çizim form, naming each file by its hash", async () => {
+    const s = await drawingScenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta, { issueId: s.issueId, userId: s.illustrator.id });
+
+    const [form, ...rest] = await formsOf(s.illustrator.id);
+    expect(rest).toHaveLength(0);
+    expect(form!.status).toBe("prepared");
+    expect(form!.issueId).toBe(s.issueId);
+    expect(form!.templateVersion).toBe(ILLUSTRATION_GROUP_TEMPLATE_VERSION);
+    expect(form!.worksLabel).toBe("Sayı 9999: Kapak; Açılış");
+    const works = await db
+      .select()
+      .from(contributorDocumentWorks)
+      .where(eq(contributorDocumentWorks.documentId, form!.id))
+      .orderBy(contributorDocumentWorks.position);
+    expect(works.map((row) => row.illustrationId)).toEqual([s.cover.id, s.opener.id]);
+    expect(works.map((row) => row.contentHash)).toEqual([s.cover.sha256, s.opener.sha256]);
+
+    const text = form!.renderedMarkdown!;
+    expect(text).toContain("ESER BAZLI KULLANIM RUHSATI FORMU (ÇİZİM)");
+    expect(text).toContain("Rol / katkı türü: Çizer");
+    expect(text).toContain("Çizim (görsel)");
+    expect(text).toContain("Panel'e yüklenen çizim dosyası: PNG, 2480 × 3508 piksel, 3,2 MB");
+    expect(text).toContain(`Ruhsata konu dosya özeti (SHA-256)\n${s.cover.sha256}`);
+    expect(text).toContain("Gerçek adıyla (Çizer Ece)");
+    // A drawing has no text for the editors to correct
+    expect(text).not.toContain("Editoryal düzeltmeler");
+    expect(text).not.toMatch(/\{\{/);
+
+    // The contract calls a çizer with only drawings Çizer, not Yazar
+    const [contract] = (await db.select().from(contributorDocuments)).filter(
+      (row) => row.kind === "general_agreement" && row.userId === s.illustrator.id,
+    );
+    expect(contract!.renderedMarkdown).toContain("Çizer");
+    expect(contract!.renderedMarkdown).not.toContain("Yazar ve Çizer");
+
+    // The çizer reads and downloads it like any document; preparing again adds nothing for them
+    expect((await listOwnContributorDocuments(actorOf(s.illustrator))).some((row) => row.articleTitle === form!.worksLabel)).toBe(true);
+    expect((await contributorDocumentPdf(actorOf(s.illustrator), form!.id)).body.subarray(0, 4).toString()).toBe("%PDF");
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    expect(await formsOf(s.illustrator.id)).toHaveLength(1);
+  });
+
+  it("keeps a lone drawing on the single çizim form, and drawings off a person's text form", async () => {
+    const s = await drawingScenario();
+    // Tam Kayıt both writes and draws in issue 9999
+    await db.update(users).set({ isIllustrator: true }).where(eq(users.id, s.complete.id));
+    const own = await drawing(s.complete.id, "Yazarın Çizimi", s.issueId);
+    await prepareContributorDocuments(actorOf(s.admin), noMeta, { userId: s.complete.id });
+
+    const forms = await formsOf(s.complete.id);
+    const single = forms.find((row) => row.illustrationId === own.id)!;
+    expect(single.templateVersion).toBe(ILLUSTRATION_FORM_TEMPLATE_VERSION);
+    expect(single.worksLabel).toBe("Yazarın Çizimi");
+    expect(single.workContentHash).toBe(own.sha256);
+    expect(single.renderedMarkdown).toContain("Ruhsata konu dosya özeti (SHA-256)");
+    // Their article in that issue keeps the text form
+    expect(forms.find((row) => row.articleId === s.published.id)!.templateVersion).toBe(LICENCE_FORM_TEMPLATE_VERSION);
+    const preview = await viewContributorDocument(actorOf(s.admin), single.id);
+    expect(preview.markdown).toContain("(ÇİZİM)");
+  });
+
+  it("lets the çizer take back a drawing whose form was not sent, and the form goes with it", async () => {
+    const s = await drawingScenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta, { issueId: s.issueId });
+    expect(await formsOf(s.illustrator.id)).toHaveLength(1);
+
+    await removeIllustration(actorOf(s.illustrator), s.cover.id, noMeta);
+    expect(await formsOf(s.illustrator.id)).toHaveLength(0);
+
+    // Drawn again with what is left: the lone drawing gets the single form
+    await prepareContributorDocuments(actorOf(s.admin), noMeta, { issueId: s.issueId });
+    const [again] = await formsOf(s.illustrator.id);
+    expect(again!.illustrationId).toBe(s.opener.id);
+  });
+
+  it("refuses the çizer a drawing whose form they were sent; an admin may still remove it", async () => {
+    const s = await drawingScenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta, { issueId: s.issueId });
+    const [form] = await formsOf(s.illustrator.id);
+    await db.update(contributorDocuments).set({ mailedAt: new Date() }).where(eq(contributorDocuments.id, form!.id));
+
+    expect((await captureError(removeIllustration(actorOf(s.illustrator), s.cover.id, noMeta)))?.status).toBe(409);
+    await removeIllustration(actorOf(s.admin), s.cover.id, noMeta);
+    // What the çizer holds stays
+    expect((await formsOf(s.illustrator.id)).map((row) => row.id)).toEqual([form!.id]);
+  });
+
+  it("offers the çizer in the admin's person list, and leaves a removed drawing out", async () => {
+    const s = await drawingScenario();
+    const options = await listLicenceScopeOptions(actorOf(s.admin));
+    expect(options.authors.some((author) => author.id === s.illustrator.id)).toBe(true);
+
+    await db.update(illustrations).set({ deletedAt: new Date() }).where(inArray(illustrations.id, [s.cover.id, s.opener.id]));
+    await prepareContributorDocuments(actorOf(s.admin), noMeta, { issueId: s.issueId, userId: s.illustrator.id });
+    expect(await formsOf(s.illustrator.id)).toHaveLength(0);
   });
 });

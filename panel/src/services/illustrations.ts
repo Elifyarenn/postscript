@@ -5,25 +5,28 @@
  *  - only an account with the çizer mark (D-151) that may open its panel uploads
  *  - JPEG, PNG or WEBP, told apart by their bytes, at most 4 MB: the host cuts a
  *    request off at about 4.5 MB before the action runs (D-254)
- *  - the çizer, the admins and the main editor see a drawing; nobody else
- *  - handing a drawing in publishes nothing and licenses nothing (FSEK)
- *  - removing one deletes the file and keeps the record for a year
+ *  - the çizer and the admins see a drawing; nobody else (D-372: not the main editor)
+ *  - every drawing names its issue: it is handed in for that issue's licence form (D-372)
+ *  - handing a drawing in publishes nothing and licenses nothing (FSEK); the
+ *    licence is the çizim form the admin prepares from it, signed by hand
+ *  - removing one deletes the file and keeps the record for a year; a çizer
+ *    cannot take back a drawing whose licence form they were already sent
  */
 import "server-only";
 import { createHash } from "node:crypto";
-import { and, count, desc, eq, isNull, lt, ne, or } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, lt, not, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { illustrations, issues, users, type Illustration } from "@/db/schema";
+import { contributorDocuments, contributorDocumentWorks, illustrations, issues, users, type Illustration } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import { canAccessAdminPanel, canAccessIllustratorPanel, canReviewIllustrations, type Actor } from "@/lib/auth/rbac";
+import { notMailed, withoutSignedCopy } from "./contributor-documents";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { imageSize } from "@/lib/image-size";
 import { buildStorageKey, getStorage } from "@/lib/storage";
 import { MAX_ILLUSTRATION_BYTES, MAX_ILLUSTRATION_MB } from "@/lib/illustration";
 import { trafficCutoff } from "@/lib/traffic";
 import { detectFileType } from "./media";
-import { getEditorAssignment } from "./editor-categories";
 import { notify } from "./notifications";
 import type { RequestMeta } from "./auth";
 
@@ -35,7 +38,7 @@ const ILLUSTRATION_MIMES = ["image/jpeg", "image/png", "image/webp"];
 export const illustrationInputSchema = z.strictObject({
   title: z.string().trim().min(1, "Çizime bir ad verin.").max(200),
   note: z.string().trim().max(1000).optional().nullable(),
-  issueId: z.uuid().optional().nullable(),
+  issueId: z.uuid("Çizimin hangi sayı için olduğunu seçin."),
 });
 
 /** The mark is not on the session (D-288), so it is read from the account each time. */
@@ -51,18 +54,19 @@ async function assertIllustrator(actor: Actor): Promise<{ displayName: string }>
 
 /** Whether this person sees the drawings handed in; the page and the service ask the same. */
 export async function mayReviewIllustrations(actor: Actor): Promise<boolean> {
-  if (canAccessAdminPanel(actor)) return true;
-  if (actor.role !== "editor") return false;
-  return canReviewIllustrations(actor, await getEditorAssignment(actor.id));
+  return canReviewIllustrations(actor);
 }
 
-/** The issues a çizer may say a drawing is for: not yet published, not the admins' sample. */
+/**
+ * The issues a çizer may say a drawing is for: any but the admins' sample.
+ * A published issue too, since its drawings still need their licence (D-372).
+ */
 export async function listIssuesForIllustrations() {
   return db
     .select({ id: issues.id, number: issues.number, title: issues.title })
     .from(issues)
-    .where(and(isNull(issues.deletedAt), ne(issues.status, "published"), eq(issues.adminOnly, false)))
-    .orderBy(issues.number);
+    .where(and(isNull(issues.deletedAt), eq(issues.adminOnly, false)))
+    .orderBy(desc(issues.number));
 }
 
 export async function uploadIllustration(
@@ -90,11 +94,9 @@ export async function uploadIllustration(
     throw badRequest(`Çizim çok büyük. Sınır: ${MAX_ILLUSTRATION_MB} MB.`);
   }
 
-  if (fields.issueId) {
-    const offered = await listIssuesForIllustrations();
-    if (!offered.some((issue) => issue.id === fields.issueId)) {
-      throw badRequest("Bu sayı için çizim gönderilemez.", { issueId: ["Listeden bir sayı seçin."] });
-    }
+  const offered = await listIssuesForIllustrations();
+  if (!offered.some((issue) => issue.id === fields.issueId)) {
+    throw badRequest("Bu sayı için çizim gönderilemez.", { issueId: ["Listeden bir sayı seçin."] });
   }
 
   const [active] = await db
@@ -115,7 +117,7 @@ export async function uploadIllustration(
       illustratorId: actor.id,
       title: fields.title,
       note: fields.note ?? null,
-      issueId: fields.issueId ?? null,
+      issueId: fields.issueId,
       storageKey,
       mime: detected.mime,
       size: input.buffer.length,
@@ -139,7 +141,7 @@ export async function uploadIllustration(
   return row!;
 }
 
-/** A panel notification for each admin and the main editor; no e-mail, so nothing queues. */
+/** A panel notification for each admin (D-372); no e-mail, so nothing queues. */
 async function notifyReviewers(row: Illustration, uploaderId: string, uploaderName: string): Promise<void> {
   const reviewers = await db
     .select({ id: users.id })
@@ -148,7 +150,7 @@ async function notifyReviewers(row: Illustration, uploaderId: string, uploaderNa
       and(
         isNull(users.deletedAt),
         eq(users.isBanned, false),
-        or(eq(users.role, "admin"), and(eq(users.role, "editor"), eq(users.isMainEditor, true))),
+        eq(users.role, "admin"),
       ),
     );
   for (const reviewer of reviewers) {
@@ -158,7 +160,7 @@ async function notifyReviewers(row: Illustration, uploaderId: string, uploaderNa
       kind: "illustration_uploaded",
       title: "Yeni çizim yüklendi",
       body: `${uploaderName}: ${row.title}`,
-      href: "/editor/cizimler",
+      href: "/admin/cizimler",
     });
   }
 }
@@ -247,6 +249,24 @@ export async function removeIllustration(actor: Actor, illustrationId: string, m
   if (!own && !canAccessAdminPanel(actor)) throw notFound("Çizim bulunamadı.");
   if (own) await assertIllustrator(actor);
 
+  // A form naming this drawing, single or for its issue (D-372)
+  const naming = or(
+    eq(contributorDocuments.illustrationId, row.id),
+    inArray(
+      contributorDocuments.id,
+      db.select({ id: contributorDocumentWorks.documentId }).from(contributorDocumentWorks).where(eq(contributorDocumentWorks.illustrationId, row.id)),
+    ),
+  );
+  if (own) {
+    // What the çizer was sent, or signed, names this file by its hash: an admin decides
+    const [held] = await db
+      .select({ id: contributorDocuments.id })
+      .from(contributorDocuments)
+      .where(and(naming, not(and(withoutSignedCopy, notMailed)!)))
+      .limit(1);
+    if (held) throw conflict("Bu çizimin ruhsat formu size gönderildi; kaldırılması için yöneticiye yazın.");
+  }
+
   // Conditional, so two removals at once cannot both write the record
   const [removed] = await db
     .update(illustrations)
@@ -256,6 +276,11 @@ export async function removeIllustration(actor: Actor, illustrationId: string, m
   if (!removed) throw notFound("Çizim bulunamadı.");
 
   await getStorage().remove({ bucket: "media", key: row.storageKey });
+  // A form nobody holds yet goes with the drawing; the issue form is drawn again without it
+  const dropped = await db
+    .delete(contributorDocuments)
+    .where(and(naming, withoutSignedCopy, notMailed))
+    .returning({ id: contributorDocuments.id });
 
   await writeAudit({
     actorId: actor.id,
@@ -263,7 +288,7 @@ export async function removeIllustration(actor: Actor, illustrationId: string, m
     entityType: "illustrations",
     entityId: row.id,
     before: { title: row.title, illustratorId: row.illustratorId, sha256: row.sha256 },
-    after: { removedBy: own ? "illustrator" : "admin" },
+    after: { removedBy: own ? "illustrator" : "admin", droppedForms: dropped.map((form) => form.id) },
     ip: meta.ip,
   });
 }

@@ -31,15 +31,15 @@ export async function uploadIllustrationAction(
         fields: {
           title: text(formData, "title"),
           note: optionalText(formData, "note"),
-          issueId: optionalText(formData, "issueId"),
+          issueId: text(formData, "issueId"),
         },
       },
       await requestMetadata(),
     );
 
     revalidatePath("/cizer/cizimler");
-    revalidatePath("/editor/cizimler");
-    return { success: "Çiziminiz yüklendi. Yönetici ve ana editör panelinde görünüyor." };
+    revalidatePath("/admin/cizimler");
+    return { success: "Çiziminiz yüklendi ve yöneticiye iletildi. Ruhsat formu hazırlanınca e-postanıza ve Belgelerim'e gelir." };
   });
 }
 
@@ -54,7 +54,7 @@ export async function removeIllustrationAction(
     await removeIllustration({ ...user }, text(formData, "illustrationId"), await requestMetadata());
 
     revalidatePath("/cizer/cizimler");
-    revalidatePath("/editor/cizimler");
+    revalidatePath("/admin/cizimler");
     return { success: "Çizim kaldırıldı." };
   });
 }

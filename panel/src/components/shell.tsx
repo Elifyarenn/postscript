@@ -69,6 +69,8 @@ export const ADMIN_NAV: NavGroup[] = [
     label: "İçerik & Topluluk",
     items: [
       { href: "/admin/announcements", label: "Duyurular" },
+      // Drawings the çizers send, for their licence forms (D-362, D-372)
+      { href: "/admin/cizimler", label: "Çizimler" },
       {
         href: "/admin/community",
         label: "Topluluk yönetimi",
@@ -93,8 +95,6 @@ export const ADMIN_NAV: NavGroup[] = [
       { href: "/editor/topics", label: "Konu önerileri" },
       { href: "/editor/gecici-alan", label: "Geçici alan" },
       { href: "/editor/approvals", label: "Eser Onayı takibi" },
-      // Drawings the çizers handed in (D-362)
-      { href: "/editor/cizimler", label: "Çizimler" },
       { href: "/editor/media", label: "Medya kütüphanesi" },
     ],
   },
@@ -143,7 +143,6 @@ export function editorNav(reviewsTopics: boolean, contactsTeam = false, mainEdit
             items: [
               { href: "/editor/gecici-alan", label: "Geçici alan" },
               { href: "/editor/mail", label: "E-posta kuyruğu" },
-              { href: "/editor/cizimler", label: "Çizimler" },
             ],
           },
         ]

@@ -82,13 +82,11 @@ export function canManageMailQueue(actor: Actor, assignment?: Pick<EditorAssignm
 }
 
 /**
- * The drawings çizers hand in (D-362) go to the people who put an issue
- * together: the admins and the main editor. A category editor reviews
- * articles in their areas and has no drawing to judge.
+ * The drawings çizers hand in (D-362) go straight to the admins, who prepare
+ * their licence forms (D-372); no editor, the main editor included, sees them.
  */
-export function canReviewIllustrations(actor: Actor, assignment?: Pick<EditorAssignment, "isMainEditor"> | null): boolean {
-  if (canAccessAdminPanel(actor)) return true;
-  return canAccessEditorPanel(actor) && assignment?.isMainEditor === true;
+export function canReviewIllustrations(actor: Actor): boolean {
+  return canAccessAdminPanel(actor);
 }
 
 /**

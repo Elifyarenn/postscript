@@ -893,6 +893,8 @@ export const contributorDocuments = pgTable(
     quizId: uuid("quiz_id").references((): AnyPgColumn => issueQuizzes.id, { onDelete: "set null" }),
     /** Or a work kept in the code, not in a table: its key in `CODE_WORKS` (D-359). */
     workKey: text("work_key"),
+    /** Or a drawing a çizer handed in, drawn on the çizim form (D-372). */
+    illustrationId: uuid("illustration_id").references((): AnyPgColumn => illustrations.id, { onDelete: "set null" }),
     /**
      * A licence form for several works of one issue (D-339): the works are in
      * `contributor_document_works`, `article_id`/`quiz_id` stay empty.
@@ -946,6 +948,9 @@ export const contributorDocuments = pgTable(
     uniqueIndex("contributor_documents_work_key_licence_unique")
       .on(t.workKey, t.templateVersion)
       .where(sql`${t.kind} = 'work_licence' and ${t.workKey} is not null`),
+    uniqueIndex("contributor_documents_illustration_licence_unique")
+      .on(t.illustrationId, t.templateVersion)
+      .where(sql`${t.kind} = 'work_licence' and ${t.illustrationId} is not null`),
   ],
 );
 
@@ -968,7 +973,9 @@ export const contributorDocumentWorks = pgTable(
     quizId: uuid("quiz_id").references((): AnyPgColumn => issueQuizzes.id, { onDelete: "set null" }),
     /** Or a work kept in the code (D-359). */
     workKey: text("work_key"),
-    /** SHA-256 of the work's body as it stood when the form was drawn. */
+    /** Or a çizer's drawing (D-372). */
+    illustrationId: uuid("illustration_id").references((): AnyPgColumn => illustrations.id, { onDelete: "set null" }),
+    /** SHA-256 of the work's body (a drawing's file) as it stood when the form was drawn. */
     contentHash: text("content_hash"),
     createdAt: createdAt(),
   },
@@ -977,6 +984,9 @@ export const contributorDocumentWorks = pgTable(
     uniqueIndex("contributor_document_works_article_unique").on(t.articleId).where(sql`${t.articleId} is not null`),
     uniqueIndex("contributor_document_works_quiz_unique").on(t.quizId).where(sql`${t.quizId} is not null`),
     uniqueIndex("contributor_document_works_work_key_unique").on(t.workKey).where(sql`${t.workKey} is not null`),
+    uniqueIndex("contributor_document_works_illustration_unique")
+      .on(t.illustrationId)
+      .where(sql`${t.illustrationId} is not null`),
   ],
 );
 
