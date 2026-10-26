@@ -70,7 +70,7 @@ const SAMPLE_PDF = Buffer.from("%PDF-1.4\n% ornek eser icerigi");
 async function submitAs(user: User, note = "örnek eser notu") {
   return submitWriterApplication(
     actorOf(user),
-    { buffer: SAMPLE_PDF, fileName: "ornek-eser.pdf", note },
+    { sample: { buffer: SAMPLE_PDF, fileName: "ornek-eser.pdf" }, note },
     noMeta,
   );
 }
@@ -92,6 +92,19 @@ describe("submitting", () => {
     expect(stored[0]!.note).toBe("örnek eser notu");
 
     expect(mailbox.lastTo("aday@example.com")?.subject).toContain("alındı");
+  });
+
+  it("accepts an application without a sample file", async () => {
+    const applicant = await createUser({ email: "dosyasiz@example.com" });
+
+    const application = await submitWriterApplication(
+      actorOf(applicant),
+      { sample: null, note: "dosya eklemedim" },
+      noMeta,
+    );
+
+    expect(application.status).toBe("submitted");
+    expect(application.sampleMediaId).toBeNull();
   });
 
   it("refuses when a prerequisite is missing, naming the missing ones", async () => {
@@ -116,7 +129,7 @@ describe("submitting", () => {
     const error = await captureError(
       submitWriterApplication(
         actorOf(applicant),
-        { buffer: Buffer.from("duz metin dosyasi"), fileName: "notlar.txt", note: null },
+        { sample: { buffer: Buffer.from("duz metin dosyasi"), fileName: "notlar.txt" }, note: null },
         noMeta,
       ),
     );

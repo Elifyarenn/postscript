@@ -341,7 +341,7 @@ export function WriterApplicationCard({
       {!latest && !cooldown.withinCooldown && ready && (
         <>
           <p className="mb-4 text-sm text-muted">
-            Örnek bir yazınızı (PDF veya DOCX, en fazla 20 MB) yükleyin. Başvuru önce
+            İsterseniz örnek bir yazınızı (PDF veya DOCX, en fazla 20 MB) ekleyin. Başvuru önce
             editörlerimize, ardından yönetime gider; onaylanırsa sözleşme imzasına davet
             edilirsiniz.
           </p>
@@ -351,12 +351,11 @@ export function WriterApplicationCard({
             csrfToken={csrfToken}
             submitLabel="Yazar Olma İsteği Gönder"
           >
-            <Field label="Örnek eser dosyası" htmlFor="sampleFile">
+            <Field label="Örnek eser dosyası (isteğe bağlı)" htmlFor="sampleFile">
               <Input
                 id="sampleFile"
                 name="sampleFile"
                 type="file"
-                required
                 accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
               />
             </Field>

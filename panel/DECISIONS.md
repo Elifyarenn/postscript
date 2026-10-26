@@ -14514,3 +14514,25 @@ sırasız `limit(1)` ile birini seçiyordu; işaret rolü editör olmayan hesapt
 adı; birincinin görevleri yeniden kaydedilebilir; birincinin işareti kalkınca ikinci atanır.
 Editör olmayan hesaptaki işaret sayılmaz, birden çok işaretlide en eski hesap seçilir.
 Migration yok.
+
+## D-370 — Yazarlık başvurusunda örnek eser dosyası isteğe bağlı
+
+**Bağlam:** Kullanıcı isteği: "yazarlık isteği gönderme alanında yazı yükleme zorunlu olmasın".
+`/account`'taki başvuru formunda dosya alanı `required`'dı; action boş dosyada 400 veriyor,
+servis dosyayı zorunlu tutuyordu.
+
+**Karar:**
+- Dosya alanı isteğe bağlı ("Örnek eser dosyası (isteğe bağlı)"); boş gönderilen dosya girdisi
+  (sıfır baytlık `File`) dosya yok sayılır.
+- Dosya verilirse kurallar aynı: yalnızca PDF/DOCX (sihirli bayt), en fazla 20 MB, satırdan önce
+  depolamaya yazılır (`storeSample`). Dosyasız başvuruda `sample_media_id` boş kalır; kolon
+  zaten boş olabiliyordu, migration yok. Editör/admin başvuru listeleri ve hesap sayfası dosya
+  bağlantısını zaten yalnızca dosya varsa gösteriyordu, değişmedi.
+- Denetim kaydının `after` alanında dosyasız başvuruda `mime` ve `size` `null`.
+
+**Hukuk (D-084):** Yeni veri yok; aydınlatma metni "başvuruya eklenen örnek çalışma" diyor,
+isteğe bağlı olunca da doğru. Metin değişmedi.
+
+**Doğrulama:** `writer-applications.test.ts` (dosyasız başvuru kabul edilir,
+`sampleMediaId` boş); dosyalı ve yanlış türlü testler yeni girdi biçimiyle geçer.
+Migration yok.

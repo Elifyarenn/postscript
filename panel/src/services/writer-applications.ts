@@ -3,7 +3,7 @@
  *
  * The flow is strictly staged and one-directional:
  *
- *   1. A plain reader applies, attaching a sample work file.
+ *   1. A plain reader applies, optionally attaching a sample work file.
  *   2. An editor decides first (approve → pass to admin, or reject).
  *   3. The admin decides second; approving defines the contract the
  *      applicant must sign — the current agreement version.
@@ -135,9 +135,39 @@ export const writerApplicationSchema = z.strictObject({
   note: z.string().trim().max(2000).optional().nullable(),
 });
 
+/** Validates and stores a sample work file, returning its private media row. */
+async function storeSample(userId: string, file: { buffer: Buffer; fileName: string }) {
+  const mime = assertApplicationFileAcceptable(file.buffer);
+  const storageKey = buildStorageKey("writer-applications", file.fileName);
+  try {
+    await getStorage().put({ bucket: "media", key: storageKey, body: file.buffer, mime });
+  } catch (error) {
+    // The sample must exist before the application row does; a storage outage
+    // is exactly where a silent failure would lose the file. Log the real
+    // cause and tell the applicant plainly what happened.
+    if (isAppError(error)) throw error;
+    console.error("Sample work upload failed", error);
+    throw badRequest(
+      "Örnek eser dosyası depolamaya yüklenemedi. Lütfen sayfayı yenileyip tekrar deneyin.",
+    );
+  }
+
+  const [row] = await db
+    .insert(media)
+    .values({
+      storageKey,
+      mime,
+      size: file.buffer.length,
+      uploadedBy: userId,
+      licenseType: null, // not library material; no license fields apply
+    })
+    .returning();
+  return row!;
+}
+
 export async function submitWriterApplication(
   actor: Actor,
-  input: { buffer: Buffer; fileName: string; note?: string | null },
+  input: { sample?: { buffer: Buffer; fileName: string } | null; note?: string | null },
   meta: RequestMeta,
 ): Promise<WriterApplication> {
   if (!canSubmitApplication(actor)) {
@@ -170,38 +200,15 @@ export async function submitWriterApplication(
     throw badRequest("Başvuru bilgileri geçersiz.", z.flattenError(parsed.error).fieldErrors);
   }
 
-  const mime = assertApplicationFileAcceptable(input.buffer);
-  const storageKey = buildStorageKey("writer-applications", input.fileName);
-  try {
-    await getStorage().put({ bucket: "media", key: storageKey, body: input.buffer, mime });
-  } catch (error) {
-    // The sample must exist before the application row does; a storage outage
-    // is exactly where a silent failure would lose the file. Log the real
-    // cause and tell the applicant plainly what happened.
-    if (isAppError(error)) throw error;
-    console.error("Sample work upload failed", error);
-    throw badRequest(
-      "Örnek eser dosyası depolamaya yüklenemedi. Lütfen sayfayı yenileyip tekrar deneyin.",
-    );
-  }
-
-  const [sample] = await db
-    .insert(media)
-    .values({
-      storageKey,
-      mime,
-      size: input.buffer.length,
-      uploadedBy: user.id,
-      licenseType: null, // not library material; no license fields apply
-    })
-    .returning();
+  // The sample is optional (D-370); when given, it is stored before the row
+  const sample = input.sample ? await storeSample(user.id, input.sample) : null;
 
   const [application] = await db
     .insert(writerApplications)
     .values({
       userId: user.id,
       status: "submitted",
-      sampleMediaId: sample!.id,
+      sampleMediaId: sample?.id ?? null,
       note: parsed.data.note ?? null,
       submittedAt: new Date(),
     })
@@ -212,7 +219,7 @@ export async function submitWriterApplication(
     action: "writer_application.submitted",
     entityType: "writer_applications",
     entityId: application!.id,
-    after: { mime, size: input.buffer.length, note: application!.note },
+    after: { mime: sample?.mime ?? null, size: sample?.size ?? null, note: application!.note },
     ip: meta.ip,
   });
 

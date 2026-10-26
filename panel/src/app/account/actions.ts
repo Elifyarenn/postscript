@@ -113,16 +113,17 @@ export async function submitWriterApplicationAction(
     const { user } = await requireAuth();
     const meta = await requestMetadata();
 
+    // An empty file input still arrives as a zero-byte File
     const file = formData.get("sampleFile");
-    if (!(file instanceof File) || file.size === 0) {
-      throw badRequest("Örnek eser dosyası seçilmedi.");
-    }
+    const sample =
+      file instanceof File && file.size > 0
+        ? { buffer: Buffer.from(await file.arrayBuffer()), fileName: file.name }
+        : null;
 
     await submitWriterApplication(
       { ...user },
       {
-        buffer: Buffer.from(await file.arrayBuffer()),
-        fileName: file.name,
+        sample,
         note: optionalText(formData, "note"),
       },
       meta,

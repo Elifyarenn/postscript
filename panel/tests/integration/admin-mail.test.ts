@@ -80,7 +80,7 @@ describe("an application reaching the admin's stage", () => {
     const applicant = await createUser({ email: "aday@example.com", displayName: "Aday Kişi" });
     return submitWriterApplication(
       actorOf(applicant),
-      { buffer: Buffer.from("%PDF-1.4\n% ornek"), fileName: "ornek.pdf", note: null },
+      { sample: { buffer: Buffer.from("%PDF-1.4\n% ornek"), fileName: "ornek.pdf" }, note: null },
       noMeta,
     );
   }
