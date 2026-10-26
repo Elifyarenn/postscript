@@ -58,6 +58,11 @@ describe("panelPathFor", () => {
 
   it("gives a plain reader no panel", () => {
     expect(panelPathFor(actor())).toBeNull();
+    // A reader with the çizer mark goes to the çizer panel (D-373)
+    expect(panelPathFor(actor(), true)).toBe("/cizer");
+    expect(panelPathFor(actor({ role: "writer", writerStatus: "active" }), true)).toBe("/writer");
+    expect(panelPathFor(actor({ isBanned: true }), true)).toBeNull();
+    expect(panelPathFor(actor({ emailVerifiedAt: null }), true)).toBeNull();
   });
 
   it("sends a frozen editor to the writer panel the role still opens", () => {

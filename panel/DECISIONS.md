@@ -14641,3 +14641,26 @@ listesinde çizer var, kaldırılmış çizime form çizilmez. `illustrations.te
 gönderim 400, yayımlanmış sayı kabul, örnek sayı 400; bildirim yalnızca admine,
 `/admin/cizimler`; dosya ana editöre 404, liste ana editöre 403. `rbac.test.ts`:
 `canReviewIllustrations` yalnızca admin.
+
+## D-373 — Çizerin PANEL düğmesi çizer paneline gider
+
+**Bağlam:** Ürün sahibi: "çizerlerin hesabında panel gözükmüyor." Sitenin üst şeridindeki
+PANEL bağlantısı (`panelPathFor`, D-086) yalnızca admin, editör ve yazar rollerine bakıyordu.
+Çizer işareti (D-151) bir rol olmadığı için okuyucu rolündeki çizere düğme çıkmıyordu;
+çizer paneline (D-288) yalnızca Hesabım sayfasındaki bağlantıdan ulaşılabiliyordu. Yazar olan
+çizerin yazar menüsünde de çizimlerine giden bir bağlantı yoktu.
+
+**Karar:**
+- `panelPathFor(actor, isIllustrator)`: admin → `/admin`, editör → `/editor`, yazar → `/writer`,
+  bunların hiçbiri değilse ve `canAccessIllustratorPanel` doğruysa → `/cizer`. Üst rolü olan
+  çizer kendi rolünün paneline gider (önceki davranış değişmez). İşaret oturum kaydından
+  (`SessionUser.isIllustrator`) gelir; oturum yükleyicisi onu her istekte hesaptan okur, yani
+  işaret verilince ya da kaldırılınca düğme hemen değişir.
+- Yazar paneli menüsüne, hesapta çizer işareti varsa "Çizimlerim" (`/cizer/cizimler`) eklendi.
+- Bu yalnızca bir bağlantıdır: `/cizer` düzeni (`guardIllustratorPanel`) işareti yine
+  hesaptan okuyup yetkiyi kendisi denetler.
+
+**Hukuk:** Yeni veri ya da işleme yok; aydınlatma metni değişmedi. Migration yok.
+
+**Doğrulama:** Kapı: typecheck, lint, test. `rbac.test.ts`: çizer işaretli okuyucu `/cizer`,
+çizer işaretli yazar `/writer`, yasaklı ya da e-postası doğrulanmamış çizer düğme almaz.

@@ -68,7 +68,7 @@ export async function SiteShell({
   const member = user && !user.isBanned ? await memberState(user) : null;
   const csrfToken = user ? ((await readCsrfToken()) ?? "") : "";
   // Only a link: the panel layouts still decide who gets in (D-086)
-  const panelHref = user ? panelPathFor(user) : null;
+  const panelHref = user ? panelPathFor(user, user.isIllustrator) : null;
   // Built once: the member rail and the phone menu show the same entries
   const memberItems = member
     ? memberNav({ messages: member.messages, notifications: member.notifications })

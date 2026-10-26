@@ -151,7 +151,7 @@ export function editorNav(reviewsTopics: boolean, contactsTeam = false, mainEdit
 }
 
 /** `locked` only greys the links out; each page checks the rule itself. */
-export function writerNav(locked: boolean, signsContract = true): NavGroup[] {
+export function writerNav(locked: boolean, signsContract = true, draws = false): NavGroup[] {
   return [
     {
       label: "Yazar",
@@ -163,6 +163,8 @@ export function writerNav(locked: boolean, signsContract = true): NavGroup[] {
         ...(signsContract ? [{ href: "/writer/agreement", label: "Sözleşmem" }] : []),
         { href: "/writer/approvals", label: "Eser Onayları", disabled: locked },
         { href: "/writer/articles", label: "Yazılarım", disabled: locked },
+        // A writer who also draws sends drawings from the çizer panel (D-362, D-373)
+        ...(draws ? [{ href: "/cizer/cizimler", label: "Çizimlerim" }] : []),
         { href: "/writer/profile", label: "Profil ve güvenlik" },
       ],
     },

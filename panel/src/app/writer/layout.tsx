@@ -29,7 +29,7 @@ export default async function WriterLayout({ children }: { children: ReactNode }
   const locked = lockedByStatus || pending.length > 0;
 
   return (
-    <PanelShell user={user} area="yazar paneli" groups={writerNav(locked, needsAuthorAgreement(user))}>
+    <PanelShell user={user} area="yazar paneli" groups={writerNav(locked, needsAuthorAgreement(user), user.isIllustrator)}>
       {children}
     </PanelShell>
   );

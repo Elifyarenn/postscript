@@ -94,10 +94,12 @@ export function canReviewIllustrations(actor: Actor): boolean {
  * checks the panel guards run, so the button never points at a door that would
  * answer 403; a plain reader, a banned or an unverified account gets none.
  */
-export function panelPathFor(actor: Actor): string | null {
+export function panelPathFor(actor: Actor, isIllustrator = false): string | null {
   if (canAccessAdminPanel(actor)) return "/admin";
   if (canAccessEditorPanel(actor)) return "/editor";
   if (canAccessWriterPanel(actor)) return "/writer";
+  // A çizer who is only a reader has the çizer panel and nothing else (D-373)
+  if (canAccessIllustratorPanel(actor, isIllustrator)) return "/cizer";
   return null;
 }
 
