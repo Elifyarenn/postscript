@@ -27,6 +27,7 @@ import { grantIssueArea, revokeIssueArea } from "@/services/issue-area-grants";
 import {
   approveSignedContract,
   rejectSignedContract,
+  revertSignedContractVerification,
   uploadCountersigned,
   uploadSignedContractForMember,
   VERIFIED_MESSAGE,
@@ -773,6 +774,28 @@ export async function approveSignedContractAction(
 
     revalidatePath("/admin/agreements");
     return { success: `Doğrulandı. Üyenin göreceği mesaj: “${VERIFIED_MESSAGE}”` };
+  });
+}
+
+/** Takes a verification back to "pending" (D-378); the reason stays in the audit log. */
+export async function revertSignedContractVerificationAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+
+    await revertSignedContractVerification(
+      { ...user },
+      text(formData, "id"),
+      optionalText(formData, "reason") ?? "",
+      await requestMetadata(),
+    );
+
+    revalidatePath("/admin/agreements");
+    revalidatePath("/admin/agreements/imza");
+    return { success: "Doğrulama geri alındı; kayıt yeniden inceleniyor." };
   });
 }
 

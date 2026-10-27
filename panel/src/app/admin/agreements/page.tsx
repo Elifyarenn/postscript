@@ -31,6 +31,7 @@ import {
   prepareIssueLicencesAction,
   publishAgreementAction,
   rejectSignedContractAction,
+  revertSignedContractVerificationAction,
   removeUnlicensedFormerWriterWorksAction,
   replaceCurrentVersionTextAction,
   setLicenceCommercialUseAction,
@@ -606,6 +607,29 @@ export default async function AdminAgreementsPage() {
                             </Field>
                           </PanelForm>
                         </div>
+                      )}
+                      {/* A verification can be taken back to review (D-378) */}
+                      {row.status === "approved" && row.memberId !== actor.id && (
+                        <details>
+                          <summary className="cursor-pointer text-muted underline">Doğrulamayı geri al</summary>
+                          <div className="mt-2">
+                            <PanelForm
+                              action={revertSignedContractVerificationAction}
+                              csrfToken={csrfToken}
+                              submitLabel="Doğrulamayı geri al"
+                              submitVariant="danger"
+                            >
+                              <input type="hidden" name="id" value={row.id} />
+                              <Field
+                                label="Neden (işlem kaydına yazılır)"
+                                htmlFor={`revert-${row.id}`}
+                                hint="Kayıt yeniden &ldquo;inceleniyor&rdquo; olur; sonra doğrulayın ya da reddedin. Rol ve yazar durumu değişmez."
+                              >
+                                <Textarea id={`revert-${row.id}`} name="reason" required minLength={3} maxLength={1000} rows={2} />
+                              </Field>
+                            </PanelForm>
+                          </div>
+                        </details>
                       )}
                     </Td>
                   </tr>

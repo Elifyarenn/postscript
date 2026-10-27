@@ -87,10 +87,27 @@ describe("signed_contracts", () => {
     ).rejects.toThrow();
   });
 
-  it("refuses reopening a decided upload", async () => {
+  it("refuses reopening a decided upload, except a verification taken back with its reviewer cleared (D-378)", async () => {
     const { contract } = await verifiedWriter();
+    // A stray status write is still refused, and so is turning a verification into a rejection
     await expect(
       db.update(signedContracts).set({ status: "pending" }).where(eq(signedContracts.id, contract.id)),
+    ).rejects.toThrow();
+    await expect(
+      db.update(signedContracts).set({ status: "rejected" }).where(eq(signedContracts.id, contract.id)),
+    ).rejects.toThrow();
+
+    await db
+      .update(signedContracts)
+      .set({ status: "pending", reviewedAt: null, reviewedBy: null })
+      .where(eq(signedContracts.id, contract.id));
+    // A rejection stays final
+    await db.update(signedContracts).set({ status: "rejected", reviewedAt: new Date() }).where(eq(signedContracts.id, contract.id));
+    await expect(
+      db
+        .update(signedContracts)
+        .set({ status: "pending", reviewedAt: null, reviewedBy: null })
+        .where(eq(signedContracts.id, contract.id)),
     ).rejects.toThrow();
   });
 

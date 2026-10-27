@@ -14818,3 +14818,50 @@ konumuna da sistemden bak."
   (ürün sahibinin seçimi); üyeler panelde "okudum" bandını görür.
 
 **Doğrulama:** Metinde köşeli parantezli yer tutucu kalmadı. Kod değişikliği yok.
+
+## D-378 — İmzalı sözleşme doğrulaması geri alınabilir
+
+**İstek (ürün sahibi, 2026-10-27):** "Doğruladığım bazı sözleşmelerde doğrulamayı geri almak
+istiyorum." Doğrulama (D-275) kesin bir karardı; D-349'daki kanıt tetikleyicisi (migration
+`0065`) da doğrulanmış kaydın durumunun değişmesini veritabanında reddediyordu. Seçenekler
+ürün sahibine soruldu: kuralı aynen tutup geri almayı ayrı bir iptal kaydı + yeniden yükleme
+ile yapmak, ya da kuralı yalnızca geri alma için gevşetmek. Ürün sahibi ikincisini seçti.
+
+**Karar:**
+- `approved → pending` geçişi: `revertSignedContractVerification` (yalnızca admin, kendi kaydı
+  değil, gerekçe 3–1000 karakter zorunlu). Kayıt yeniden "inceleniyor" olur; `reviewed_at` ve
+  `reviewed_by` boşalır; sonra aynı dosya yeniden doğrulanır ya da gerekçeyle reddedilir. Üyenin
+  yeniden yüklemesi gerekmez.
+- **Yalnızca doğrulama geri alınır.** Doğrulamanın yol açtıkları olduğu gibi kalır: aktifleşen
+  yazar aktif kalır; başvurusu kapanıp yazara terfi eden hesap terfi etmiş kalır
+  (`role_changes` yalnızca eklenir; rolü geri almak ayrı bir yönetici kararıdır); karşı imzalı
+  kopya (D-290) arşivde durur ve kayıt yeniden doğrulanınca yine görünür. Geri alınan kayıt
+  doğrulanana kadar sözleşme sayılmaz (`hasAcceptedCurrentAgreement` yalnızca `approved` okur).
+- Aynı belge için incelemede başka bir dosya varsa geri alma reddedilir (409): belge başına tek
+  bekleyen yükleme kuralı (D-289).
+- **Kanıt kuralı (migration `0071`, elle yazılan özel migration; 0065 gibi):**
+  `postscript_guard_signed_contracts` yalnızca bir istisna alır: `approved → pending`,
+  `reviewed_at` ve `reviewed_by` birlikte boşaltılıyorsa. Tek başına durum yazmak, doğrulanmışı
+  reddedilmişe çevirmek ve reddedilmiş bir kaydı yeniden açmak hâlâ reddedilir; dosya, sahibi,
+  özeti ve silme yasağı aynen durur.
+- **Kayıt:** `audit_log`'a `signed_contract.verification_reverted` (önceki doğrulayan ve zaman,
+  gerekçe, karşı imzalı kopya olup olmadığı, IP). İlk doğrulamanın `signed_contract.verified`
+  satırı yerinde kalır. Gerekçe üyeye gösterilmez; üye kendi ekranında belgeyi yeniden
+  "inceleniyor" görür. E-posta gönderilmez.
+- **Ekran:** `/admin/agreements` imzalı sözleşmeler tablosunda doğrulanmış her satırda
+  "Doğrulamayı geri al" (açılır alan: gerekçe + düğme).
+
+**Hukuk (D-084):** Yeni kişisel veri yok; aydınlatma metni doğrulama durumunu ("inceleniyor,
+doğrulandı, reddedildi"), doğrulayan yöneticiyi ve işlem tarihini zaten anlatıyor. Metin
+değişmedi. Islak imzalı asıl ve ruhsatın yürürlüğü panel durumuna bağlı değildir (form m. 12.3–
+12.4); geri alma yalnızca panelin takibini düzeltir.
+
+**Canlıya geçiş (D-079):** Kod geri almayı tetikleyicinin izin verdiği biçimde yazar; 0071
+uygulanmadan düğme veritabanı hatasıyla reddedilir. **Önce migration 0071, sonra push.**
+`scripts/rollback/0064-0065-down.sql` tetikleyiciyi tümüyle kaldırdığı için 0071'den etkilenmez.
+
+**Doğrulama:** Kapı: typecheck, lint, test. `signed-contracts.test.ts` (D-378): gerekçesiz 400,
+admin olmayan 403; geri alınca kayıt "pending", inceleyen boş, sözleşme sayılmaz, yazar aktif
+kalır, denetim satırında gerekçe; ikinci geri alma 409; sonra reddedilebilir.
+`evidence-guards.test.ts`: tek başına `pending` yazmak ve doğrulanmışı `rejected` yapmak
+reddedilir; inceleyeni boşaltarak geri alma geçer; reddedilmiş kayıt yeniden açılamaz.

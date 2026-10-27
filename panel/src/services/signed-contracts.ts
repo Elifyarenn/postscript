@@ -8,7 +8,7 @@
  * history and count for nothing. The copy signed by both sides
  * (`countersigned_*`, D-290) is archive only and gates nothing (D-334).
  *
- *   pending ──approve──▶ approved
+ *   pending ──approve──▶ approved ──revert──▶ pending   (D-378: reason required)
  *      └─────reject───▶ rejected   (reason required; the member uploads again)
  *
  * Who may do what is decided here, on the server, whatever a page shows:
@@ -18,7 +18,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { alias } from "drizzle-orm/pg-core";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, ne, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   agreementVersions,
@@ -417,6 +417,66 @@ export async function approveSignedContract(actor: Actor, id: string, meta: Requ
     entityType: "signed_contracts",
     entityId: row.id,
     after: { userId: row.userId, version: current.version, promoted: application !== null },
+    ip: meta.ip,
+  });
+}
+
+/**
+ * Takes a verification back (D-378): the upload is "pending" again, to be
+ * verified or rejected anew. Only the verification is undone. What it set off
+ * stays as it is: a writer made active stays active, an application closed
+ * with a promotion stays closed (`role_changes` is only ever added to; taking
+ * the role back is the admin's separate decision), and a countersigned copy
+ * stays in the archive. The reason goes to the audit row only.
+ */
+export async function revertSignedContractVerification(
+  actor: Actor,
+  id: string,
+  rawReason: string,
+  meta: RequestMeta,
+): Promise<void> {
+  if (!canManageAgreements(actor)) throw forbidden();
+  const reason = rawReason.trim();
+  if (reason.length < 3 || reason.length > 1000) {
+    throw badRequest("Geri alma nedeni zorunludur (3–1000 karakter).", {
+      reason: ["Geri alma nedeni zorunludur (3–1000 karakter)."],
+    });
+  }
+  const [row] = await db.select().from(signedContracts).where(eq(signedContracts.id, id)).limit(1);
+  if (!row) throw notFound("Sözleşme kaydı bulunamadı.");
+  if (row.userId === actor.id) throw forbidden("Kendi sözleşmeniz üzerinde işlem yapamazsınız.");
+  if (row.status !== "approved") throw conflict("Yalnızca doğrulanmış bir kaydın doğrulaması geri alınabilir.");
+
+  // One pending upload per document (or per member without one): another may already wait
+  const [waiting] = await db
+    .select({ id: signedContracts.id })
+    .from(signedContracts)
+    .where(
+      and(
+        eq(signedContracts.status, "pending"),
+        ne(signedContracts.id, row.id),
+        row.contributorDocumentId
+          ? eq(signedContracts.contributorDocumentId, row.contributorDocumentId)
+          : and(eq(signedContracts.userId, row.userId), isNull(signedContracts.contributorDocumentId)),
+      ),
+    )
+    .limit(1);
+  if (waiting) throw conflict("Bu belge için incelemede bekleyen başka bir dosya var; önce onu sonuçlandırın.");
+
+  const [updated] = await db
+    .update(signedContracts)
+    .set({ status: "pending", reviewedAt: null, reviewedBy: null, updatedAt: new Date() })
+    .where(and(eq(signedContracts.id, row.id), eq(signedContracts.status, "approved")))
+    .returning({ id: signedContracts.id });
+  if (!updated) throw conflict("Bu kaydın durumu değişmiş; sayfayı yenileyin.");
+
+  await writeAudit({
+    actorId: actor.id,
+    action: "signed_contract.verification_reverted",
+    entityType: "signed_contracts",
+    entityId: row.id,
+    before: { status: "approved", reviewedAt: row.reviewedAt, reviewedBy: row.reviewedBy },
+    after: { status: "pending", userId: row.userId, reason, countersigned: row.countersignedMediaId !== null },
     ip: meta.ip,
   });
 }

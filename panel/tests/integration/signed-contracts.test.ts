@@ -7,7 +7,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
-import { agreementAcceptances, agreementVersions, media, signedContracts, users, type User } from "@/db/schema";
+import { agreementAcceptances, agreementVersions, auditLog, media, signedContracts, users, type User } from "@/db/schema";
 import { createSession } from "@/lib/auth/session";
 import { isAppError } from "@/lib/errors";
 import { MemoryStorageAdapter, setStorageAdapter } from "@/lib/storage";
@@ -22,6 +22,7 @@ import {
   listOwnSignedContracts,
   listSignedContracts,
   rejectSignedContract,
+  revertSignedContractVerification,
   uploadSignedContract,
   uploadSignedContractForMember,
 } from "@/services/signed-contracts";
@@ -513,5 +514,35 @@ describe("the magazine's signature (D-290)", () => {
     // A designer is still contributing
     await db.update(users).set({ isIllustrator: true }).where(eq(users.id, writer.id));
     expect(await listed()).toBe(true);
+  });
+});
+
+describe("taking a verification back (D-378)", () => {
+  it("puts the upload back to pending with a reason; it then counts for nothing until decided again", async () => {
+    const { admin, otherAdmin, writer } = await setup();
+    const { id } = await uploadSignedContract(actorOf(writer), pdf, noMeta);
+    await approveSignedContract(actorOf(admin), id, noMeta);
+
+    // A reason is required, and only an admin may do it
+    expect((await captureError(revertSignedContractVerification(actorOf(admin), id, " ", noMeta)))?.status).toBe(400);
+    expect((await captureError(revertSignedContractVerification(actorOf(writer), id, "Yanlış dosya", noMeta)))?.status).toBe(403);
+
+    await revertSignedContractVerification(actorOf(otherAdmin), id, "Yanlış kişinin dosyası doğrulanmış", noMeta);
+    const [row] = await db.select().from(signedContracts).where(eq(signedContracts.id, id));
+    expect(row!.status).toBe("pending");
+    expect(row!.reviewedAt).toBeNull();
+    expect(row!.reviewedBy).toBeNull();
+    expect(await hasAcceptedCurrentAgreement(writer.id)).toBe(false);
+    // What the verification set off stays: the writer is still active
+    expect((await reloadUser(writer.id)).writerStatus).toBe("active");
+
+    const [audit] = await db.select().from(auditLog).where(eq(auditLog.action, "signed_contract.verification_reverted"));
+    expect(audit!.entityId).toBe(id);
+    expect((audit!.after as { reason: string }).reason).toBe("Yanlış kişinin dosyası doğrulanmış");
+
+    // Only an approved record can be taken back; it can now be decided again
+    expect((await captureError(revertSignedContractVerification(actorOf(admin), id, "Tekrar", noMeta)))?.status).toBe(409);
+    await rejectSignedContract(actorOf(admin), id, "İmza eksik", noMeta);
+    expect((await db.select().from(signedContracts).where(eq(signedContracts.id, id)))[0]!.status).toBe("rejected");
   });
 });
