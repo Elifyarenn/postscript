@@ -10,10 +10,11 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
-import { articles, editorCategories, issues, users } from "@/db/schema";
+import { articles, auditLog, editorCategories, issues, notifications, users } from "@/db/schema";
 import { getMainEditor, listMainEditors, setEditorDuties } from "@/services/editor-categories";
 import {
   addComment,
+  assignReviewEditor,
   createArticle,
   createArticleAsWriter,
   listArticleVersions,
@@ -438,6 +439,61 @@ describe("the staged review chain", () => {
     const { items: others } = await listArticles(actorOf(otherEditor), { issueId: await testIssueId(), limit: 20 });
     expect(others.map((article) => article.category)).not.toContain("Sanat & Edebiyat");
     expect(others.map((article) => article.category)).toContain("Bilim & Teknoloji");
+  });
+
+  it("sends an article to another editor, who then holds its category stage alone (D-376)", async () => {
+    const { admin, categoryEditor, mainEditor, otherEditor, writer } = await chainScenario();
+    const issueId = await testIssueId();
+    const draft = await createArticleAsWriter(
+      actorOf(writer),
+      { issueId, title: "Gönderilecek Yazı", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
+      noMeta,
+    );
+    await transitionArticle(actorOf(writer), draft.id, "in_review", noMeta);
+    const before = (await db.select().from(articles).where(eq(articles.id, draft.id)))[0]!;
+
+    // Only an admin or the main editor sends it
+    expect((await captureError(assignReviewEditor(actorOf(categoryEditor), draft.id, otherEditor.id, noMeta))).status).toBe(403);
+    // Not to a non-editor, nor to the main editor, nor to its own author
+    expect((await captureError(assignReviewEditor(actorOf(admin), draft.id, writer.id, noMeta))).status).toBe(400);
+    expect((await captureError(assignReviewEditor(actorOf(admin), draft.id, mainEditor.id, noMeta))).status).toBe(400);
+
+    await assignReviewEditor(actorOf(mainEditor), draft.id, otherEditor.id, noMeta);
+    const sent = (await db.select().from(articles).where(eq(articles.id, draft.id)))[0]!;
+    expect(sent.reviewEditorId).toBe(otherEditor.id);
+    // The text and its timestamp are untouched: an open form stays valid (D-361)
+    expect(sent.updatedAt.getTime()).toBe(before.updatedAt.getTime());
+
+    const told = await db.select().from(notifications).where(eq(notifications.userId, otherEditor.id));
+    expect(told.map((row) => row.kind)).toEqual(["article_review_assigned"]);
+    expect(told[0]!.href).toBe(`/editor/articles/${draft.id}`);
+    const audited = await db.select().from(auditLog).where(eq(auditLog.action, "article.review_editor_assigned"));
+    expect(audited).toHaveLength(1);
+
+    // The new editor sees and edits it; the area's editor no longer does
+    const { items: theirs } = await listArticles(actorOf(otherEditor), { issueId, limit: 20 });
+    expect(theirs.map((item) => item.id)).toContain(draft.id);
+    expect(theirs.find((item) => item.id === draft.id)!.reviewEditorName).toBe(otherEditor.displayName);
+    const { items: area } = await listArticles(actorOf(categoryEditor), { issueId, limit: 20 });
+    expect(area.map((item) => item.id)).not.toContain(draft.id);
+    expect((await captureError(addComment(actorOf(categoryEditor), draft.id, "Bakamadım.", noMeta))).status).toBe(403);
+    expect(
+      (await captureError(transitionArticle(actorOf(categoryEditor), draft.id, "pending_admin_approval", noMeta))).status,
+    ).toBe(403);
+    await addComment(actorOf(otherEditor), draft.id, "Ben bakıyorum.", noMeta);
+
+    // Given back, it is the area editor's again
+    await assignReviewEditor(actorOf(admin), draft.id, null, noMeta);
+    const { items: back } = await listArticles(actorOf(categoryEditor), { issueId, limit: 20 });
+    expect(back.map((item) => item.id)).toContain(draft.id);
+    const { items: gone } = await listArticles(actorOf(otherEditor), { issueId, limit: 20 });
+    expect(gone.map((item) => item.id)).not.toContain(draft.id);
+
+    // Sent again, the new editor approves the category stage; after that it cannot change hands
+    await assignReviewEditor(actorOf(admin), draft.id, otherEditor.id, noMeta);
+    const approved = await transitionArticle(actorOf(otherEditor), draft.id, "pending_admin_approval", noMeta);
+    expect(approved.status).toBe("pending_admin_approval");
+    expect((await captureError(assignReviewEditor(actorOf(admin), draft.id, null, noMeta))).status).toBe(409);
   });
 });
 

@@ -18,6 +18,7 @@ import {
   setPlagiarismStatus,
   transitionArticle,
   updateArticle,
+  assignReviewEditor,
 } from "@/services/articles";
 import { createIssue, reorderArticles, setIssueStatus, updateIssue } from "@/services/issues";
 import { attachMediaToArticle, detachMediaFromArticle, updateMediaLicense, uploadMedia } from "@/services/media";
@@ -641,5 +642,24 @@ export async function revokeTemporaryAreaAction(
     await revokeIssueArea({ ...user }, text(formData, "grantId"), await requestMetadata());
     revalidatePath("/editor/gecici-alan");
     return { success: "Geçici alan geri alındı." };
+  });
+}
+
+/** An admin or the main editor sends an article to another editor, or gives it back (D-376). */
+export async function assignReviewEditorAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("editor");
+
+    const articleId = text(formData, "articleId");
+    const editorId = optionalText(formData, "editorId");
+    await assignReviewEditor({ ...user }, articleId, editorId, await requestMetadata());
+
+    revalidatePath(`/editor/articles/${articleId}`);
+    revalidatePath("/editor/articles");
+    return { success: editorId ? "Yazı seçtiğiniz editöre gönderildi." : "Yazı kategori editörüne geri verildi." };
   });
 }

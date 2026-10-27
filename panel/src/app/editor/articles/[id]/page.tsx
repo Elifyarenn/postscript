@@ -1,14 +1,17 @@
 import Link from "next/link";
-import { and, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import { guardPanel } from "@/lib/auth/guard";
+import { canReassignReviewEditor, REASSIGNABLE_STATUSES } from "@/lib/auth/rbac";
+import { getEditorAssignment } from "@/services/editor-categories";
 import {
   allowedTargetsForActor,
   assertCanReadArticle,
   findArticleById,
   listArticleVersions,
   listComments,
+  listReviewEditors,
 } from "@/services/articles";
 import { listIssues } from "@/services/issues";
 import { findLiveApproval } from "@/services/rights";
@@ -40,6 +43,7 @@ import { StatusPanel } from "./status-panel";
 import { ArticleHistoryCard } from "@/components/article-history";
 import {
   addCommentAction,
+  assignReviewEditorAction,
   resolveCommentAction,
   setPlagiarismAction,
   transitionArticleAction,
@@ -63,6 +67,12 @@ export default async function EditorArticleDetailPage({
   // A category editor may only open articles in their own areas (D-059)
   await assertCanReadArticle(actor, article);
   const targets = await allowedTargetsForActor(actor, article);
+  // Sending the article to another editor (D-376): the admin's and the main editor's
+  const reassigns = canReassignReviewEditor(actor, await getEditorAssignment(actor.id));
+  const reviewEditors = reassigns ? await listReviewEditors(actor) : [];
+  const [reviewEditor] = article.reviewEditorId
+    ? await db.select({ displayName: users.displayName }).from(users).where(eq(users.id, article.reviewEditorId)).limit(1)
+    : [];
 
   // The media card is gone from this page (D-080), but the licence check stays:
   // media attached earlier still blocks publishing until it is licensed.
@@ -153,6 +163,56 @@ export default async function EditorArticleDetailPage({
             targets={targets}
           />
         </Card>
+
+        {(reviewEditor || reassigns) && (
+          <Card>
+            <h2 className="mb-1 font-serif text-lg">İnceleyen editör</h2>
+            <p className="mb-4 text-sm text-muted">
+              {reviewEditor
+                ? `Bu yazı ${reviewEditor.displayName} adlı editöre gönderildi; kategori aşamasını o yürütür, alanın kategori editörü görmez.`
+                : "Yazı, kategorisinin editöründe."}
+            </p>
+            {reassigns &&
+              (REASSIGNABLE_STATUSES.includes(article.status) ? (
+                <div className="flex flex-wrap items-end gap-3">
+                  <PanelForm
+                    action={assignReviewEditorAction}
+                    csrfToken={csrfToken}
+                    submitLabel="Bu editöre gönder"
+                    submitVariant="secondary"
+                  >
+                    <>
+                      <input type="hidden" name="articleId" value={article.id} />
+                      <Field label="Başka editöre gönder" htmlFor="editorId">
+                        <Select id="editorId" name="editorId" defaultValue="" required>
+                          <option value="" disabled>
+                            Editör seçin
+                          </option>
+                          {reviewEditors
+                            .filter((editor) => editor.id !== article.authorId && editor.id !== article.reviewEditorId)
+                            .map((editor) => (
+                              <option key={editor.id} value={editor.id}>
+                                {editor.displayName}
+                              </option>
+                            ))}
+                        </Select>
+                      </Field>
+                    </>
+                  </PanelForm>
+                  {reviewEditor && (
+                    <ActionButton
+                      action={assignReviewEditorAction}
+                      csrfToken={csrfToken}
+                      label="Kategori editörüne geri ver"
+                      fields={{ articleId: article.id, editorId: "" }}
+                    />
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted">Yazı kategori aşamasını geçti; artık başka editöre gönderilemez.</p>
+              ))}
+          </Card>
+        )}
 
         <Card>
           <h2 className="mb-4 font-serif text-lg">Makale</h2>

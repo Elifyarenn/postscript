@@ -67,3 +67,17 @@ describe("editorForArticle", () => {
     ).toEqual({ kind: "main", person: null });
   });
 });
+
+describe("an article sent to another editor (D-376)", () => {
+  it("names the editor it was sent to, until the main editor's stage", () => {
+    const areas = [{ name: "Sanat", holderEditorId: "a", holderEditorName: "Alan Editörü" }];
+    const reviewEditor = { id: "b", displayName: "Yardımcı Editör" };
+    expect(editorForArticle({ category: "Sanat", status: "in_review", reviewEditor }, areas, null)).toEqual({
+      kind: "editor",
+      id: "b",
+      name: "Yardımcı Editör",
+      sent: true,
+    });
+    expect(editorForArticle({ category: "Sanat", status: "pending_admin_approval", reviewEditor }, areas, null).kind).toBe("main");
+  });
+});

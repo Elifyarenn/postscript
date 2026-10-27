@@ -1,0 +1,2 @@
+ALTER TABLE "articles" ADD COLUMN "review_editor_id" uuid;--> statement-breakpoint
+ALTER TABLE "articles" ADD CONSTRAINT "articles_review_editor_id_users_id_fk" FOREIGN KEY ("review_editor_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;

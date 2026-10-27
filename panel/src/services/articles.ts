@@ -7,7 +7,8 @@
  * no other write path for `articles.status`.
  */
 import "server-only";
-import { and, asc, count, desc, eq, ilike, inArray, isNull, lte, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, lte, ne, or, sql, type SQL } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { db } from "@/db/client";
 import {
@@ -38,10 +39,13 @@ import {
   canAccessAdminPanel,
   canAccessEditorPanel,
   canPerformTransition,
+  canReassignReviewEditor,
   canReadArticle,
   canWriteInAnyArea,
+  editorCoversArticle,
   isActiveWriter,
   needsAuthorAgreement,
+  REASSIGNABLE_STATUSES,
   type Actor,
 } from "@/lib/auth/rbac";
 import { env } from "@/lib/env";
@@ -237,17 +241,20 @@ async function editorListConditions(actor: Actor, filters: Omit<ArticleFilters, 
   if (search) conditions.push(search);
 
   // A plain category editor only sees the articles that fall into their own
-  // areas ("Kategoriye Düşen Yazılar"). Main editors and admins read every
-  // category (D-059). An editor with no assigned areas sees an empty queue.
+  // areas ("Kategoriye Düşen Yazılar"), less those sent to someone else, plus
+  // those sent to them (D-376). Main editors and admins read every category
+  // (D-059). The same rule as `editorCoversArticle`, as SQL.
   if (actor.role !== "admin" && !assignment.isMainEditor) {
-    if (assignment.assignedAreas.length === 0) {
-      conditions.push(sql`false`);
-    } else {
-      conditions.push(inArray(articles.category, assignment.assignedAreas));
-    }
+    const ownAreas =
+      assignment.assignedAreas.length === 0
+        ? sql`false`
+        : and(isNull(articles.reviewEditorId), inArray(articles.category, assignment.assignedAreas))!;
+    conditions.push(or(eq(articles.reviewEditorId, actor.id), ownAreas)!);
   }
   return conditions;
 }
+
+const reviewEditors = alias(users, "review_editors");
 
 export async function listArticles(actor: Actor, filters: ArticleFilters) {
   if (!canAccessEditorPanel(actor)) throw forbidden();
@@ -276,9 +283,13 @@ export async function listArticles(actor: Actor, filters: ArticleFilters) {
         publishedAt: articles.publishedAt,
         plagiarismCheckStatus: articles.plagiarismCheckStatus,
         updatedAt: articles.updatedAt,
+        // Whom it was sent to, for the "Editör" column (D-376)
+        reviewEditorId: articles.reviewEditorId,
+        reviewEditorName: reviewEditors.displayName,
       })
       .from(articles)
       .leftJoin(users, eq(articles.authorId, users.id))
+      .leftJoin(reviewEditors, eq(articles.reviewEditorId, reviewEditors.id))
       .where(and(...conditions))
       .orderBy(...articleOrder(filters.sort ?? "updated"))
       .limit(filters.limit ?? 50)
@@ -414,12 +425,10 @@ export async function assertCanReadArticle(actor: Actor, article: Article): Prom
  */
 async function assertEditorCoversArticle(
   actor: Actor,
-  article: { category: string | null },
+  article: { category: string | null; reviewEditorId?: string | null },
 ): Promise<void> {
   if (actor.role === "admin") return;
-  const assignment = await getEditorAssignment(actor.id);
-  if (assignment.isMainEditor) return;
-  if (article.category !== null && assignment.assignedAreas.includes(article.category)) return;
+  if (editorCoversArticle(actor, await getEditorAssignment(actor.id), article)) return;
   throw forbidden("Bu makale sizin sorumlu olduğunuz alanlara düşmüyor.");
 }
 
@@ -437,7 +446,7 @@ export async function allowedTargetsForActor(
     canPerformTransition(
       actor,
       assignment,
-      { status: article.status, authorId: article.authorId, category: article.category },
+      { status: article.status, authorId: article.authorId, category: article.category, reviewEditorId: article.reviewEditorId },
       to,
     ),
   );
@@ -884,7 +893,7 @@ export async function updateArticle(
   // may do that (D-071).
   const nextCategory = input.category === undefined ? existing.category : (input.category ?? null);
   if (nextCategory !== existing.category) {
-    await assertEditorCoversArticle(actor, { category: nextCategory });
+    await assertEditorCoversArticle(actor, { category: nextCategory, reviewEditorId: existing.reviewEditorId });
   }
 
   // The slug is part of the public URL, so it only follows the title while unpublished
@@ -1141,7 +1150,7 @@ export async function transitionArticle(
     !canPerformTransition(
       actor,
       assignment,
-      { status: article.status, authorId: article.authorId, category: article.category },
+      { status: article.status, authorId: article.authorId, category: article.category, reviewEditorId: article.reviewEditorId },
       to,
     )
   ) {
@@ -1552,4 +1561,77 @@ export async function setPlagiarismStatus(
   });
 
   return updated;
+}
+
+/* ------------------------------------------------------------------ */
+/* Sending an article to another editor (D-376)                        */
+/* ------------------------------------------------------------------ */
+
+/** The editors an article can be sent to: active, reachable editors who hold no main desk. */
+export async function listReviewEditors(actor: Actor): Promise<{ id: string; displayName: string }[]> {
+  if (!canReassignReviewEditor(actor, await getEditorAssignment(actor.id))) throw forbidden();
+  return db
+    .select({ id: users.id, displayName: users.displayName })
+    .from(users)
+    .where(
+      and(
+        eq(users.role, "editor"),
+        // The editor panel's own rule: open unless frozen
+        or(isNull(users.editorStatus), ne(users.editorStatus, "suspended")),
+        isNotNull(users.emailVerifiedAt),
+        eq(users.isMainEditor, false),
+        eq(users.isBanned, false),
+        isNull(users.deletedAt),
+      ),
+    )
+    .orderBy(users.displayName);
+}
+
+/**
+ * An admin or the main editor sends an article on the category editor's side
+ * of the chain to another editor, or (`editorId` null) gives it back to its
+ * area's editor. The new editor is told in the panel. The article's text and
+ * `updated_at` are not touched, so a writer's open form stays valid (D-361).
+ */
+export async function assignReviewEditor(
+  actor: Actor,
+  articleId: string,
+  editorId: string | null,
+  meta: RequestMeta,
+): Promise<void> {
+  if (!canReassignReviewEditor(actor, await getEditorAssignment(actor.id))) throw forbidden();
+  const article = await findArticleById(articleId);
+  if (!REASSIGNABLE_STATUSES.includes(article.status)) {
+    throw conflict("Yazı kategori aşamasını geçti; başka editöre gönderilemez.");
+  }
+
+  if (editorId) {
+    const offered = await listReviewEditors(actor);
+    const editor = offered.find((row) => row.id === editorId);
+    if (!editor) throw badRequest("Bu editöre yazı gönderilemez.", { editorId: ["Listeden bir editör seçin."] });
+    if (editor.id === article.authorId) {
+      throw badRequest("Yazı kendi yazarına gönderilemez.", { editorId: ["Başka bir editör seçin."] });
+    }
+  }
+  if ((article.reviewEditorId ?? null) === editorId) return;
+
+  await db.update(articles).set({ reviewEditorId: editorId }).where(eq(articles.id, article.id));
+  await writeAudit({
+    actorId: actor.id,
+    action: "article.review_editor_assigned",
+    entityType: "articles",
+    entityId: article.id,
+    before: { reviewEditorId: article.reviewEditorId ?? null },
+    after: { reviewEditorId: editorId },
+    ip: meta.ip,
+  });
+  if (editorId) {
+    await notify({
+      userId: editorId,
+      kind: "article_review_assigned",
+      title: "Size bir yazı gönderildi",
+      body: article.title,
+      href: `/editor/articles/${article.id}`,
+    });
+  }
 }

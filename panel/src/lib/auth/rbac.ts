@@ -273,12 +273,38 @@ export type ArticleForReview = {
   status: ArticleStatus;
   authorId: string | null;
   category: string | null;
+  /** The editor it was sent to, if any (D-376). */
+  reviewEditorId?: string | null;
 };
 
 /**
+ * Whose desk an article is on: an admin's and the main editor's always; an
+ * article sent to an editor is theirs alone (D-376); otherwise its area's
+ * category editor's. The list, the read and write guards and the category
+ * stage all ask this one question.
+ */
+export function editorCoversArticle(
+  actor: Actor,
+  assignment: EditorAssignment,
+  article: Pick<ArticleForReview, "category" | "reviewEditorId">,
+): boolean {
+  if (actor.role === "admin" || assignment.isMainEditor) return true;
+  if (article.reviewEditorId) return article.reviewEditorId === actor.id;
+  return article.category !== null && assignment.assignedAreas.includes(article.category);
+}
+
+/** Statuses on the category editor's side of the chain, where an article may change hands (D-376). */
+export const REASSIGNABLE_STATUSES: readonly ArticleStatus[] = ["draft", "in_review", "revision_requested"];
+
+/** Sending an article to another editor is for those who see every desk: an admin or the main editor (D-376). */
+export function canReassignReviewEditor(actor: Actor, assignment: EditorAssignment): boolean {
+  return canReviewMainStage(actor, assignment);
+}
+
+/**
  * Whether the actor may act on the first review stage (`in_review`) of this
- * article: its category editor, a main editor (who may cover an unassigned
- * category), or an admin.
+ * article: its category editor (or the editor it was sent to, D-376), a main
+ * editor (who may cover an unassigned category), or an admin.
  */
 export function canReviewCategoryStage(
   actor: Actor,
@@ -286,9 +312,7 @@ export function canReviewCategoryStage(
   article: ArticleForReview,
 ): boolean {
   if (!canAccessEditorPanel(actor)) return false;
-  if (actor.role === "admin") return true;
-  if (assignment.isMainEditor) return true;
-  return article.category !== null && assignment.assignedAreas.includes(article.category);
+  return editorCoversArticle(actor, assignment, article);
 }
 
 /**

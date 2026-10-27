@@ -1358,6 +1358,11 @@ export const articles = pgTable(
 
     // `subcategory` ("alt köşe") and `tags` were dropped in D-082
     category: text("category"),
+    /**
+     * The editor an admin or the main editor sent the article to (D-376). While
+     * set, this editor holds the category stage instead of the area's editor.
+     */
+    reviewEditorId: uuid("review_editor_id").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
 
     status: articleStatusEnum("status").notNull().default("draft"),
 

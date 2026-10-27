@@ -14750,3 +14750,52 @@ her eksik zorunlu yanıt kendi mesajıyla 400 ve hiçbir satır yazılmaz; etkin
 doldurur, uzun sürelide dosya alanının zorunlu olduğunu ve yanıtların kullanıcı sayfasında
 göründüğünü denetler. Migration `0069` canlıya push'tan **önce** uygulanmalı (başvuru
 listeleri yeni kolonları okuyor).
+
+## D-376 — Yazıyı başka editöre gönderme
+
+**İstek (ürün sahibi, 2026-10-27):** "Bazı yazıları başka editöre gönder seçeneği olsun;
+mesela bir sayıda bir editör kategorisindeki yazıya bakamadıysa diğer editörlere
+gönderebileyim." Yazı, kategorisi bir editörün alanına düştüğü için o editöre gidiyordu
+(D-059, D-152); tek tek yazıyı başka birine verme yolu yoktu. Geçici alan (D-306) yazarlar
+içindir, alan bazındadır.
+
+**Karar:**
+- Yeni kolon `articles.review_editor_id` (migration `0070`, boş olabilir, kullanıcı silinirse
+  `set null`). Doluyken yazının kategori aşaması o editörün masasındadır.
+- **Devir, paylaşım değil:** gönderilen editör yazıyı listesinde görür, açar, düzenler, not
+  ekler, kategori aşamasının kararını verir (onaylayıp ana editöre gönderme, yazardan
+  revizyon). Alanın kategori editörü o yazıyı artık görmez ve değiştiremez; iş iki kişide
+  kalmaz. Admin ve ana editör her zaman olduğu gibi her yazıyı görür. Tek kural tek yerde:
+  saf `editorCoversArticle` (`rbac.ts`); liste sorgusu, okuma/yazma kapısı
+  (`assertEditorCoversArticle`) ve `canReviewCategoryStage` onu kullanır.
+- **Kim gönderir:** admin ve ana editör (`canReassignReviewEditor` = ikinci aşamanın sahipleri).
+  Kategori editörü kendisi devredemez.
+- **Kime:** dondurulmamış, e-postası doğrulanmış, yasaklı olmayan, silinmemiş, ana editör
+  olmayan editörler (ana editör zaten her yazıyı görür); yazının kendi yazarına gönderilemez.
+- **Ne zaman:** yazı kategori aşamasındayken: `draft`, `in_review`, `revision_requested`.
+  Ana editöre geçtikten sonra devir yok (409); kayıt durur, listede bu aşamada ana editör
+  görünür (D-152).
+- **Geri verme:** "Kategori editörüne geri ver" kolonu boşaltır; yazı yine alanın editörüne düşer.
+- **Haber ve kayıt:** gönderilen editöre panel bildirimi ("Size bir yazı gönderildi", yazıya
+  bağlantı); e-posta yok. Her değişiklik `audit_log`'a `article.review_editor_assigned`
+  (önceki/yeni editör, IP) olarak yazılır. Yazının metnine ve `updated_at`'ine dokunulmaz,
+  böylece yazarın ya da editörün açık formu eskimiş sayılmaz (D-361).
+- **Ekran:** `/editor/articles/:id`'de admin ve ana editöre "İnceleyen editör" kartı (editör
+  seçimi + "Bu editöre gönder", gönderilmişse "Kategori editörüne geri ver"). Kart, yazı
+  gönderildiyse gönderilen editöre de kimde olduğunu söyler. `/editor/articles` listesindeki
+  "Editör" sütunu gönderilen editörü "· gönderildi" etiketiyle gösterir.
+
+**Hukuk (D-084):** Yeni kişisel veri yok: yazıyı hangi editörün incelediği zaten iç iş akışı ve
+işlem kaydının konusu; aydınlatma metni editörlerin yazıları incelediğini ve panel işlem
+kaydını anlatıyor. Metin değişmedi. Yazarın izni ve ruhsatı etkilenmez; editör yetkisi aynı.
+
+**Canlıya geçiş (D-079):** Kod `review_editor_id`'yi okuduğu için **önce migration 0070
+üretime uygulanmalı** (0069 da uygulanmamışsa ikisi sırayla gider), sonra push.
+
+**Doğrulama:** Kapı: typecheck, lint, test. `editor-categories.test.ts`: kategori editörü
+gönderemez (403); yazara, ana editöre gönderilemez (400); ana editör gönderir, kolon dolar,
+`updated_at` değişmez, bildirim ve denetim satırı yazılır; gönderilen editör listede görür,
+not ekler, alan editörü göremez, not ekleyemez, onaylayamaz (403); geri verilince tersine
+döner; yeniden gönderilince yeni editör kategori aşamasını onaylar; ana editör aşamasında
+devir 409. `rbac.test.ts`: `editorCoversArticle`, `canReassignReviewEditor`.
+`article-editor.test.ts`: gönderilen yazıda editör sütunu, ana editör aşamasında ana editör.

@@ -14,7 +14,9 @@ import {
   canManageUsers,
   canManageIssueAreaGrants,
   canManageMailQueue,
+  canReassignReviewEditor,
   canReviewIllustrations,
+  editorCoversArticle,
   canModerateCommunity,
   communityBadge,
   panelRoleBadges,
@@ -400,5 +402,27 @@ describe("the drawings çizers send (D-362, D-372)", () => {
     expect(canReviewIllustrations(actor({ role: "editor", editorStatus: "active" }))).toBe(false);
     expect(canReviewIllustrations(actor({ role: "writer", writerStatus: "active" }))).toBe(false);
     expect(canReviewIllustrations(actor({ role: "admin", isBanned: true }))).toBe(false);
+  });
+});
+
+describe("an article sent to another editor (D-376)", () => {
+  const editor = actor({ id: "editor-a", role: "editor", editorStatus: "active" });
+  const other = actor({ id: "editor-b", role: "editor", editorStatus: "active" });
+  const areas = { isMainEditor: false, assignedAreas: ["Sanat"] };
+  const none = { isMainEditor: false, assignedAreas: [] };
+
+  it("is on the desk of the editor it was sent to, and off the area editor's", () => {
+    expect(editorCoversArticle(editor, areas, { category: "Sanat" })).toBe(true);
+    expect(editorCoversArticle(editor, areas, { category: "Sanat", reviewEditorId: "editor-b" })).toBe(false);
+    expect(editorCoversArticle(other, none, { category: "Sanat", reviewEditorId: "editor-b" })).toBe(true);
+    expect(editorCoversArticle(actor({ role: "admin" }), none, { category: "Sanat", reviewEditorId: "editor-b" })).toBe(true);
+    expect(editorCoversArticle(editor, { isMainEditor: true, assignedAreas: [] }, { category: null, reviewEditorId: "editor-b" })).toBe(true);
+  });
+
+  it("is sent by an admin or the main editor only", () => {
+    expect(canReassignReviewEditor(actor({ role: "admin" }), none)).toBe(true);
+    expect(canReassignReviewEditor(editor, { isMainEditor: true, assignedAreas: [] })).toBe(true);
+    expect(canReassignReviewEditor(editor, areas)).toBe(false);
+    expect(canReassignReviewEditor(actor({ role: "writer", writerStatus: "active" }), { isMainEditor: true, assignedAreas: [] })).toBe(false);
   });
 });

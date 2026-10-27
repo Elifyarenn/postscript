@@ -64,7 +64,13 @@ function EditorCell({ routed, canOpenAccounts }: { routed: ArticleEditor; canOpe
 
   switch (routed.kind) {
     case "editor":
-      return named(routed.id, routed.name);
+      return routed.sent ? (
+        <>
+          {named(routed.id, routed.name)} <span className="text-muted">· gönderildi</span>
+        </>
+      ) : (
+        named(routed.id, routed.name)
+      );
     case "main":
       return routed.person ? (
         <>
@@ -280,7 +286,20 @@ export default async function EditorArticlesPage({
                     <Td className="text-xs">{article.category ?? "—"}</Td>
                     <Td className="text-xs whitespace-nowrap">{formatWordCount(article.wordCount)}</Td>
                     <Td className="text-xs">
-                      <EditorCell routed={editorForArticle(article, areas, mainEditor)} canOpenAccounts={isAdmin} />
+                      <EditorCell
+                        routed={editorForArticle(
+                          {
+                            ...article,
+                            reviewEditor:
+                              article.reviewEditorId && article.reviewEditorName
+                                ? { id: article.reviewEditorId, displayName: article.reviewEditorName }
+                                : null,
+                          },
+                          areas,
+                          mainEditor,
+                        )}
+                        canOpenAccounts={isAdmin}
+                      />
                     </Td>
                     <Td>
                       <StatusBadge status={article.status} />

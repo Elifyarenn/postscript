@@ -22,8 +22,8 @@ export type AreaEditor = {
 export type Person = { id: string; displayName: string };
 
 export type ArticleEditor =
-  /** The category editor the article lands on. */
-  | { kind: "editor"; id: string; name: string }
+  /** The category editor the article lands on, or the editor it was sent to (`sent`, D-376). */
+  | { kind: "editor"; id: string; name: string; sent?: boolean }
   /** The second stage: the main editor, who may not be appointed yet. */
   | { kind: "main"; person: Person | null }
   /** The article has an area, but nobody holds it. */
@@ -37,13 +37,17 @@ function key(name: string): string {
 }
 
 export function editorForArticle(
-  article: { category: string | null; status: ArticleStatus },
+  article: { category: string | null; status: ArticleStatus; reviewEditor?: Person | null },
   areas: readonly AreaEditor[],
   mainEditor: Person | null,
 ): ArticleEditor {
   // The second stage is the main editor's whatever the area is (D-059)
   if (article.status === "pending_admin_approval") {
     return { kind: "main", person: mainEditor };
+  }
+  // Sent to another editor: theirs, whatever the area says (D-376)
+  if (article.reviewEditor) {
+    return { kind: "editor", id: article.reviewEditor.id, name: article.reviewEditor.displayName, sent: true };
   }
 
   const category = article.category?.trim();
