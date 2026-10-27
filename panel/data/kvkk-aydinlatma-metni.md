@@ -7,8 +7,6 @@ Esaslar Hakkında Tebliğ uyarınca hazırlanmıştır.
 **Veri sorumlusu:** Postscript Dergisi adı altında faaliyet gösteren adi
 ortaklık — ortaklar: Elif Yaren Çekiç, Tuanna Demir
 
-**Tebligat adresi:** [AÇIK ADRES]
-
 **E-posta:** iletisim@postscriptmag.com
 
 **İnternet adresi:** https://www.postscriptmag.com
@@ -188,7 +186,7 @@ sağlayıcıların yurt dışındaki sistemlerinde tutulmaktadır:
 | Cloudflare, Inc. (ABD merkezli; R2 nesne depolama Avrupa Birliği veri yerleşimi garantili, Turnstile bot doğrulaması) | Görsel, PDF ve belge depolama; kayıt formlarında bot doğrulaması | Avrupa Birliği (depolama) | Profil görseli, ekip avatarı görselleri, örnek çalışma dosyaları, çizer panelinden yüklenen çizimler, sözleşme PDF'leri; bot doğrulamasında IP adresi ve tarayıcı sinyalleri |
 | Resend, Inc. (ABD merkezli; gönderim sunucusu: AWS ap-northeast-1, Tokyo) | Doğrulama ve bildirim e-postalarının gönderimi | Japonya | E-posta adresi, görünen ad, e-posta içeriği |
 | Spotify AB | Çalma listesi çaları (yalnızca üyeler açtığında yüklenir) | İsveç | Çaları açtığınızda IP adresi ve tarayıcı bilgisi; aktarım tarayıcınızdan doğrudan yapılır |
-| Google LLC (ABD merkezli; Firebase Cloud Firestore, veri konumu: [FIRESTORE KONUMU]) | Yöneticinin iş takip ajandasının cihazlar arasında eşitlenmesi | [FIRESTORE KONUMU] | Dergi ekibindeyseniz ad, mahlas, ekip görevleri ve tarihleri; size verilen dergi işlerine ilişkin yönetici notları |
+| Google LLC (ABD merkezli; Firebase Cloud Firestore, veri konumu: Amerika Birleşik Devletleri (nam5, çok bölgeli)) | Yöneticinin iş takip ajandasının cihazlar arasında eşitlenmesi | Amerika Birleşik Devletleri (nam5, çok bölgeli) | Dergi ekibindeyseniz ad, mahlas, ekip görevleri ve tarihleri; size verilen dergi işlerine ilişkin yönetici notları |
 
 Bu aktarımlar KVKK'nın 9. maddesinin üçüncü fıkrası uyarınca, taraflar arasında
 imzalanan ve Kişisel Verileri Koruma Kurumu'na bildirilen **standart sözleşme**
@@ -261,7 +259,6 @@ doğrudan talep edebilirsiniz.
 Veri Sorumlusuna Başvuru Usul ve Esasları Hakkında Tebliğ uyarınca
 başvurularınızı şu yollardan biriyle iletebilirsiniz:
 
-- Yazılı olarak, ıslak imzalı dilekçe ile: [AÇIK ADRES]
 - Sistemimizde kayıtlı e-posta adresinizden: iletisim@postscriptmag.com
 - Güvenli elektronik imza veya mobil imza ile imzalanmış e-posta olarak.
 

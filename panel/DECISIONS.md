@@ -14799,3 +14799,22 @@ not ekler, alan editörü göremez, not ekleyemez, onaylayamaz (403); geri veril
 döner; yeniden gönderilince yeni editör kategori aşamasını onaylar; ana editör aşamasında
 devir 409. `rbac.test.ts`: `editorCoversArticle`, `canReassignReviewEditor`.
 `article-editor.test.ts`: gönderilen yazıda editör sütunu, ana editör aşamasında ana editör.
+
+## D-377 — KVKK metninde yer tutucular kalktı; yeni sürüm sessiz yayımlanır
+
+**Bağlam:** Ürün sahibi, D-375 ile güncellenen aydınlatma metninin yayımlanmasını istedi.
+Metinde `[AÇIK ADRES]` (veri sorumlusu bölümü ve §9'daki yazılı başvuru yolu) ve
+`[FIRESTORE KONUMU]` (yurt dışı hizmet sağlayıcıları tablosu, iki yer) duruyordu.
+
+**Karar (ürün sahibinin sözüyle):** "Oraları sil, açık adres yazmamıza gerek yok; Firestore
+konumuna da sistemden bak."
+- "Tebligat adresi" satırı ve §9'daki "Yazılı olarak, ıslak imzalı dilekçe ile" yolu
+  silindi. Başvuru yolları kayıtlı e-posta ve güvenli elektronik/mobil imzalı e-posta
+  olarak kaldı. Risk bir kez söylendi: m. 10 aydınlatmasında ve başvuru usulünde fiziksel
+  adres yok; ürün sahibi bunu bilerek seçti.
+- Firestore konumu Firebase konsolundan okundu (`ajanda-elif-planner`, `(default)`
+  veritabanı): `nam5`. Tabloya "Amerika Birleşik Devletleri (nam5, çok bölgeli)" yazıldı.
+- Yeni sürüm `/admin/settings`'ten **üyelere bildirim ve e-posta gönderilmeden** yayımlanır
+  (ürün sahibinin seçimi); üyeler panelde "okudum" bandını görür.
+
+**Doğrulama:** Metinde köşeli parantezli yer tutucu kalmadı. Kod değişikliği yok.
