@@ -109,6 +109,15 @@ export function SiteTitle({ children, description }: { children: ReactNode; desc
   );
 }
 
+/** The collage artist's small signature in the picture's corner (D-379). */
+export function CollageCredit() {
+  return (
+    <p className="collage-credit" lang="en">
+      created by Medine İlkim Yıldırır
+    </p>
+  );
+}
+
 /** The night-burgundy banner with a hairline italic title ("HAKKINDA", "SAYILAR"). */
 export function SiteBanner({
   title,
@@ -156,6 +165,7 @@ export function SiteBanner({
         <Sparkle className="site-banner-star" />
         {aside}
       </div>
+      {image && <CollageCredit />}
     </section>
   );
 }

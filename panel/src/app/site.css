@@ -452,6 +452,20 @@ html[data-playlist-open] .ps-site .topbar-note {
   object-fit: cover;
 }
 
+/* The artist's signature on the collages (D-379); above the hero's shade */
+.ps-site .collage-credit {
+  position: absolute;
+  right: clamp(0.75rem, 2vw, 1.5rem);
+  bottom: 0.6rem;
+  z-index: 1;
+  color: var(--site-paper);
+  font-family: var(--font-italic), Georgia, serif;
+  font-size: 0.7rem;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+}
+
 /* The community page's tab band under its banner (D-178) */
 .ps-site .community-bar {
   margin-top: 1.25rem;

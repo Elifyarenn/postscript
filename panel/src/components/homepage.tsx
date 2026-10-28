@@ -23,7 +23,7 @@ import { spotifyEmbedUrl } from "@/lib/spotify";
 import { IssueCardRail } from "./issue-card-rail";
 import { SpotifyPlayer } from "./spotify-player";
 import { CategoryCard } from "./category-card";
-import { Sparkle } from "./site-ui";
+import { CollageCredit, Sparkle } from "./site-ui";
 
 const CARD_IMAGES: Record<IssueCardImage, StaticImageData> = {
   "black-swan": movieBlackSwan,
@@ -84,6 +84,7 @@ export function HomePage({
           loading="eager"
           fetchPriority="high"
         />
+        <CollageCredit />
 
         <div className="home-hero-copy">
           <p className="hero-issue">Sayı {formatIssueNumber(issue.number)}</p>

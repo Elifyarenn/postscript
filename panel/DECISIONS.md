@@ -14865,3 +14865,19 @@ admin olmayan 403; geri alınca kayıt "pending", inceleyen boş, sözleşme say
 kalır, denetim satırında gerekçe; ikinci geri alma 409; sonra reddedilebilir.
 `evidence-guards.test.ts`: tek başına `pending` yazmak ve doğrulanmışı `rejected` yapmak
 reddedilir; inceleyeni boşaltarak geri alma geçer; reddedilmiş kayıt yeniden açılamaz.
+
+## D-379 — Kolajların köşesinde çizerin imzası
+
+**Karar:** Sitenin üst kolajlarında (ana sayfa hero'su ve resimli `SiteBanner`: Hakkında,
+Kategoriler, İletişim, Topluluk) sağ alt köşede küçük bir imza durur: "created by Medine İlkim
+Yıldırır". Sahibin isteği; metin İngilizce olduğu için `lang="en"`.
+
+- **Tek yer:** `CollageCredit` (`src/components/site-ui.tsx`); `SiteBanner` yalnızca `image`
+  verildiğinde gösterir, hero doğrudan çağırır. Stil `.collage-credit` (`site.css`): mutlak
+  konum, hero'nun gölge katmanının üstünde (`z-index: 1`), küçük italik, %75 opaklık.
+- `text-transform` yok: küçük harfe çevirmek "İ"yi bozar, metin yazıldığı gibi durur.
+
+**Hukuk (D-084):** Yeni kişisel veri işlenmiyor; görselin yaratıcısını anmak FSEK m. 15'teki
+adın belirtilmesi yetkisine uygundur. Aydınlatma metni değişmedi.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Görsel kontrol canlıda.
