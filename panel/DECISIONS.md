@@ -14881,3 +14881,38 @@ Yıldırır". Sahibin isteği; metin İngilizce olduğu için `lang="en"`.
 adın belirtilmesi yetkisine uygundur. Aydınlatma metni değişmedi.
 
 **Doğrulama:** Kapı: typecheck, lint, test. Görsel kontrol canlıda.
+
+## D-380 — Yazılara kaynakça; yazar gönderdikten sonra da ekleyebilir
+
+**Karar:** Her yazının ayrı bir kaynakça alanı var (`articles.references_markdown`, markdown,
+en fazla 20.000 karakter, boş varsayılan). Sahibin isteği: yazarlar yeni yazıya kaynakça
+yazabilsin, daha önce gönderdikleri yazılara da ekleyebilsin.
+
+- **Gövdeden ayrı:** kelime sayısına ve kategorinin 1600 kelimelik toplamına (D-331) girmez;
+  gövdenin sürümlerine (`article_versions`) yazılmaz.
+- **Yazar:** taslakta ve revizyonda düzenleme formunda; incelemede, planlanmışta,
+  yayımlanmışta ve arşivde yazı sayfasındaki ayrı "Kaynakça" kartından
+  (`updateArticleReferencesAsWriter`). Geri çekilmiş yazı kapalı (409), başkasının yazısı 403.
+  Eski sayfadan kayıt D-361 gibi 409.
+- **Editör:** düzenleme formunda aynı alan; değişiklik türünden (düzeltme/içerik) bağımsız.
+- **Herkese açık:** yazı sayfasında gövdenin altında "Kaynakça" kartı, gövdeyle aynı
+  `renderMarkdown` (rehype-sanitize). Boşsa kart yok. Yayımlanmış yazıda değişiklik
+  `/anon` önbelleğini hemen düşürür. Sayı okuyucusundaki tasarım sayfaları resimdir;
+  kaynakça orada görünmez.
+- **Kayıt:** her değişiklik `audit_log`'a `article.references_updated` olarak eski ve yeni
+  metniyle yazılır. Kaynakça sürüm geçmişinde olmadığı için yayımlanmış hâlin izi buradadır
+  (5187 s. K. belirsizliği: yayımlanan içeriğin geçmişi silinmez).
+
+**Hukuk (D-084):** Kaynakça yazının yayın izni verilen metnini değiştirmez; atıf yapılan
+eserlerin listesidir (FSEK m. 35'teki kaynak gösterme yükümlülüğünü yerine getirir). Bu yüzden
+değişikliği yeni bir Eser Onayı istemez ve onayı geri almaz. D-268 (içerik hash'i) devreye
+girdiğinde hash'e kaynakçanın katılıp katılmayacağı orada kararlaştırılmalı; şimdilik
+katılmaz. Yeni kişisel veri yok; aydınlatma metni değişmedi.
+
+**Canlıya geçiş (D-079):** 0072 (`ADD COLUMN references_markdown text DEFAULT '' NOT NULL`)
+uygulanmadan yeni kod `articles` okurken hata verir. **Önce migration 0072, sonra push.**
+
+**Doğrulama:** Kapı: typecheck, lint, test. `article-references.test.ts`: yeni yazıda kırpılarak
+kaydedilir; yayımlanmış yazıda yazar değiştirir, gövde ve sürüm sayısı aynı kalır, denetim
+satırında eski/yeni metin; taslak formu alana dokunmadan kaydedince liste korunur; geri
+çekilmiş 409, başkasının yazısı 403; eski sayfadan kayıt 409.

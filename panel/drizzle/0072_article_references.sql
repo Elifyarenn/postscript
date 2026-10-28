@@ -1,0 +1,1 @@
+ALTER TABLE "articles" ADD COLUMN "references_markdown" text DEFAULT '' NOT NULL;

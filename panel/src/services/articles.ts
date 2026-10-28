@@ -51,7 +51,7 @@ import {
 import { env } from "@/lib/env";
 import { AppError, badRequest, conflict, forbidden, isAppError, notFound } from "@/lib/errors";
 import { sendMail } from "@/services/mail-queue";
-import { triggerRevalidate } from "@/lib/revalidate";
+import { refreshPublicPages, triggerRevalidate } from "@/lib/revalidate";
 import { slugify, uniqueSlug } from "@/lib/slug";
 import * as templates from "@emails/templates";
 import { allMediaLicensed } from "./media";
@@ -78,10 +78,14 @@ import type { RequestMeta } from "./auth";
 /* Schemas                                                             */
 /* ------------------------------------------------------------------ */
 
+/** The article's source list (D-380); outside the body and its word totals. */
+const referencesField = z.string().max(20_000, "Kaynakça en fazla 20.000 karakter olabilir.").optional();
+
 export const articleInputSchema = z.strictObject({
   title: z.string().trim().min(3, "Başlık en az 3 karakter olmalı.").max(200),
   summary: z.string().trim().max(600).optional().nullable(),
   bodyMarkdown: z.string().max(200_000).optional(),
+  referencesMarkdown: referencesField,
   authorId: z.uuid().optional().nullable(),
   issueId: z.uuid().optional().nullable(),
   category: z.string().trim().max(80).optional().nullable(),
@@ -110,6 +114,7 @@ export const writerArticleInputSchema = z.strictObject({
   title: z.string().trim().min(3, "Başlık en az 3 karakter olmalı.").max(200),
   summary: z.string().trim().max(600).optional().nullable(),
   bodyMarkdown: z.string().max(200_000).optional(),
+  referencesMarkdown: referencesField,
   slug: z.string().trim().max(120).optional().nullable(),
   category: z.string().trim().max(80).optional().nullable(),
   /**
@@ -498,6 +503,7 @@ export async function createArticle(
         slug,
         summary: input.summary ?? null,
         bodyMarkdown: input.bodyMarkdown ?? "",
+        referencesMarkdown: input.referencesMarkdown?.trim() ?? "",
         authorId: input.authorId ?? null,
         issueId: input.issueId!,
         category: input.category ?? null,
@@ -634,6 +640,7 @@ export async function createArticleAsWriter(
         slug,
         summary: input.summary ?? null,
         bodyMarkdown: input.bodyMarkdown ?? "",
+        referencesMarkdown: input.referencesMarkdown?.trim() ?? "",
         authorId: actor.id,
         issueId: target.issueId,
         category,
@@ -773,6 +780,7 @@ export async function updateArticleAsWriter(
         slug,
         summary: input.summary ?? null,
         bodyMarkdown: input.bodyMarkdown ?? existing.bodyMarkdown,
+        referencesMarkdown: input.referencesMarkdown?.trim() ?? existing.referencesMarkdown,
         category,
         updatedAt: new Date(),
       })
@@ -803,7 +811,85 @@ export async function updateArticleAsWriter(
     after: { title: updated!.title, status: existing.status },
     ip: meta.ip,
   });
+  if (updated!.referencesMarkdown !== existing.referencesMarkdown) {
+    await auditReferencesChange(existing, updated!, actor.id, meta);
+  }
 
+  return updated!;
+}
+
+/**
+ * Every change of a source list goes into the audit log with both texts
+ * (D-380): the list may change after publication without a new version of
+ * the body, and the record of what readers were shown must not be lost
+ * (5187 s. K. uncertainty, see CLAUDE.md). A published page is refreshed so
+ * the new list shows at once.
+ */
+async function auditReferencesChange(
+  before: Article,
+  after: Article,
+  actorId: string,
+  meta: RequestMeta,
+): Promise<void> {
+  await writeAudit({
+    actorId,
+    action: "article.references_updated",
+    entityType: "articles",
+    entityId: after.id,
+    before: { referencesMarkdown: before.referencesMarkdown, status: before.status },
+    after: { referencesMarkdown: after.referencesMarkdown, status: after.status },
+    ip: meta.ip,
+  });
+  if (after.status === "published") refreshPublicPages();
+}
+
+const referencesInputSchema = z.strictObject({
+  referencesMarkdown: z.string().max(20_000, "Kaynakça en fazla 20.000 karakter olabilir."),
+  /** The `updated_at` the form was drawn from; see `assertArticleUnchanged` (D-361). */
+  expectedUpdatedAt: z.iso.datetime().optional().nullable(),
+});
+
+/**
+ * The author adds or fixes the source list of an article already submitted,
+ * scheduled or published (D-380). The body stays locked once it leaves the
+ * author, but a source list does not change the licensed text, so neither a
+ * new body version nor a new approval is needed. A withdrawn article is
+ * closed: it is no longer the magazine's to show.
+ */
+export async function updateArticleReferencesAsWriter(
+  actor: Actor,
+  articleId: string,
+  rawInput: unknown,
+  meta: RequestMeta,
+): Promise<Article> {
+  if (!isActiveWriter(actor)) throw forbidden();
+
+  const existing = await findArticleById(articleId);
+  if (existing.authorId !== actor.id) {
+    throw forbidden("Yalnızca kendi yazılarınızın kaynakçasını düzenleyebilirsiniz.");
+  }
+  if (existing.status === "withdrawn") {
+    throw conflict("Geri çekilmiş bir yazının kaynakçası değiştirilemez.");
+  }
+
+  const parsed = referencesInputSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    throw badRequest("Kaynakça geçersiz.", z.flattenError(parsed.error).fieldErrors);
+  }
+  const referencesMarkdown = parsed.data.referencesMarkdown.trim();
+  if (referencesMarkdown === existing.referencesMarkdown) return existing;
+
+  const updated = await db.transaction(async (tx) => {
+    await assertArticleUnchanged(tx, articleId, parsed.data.expectedUpdatedAt);
+    const [row] = await tx
+      .update(articles)
+      .set({ referencesMarkdown, updatedAt: new Date() })
+      .where(eq(articles.id, articleId))
+      .returning();
+    return row;
+  });
+
+  await auditReferencesChange(existing, updated!, actor.id, meta);
   return updated!;
 }
 
@@ -915,6 +1001,7 @@ export async function updateArticle(
         slug,
         summary: input.summary ?? null,
         bodyMarkdown: input.bodyMarkdown ?? existing.bodyMarkdown,
+        referencesMarkdown: input.referencesMarkdown?.trim() ?? existing.referencesMarkdown,
         authorId: input.authorId ?? existing.authorId,
         issueId: input.issueId ?? existing.issueId,
         category: nextCategory,
@@ -939,6 +1026,9 @@ export async function updateArticle(
     after: { title: updated!.title, authorId: updated!.authorId, changeKind },
     ip: meta.ip,
   });
+  if (updated!.referencesMarkdown !== existing.referencesMarkdown) {
+    await auditReferencesChange(existing, updated!, actor.id, meta);
+  }
 
   // §7.5: a correction stays inside contract article 6.2 and keeps the writer's
   // approval. A content change is a different work, so the approval it was

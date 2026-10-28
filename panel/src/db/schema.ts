@@ -1353,6 +1353,12 @@ export const articles = pgTable(
     summary: text("summary"),
     /** Pasted in by an editor; there is no writer-facing submission flow in this phase. */
     bodyMarkdown: text("body_markdown").notNull().default(""),
+    /**
+     * The sources the article cites, as markdown (D-380). Kept apart from the
+     * body: it is not counted in the word totals, and the author may add or fix
+     * it after submission without reopening the work approval.
+     */
+    referencesMarkdown: text("references_markdown").notNull().default(""),
 
     authorId: uuid("author_id").references(() => users.id, { onDelete: "restrict" }),
 

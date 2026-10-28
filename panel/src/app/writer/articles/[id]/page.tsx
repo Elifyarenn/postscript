@@ -15,11 +15,15 @@ import { PanelForm } from "@/components/form";
 import { ArticleBodyTextarea } from "@/components/article-body-textarea";
 import { countWords, formatWordCount } from "@/lib/word-count";
 import { categoryBudgetForForm } from "@/services/category-budget";
-import { Alert, Card, EmptyState, Field, Input, PageHeader, Select, StatusBadge, Table, Td, Th } from "@/components/ui";
+import { Alert, Card, EmptyState, Field, Input, PageHeader, Select, StatusBadge, Table, Td, Th, Textarea } from "@/components/ui";
 import { formatDate, formatDateTime } from "@/lib/utils";
-import { updateArticleAsWriterAction } from "../../actions";
+import { updateArticleAsWriterAction, updateArticleReferencesAction } from "../../actions";
 
 export const metadata = { title: "Yazı" };
+
+/** Shared by both reference fields on this page (D-380). */
+const REFERENCES_HINT = 'Her kaynağı "- " ile başlayan ayrı bir satıra yazın. Kelime sayısına dahil değildir.';
+const REFERENCES_PLACEHOLDER = "- Yazar, A. (2020). Kitabın adı. Yayınevi.\n- https://ornek.com/makale";
 
 export default async function WriterArticleDetailPage({
   params,
@@ -53,7 +57,10 @@ export default async function WriterArticleDetailPage({
     listArticleHistory({ ...user }, id),
   ]);
 
-  const preview = await renderMarkdown(article.bodyMarkdown);
+  const [preview, referencesPreview] = await Promise.all([
+    renderMarkdown(article.bodyMarkdown),
+    renderMarkdown(article.referencesMarkdown),
+  ]);
   // The category's total in this issue, shown live under the body (D-331); an admin has none (D-357)
   const budgetData = canWriteInAnyArea({ ...user }) ? null : await categoryBudgetForForm(article.issueId, article.id);
   const budget = budgetData
@@ -144,6 +151,17 @@ export default async function WriterArticleDetailPage({
                     />
                   </Field>
 
+                  <Field label="Kaynakça (isteğe bağlı)" htmlFor="referencesMarkdown" hint={REFERENCES_HINT}>
+                    <Textarea
+                      id="referencesMarkdown"
+                      name="referencesMarkdown"
+                      rows={6}
+                      maxLength={20000}
+                      defaultValue={article.referencesMarkdown}
+                      placeholder={REFERENCES_PLACEHOLDER}
+                    />
+                  </Field>
+
                   {/* Goes onto the version this save creates, so the history
                       below reads as sentences rather than dashes (D-242) */}
                   <Field
@@ -197,6 +215,39 @@ export default async function WriterArticleDetailPage({
               düzenleyebilir; durum değişikliklerini ve editör notlarını
               buradan izleyebilirsiniz.
             </p>
+          </Card>
+        )}
+
+        {/* The body is locked once submitted, the source list is not (D-380) */}
+        {!editable && article.status !== "withdrawn" && (
+          <Card>
+            <h2 className="mb-2 font-serif text-lg">Kaynakça</h2>
+            <p className="mb-4 text-sm text-muted">
+              Gönderdiğiniz yazıya kaynakça ekleyebilir ya da kaynakçayı düzeltebilirsiniz. Metin
+              değişmediği için yeniden onay gerekmez
+              {article.status === "published" ? "; kaydettiğinizde yazının sayfasında hemen görünür." : "."}
+            </p>
+            <PanelForm
+              action={updateArticleReferencesAction}
+              csrfToken={csrfToken}
+              submitLabel="Kaynakçayı kaydet"
+              warnUnsaved
+            >
+              <>
+                <input type="hidden" name="articleId" value={article.id} />
+                <input type="hidden" name="expectedUpdatedAt" value={article.updatedAt.toISOString()} />
+                <Field label="Kaynakça (isteğe bağlı)" htmlFor="referencesMarkdown" hint={REFERENCES_HINT}>
+                  <Textarea
+                    id="referencesMarkdown"
+                    name="referencesMarkdown"
+                    rows={8}
+                    maxLength={20000}
+                    defaultValue={article.referencesMarkdown}
+                    placeholder={REFERENCES_PLACEHOLDER}
+                  />
+                </Field>
+              </>
+            </PanelForm>
           </Card>
         )}
 
@@ -265,6 +316,12 @@ export default async function WriterArticleDetailPage({
           <Card>
             <h2 className="mb-4 font-serif text-lg">Önizleme</h2>
             <div className="prose-panel text-sm" dangerouslySetInnerHTML={{ __html: preview }} />
+            {referencesPreview && (
+              <>
+                <h3 className="mb-2 mt-6 font-serif text-base">Kaynakça</h3>
+                <div className="prose-panel text-sm" dangerouslySetInnerHTML={{ __html: referencesPreview }} />
+              </>
+            )}
           </Card>
         )}
 

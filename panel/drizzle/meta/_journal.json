@@ -498,6 +498,13 @@
       "when": 1793062705475,
       "tag": "0071_signed_contract_revert",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1793188364738,
+      "tag": "0072_article_references",
+      "breakpoints": true
     }
   ]
 }

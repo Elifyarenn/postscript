@@ -213,6 +213,7 @@ export async function getPublicArticle(slug: string) {
       slug: articles.slug,
       summary: articles.summary,
       bodyMarkdown: articles.bodyMarkdown,
+      referencesMarkdown: articles.referencesMarkdown,
       status: articles.status,
       category: articles.category,
       publishedAt: articles.publishedAt,
@@ -245,6 +246,8 @@ export async function getPublicArticle(slug: string) {
     slug: row.slug,
     summary: row.summary,
     html: await renderMarkdown(row.bodyMarkdown),
+    // Empty string when the author gave no sources (D-380)
+    referencesHtml: await renderMarkdown(row.referencesMarkdown),
     category: row.category,
     publishedAt: row.publishedAt,
     updatedAt: row.updatedAt,

@@ -167,6 +167,14 @@ export async function ArticleView({
         <div className="prose-panel" dangerouslySetInnerHTML={{ __html: article.html }} />
       </Card>
 
+      {article.referencesHtml && (
+        <Card className="mt-6">
+          <h2 className="mb-3 font-serif text-lg">Kaynakça</h2>
+          {/* Sanitised the same way as the body (D-012, D-380) */}
+          <div className="prose-panel text-sm" dangerouslySetInnerHTML={{ __html: article.referencesHtml }} />
+        </Card>
+      )}
+
       {article.author && (
         <Card className="mt-6">
           <h2 className="font-serif text-base">{article.author.name}</h2>

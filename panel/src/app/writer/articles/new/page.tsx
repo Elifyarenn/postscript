@@ -10,7 +10,7 @@ import { categoryBudgetForForm } from "@/services/category-budget";
 import { readCsrfToken } from "@/lib/csrf";
 import { PanelForm } from "@/components/form";
 import { ArticleBodyTextarea } from "@/components/article-body-textarea";
-import { EmptyState, Field, Input, PageHeader, Select } from "@/components/ui";
+import { EmptyState, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
 import { createArticleAsWriterAction } from "../../actions";
 
 export const metadata = { title: "Yeni yazı" };
@@ -164,6 +164,20 @@ export default async function WriterNewArticlePage({
               name="bodyMarkdown"
               rows={18}
               budget={budgetData ? { ...budgetData, categoryFieldId: "category" } : undefined}
+            />
+          </Field>
+
+          <Field
+            label="Kaynakça (isteğe bağlı)"
+            htmlFor="referencesMarkdown"
+            hint={'Her kaynağı "- " ile başlayan ayrı bir satıra yazın. Kelime sayısına dahil değildir; yazıyı gönderdikten sonra da ekleyebilirsiniz.'}
+          >
+            <Textarea
+              id="referencesMarkdown"
+              name="referencesMarkdown"
+              rows={6}
+              maxLength={20000}
+              placeholder={"- Yazar, A. (2020). Kitabın adı. Yayınevi.\n- https://ornek.com/makale"}
             />
           </Field>
         </>

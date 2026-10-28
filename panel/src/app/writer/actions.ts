@@ -16,6 +16,7 @@ import {
   declineWorkAndReturnForRevision,
   saveAndSubmitArticleAsWriter,
   updateArticleAsWriter,
+  updateArticleReferencesAsWriter,
 } from "@/services/articles";
 import { approveWork, confirmUncoveredSubmissions } from "@/services/rights";
 import { requestMetadata, requireAuth, requireRole } from "@/lib/auth/session";
@@ -159,6 +160,7 @@ export async function createArticleAsWriterAction(
         title: text(formData, "title"),
         summary: optionalText(formData, "summary"),
         bodyMarkdown: text(formData, "bodyMarkdown"),
+        referencesMarkdown: text(formData, "referencesMarkdown"),
         slug: optionalText(formData, "slug"),
         category: optionalText(formData, "category"),
         // An accepted topic, or an issue without windows (D-261), from one select
@@ -188,6 +190,7 @@ export async function updateArticleAsWriterAction(
       title: text(formData, "title"),
       summary: optionalText(formData, "summary"),
       bodyMarkdown: text(formData, "bodyMarkdown"),
+      referencesMarkdown: text(formData, "referencesMarkdown"),
       slug: optionalText(formData, "slug"),
       category: optionalText(formData, "category"),
       changeNote: optionalText(formData, "changeNote"),
@@ -218,6 +221,32 @@ export async function updateArticleAsWriterAction(
           ? `Yazı kaydedildi. Uyarı: yazı ${formatWordCount(words)}, önerilen üst sınır ${ARTICLE_WORD_WARNING} kelime.`
           : "Yazı kaydedildi.",
     };
+  });
+}
+
+/** The source list of an article that has already left the author's hands (D-380). */
+export async function updateArticleReferencesAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("writer");
+    const meta = await requestMetadata();
+
+    const articleId = text(formData, "articleId");
+    await updateArticleReferencesAsWriter(
+      { ...user },
+      articleId,
+      {
+        referencesMarkdown: text(formData, "referencesMarkdown"),
+        expectedUpdatedAt: optionalText(formData, "expectedUpdatedAt"),
+      },
+      meta,
+    );
+
+    revalidatePath(`/writer/articles/${articleId}`);
+    return { success: "Kaynakça kaydedildi." };
   });
 }
 

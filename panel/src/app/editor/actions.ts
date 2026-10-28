@@ -100,6 +100,7 @@ export async function updateArticleAction(
         title: text(formData, "title"),
         summary: optionalText(formData, "summary"),
         bodyMarkdown: text(formData, "bodyMarkdown"),
+        referencesMarkdown: text(formData, "referencesMarkdown"),
         authorId: optionalText(formData, "authorId"),
         issueId: optionalText(formData, "issueId"),
         category: optionalText(formData, "category"),

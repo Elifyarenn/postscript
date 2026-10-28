@@ -93,7 +93,10 @@ export default async function EditorArticleDetailPage({
       listArticleHistory(actor, article.id),
     ]);
 
-  const preview = await renderMarkdown(article.bodyMarkdown);
+  const [preview, referencesPreview] = await Promise.all([
+    renderMarkdown(article.bodyMarkdown),
+    renderMarkdown(article.referencesMarkdown),
+  ]);
   const withoutTopic = await isArticleWithoutTopic(article);
 
   // The main editor's open request to the category editor: the last status
@@ -282,6 +285,16 @@ export default async function EditorArticleDetailPage({
                   />
                 </Field>
 
+                <Field label="Kaynakça (isteğe bağlı)" htmlFor="referencesMarkdown" hint="Yazar da yazıyı gönderdikten sonra düzenleyebilir. Değişiklik yazarın onayını yeniden açmaz.">
+                  <Textarea
+                    id="referencesMarkdown"
+                    name="referencesMarkdown"
+                    rows={6}
+                    maxLength={20000}
+                    defaultValue={article.referencesMarkdown}
+                                     />
+                </Field>
+
                 <Field
                   label="Değişiklik notu"
                   htmlFor="changeNote"
@@ -311,6 +324,12 @@ export default async function EditorArticleDetailPage({
         <Card>
           <h2 className="mb-4 font-serif text-lg">Önizleme</h2>
           <div className="prose-panel text-sm" dangerouslySetInnerHTML={{ __html: preview }} />
+          {referencesPreview && (
+            <>
+              <h3 className="mb-2 mt-6 font-serif text-base">Kaynakça</h3>
+              <div className="prose-panel text-sm" dangerouslySetInnerHTML={{ __html: referencesPreview }} />
+            </>
+          )}
         </Card>
 
         <Card>
