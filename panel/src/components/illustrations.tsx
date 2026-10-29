@@ -37,6 +37,11 @@ export function IllustrationCard({
       <div className="flex flex-1 flex-col gap-1 p-3 text-sm">
         <p className="font-medium">{item.title}</p>
         {showIllustrator && <p className="text-muted">{item.illustratorName}</p>}
+        <p className="text-xs">
+          {item.areaName ?? "Kategorisiz"}
+          {/* The same id the licence form prints as "Panel kaydı", shortened */}
+          <span className="text-muted"> · Kayıt {item.id.slice(0, 8)}</span>
+        </p>
         <p className="text-xs text-muted">
           {formatDateTime(item.createdAt)}
           {item.issueNumber !== null && ` · Sayı ${item.issueNumber}`}

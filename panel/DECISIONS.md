@@ -14916,3 +14916,41 @@ uygulanmadan yeni kod `articles` okurken hata verir. **Önce migration 0072, son
 kaydedilir; yayımlanmış yazıda yazar değiştirir, gövde ve sürüm sayısı aynı kalır, denetim
 satırında eski/yeni metin; taslak formu alana dokunmadan kaydedince liste korunur; geri
 çekilmiş 409, başkasının yazısı 403; eski sayfadan kayıt 409.
+
+## D-381 — Çizimleri admin kategoriye ayırır, kategorinin kimliğiyle
+
+**Bağlam:** Çizerler kategoriyi kendi serbest metinleriyle yazıyordu: kimi nota ("Sosyoloji",
+"Dizi Film"), kimi başlığa ("Pop kültürü katogarisi"). Bu metinlerle gruplama yapılamıyor,
+yazım hataları da ruhsat formuna aynen geçiyor. Sahibin isteği: "görselleri biz id ile
+kategorize edelim panelde".
+
+**Karar:**
+- `illustrations.area_id` → `writer_areas.id` (ON DELETE SET NULL). Kategori listesi
+  yazıların ve editör alanlarının kullandığı aynı tablo; ikinci bir liste yok. Silinen
+  alan çizimi "Kategorisiz"e düşürür.
+- Kategoriyi **yalnızca admin** seçer: `/admin/cizimler`'de her kartta açılır liste
+  (`setIllustrationArea`, `canReviewIllustrations` ile aynı yetki). Çizerin yükleme formu
+  değişmedi. Boş seçim kategoriyi kaldırır. Kapalı alanlar listede "(kapalı)" diye durur ki
+  eski bir seçim kaybolmasın.
+- Sayfanın üstünde kategori filtresi (`?kategori=<alan id>` / `yok`), sayılarıyla.
+- Kartta kategori ve kaydın kısa kimliği ("Kayıt 2790166d") görünür. Bu, ruhsat
+  formunun "Panel kaydı" satırındaki kimliğin ilk sekiz hanesi; formla kartı eşleştirmek
+  için.
+- Her değişiklik `audit_log`'a `illustration.area_set` olarak eski ve yeni alan kimliğiyle
+  yazılır. Aynı seçimi yeniden kaydetmek satır yazmaz.
+
+**Hukuk (D-084):** Kategori ruhsat formuna yazılmaz; formun metni, dosyanın özeti (SHA-256) ve
+çizerin verdiği başlık değişmez. Bu yüzden kategori değiştirmek hazırlanmış ya da
+gönderilmiş bir formu bozmaz ve yeniden imza gerektirmez. Kategori, derginin kendi iç
+sınıflandırmasıdır. Kişinin verdiği bir bilgi değil, yeni bir işleme amacı da değil. Bu
+yüzden aydınlatma metni değişmedi ve KVKK dışa aktarımına eklenmedi.
+
+**Canlıya geçiş (D-079):** 0073 (`ADD COLUMN area_id uuid`, FK, index) uygulanmadan yeni kod
+`illustrations` okurken hata verir. **Önce migration 0073, sonra push.** Sütun boş
+bırakılabildiği ve varsayılanı olmadığı için mevcut satırlar etkilenmez. Hepsi
+"Kategorisiz" başlar.
+
+**Doğrulama:** Kapı: typecheck, lint, test. `illustrations.test.ts`: admin kimlikle atar ve
+kaldırır; başlık ve özet aynı kalır; iki denetim satırı oluşur (aynı seçimin tekrarı
+yazılmaz). Çizer ve baş editör 403, bilinmeyen alan ve kimlik olmayan değer 400, kaldırılmış
+çizim 404.

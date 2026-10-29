@@ -2275,6 +2275,11 @@ export const illustrations = pgTable(
     note: text("note"),
     /** The issue the çizer drew it for, when they said. */
     issueId: uuid("issue_id").references(() => issues.id, { onDelete: "set null" }),
+    /**
+     * The category an admin files it under (D-381), by the area's id; the
+     * çizer's own title and note are free text and cannot be grouped on.
+     */
+    areaId: uuid("area_id").references(() => writerAreas.id, { onDelete: "set null" }),
     storageKey: text("storage_key").notNull(),
     mime: text("mime").notNull(),
     size: integer("size").notNull(),
@@ -2289,6 +2294,7 @@ export const illustrations = pgTable(
   (t) => [
     index("illustrations_illustrator_idx").on(t.illustratorId, t.createdAt),
     index("illustrations_created_at_idx").on(t.createdAt),
+    index("illustrations_area_idx").on(t.areaId),
   ],
 );
 

@@ -505,6 +505,13 @@
       "when": 1793188364738,
       "tag": "0072_article_references",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1793273587225,
+      "tag": "0073_illustration_area",
+      "breakpoints": true
     }
   ]
 }

@@ -59,6 +59,7 @@ import { setEditorDuties } from "@/services/editor-categories";
 import { setHybridWriterRole } from "@/services/users";
 import { saveSiteSettings, SITE_SETTING_KEYS } from "@/services/site-settings";
 import { publishKvkkVersion } from "@/services/kvkk";
+import { setIllustrationArea } from "@/services/illustrations";
 import { requestMetadata, requireRole, revokeAllSessions } from "@/lib/auth/session";
 import { assertCsrfFromForm } from "@/lib/csrf";
 import {
@@ -1037,5 +1038,24 @@ export async function setHybridWriterRoleAction(
         ? "Editör artık aynı zamanda yazar; panel anahtarıyla iki panel arasında geçebilir."
         : "Editörün yazarlığı kaldırıldı.",
     };
+  });
+}
+
+export async function setIllustrationAreaAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+
+    await setIllustrationArea(
+      { ...user },
+      { illustrationId: text(formData, "illustrationId"), areaId: text(formData, "areaId") },
+      await requestMetadata(),
+    );
+
+    revalidatePath("/admin/cizimler");
+    return { success: "Kategori kaydedildi." };
   });
 }

@@ -17,7 +17,15 @@ import { createHash } from "node:crypto";
 import { and, count, desc, eq, inArray, isNull, lt, not, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { contributorDocuments, contributorDocumentWorks, illustrations, issues, users, type Illustration } from "@/db/schema";
+import {
+  contributorDocuments,
+  contributorDocumentWorks,
+  illustrations,
+  issues,
+  users,
+  writerAreas,
+  type Illustration,
+} from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
 import { canAccessAdminPanel, canAccessIllustratorPanel, canReviewIllustrations, type Actor } from "@/lib/auth/rbac";
 import { notMailed, withoutSignedCopy } from "./contributor-documents";
@@ -175,6 +183,8 @@ export type IllustrationListItem = {
   height: number | null;
   createdAt: Date;
   issueNumber: number | null;
+  areaId: string | null;
+  areaName: string | null;
   illustratorId: string;
   illustratorName: string;
 };
@@ -189,6 +199,8 @@ const listColumns = {
   height: illustrations.height,
   createdAt: illustrations.createdAt,
   issueNumber: issues.number,
+  areaId: illustrations.areaId,
+  areaName: writerAreas.name,
   illustratorId: illustrations.illustratorId,
   illustratorName: users.displayName,
 };
@@ -200,6 +212,7 @@ export async function listOwnIllustrations(actor: Actor): Promise<IllustrationLi
     .from(illustrations)
     .innerJoin(users, eq(users.id, illustrations.illustratorId))
     .leftJoin(issues, eq(issues.id, illustrations.issueId))
+    .leftJoin(writerAreas, eq(writerAreas.id, illustrations.areaId))
     .where(and(eq(illustrations.illustratorId, actor.id), isNull(illustrations.deletedAt)))
     .orderBy(desc(illustrations.createdAt));
 }
@@ -212,8 +225,54 @@ export async function listIllustrationsForReview(actor: Actor): Promise<Illustra
     .from(illustrations)
     .innerJoin(users, eq(users.id, illustrations.illustratorId))
     .leftJoin(issues, eq(issues.id, illustrations.issueId))
+    .leftJoin(writerAreas, eq(writerAreas.id, illustrations.areaId))
     .where(isNull(illustrations.deletedAt))
     .orderBy(desc(illustrations.createdAt));
+}
+
+const areaInputSchema = z.strictObject({
+  illustrationId: z.uuid("Çizim geçersiz."),
+  // Empty means "Kategorisiz": a wrong choice is taken back this way
+  areaId: z.union([z.uuid("Listeden bir kategori seçin."), z.literal("")]),
+});
+
+/**
+ * An admin files a drawing under one of the writing areas (D-381). Only the
+ * category changes: the çizer's title, the file and any licence form drawn
+ * from it stay as they are, so the form's hash still matches what was sent.
+ */
+export async function setIllustrationArea(actor: Actor, input: unknown, meta: RequestMeta): Promise<void> {
+  if (!(await mayReviewIllustrations(actor))) throw forbidden();
+  const parsed = areaInputSchema.safeParse(input);
+  if (!parsed.success) {
+    throw badRequest("Kategori geçersiz.", z.flattenError(parsed.error).fieldErrors);
+  }
+  const areaId = parsed.data.areaId || null;
+
+  if (areaId) {
+    const [area] = await db.select({ id: writerAreas.id }).from(writerAreas).where(eq(writerAreas.id, areaId)).limit(1);
+    if (!area) throw badRequest("Bu kategori yok.", { areaId: ["Listeden bir kategori seçin."] });
+  }
+
+  const [row] = await db
+    .select({ id: illustrations.id, areaId: illustrations.areaId })
+    .from(illustrations)
+    .where(and(eq(illustrations.id, parsed.data.illustrationId), isNull(illustrations.deletedAt)))
+    .limit(1);
+  if (!row) throw notFound("Çizim bulunamadı.");
+  if (row.areaId === areaId) return;
+
+  await db.update(illustrations).set({ areaId, updatedAt: new Date() }).where(eq(illustrations.id, row.id));
+
+  await writeAudit({
+    actorId: actor.id,
+    action: "illustration.area_set",
+    entityType: "illustrations",
+    entityId: row.id,
+    before: { areaId: row.areaId },
+    after: { areaId },
+    ip: meta.ip,
+  });
 }
 
 /** The file, for the çizer who handed it in and for the reviewers; 404 for anyone else. */

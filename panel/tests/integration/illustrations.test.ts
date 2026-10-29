@@ -6,13 +6,14 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { db, type Database } from "@/db/client";
-import { auditLog, illustrations, issues, notifications, users } from "@/db/schema";
+import { auditLog, illustrations, issues, notifications, users, writerAreas } from "@/db/schema";
 import {
   listIllustrationsForReview,
   listOwnIllustrations,
   pruneRemovedIllustrations,
   readIllustrationFile,
   removeIllustration,
+  setIllustrationArea,
   uploadIllustration,
 } from "@/services/illustrations";
 import { MAX_ILLUSTRATION_BYTES } from "@/lib/illustration";
@@ -192,6 +193,58 @@ describe("who sees a drawing", () => {
     for (const refused of [main, plain]) {
       expect((await captureError(listIllustrationsForReview(actorOf(refused)))).status).toBe(403);
     }
+  });
+});
+
+describe("filing a drawing under a category (D-381)", () => {
+  it("lets an admin set and clear it by the area's id, with an audit row; the file and title stay", async () => {
+    const admin = await createUser({ role: "admin" });
+    const ece = await illustrator();
+    const row = await upload(ece);
+    const [area] = await db.insert(writerAreas).values({ name: "Sanat", sortOrder: 1 }).returning();
+
+    await setIllustrationArea(actorOf(admin), { illustrationId: row.id, areaId: area!.id }, noMeta);
+    const [listed] = await listIllustrationsForReview(actorOf(admin));
+    expect(listed?.areaId).toBe(area!.id);
+    expect(listed?.areaName).toBe("Sanat");
+    expect(listed?.title).toBe("Kapak taslağı");
+
+    // Saving the same choice again writes nothing
+    await setIllustrationArea(actorOf(admin), { illustrationId: row.id, areaId: area!.id }, noMeta);
+    await setIllustrationArea(actorOf(admin), { illustrationId: row.id, areaId: "" }, noMeta);
+    const [after] = await db.select().from(illustrations).where(eq(illustrations.id, row.id));
+    expect(after?.areaId).toBeNull();
+    expect(after?.sha256).toBe(row.sha256);
+
+    const audits = await db
+      .select()
+      .from(auditLog)
+      .where(and(eq(auditLog.entityId, row.id), eq(auditLog.action, "illustration.area_set")));
+    expect(audits).toHaveLength(2);
+  });
+
+  it("refuses the çizer, the main editor, an unknown area and a removed drawing", async () => {
+    const admin = await createUser({ role: "admin" });
+    const main = await createUser({ role: "editor", editorStatus: "active" });
+    await db.update(users).set({ isMainEditor: true }).where(eq(users.id, main.id));
+    const ece = await illustrator();
+    const row = await upload(ece);
+    const [area] = await db.insert(writerAreas).values({ name: "Tarih", sortOrder: 1 }).returning();
+
+    for (const refused of [ece, main]) {
+      const error = await captureError(setIllustrationArea(actorOf(refused), { illustrationId: row.id, areaId: area!.id }, noMeta));
+      expect(error.status).toBe(403);
+    }
+    const unknown = await captureError(
+      setIllustrationArea(actorOf(admin), { illustrationId: row.id, areaId: "00000000-0000-4000-8000-000000000000" }, noMeta),
+    );
+    expect(unknown.status).toBe(400);
+    const notUuid = await captureError(setIllustrationArea(actorOf(admin), { illustrationId: row.id, areaId: "Sanat" }, noMeta));
+    expect(notUuid.status).toBe(400);
+
+    await removeIllustration(actorOf(admin), row.id, noMeta);
+    const removed = await captureError(setIllustrationArea(actorOf(admin), { illustrationId: row.id, areaId: area!.id }, noMeta));
+    expect(removed.status).toBe(404);
   });
 });
 
