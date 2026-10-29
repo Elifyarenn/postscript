@@ -41,11 +41,14 @@ export const LICENCE_GROUP_TEMPLATE_VERSION = "8";
  * section 1 naming the uploaded file and without the editors' text
  * corrections, which a drawing has no counterpart of. A çizer's drawings in
  * one issue share the issue form, apart from any text works of theirs.
+ * Versions 11 and 12 (D-382) keep the text of 9 and 10 word for word; they
+ * name each drawing by its record ("Çizim 2790166d") instead of the çizer's
+ * own title, and the new number makes the unsent older forms drawn again.
  */
-export const ILLUSTRATION_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu-cizim-v9.md";
-export const ILLUSTRATION_FORM_TEMPLATE_VERSION = "9";
-export const ILLUSTRATION_GROUP_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu-cizim-v10.md";
-export const ILLUSTRATION_GROUP_TEMPLATE_VERSION = "10";
+export const ILLUSTRATION_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu-cizim-v11.md";
+export const ILLUSTRATION_FORM_TEMPLATE_VERSION = "11";
+export const ILLUSTRATION_GROUP_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu-cizim-v12.md";
+export const ILLUSTRATION_GROUP_TEMPLATE_VERSION = "12";
 
 /** "PNG, 2480 × 3508 piksel, 3,2 MB": what section 1 says of an uploaded drawing's file. */
 export function illustrationFileDescription(file: {

@@ -24,6 +24,7 @@ import { formatDate, formatDateTime } from "@/lib/utils";
 import {
   approveSignedContractAction,
   clearContributorDocumentsAction,
+  withdrawQueuedDocumentMailsAction,
   mailContributorDocumentsAction,
   queueAllContributorDocumentsAction,
   createVersionFromTemplateAction,
@@ -95,6 +96,7 @@ export default async function AdminAgreementsPage() {
   // The counts follow what each action will do (D-316): "delete all" leaves a
   // signed copy's document, the bulk mail skips frozen, deleted and admin owners
   const clearable = unsentDocuments.filter((row) => row.mailState !== "queued" && !row.hasSignedCopy).length;
+  const queuedDocuments = unsentDocuments.filter((row) => row.mailState === "queued").length;
   const preparedByUser = new Map<string, number>();
   const bulkRecipients = new Set<string>();
   for (const row of unsentDocuments) {
@@ -451,6 +453,14 @@ export default async function AdminAgreementsPage() {
                 csrfToken={csrfToken}
                 label={`Gönderilmemiş hazır belgeleri mail kuyruğuna al (${bulkRecipients.size} kişi)`}
                 confirmMessage={`${bulkRecipients.size} kişiye henüz gönderilmemiş hazır belgeleri PDF ekiyle e-posta kuyruğuna yazılacak; gönderilmiş belgeler tekrar gitmez. Gönderim /admin/mail'de "Kuyruğu şimdi işle" ile yapılır. Devam edilsin mi?`}
+              />
+            )}
+            {queuedDocuments > 0 && (
+              <ActionButton
+                action={withdrawQueuedDocumentMailsAction}
+                csrfToken={csrfToken}
+                label={`Kuyruktaki belge maillerini geri al (${queuedDocuments} belge)`}
+                confirmMessage={`Kuyrukta bekleyen ve henüz gönderilmemiş belge e-postaları silinecek; ${queuedDocuments} belge gönderilmemiş hâline döner. Gönderilmekte olan ya da gönderilmiş mail geri alınamaz. Devam edilsin mi?`}
               />
             )}
             {clearable > 0 && (

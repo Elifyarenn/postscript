@@ -263,10 +263,19 @@ function codeWork(entry: CodeWork): LicensedWork {
   };
 }
 
+/**
+ * A drawing is named on its form by its record, not by the çizer's own title
+ * (D-382): those are free text, often a category or a test name, and a form
+ * cannot be corrected once signed. The full id is on the "Panel kaydı" line.
+ */
+export function illustrationFormTitle(id: string): string {
+  return `Çizim ${id.slice(0, 8)}`;
+}
+
 function illustrationWork(row: typeof illustrations.$inferSelect): LicensedWork {
   return {
     id: row.id,
-    title: row.title,
+    title: illustrationFormTitle(row.id),
     body: "",
     typeLabel: "Çizim (görsel)",
     describe: () => "",
@@ -1045,6 +1054,51 @@ export const withoutSignedCopy = sql`not exists (select 1 from ${signedContracts
  * may be queued, sent or cleared. A failed mail counts as not sent.
  */
 export const notMailed = sql`${contributorDocuments.mailedAt} is null and not exists (select 1 from ${mailJobs} where ${mailJobs.id} = ${contributorDocuments.mailJobId} and ${mailJobs.status} <> 'failed')`;
+
+/**
+ * Takes the documents mails back out of the outbox before they go (D-382), so
+ * the documents can be cleared and drawn again. Only a job still `pending` is
+ * removed; one being sent, sent or failed is left, and its documents with it.
+ * The job is deleted rather than marked failed: a failed one could be retried
+ * from /admin/mail and would carry the old PDFs.
+ */
+export async function withdrawQueuedDocumentMails(actor: Actor, meta: RequestMeta): Promise<{ mails: number; documents: number }> {
+  if (!canManageAgreements(actor)) throw forbidden();
+  await syncDocumentMails();
+
+  const result = await db.transaction(async (tx) => {
+    // Locked, so the queue cannot start sending one between the count and the delete
+    const jobs = await tx
+      .select({ id: mailJobs.id })
+      .from(mailJobs)
+      .where(
+        and(
+          eq(mailJobs.kind, "contributor_documents"),
+          eq(mailJobs.status, "pending"),
+          sql`exists (select 1 from ${contributorDocuments} where ${contributorDocuments.mailJobId} = ${mailJobs.id} and ${contributorDocuments.mailedAt} is null)`,
+        ),
+      )
+      .for("update");
+    if (jobs.length === 0) return { mails: 0, documents: 0 };
+    const ids = jobs.map((job) => job.id);
+    const [carried] = await tx
+      .select({ value: sql<number>`count(*)::int` })
+      .from(contributorDocuments)
+      .where(inArray(contributorDocuments.mailJobId, ids));
+    // The documents' `mail_job_id` is ON DELETE SET NULL, which frees them
+    await tx.delete(mailJobs).where(and(inArray(mailJobs.id, ids), eq(mailJobs.status, "pending")));
+    return { mails: ids.length, documents: Number(carried?.value ?? 0) };
+  });
+
+  await writeAudit({
+    actorId: actor.id,
+    action: "contributor_documents.mails_withdrawn",
+    entityType: "contributor_documents",
+    after: result,
+    ip: meta.ip,
+  });
+  return result;
+}
 
 export async function clearContributorDocuments(actor: Actor, meta: RequestMeta): Promise<number> {
   if (!canManageAgreements(actor)) throw forbidden();

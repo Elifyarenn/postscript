@@ -39,6 +39,7 @@ import {
   queueAllContributorDocuments,
   setLicenceCommercialUse,
   viewContributorDocument,
+  withdrawQueuedDocumentMails,
 } from "@/services/contributor-documents";
 import { articleHash } from "@/services/rights";
 import { processMailQueue } from "@/services/mail-queue";
@@ -420,6 +421,32 @@ describe("mailing a contributor their documents (D-285)", () => {
     expect(await db.select().from(mailJobs)).toHaveLength(people.size);
 
     expect((await captureError(queueAllContributorDocuments(actorOf(s.editor), noMeta)))?.status).toBe(403);
+  });
+
+  it("takes the waiting mails back out of the outbox, so the documents can be cleared and drawn again (D-382)", async () => {
+    const s = await scenario();
+    await prepareContributorDocuments(actorOf(s.admin), noMeta);
+    const queued = await queueAllContributorDocuments(actorOf(s.admin), noMeta);
+
+    // One already being sent stays, and so do its documents
+    const jobs = await db.select().from(mailJobs);
+    const busy = jobs.find((job) => job.recipient === s.complete.email)!;
+    await db.update(mailJobs).set({ status: "processing" }).where(eq(mailJobs.id, busy.id));
+    const busyDocuments = (await db.select().from(contributorDocuments)).filter((row) => row.mailJobId === busy.id).length;
+
+    expect((await captureError(withdrawQueuedDocumentMails(actorOf(s.editor), noMeta)))?.status).toBe(403);
+    const result = await withdrawQueuedDocumentMails(actorOf(s.admin), noMeta);
+    expect(result).toEqual({ mails: queued.mails - 1, documents: queued.documents - busyDocuments });
+    expect((await db.select().from(mailJobs)).map((job) => job.id)).toEqual([busy.id]);
+    expect(mailbox.outbox).toHaveLength(0);
+
+    const [audit] = await db.select().from(auditLog).where(eq(auditLog.action, "contributor_documents.mails_withdrawn"));
+    expect(audit?.after).toEqual(result);
+
+    // Freed, so "delete all" takes them; the one being sent is left alone
+    expect(await clearContributorDocuments(actorOf(s.admin), noMeta)).toBeGreaterThanOrEqual(result.documents);
+    expect((await db.select().from(contributorDocuments)).every((row) => row.mailJobId === busy.id)).toBe(true);
+    expect(await withdrawQueuedDocumentMails(actorOf(s.admin), noMeta)).toEqual({ mails: 0, documents: 0 });
   });
 
   it("sends nothing for someone whose documents are all under review", async () => {
@@ -1151,7 +1178,8 @@ describe("drawings on the çizim form (D-372)", () => {
     expect(form!.status).toBe("prepared");
     expect(form!.issueId).toBe(s.issueId);
     expect(form!.templateVersion).toBe(ILLUSTRATION_GROUP_TEMPLATE_VERSION);
-    expect(form!.worksLabel).toBe("Sayı 9999: Kapak; Açılış");
+    // Named by their records, not by the çizer's own titles (D-382)
+    expect(form!.worksLabel).toBe(`Sayı 9999: Çizim ${s.cover.id.slice(0, 8)}; Çizim ${s.opener.id.slice(0, 8)}`);
     const works = await db
       .select()
       .from(contributorDocumentWorks)
@@ -1166,6 +1194,9 @@ describe("drawings on the çizim form (D-372)", () => {
     expect(text).toContain("Çizim (görsel)");
     expect(text).toContain("Panel'e yüklenen çizim dosyası: PNG, 2480 × 3508 piksel, 3,2 MB");
     expect(text).toContain(`Ruhsata konu dosya özeti (SHA-256)\n${s.cover.sha256}`);
+    expect(text).toContain(`Başlık\nÇizim ${s.cover.id.slice(0, 8)}`);
+    expect(text).toContain(`Panel kaydı\n${s.cover.id}`);
+    expect(text).not.toContain("Kapak");
     expect(text).toContain("Gerçek adıyla (Çizer Ece)");
     // A drawing has no text for the editors to correct
     expect(text).not.toContain("Editoryal düzeltmeler");
@@ -1195,13 +1226,42 @@ describe("drawings on the çizim form (D-372)", () => {
     const forms = await formsOf(s.complete.id);
     const single = forms.find((row) => row.illustrationId === own.id)!;
     expect(single.templateVersion).toBe(ILLUSTRATION_FORM_TEMPLATE_VERSION);
-    expect(single.worksLabel).toBe("Yazarın Çizimi");
+    expect(single.worksLabel).toBe(`Çizim ${own.id.slice(0, 8)}`);
     expect(single.workContentHash).toBe(own.sha256);
     expect(single.renderedMarkdown).toContain("Ruhsata konu dosya özeti (SHA-256)");
     // Their article in that issue keeps the text form
     expect(forms.find((row) => row.articleId === s.published.id)!.templateVersion).toBe(LICENCE_FORM_TEMPLATE_VERSION);
     const preview = await viewContributorDocument(actorOf(s.admin), single.id);
     expect(preview.markdown).toContain("(ÇİZİM)");
+  });
+
+  it("draws an older çizim form again once its mail is taken back, and leaves the contract alone (D-382)", async () => {
+    const s = await drawingScenario();
+    const scope = { issueId: s.issueId, userId: s.illustrator.id };
+    await prepareContributorDocuments(actorOf(s.admin), noMeta, scope);
+    const [old] = await formsOf(s.illustrator.id);
+    // As production holds it: drawn under the v10 form, with the çizer's titles
+    await db
+      .update(contributorDocuments)
+      .set({ templateVersion: "10", worksLabel: "Sayı 9999: Kapak; Açılış" })
+      .where(eq(contributorDocuments.id, old!.id));
+    const contractBefore = (await db.select().from(contributorDocuments)).find(
+      (row) => row.kind === "general_agreement" && row.userId === s.illustrator.id,
+    )!;
+    await queueAllContributorDocuments(actorOf(s.admin), noMeta);
+
+    // While the mail waits, the form is what the çizer will get: it is not drawn again
+    expect((await prepareContributorDocuments(actorOf(s.admin), noMeta, scope)).redrawn).toBe(0);
+
+    await withdrawQueuedDocumentMails(actorOf(s.admin), noMeta);
+    expect((await prepareContributorDocuments(actorOf(s.admin), noMeta, scope)).redrawn).toBe(1);
+    const [fresh, ...rest] = await formsOf(s.illustrator.id);
+    expect(rest).toHaveLength(0);
+    expect(fresh!.id).not.toBe(old!.id);
+    expect(fresh!.templateVersion).toBe(ILLUSTRATION_GROUP_TEMPLATE_VERSION);
+    expect(fresh!.worksLabel).toBe(`Sayı 9999: Çizim ${s.cover.id.slice(0, 8)}; Çizim ${s.opener.id.slice(0, 8)}`);
+    const contractAfter = (await db.select().from(contributorDocuments)).find((row) => row.id === contractBefore.id);
+    expect(contractAfter?.textHash).toBe(contractBefore.textHash);
   });
 
   it("lets the çizer take back a drawing whose form was not sent, and the form goes with it", async () => {

@@ -34,6 +34,7 @@ import {
 } from "@/services/signed-contracts";
 import {
   clearContributorDocuments,
+  withdrawQueuedDocumentMails,
   mailContributorDocuments,
   prepareContributorDocuments,
   queueAllContributorDocuments,
@@ -651,6 +652,25 @@ export async function queueAllContributorDocumentsAction(
           ? ` · ${result.failedBefore} kişinin aynı belgeleri daha önce gönderilemedi; /admin/mail'den yeniden deneyin`
           : "") +
         `. Göndermek için /admin/mail sayfasında "Kuyruğu şimdi işle".`,
+    };
+  });
+}
+
+/** Takes the unsent documents mails out of the outbox, so they can be drawn again (D-382). */
+export async function withdrawQueuedDocumentMailsAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  return runAction(async () => {
+    await assertCsrfFromForm(formData);
+    const { user } = await requireRole("admin");
+    const result = await withdrawQueuedDocumentMails({ ...user }, await requestMetadata());
+    revalidatePath("/admin/agreements");
+    revalidatePath("/admin/mail");
+    return {
+      success:
+        `${result.mails} e-posta kuyruktan geri alındı (${result.documents} belge).` +
+        (result.mails ? ` Belgeler artık "Gönderilmemiş belgelerin hepsini sil" ile silinip yeniden hazırlanabilir.` : ""),
     };
   });
 }

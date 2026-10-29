@@ -14954,3 +14954,51 @@ bırakılabildiği ve varsayılanı olmadığı için mevcut satırlar etkilenme
 kaldırır; başlık ve özet aynı kalır; iki denetim satırı oluşur (aynı seçimin tekrarı
 yazılmaz). Çizer ve baş editör 403, bilinmeyen alan ve kimlik olmayan değer 400, kaldırılmış
 çizim 404.
+
+## D-382 — Çizim formları çizimleri kayıt kimliğiyle adlandırır; kuyruktaki belge mailleri geri alınabilir
+
+**Bağlam:** Gönderilmeyi bekleyen çizim formlarına çizerlerin serbest başlıkları aynen
+geçmişti: kategori adları ("Pop kültürü katogarisi"), deneme adları ("Deneme goya").
+İmzalanan form sonradan düzeltilemez. Sahibin isteği: "tüm formları id lerle tekrar hazırla".
+
+**Karar:**
+- Çizim formunun 1. maddesindeki "Başlık" satırı ve listelerdeki form adı artık kaydın
+  kimliğinden gelir: `Çizim 2790166d` (`illustrationFormTitle`, kimliğin ilk sekiz hanesi).
+  Tam kimlik "Panel kaydı" satırında, dosyanın özeti (SHA-256) de yanında, eskisi gibi
+  durur. Çizerin kendi başlığı panelde kalır, forma girmez. Yazı formları değişmedi.
+- Şablonlar **çizim v11** (tekil) ve **çizim v12** (sayı formu). Metinleri v9 ve v10 ile
+  kelimesi kelimesine aynı; eski dosyalar arşiv olarak duruyor. Numara, D-340'taki kural
+  devreye girsin diye yükseldi: "Bir sayının ruhsat formlarını hazırla", gönderilmemiş eski
+  sürüm formları kendiliğinden yeniden çizer. Genel sözleşmelere dokunulmaz. "Hepsini sil"
+  ve kapsamsız "Belgeleri hazırla" yoluna bu yüzden gerek kalmaz; o yol genel sözleşmeleri
+  de siler ve sırası gelen başka yazıların formlarını üretebilir.
+- **Kuyruktaki belge maillerini geri al** (`withdrawQueuedDocumentMails`, `/admin/agreements`):
+  `contributor_documents` türündeki, hâlâ `pending` olan ve gönderilmemiş belge taşıyan mail
+  kayıtlarını siler. Silme işlemi aynı işlemde `FOR UPDATE` kilidiyle yapılır, böylece kuyruk
+  o arada gönderime başlayamaz. Belgelerin `mail_job_id` alanı FK gereği boşalır ve belgeler
+  "gönderilmemiş" olur. Gönderilmekte olan (`processing`), gönderilmiş ve başarısız mail
+  bırakılır. Kayıt "başarısız" diye işaretlenmez, silinir: başarısız bir mail
+  `/admin/mail`'den yeniden denenebilir ve eski PDF'leri götürür. Denetim:
+  `contributor_documents.mails_withdrawn`.
+
+**Hukuk (D-084):** Ruhsatın kapsamı, hakları, mecraları ve süresi aynı; yalnızca eserin
+adlandırılması değişti. Eseri tek anlamlı biçimde tanımlayan şey zaten dosyanın özeti ve
+panel kaydıydı (FSEK m. 52 yazılı şekil: hangi eserin kapsandığı bellidir). Başlık
+derginin verdiği bir tanıtıcı olduğu için, çizerin yazım hataları ya da deneme adları
+imzalanan bir belgeye girmez. Gönderilmiş ya da imzalanmış hiçbir form değişmez: yeniden
+çizim yalnızca maili gitmemiş ve imzalı kopyası olmayan formlara uygulanır. Yeni kişisel
+veri yok; aydınlatma metni değişmedi.
+
+**Canlıda sıra:** Migration yok. Admin sırayla şunlara basar:
+1. `/admin/agreements` → "Kuyruktaki belge maillerini geri al".
+2. "Bir sayının ruhsat formlarını hazırla": önce Sayı 1, sonra Sayı 2.
+3. Formları kontrol eder, sonra "Gönderilmemiş hazır belgeleri mail kuyruğuna al".
+4. `/admin/mail` → "Kuyruğu şimdi işle".
+
+Deneme olan bir çizim varsa 2. adımdan önce kaldırılmalı.
+
+**Doğrulama:** Kapı: typecheck, lint, test. `contributor-documents.test.ts`: formun Başlık
+satırı ve liste adı kimlikle, çizerin başlığı metinde yok; geri alma bekleyen mailleri
+siler, gönderilmekte olana dokunmaz, editöre 403, denetim satırı yazılır, ardından "hepsini
+sil" serbest kalan belgeleri alır. Kuyruktaki v10 form yeniden çizilmez, geri alındıktan
+sonra v12 ile yeniden çizilir ve genel sözleşmenin özeti aynı kalır.
