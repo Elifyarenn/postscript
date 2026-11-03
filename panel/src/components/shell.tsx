@@ -71,6 +71,8 @@ export const ADMIN_NAV: NavGroup[] = [
       { href: "/admin/announcements", label: "Duyurular" },
       // Drawings the çizers send, for their licence forms (D-362, D-372)
       { href: "/admin/cizimler", label: "Çizimler" },
+      // How often each issue was opened (D-344, D-383)
+      { href: "/admin/views", label: "Sayı görüntülenmeleri" },
       {
         href: "/admin/community",
         label: "Topluluk yönetimi",

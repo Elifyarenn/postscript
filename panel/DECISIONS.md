@@ -15002,3 +15002,35 @@ satırı ve liste adı kimlikle, çizerin başlığı metinde yok; geri alma bek
 siler, gönderilmekte olana dokunmaz, editöre 403, denetim satırı yazılır, ardından "hepsini
 sil" serbest kalan belgeleri alır. Kuyruktaki v10 form yeniden çizilmez, geri alındıktan
 sonra v12 ile yeniden çizilir ve genel sözleşmenin özeti aynı kalır.
+
+## D-383 — Sayı görüntülenmeleri admin panelinde
+
+**İstek (ürün sahibi, 2026-11-03):** "her sayının ne kadar okunduğunu gösteren bir sayaç
+olmalı" → sayaç zaten vardı (D-344), yalnızca sayının kendi sayfasında toplam olarak
+görünüyordu → "admin panelinde de göster".
+
+**Karar:**
+- `/admin/views` ("Sayı görüntülenmeleri", menüde İçerik & Topluluk altında): her sayı
+  için son 7 gün, son 30 gün ve toplam; altında her sayının gün gün dökümü (en yeni
+  gün üstte, açılış olmayan günün satırı yok).
+- Listede yayımlanmış ve arşivlenmiş sayılar, bir de sayılmış satırı olan diğer
+  sayılar (yayından kaldırılmış bir sayının geçmişi kaybolmasın) var. Hazırlıktaki,
+  hiç açılmamış sayı yok.
+- Yalnızca admin (`issueViewReport`, `canAccessAdminPanel`; sayfa `guardPanel("admin")`).
+  Görüntülenme bilgisi kişisel veri değil, ama editör paneline ayrıca konmadı: istek
+  admin paneliydi.
+- Toplamlar SQL'de değil serviste alınıyor: `issue_view_days` sayı × gün kadar satır,
+  küçük; böylece ham SQL'den tarih geçmiyor (D-078) ve sürücüye duyarlı bir şey yok.
+  "Son 7 gün" bugün dahil yedi Türkiye günü (`turkeyDay`).
+- Sayfada sayımın 21 Ekim 2026'da başladığı ve neyin sayılmadığı yazıyor. 21 Ekim'in
+  ilk 2 açılışı asistanın deneme isteğiydi (D-344 notu); sayıdan düşülmedi, veri
+  değiştirilmedi.
+
+**Hukuk:** Yeni kişisel veri, amaç ya da hizmet sağlayıcı yok; aydınlatma metni
+değişmedi.
+
+**Canlıya etkisi:** Migration yok; yalnızca okuma.
+
+**Doğrulama:** Kapı: typecheck, lint, test. Entegrasyon (`issue-views.test.ts`): 7/30
+gün ve toplam sınırları (bugün dahil, 30. günden öncesi dışarıda), günler yeniden
+eskiye, açılmamış yayımlı sayı listede/hazırlıktaki yok, editör ve üye 403.

@@ -9,7 +9,7 @@ import { db, type Database } from "@/db/client";
 import { issues, issueViewDays } from "@/db/schema";
 import { isAppError } from "@/lib/errors";
 import { createIssue, setIssueStatus } from "@/services/issues";
-import { issueViewTotal, recordIssueView, turkeyDay } from "@/services/issue-views";
+import { issueViewReport, issueViewTotal, recordIssueView, turkeyDay } from "@/services/issue-views";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
 import { actorOf, createUser, noMeta } from "../helpers/factories";
 
@@ -86,5 +86,46 @@ describe("counting an issue's readings", () => {
     await recordIssueView(null, 1);
     await db.delete(issues).where(eq(issues.id, created.id));
     expect(await db.select().from(issueViewDays)).toHaveLength(0);
+  });
+});
+
+describe("the admins' view report (D-383)", () => {
+  it("sums each issue's last 7 days, last 30 days and total, and lists its days newest first", async () => {
+    const { admin, issue: created } = await issue();
+    const now = new Date("2026-11-03T09:00:00Z");
+    // 2026-11-03 is today; 10-28 is the first day of the last seven, 10-05 of the last thirty
+    await db.insert(issueViewDays).values([
+      { issueId: created.id, day: "2026-11-03", views: 2 },
+      { issueId: created.id, day: "2026-10-28", views: 3 },
+      { issueId: created.id, day: "2026-10-27", views: 5 },
+      { issueId: created.id, day: "2026-10-05", views: 7 },
+      { issueId: created.id, day: "2026-10-04", views: 11 },
+    ]);
+
+    const [row] = await issueViewReport(admin, now);
+    expect(row).toMatchObject({ number: 1, last7Days: 5, last30Days: 17, total: 28 });
+    expect(row!.days.map((day) => day.day)).toEqual([
+      "2026-11-03",
+      "2026-10-28",
+      "2026-10-27",
+      "2026-10-05",
+      "2026-10-04",
+    ]);
+  });
+
+  it("shows a published issue nobody opened yet, and leaves out one in the making", async () => {
+    const { admin } = await issue();
+    await createIssue(admin, { number: 2, title: "Sonraki" }, noMeta);
+
+    const report = await issueViewReport(admin);
+    expect(report.map((row) => [row.number, row.total])).toEqual([[1, 0]]);
+  });
+
+  it("is for the admins only", async () => {
+    await issue();
+    const editor = actorOf(await createUser({ role: "editor" }));
+    const member = actorOf(await createUser({ role: "user" }));
+    await expectStatus(issueViewReport(editor), 403);
+    await expectStatus(issueViewReport(member), 403);
   });
 });
