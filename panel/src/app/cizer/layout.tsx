@@ -12,7 +12,7 @@ export const metadata = { robots: NO_INDEX };
 export default async function IllustratorLayout({ children }: { children: ReactNode }) {
   const { user } = await guardIllustratorPanel();
   return (
-    <PanelShell user={user} area="çizer paneli" groups={illustratorNav()}>
+    <PanelShell user={user} area="çizer paneli" groups={illustratorNav()} guide="illustrator">
       {children}
     </PanelShell>
   );

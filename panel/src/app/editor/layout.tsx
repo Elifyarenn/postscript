@@ -23,6 +23,7 @@ export default async function EditorLayout({ children }: { children: ReactNode }
   const assignment = adminView ? null : await getEditorAssignment(user.id);
   const reviewsTopics = assignment !== null && canReviewTopicProposals(user, assignment);
   const contactsTeam = assignment !== null && canContactTeam(user, assignment);
+  const isMainEditor = assignment?.isMainEditor === true;
   const mainEditorTools =
     assignment !== null && canManageMailQueue(user, assignment) && canManageIssueAreaGrants(user, assignment);
 
@@ -30,7 +31,8 @@ export default async function EditorLayout({ children }: { children: ReactNode }
     <PanelShell
       user={user}
       area={adminView ? "yönetim" : "editör paneli"}
-      groups={adminView ? ADMIN_NAV : editorNav(reviewsTopics, contactsTeam, mainEditorTools)}
+      groups={adminView ? ADMIN_NAV : editorNav(reviewsTopics, contactsTeam, mainEditorTools, isMainEditor)}
+      guide={adminView ? "admin" : isMainEditor ? "mainEditor" : "editor"}
     >
       {children}
     </PanelShell>

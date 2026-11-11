@@ -1,3 +1,5 @@
+import { editorGuideKey, guideHref } from "@/lib/panel-guides/help";
+import { GuideHint } from "@/components/panel-guide";
 import { guardPanel } from "@/lib/auth/guard";
 import { articlesUsingMedia, listMedia, MAX_IMAGE_BYTES, MAX_PDF_BYTES } from "@/services/media";
 import { readCsrfToken } from "@/lib/csrf";
@@ -49,7 +51,10 @@ export default async function EditorMediaPage() {
 
       <div className="space-y-6">
         <Card>
-          <h2 className="mb-4 font-serif text-lg">Yükle</h2>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-serif text-lg">Yükle</h2>
+            <GuideHint href={guideHref(editorGuideKey(user), "medya")}>Lisans türü neden zorunlu?</GuideHint>
+          </div>
 
           <Alert tone="info">
             Kabul edilen türler: JPEG, PNG, GIF, WEBP ve PDF. Görsellerde sınır{" "}

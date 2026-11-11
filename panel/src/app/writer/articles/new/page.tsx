@@ -1,3 +1,4 @@
+import { GuideHint } from "@/components/panel-guide";
 import Link from "next/link";
 import { guardWriterInnerPages } from "@/lib/auth/guard";
 import { canProposeTopics, canWriteInAnyArea } from "@/lib/auth/rbac";
@@ -87,6 +88,7 @@ export default async function WriterNewArticlePage({
       <PageHeader
         title="Yeni yazı"
         description="Taslağınızı kaydedin; yazı kabul dönemi açıkken “İncelemeye gönder” ile teslim edersiniz."
+        actions={<GuideHint href="/writer/rehber#yeni-yazi">Konu seçimi ve 1.600 kelime sınırı</GuideHint>}
       />
 
       <PanelForm action={createArticleAsWriterAction} csrfToken={csrfToken} submitLabel="Taslak olarak kaydet">

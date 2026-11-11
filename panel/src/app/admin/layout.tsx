@@ -14,7 +14,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const { user } = await guardPanel("admin");
 
   return (
-    <PanelShell user={user} area="yönetim" groups={ADMIN_NAV}>
+    <PanelShell user={user} area="yönetim" groups={ADMIN_NAV} guide="admin">
       {children}
     </PanelShell>
   );

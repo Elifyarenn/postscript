@@ -1,3 +1,4 @@
+import { GuideHint } from "@/components/panel-guide";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { eq, inArray } from "drizzle-orm";
@@ -91,7 +92,10 @@ export default async function WriterArticleDetailPage({
         {editable && (
           <>
             <Card>
-              <h2 className="mb-4 font-serif text-lg">Yazı</h2>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="font-serif text-lg">Yazı</h2>
+                <GuideHint href="/writer/rehber#gonderme">Göndermeden önce: kurallar ve sınırlar</GuideHint>
+              </div>
 
               <PanelForm
                 action={updateArticleAsWriterAction}

@@ -1,3 +1,5 @@
+import { editorGuideKey, guideHref, type GuideKey } from "@/lib/panel-guides/help";
+import { GuideHint } from "@/components/panel-guide";
 import Link from "next/link";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
@@ -52,12 +54,22 @@ import {
 
 export const metadata = { title: "Makale" };
 
+// Where each reader's guide explains the status buttons (D-384)
+const STATUS_SECTION: Record<GuideKey, string> = {
+  admin: "yayin-akisi",
+  mainEditor: "ana-editor-onayi",
+  editor: "onay",
+  writer: "gonderdikten-sonra",
+  illustrator: "baslarken",
+};
+
 export default async function EditorArticleDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { user } = await guardPanel("editor");
+  const guideKey = editorGuideKey(user);
   const actor = { ...user };
   const isAdmin = user.role === "admin";
   const { id } = await params;
@@ -136,7 +148,10 @@ export default async function EditorArticleDetailPage({
         )}
 
         <Card>
-          <h2 className="mb-4 font-serif text-lg">Durum</h2>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-serif text-lg">Durum</h2>
+            <GuideHint href={guideHref(guideKey, STATUS_SECTION[guideKey])}>Hangi düğme ne yapar?</GuideHint>
+          </div>
 
           {!licensed && (
             <div className="mb-4">
@@ -218,7 +233,12 @@ export default async function EditorArticleDetailPage({
         )}
 
         <Card>
-          <h2 className="mb-4 font-serif text-lg">Makale</h2>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-serif text-lg">Makale</h2>
+            <GuideHint href={guideHref(guideKey, guideKey === "admin" ? "yayin-akisi" : "makale")}>
+              Düzeltme mi, içerik değişikliği mi?
+            </GuideHint>
+          </div>
 
           <PanelForm action={updateArticleAction} csrfToken={csrfToken} submitLabel="Kaydet" warnUnsaved>
               <>

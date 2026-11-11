@@ -23,6 +23,8 @@ import { readCsrfToken } from "@/lib/csrf";
 import type { SessionUser } from "@/lib/auth/session";
 import { KvkkNotice } from "./kvkk-notice";
 import { USER_SEGMENTS, USER_SEGMENT_META } from "@/lib/user-segments";
+import { GUIDE_PATHS, helpTargets, type GuideKey } from "@/lib/panel-guides/help";
+import { GuideHelpButton } from "./guide-help-button";
 
 export type NavItem = {
   href: string;
@@ -47,6 +49,8 @@ export const ADMIN_NAV: NavGroup[] = [
     label: "Genel",
     items: [
       { href: "/admin", label: "Genel bakış" },
+      // One usage guide per panel (D-384)
+      { href: "/admin/rehber", label: "Kullanım rehberi" },
     ],
   },
   {
@@ -118,11 +122,15 @@ export const ADMIN_NAV: NavGroup[] = [
  * Issue planning, announcements, work approvals and writer applications are
  * the admin's business and do not appear here.
  */
-export function editorNav(reviewsTopics: boolean, contactsTeam = false, mainEditorTools = false): NavGroup[] {
+export function editorNav(reviewsTopics: boolean, contactsTeam = false, mainEditorTools = false, isMainEditor = false): NavGroup[] {
   return [
     {
       label: "Genel",
-      items: [{ href: "/editor", label: "Genel bakış" }],
+      items: [
+        { href: "/editor", label: "Genel bakış" },
+        // The main editor reads their own guide (D-384)
+        { href: GUIDE_PATHS[isMainEditor ? "mainEditor" : "editor"], label: "Kullanım rehberi" },
+      ],
     },
     {
       label: "İnceleme",
@@ -168,6 +176,8 @@ export function writerNav(locked: boolean, signsContract = true, draws = false):
         // A writer who also draws sends drawings from the çizer panel (D-362, D-373)
         ...(draws ? [{ href: "/cizer/cizimler", label: "Çizimlerim" }] : []),
         { href: "/writer/profile", label: "Profil ve güvenlik" },
+        // Never greyed out: a locked writer needs the guide most
+        { href: "/writer/rehber", label: "Kullanım rehberi" },
       ],
     },
   ];
@@ -182,6 +192,7 @@ export function illustratorNav(): NavGroup[] {
         { href: "/cizer", label: "Sözleşmem ve belgelerim" },
         { href: "/cizer/cizimler", label: "Çizimlerim" },
         { href: "/account", label: "Hesabım" },
+        { href: "/cizer/rehber", label: "Kullanım rehberi" },
       ],
     },
   ];
@@ -196,11 +207,14 @@ export async function PanelShell({
   user,
   area,
   groups,
+  guide,
   children,
 }: {
   user: SessionUser;
   area: string;
   groups: NavGroup[];
+  /** The guide whose sections the header's help button opens (D-384). */
+  guide: GuideKey;
   children: ReactNode;
 }) {
   // The sign-out form is a mutation like any other, so it carries the same
@@ -218,6 +232,7 @@ export async function PanelShell({
               {area}
             </span>
             <BackButton />
+            <GuideHelpButton targets={helpTargets(guide)} guidePath={GUIDE_PATHS[guide]} />
             {/* The sidebar wordmark also leads home, but few people read a logo as a button */}
             <Link
               href="/"

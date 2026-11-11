@@ -115,6 +115,7 @@ export default async function IllustratorPage() {
                 action={uploadSignedContractAction}
                 csrfToken={csrfToken}
                 maxMb={MAX_SIGNED_CONTRACT_MB}
+                guideHref="/cizer/rehber#imza-ve-tarama"
               />
             )}
             {renderError ? (
@@ -135,7 +136,7 @@ export default async function IllustratorPage() {
           </Card>
         )}
 
-        <OwnDocumentsCard items={documents} uploads={uploads} upload={upload} />
+        <OwnDocumentsCard items={documents} uploads={uploads} upload={upload} guideHref="/cizer/rehber#imza-ve-tarama" />
 
         {uploads.length > 0 && (
           <Card>

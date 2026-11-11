@@ -4,6 +4,7 @@
  * Each prepared document takes its own signed copy (D-289): as many uploads
  * as documents were sent.
  */
+import { GuideHint } from "@/components/panel-guide";
 import Link from "next/link";
 import type { ServerAction } from "@/components/form";
 import { Card, Table, Td, Th } from "@/components/ui";
@@ -21,12 +22,15 @@ export function OwnDocumentsCard({
   items,
   uploads = [],
   upload,
+  guideHref,
 }: {
   items: ContributorDocumentItem[];
   /** The member's signed uploads; each is matched to its document. */
   uploads?: OwnSignedContract[];
   /** Given where the member may upload the signed copies from this card. */
   upload?: { action: ServerAction; csrfToken: string; maxMb: number };
+  /** The guide section on initialling and scanning each page (D-384). */
+  guideHref?: string;
 }) {
   if (items.length === 0) return null;
   const prepared = items.filter((item) => item.status === "prepared").length;
@@ -41,6 +45,11 @@ export function OwnDocumentsCard({
         kontrol edilir, panel onayı bir şart değildir. Her sayfanın altındaki paraf alanını parafe edin ve
         ıslak imzalı aslını saklayın.
       </p>
+      {guideHref && (
+        <div className="mb-3">
+          <GuideHint href={guideHref}>Her sayfaya paraf, tarama ve PDF küçültme: adım adım</GuideHint>
+        </div>
+      )}
       {/* The same words as the mail that carries the forms (D-358) */}
       <p className="mb-3 text-sm">{LICENCE_PLAIN_TERMS}</p>
       <Table>

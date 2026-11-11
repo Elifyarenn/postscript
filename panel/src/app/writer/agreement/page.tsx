@@ -142,12 +142,13 @@ export default async function WriterAgreementPage() {
                 action={uploadSignedContractAction}
                 csrfToken={csrfToken}
                 maxMb={MAX_SIGNED_CONTRACT_MB}
+                guideHref="/writer/rehber#imza-ve-tarama"
               />
             )}
           </Card>
         )}
 
-        <OwnDocumentsCard items={documents} uploads={uploads} upload={upload} />
+        <OwnDocumentsCard items={documents} uploads={uploads} upload={upload} guideHref="/writer/rehber#imza-ve-tarama" />
 
         {uploads.length > 0 && (
           <Card>

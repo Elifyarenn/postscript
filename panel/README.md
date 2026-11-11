@@ -165,6 +165,13 @@ oturum kimliği veya kimlik belgesi yolu yazılmaz.
 
 Roller sıralıdır: her rol bir öncekinin yetkilerini kapsar.
 
+Her panelin kendi kullanım rehberi var: `/admin/rehber`, `/editor/rehber`
+(kategori editörü), `/editor/rehber/ana-editor`, `/writer/rehber`,
+`/cizer/rehber` (D-384). Panel sayfalarının üst çubuğundaki "Bu sayfanın
+rehberi" düğmesi ilgili bölümü açar. Metin `src/lib/panel-guides/*`
+içinde veri olarak durur; bir akışı değiştiren adım ilgili rehber bölümünü de
+günceller.
+
 | Rol | Kapsam |
 |---|---|
 | `user` | Kayıtlı okuyucu. Yönetim panellerine erişemez; dergiyi okur (`/magazine`), profilini ve oturumlarını yönetir. |

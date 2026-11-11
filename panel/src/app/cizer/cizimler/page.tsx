@@ -1,3 +1,4 @@
+import { GuideHint } from "@/components/panel-guide";
 import { guardIllustratorPanel } from "@/lib/auth/guard";
 import { readCsrfToken } from "@/lib/csrf";
 import { MAX_ILLUSTRATION_MB } from "@/lib/illustration";
@@ -27,7 +28,10 @@ export default async function IllustrationsPage() {
 
       <div className="space-y-6">
         <Card>
-          <h2 className="mb-1 font-serif text-lg">Çizim gönder</h2>
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-serif text-lg">Çizim gönder</h2>
+            <GuideHint href="/cizer/rehber#cizimler">Çizim ve ruhsat formu nasıl işler?</GuideHint>
+          </div>
           <p className="mb-4 text-sm text-muted">
             JPG, PNG ya da WEBP; en çok {MAX_ILLUSTRATION_MB} MB. Daha büyük bir dosyayı JPG ya da WEBP olarak
             küçültüp yükleyin.

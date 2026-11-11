@@ -1,3 +1,5 @@
+import { SIGNING_SECTION } from "@/lib/panel-guides";
+import { GuideSectionDetails } from "@/components/panel-guide";
 import { NO_INDEX } from "@/lib/seo";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
@@ -108,6 +110,12 @@ export default async function WriterApplicationContractPage({
             <div className="mb-5 max-h-[30rem] overflow-y-auto rounded-md border border-line bg-surface p-5">
               {/* Rendered and sanitised on the server */}
               <div className="prose-panel text-sm" dangerouslySetInnerHTML={{ __html: rendered.html }} />
+            </div>
+            <div className="mb-4">
+              <GuideSectionDetails
+                section={SIGNING_SECTION}
+                summary="PDF nasıl hazırlanır? Her sayfaya paraf, tarama ve küçültme"
+              />
             </div>
             <SignedContractUploadForm
               action={uploadSignedContractAction}

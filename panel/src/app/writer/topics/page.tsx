@@ -1,3 +1,4 @@
+import { GuideHint } from "@/components/panel-guide";
 import Link from "next/link";
 import { guardWriterInnerPages } from "@/lib/auth/guard";
 import { canProposeTopics, canWriteInAnyArea } from "@/lib/auth/rbac";
@@ -273,13 +274,16 @@ export default async function WriterTopicsPage() {
               {/* A new topic: the first one, or one for an area still without a topic */}
               {topicState === "open" && canProposeMore && (!requireArea || openAreas.length > 0) && (
                 <div className="mt-5 border-t border-line pt-4">
-                  <h3 className="mb-3 text-sm font-medium">
-                    {proposals.length === 0
-                      ? "Konu Belirle"
-                      : anyArea
-                        ? "Başka bir alan için konu belirleyin"
-                        : `Diğer alanınız için konu belirleyin (${openAreas.join(", ")})`}
-                  </h3>
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-sm font-medium">
+                      {proposals.length === 0
+                        ? "Konu Belirle"
+                        : anyArea
+                          ? "Başka bir alan için konu belirleyin"
+                          : `Diğer alanınız için konu belirleyin (${openAreas.join(", ")})`}
+                    </h3>
+                    <GuideHint href="/writer/rehber#konular">Konu nasıl belirlenir?</GuideHint>
+                  </div>
                   <PanelForm action={submitTopicAction} csrfToken={csrfToken} submitLabel="Konuyu gönder">
                     <input type="hidden" name="issueId" value={issue.id} />
                     <TopicFields

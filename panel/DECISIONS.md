@@ -15034,3 +15034,91 @@ değişmedi.
 **Doğrulama:** Kapı: typecheck, lint, test. Entegrasyon (`issue-views.test.ts`): 7/30
 gün ve toplam sınırları (bugün dahil, 30. günden öncesi dışarıda), günler yeniden
 eskiye, açılmamış yayımlı sayı listede/hazırlıktaki yok, editör ve üye 403.
+
+## D-384 — Her panelin kullanım rehberi
+
+**Karar:** Dört panelin her birine bir "Kullanım rehberi" sayfası eklendi:
+`/admin/rehber`, `/editor/rehber`, `/writer/rehber`, `/cizer/rehber`. Her
+panelin kenar çubuğunda bağlantısı var (yönetim ve editörde "Genel" grubunda,
+yazar ve çizerde menünün sonunda). Sayfalar her sayfanın ne gösterdiğini,
+düğmelerin arayüzdeki adlarıyla ne yaptığını, süreleri, sınırları ve kimin
+neyi göremeyeceğini anlatır; her bölümden ilgili sayfaya "Sayfaya git"
+bağlantısı çıkar.
+
+**Nasıl:** Metin veri olarak `src/lib/panel-guides/*` içinde, tek bileşen
+`src/components/panel-guide.tsx` çizer. Biçimlendirme yalnızca `**etiket**`
+(düğme adı kalın); Markdown hattı eklenmedi, çünkü metin kullanıcıdan değil
+koddan geliyor. Metin, her panelin sayfaları, eylemleri ve servisleri okunarak
+yazıldı; şablon değil.
+
+- Editör rehberi kategori editörü ve ana editör için tek sayfa; ana editöre
+  özgü bölümler "Yalnızca ana editör" diye işaretli. Rol başına ayrı sayfa
+  yerine bu seçildi: kategori editörü ana editörün ne yaptığını bilince
+  yazının kendisine neden döndüğünü anlıyor.
+- Yazarın rehber bağlantısı kilitliyken de açık (zorunlu duyuru, askı):
+  kilitli yazarın rehbere en çok ihtiyacı olduğu an o. Sayfa veri okumaz;
+  yalnızca `guardPanel("writer")`.
+- Yönetim rehberi, yönetim kenar çubuğundaki editör sayfalarını (makaleler,
+  sayılar, sayfalar, konular, geçici alan, Eser Onayı takibi, medya) da kapsar.
+
+**Sapmaya karşı:** `tests/unit/panel-guides.test.ts` her bölümün işaret ettiği
+sayfanın `page.tsx`'inin var olduğunu, çapaların tekil olduğunu, `**`
+işaretlerinin dengeli olduğunu, her kenar çubuğunun kendi rehberine
+bağlandığını ve kilitli yazarda bağlantının soluk olmadığını denetler. Bir
+sayfa taşınır ya da silinirse test düşer. Metnin içeriğini (düğme adları,
+sınırlar) test denetlemez: bir akış değişince ilgili rehber bölümü aynı adımda
+güncellenmeli.
+
+**İmza ve tarama bölümü** (sahibin isteği): yazar ve çizer rehberinde ortak
+bir bölüm (`signing.ts`) belgenin her sayfasının parafe edilmesini, son
+sayfanın imzalanmasını ve bütün sayfaların sırayla tek PDF'te taranmasını
+anlatır. Ruhsat formlarının m. 12.8'i zaten her sayfada paraf istiyor; genel
+sözleşmede paraf alanı yoksa "sağ alt köşeye" denir. İki SVG çizim var
+(`panel-guide-figures.tsx`: parafı gösteren sayfalar, beş adımlık akış);
+`currentColor` ve tema renkleriyle çizildikleri için görsel dosyası yok.
+4 MB sınırı metne `MAX_SIGNED_CONTRACT_MB`'dan bakan bir testle bağlı.
+
+Önerilen araçlar ve neden bunlar: tarama için telefonun kendi aracı (iPhone
+Notlar/Dosyalar, Android Google Drive) ve Adobe Scan; küçültmek için önce
+dosyanın cihazdan çıkmadığı Mac Önizleme ve Windows PDF24 Creator, sonra
+çevrimiçi PDF24 (Almanya, 1 saatte silme) ve iLovePDF (2 saatte silme).
+Microsoft Lens önerilmedi: 2025'te kaldırıldı. Linkler 2026-11-12'de
+kontrol edildi (Adobe ve iLovePDF bu makineden açılamadı, adresleri arama
+sonuçlarıyla doğrulandı). İmzalı belge kişisel veri taşıdığı için rehber
+cihazda kalan yöntemleri önce önerir ve çevrimiçi araçta dosyanın o şirketin
+sunucusuna gittiğini açıkça söyler. Linkler yeni sekmede, `noopener
+noreferrer` ile açılır.
+
+**Ana editörün ayrı rehberi** (sahibin isteği): `/editor/rehber` artık
+kategori editörü rehberi, ana editörün kendi rehberi `/editor/rehber/ana-editor`
+(`main-editor.ts`). Ortak bölümler (liste, yazı sayfası, yolculuk, medya, iki
+adımlı doğrulama) iki rehberde aynı nesne; kategori editörü rehberi ana
+editörün sayfalarını anlatmaz, yalnızca iki rolü yan yana gösterir. Ana editör
+rehberi kategori editörüne 403 (ana editörün sayfaları gibi); kenar çubuğu
+ana editöre kendi rehberini bağlar. Ana editör `users.is_main_editor`'dan.
+
+**Görseller:** Her rehberde akış (`flow`), zaman çizelgesi (`timeline`) ve
+karşılaştırma (`compare`) blokları HTML olarak, çizilmesi gereken iki şey
+(parafı gösteren sayfalar, 1.600 kelimelik kategori çubuğu) SVG olarak.
+HTML seçildi: telefonda alt alta dizilir, ekran okuyucu sırayla okur, görsel
+dosyası ve metin kopyası tutulmaz. Yazının yolculuğu, sayı dönemleri, kelime
+sınırı ve düzeltme/içerik değişikliği ayrımı `shared.ts`'te tek kopya. Test
+her rehberde en az üç bölüme bir görsel arar.
+
+**Bilgilendirme düğmeleri:** Her panel sayfasının üst çubuğunda "Bu sayfanın
+rehberi" düğmesi (`guide-help-button.tsx`) o sayfayı anlatan bölümü açar.
+Eşleme rehber verisinden çıkar (`href` + `pages`; en uzun eşleşme kazanır,
+`/` ile biten desen altındaki her şeyi kapsar); tarayıcıya yalnızca küçük
+yol→bölüm tablosu gider (`help-match.ts`), rehber metinleri gitmez. Ayrıca
+formların yanında bağlama özel düğmeler: imzalı sözleşme ve Belgelerim
+(→ imza ve tarama), çizim gönder, konu belirle, yeni yazı ve yazı formu,
+editörün Durum ve Makale kartları, medya yükleme. Editör sayfalarındaki
+düğme okuyanın rehberine gider (`editorGuideKey`: admin / ana editör /
+kategori editörü). Başvuru sahibi henüz yazar olmadığı ve yazar rehberini
+açamadığı için `/writer-application/contract`'ta imza bölümü katlanır kutu
+olarak sayfanın içinde.
+
+**KVKK:** Yeni kişisel veri, amaç, aktarım ya da saklama süresi yok. Önerilen
+araçlara dergi veri göndermez; kullanıcı kendi seçimiyle kullanır, bu yüzden
+yurt dışı aktarım (m. 9) doğmaz. Aydınlatma metni değişmedi (D-084 gereği
+bakıldı). Migration yok.

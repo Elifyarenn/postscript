@@ -3,6 +3,7 @@
  * what happened to it, and the form to upload a PDF. Shared by "Sözleşmem"
  * in the writer panel and the applicant's contract page.
  */
+import { GuideHint } from "@/components/panel-guide";
 import Link from "next/link";
 import type { ServerAction } from "@/components/form";
 import { PanelForm } from "@/components/form";
@@ -88,6 +89,7 @@ export function SignedContractUploadForm({
   documentId,
   fieldName = "documentId",
   label = "İmzalı sözleşme",
+  guideHref,
 }: {
   action: ServerAction;
   csrfToken: string;
@@ -97,11 +99,18 @@ export function SignedContractUploadForm({
   /** The hidden field's name; the admin's countersigned upload sends the upload's `id` (D-290). */
   fieldName?: string;
   label?: string;
+  /** The guide section on initialling, scanning and shrinking the PDF (D-384). */
+  guideHref?: string;
 }) {
   const inputId = documentId ? `signed-file-${documentId}` : "signed-contract-file";
   return (
     <PanelForm action={action} csrfToken={csrfToken} submitLabel="İmzalı PDF'i yükle">
       {documentId && <input type="hidden" name={fieldName} value={documentId} />}
+      {guideHref && (
+        <div className="mb-3">
+          <GuideHint href={guideHref}>PDF nasıl hazırlanır? Paraf, tarama, küçültme</GuideHint>
+        </div>
+      )}
       <Field label={`${label} (yalnızca PDF, en fazla ${maxMb} MB)`} htmlFor={inputId}>
         <PdfFileInput id={inputId} maxMb={maxMb} />
       </Field>
