@@ -15122,3 +15122,45 @@ olarak sayfanın içinde.
 araçlara dergi veri göndermez; kullanıcı kendi seçimiyle kullanır, bu yüzden
 yurt dışı aktarım (m. 9) doğmaz. Aydınlatma metni değişmedi (D-084 gereği
 bakıldı). Migration yok.
+
+## D-385 — Panellerde WhatsApp destek düğmesi
+
+**Karar (sahibin isteği):** Sözleşme işleri ve siteyle ilgili sorunlar için
+panellerin sağ altında yüzen bir "Sözleşme veya site sorunu? WhatsApp"
+düğmesi var; sahibin WhatsApp kullanıcı adına (`eyckc`) giden
+`https://wa.me/eyckc` bağlantısını yeni sekmede açar. Telefonda yalnızca yuvarlak
+düğme görünür (sayfayı daha az kapatsın), geniş ekranda yazısıyla.
+
+- **Nerede:** `PanelShell` içinde, yani yazar, çizer ve editör panellerinin
+  her sayfasında. Yöneticilere gösterilmez: hat zaten onlara ulaşıyor. Herkese
+  açık site sayfalarına (okuyucu, ana sayfa) konmadı: istek sözleşme işleri
+  ve panel kullanıcıları içindi, sayfa çevirmeli okuyucunun üstünde yüzen bir
+  düğme okumayı bozar. İstenirse `site-shell.tsx`'e aynı bileşen eklenir.
+- **Neden kullanıcı adı bağlantısı:** sahip numara değil kullanıcı adı verdi.
+  `wa.me/<kullanıcı adı>` WhatsApp'ın kullanıcı adı bağlantısı; kaynaklara göre
+  ülke ülke açılıyor, her hesapta henüz sohbet açmayabilir. Canlıda denenmeli;
+  açmazsa sahibin onayıyla numaralı `wa.me/<numara>` bağlantısına geçilir
+  (`src/lib/support-contact.ts`, tek sabit). Önceden doldurulmuş mesaj
+  (`?text=`) konmadı: kullanıcı adı bağlantısında desteklendiği doğrulanamadı.
+- Düğme yalnızca bağlantı: site hiçbir veri göndermez, almaz, saklamaz.
+  Mobil menü çekmecesinin (z-50) altında (z-40); düğme varken `main`'e alt
+  boşluk eklenir ki son formun düğmesini kapatmasın. Erişilebilir ad ve "yeni
+  sekmede açılır" ekran okuyucuya yazılı.
+- Rehberin imza bölümüne düğmeyi anan, "imzalı belgeyi WhatsApp'tan
+  göndermeyin" diyen bir not eklendi.
+
+**KVKK (D-084):** Yeni bir kişisel veri yolu, aydınlatma metni aynı adımda
+güncellendi: veri kalemi (WhatsApp'ta görünen numara, profil adı ve fotoğrafı,
+mesajlar, dosyalar), amaç (cevap vermek; meşru menfaat, e-posta alternatifi),
+toplama yöntemi (imzalı belge ve kimlik bilgisi WhatsApp'tan gönderilmesin),
+yurt dışı (WhatsApp, Meta grubu; kullanıcının başlattığı, yazışmayla sınırlı
+arızi aktarım, KVKK m. 9/6) ve saklama (yöneticinin hesabında, talep
+karşılandıktan sonra en geç 1 yıl; iletişim formuyla aynı süre). Hukukçu yok
+(bkz. no-legal-adviser); m. 9/6 dayanağı ve WhatsApp şirketinin adının
+belirtilmemesi muhafazakâr okuma, ileride hukukçu görüşüyle gözden geçirilmeli.
+Metin değişikliği yönetici **Sistem → KVKK aydınlatma metni → Yeni sürüm
+yayınla** ile yayımlanınca yürürlüğe girer; esaslı değişiklik sayılmalı
+(yeni yurt dışı aktarım). `tests/unit/support-contact.test.ts` metnin bu
+kanalı anlattığını denetler.
+
+Migration yok.

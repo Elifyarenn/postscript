@@ -110,5 +110,9 @@ export const SIGNING_SECTION: GuideSection = {
       kind: "note",
       text: "İmzalı belgede adınız, imzanız ve diğer kişisel bilgileriniz bulunur. Mümkünse dosyanın cihazınızda kaldığı yöntemleri (telefonun kendi tarayıcısı, Önizleme, PDF24 Creator) tercih edin. Çevrimiçi bir araç kullanırsanız belgenin o şirketin sunucusuna yükleneceğini bilin ve işiniz bitince dosyayı orada silin. Bu uygulama ve siteler dergiden bağımsızdır; dergi bunlara veri göndermez.",
     },
+    {
+      kind: "note",
+      text: "Takıldığınız bir yer olursa sağ alttaki **Sözleşme veya site sorunu? WhatsApp** düğmesiyle bize yazın. İmzalı belgeyi WhatsApp'tan göndermeyin; belgeler yalnızca paneldeki yükleme alanından iletilir.",
+    },
   ],
 };

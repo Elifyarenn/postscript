@@ -25,6 +25,7 @@ import { KvkkNotice } from "./kvkk-notice";
 import { USER_SEGMENTS, USER_SEGMENT_META } from "@/lib/user-segments";
 import { GUIDE_PATHS, helpTargets, type GuideKey } from "@/lib/panel-guides/help";
 import { GuideHelpButton } from "./guide-help-button";
+import { WhatsAppSupportButton } from "./whatsapp-support-button";
 
 export type NavItem = {
   href: string;
@@ -220,6 +221,8 @@ export async function PanelShell({
   // The sign-out form is a mutation like any other, so it carries the same
   // double-submit token (D-072). Read here rather than at every call site.
   const csrfToken = (await readCsrfToken()) ?? "";
+  // The admins are the ones the WhatsApp line reaches (D-385)
+  const showSupport = user.role !== "admin";
 
   return (
     <div className="min-h-screen lg:flex">
@@ -258,7 +261,8 @@ export async function PanelShell({
 
         <KvkkNotice user={user} csrfToken={csrfToken} />
 
-        <main className="flex-1 px-6 py-8">
+        {/* Room under the last form for the floating WhatsApp button */}
+        <main className={cn("flex-1 px-6 py-8", showSupport && "pb-24")}>
           <div className={cn("mx-auto", user.role === "admin" ? "max-w-6xl" : "max-w-5xl")}>
             {children}
           </div>
@@ -294,6 +298,7 @@ export async function PanelShell({
           </span>
         </footer>
       </div>
+      {showSupport && <WhatsAppSupportButton />}
     </div>
   );
 }

@@ -40,6 +40,7 @@ ortaklık adına tek başına temsile yetkilidir.
 | Moderasyon | Yasaklama durumu ve gerekçesi, kaldırılan içerik kayıtları |
 | Denetim | Panelde yapılan işlemlerin kaydı: kimin, ne zaman, hangi işlemi, hangi IP adresinden yaptığı |
 | İletişim formu | İletişim sayfasındaki formu doldurduğunuzda yazdığınız ad, e-posta adresi, konu ve mesajınız. Bu bilgiler sitede kalıcı olarak saklanmaz; derginin e-posta kutusuna iletilir. İletilene kadar e-posta gönderim kuyruğunda bekler ve iletildiği anda içeriği silinir |
+| WhatsApp iletişimi | Paneldeki "Sözleşme veya site sorunu? WhatsApp" düğmesiyle bize yazmayı seçerseniz: WhatsApp'ta görünen telefon numaranız, WhatsApp profil adınız ve fotoğrafınız, yazdığınız mesajlar ve gönderdiğiniz dosyalar, gönderim zamanları. Düğme yalnızca bir bağlantıdır; site bu bilgileri almaz ve saklamaz, yazışma yöneticinin WhatsApp hesabında tutulur |
 | E-posta gönderim kaydı | Size (veya iletişim formunda derginin kutusuna) gönderilen her e-posta için: alıcı adresi, konu, e-postanın türü (ör. doğrulama, duyuru), gönderim durumu, deneme sayısı, varsa gönderim hatasının adres ve bağlantı içermeyen özeti, oluşturulma, deneme ve gönderim zamanları. E-postanın içeriği (metni, varsa eki) yalnızca gönderilene kadar tutulur |
 | Profil görselleri | Topluluk profilinize yüklediğiniz profil fotoğrafı ve kapak fotoğrafı; yükleyen hesap, dosya türü ve boyutu. Bu görselleri giriş yapmış diğer üyeler görür; yüklemek zorunlu değildir |
 | Ekip avatarı | Panelde bir süre açık kalan ekip avatarı oluşturucusunu ve ekip formunu kullandıysanız, o dönemde kaydedilmiş: seçtiğiniz çizim parçaları (ten tonu, yüz şekli, göz ve kirpik, kaş, burun, ağız ve dudak rengi, saç modeli, dokusu ve rengi, sakal, çil, ben, allık, göz altı, yara izi, gözlük, piercing, küpe, kolye, kıyafet ve şapka gibi ekstralar), bu seçimlerden sunucuda çizilen PNG görseli, girdiğiniz görünen isim ve ekipteki rolünüz, kaydın hesabınızla ilişkisi, oluşturulma ve güncellenme zamanı. Avatarınızı gönderdiyseniz ayrıca doldurabileceğiniz ekip formunun yanıtları: kendinizden yazdığınız en çok 55 karakterlik bir söz, ekip sayfasında adınızın mı mahlasınızın mı yazmasını istediğiniz, burcunuz ve formu yanıtladığınız zaman. Oluşturucu ve form panelden kaldırıldı; artık yeni avatar veya form yanıtı alınmıyor, var olan kayıtlar veritabanında saklanıyor ve panelde gösterilmiyor |
@@ -109,6 +110,7 @@ saklanmaz**.
 | E-postaların gönderim kuyruğunda tutulması, iletilemeyenlerin yeniden denenmesi ve gönderim durumunun yöneticilerce izlenmesi | (c) Sözleşmenin ifası, (f) Meşru menfaat |
 | Aydınlatma metninin yeni sürümlerinin duyurulması ve hangi sürümün ne zaman okunduğunun kaydedilmesi | (ç) Veri sorumlusunun hukuki yükümlülüğü — KVKK m. 10 |
 | İletişim formundan gönderdiğiniz mesajı okumak ve size cevap vermek | Meşru menfaat (KVKK m. 5/2-f): bize yazan kişiye cevap verebilmek. Formu doldurmak zorunda değilsiniz; aynı adrese doğrudan da yazabilirsiniz |
+| WhatsApp'tan yazdığınız sözleşme işleri ve siteyle ilgili sorunlar hakkındaki mesajınızı okumak ve size cevap vermek | Meşru menfaat (KVKK m. 5/2-f): bize yazan kişiye cevap verebilmek. WhatsApp'ı kullanmak zorunda değilsiniz; aynı konularda iletisim@postscriptmag.com adresine de yazabilirsiniz |
 | Sayının çalma listesinin, yalnızca üye olarak giriş yapmışken siz çal düğmesine bastığınızda Spotify çaları yüklenerek dinletilmesi | Açık rıza (KVKK m. 5/1): çalar, düğmeye basmanızdan önce hiçbir veri iletmez; basmazsanız yüklenmez |
 
 Pazarlama, reklam veya profilleme amacıyla kişisel veri işlemiyoruz. Hakkınızda
@@ -130,6 +132,12 @@ Kişisel verileriniz tamamen elektronik ortamda toplanır:
   kadar gönderim kuyruğunda tutar, iletildiği anda içeriği siler. Formun
   kötüye kullanılmasını önlemek için gönderim sırasında IP adresiniz sayaç
   amacıyla kullanılır.
+- **WhatsApp'tan yazdığınızda:** Paneldeki düğme kendi WhatsApp uygulamanızda
+  yöneticiyle bir sohbet açar. Mesajınız ve WhatsApp'taki bilgileriniz
+  (telefon numarası, profil adı ve fotoğrafı) WhatsApp üzerinden yöneticiye
+  ulaşır; site bu sırada hiçbir veri göndermez ve almaz. İmzalı sözleşme,
+  ruhsat formu veya kimlik bilgisi içeren belgeleri WhatsApp'tan göndermeyin;
+  belgeleri paneldeki yükleme alanından iletin.
 - **Bot doğrulaması sırasında:** Kayıt ve doğrulama e-postası formlarındaki
   Cloudflare Turnstile bileşeni aracılığıyla, tarayıcınızdan toplanan teknik
   sinyaller ve IP adresiniz.
@@ -188,7 +196,14 @@ sağlayıcıların yurt dışındaki sistemlerinde tutulmaktadır:
 | Spotify AB | Çalma listesi çaları (yalnızca üyeler açtığında yüklenir) | İsveç | Çaları açtığınızda IP adresi ve tarayıcı bilgisi; aktarım tarayıcınızdan doğrudan yapılır |
 | Google LLC (ABD merkezli; Firebase Cloud Firestore, veri konumu: Amerika Birleşik Devletleri (nam5, çok bölgeli)) | Yöneticinin iş takip ajandasının cihazlar arasında eşitlenmesi | Amerika Birleşik Devletleri (nam5, çok bölgeli) | Dergi ekibindeyseniz ad, mahlas, ekip görevleri ve tarihleri; size verilen dergi işlerine ilişkin yönetici notları |
 
-Bu aktarımlar KVKK'nın 9. maddesinin üçüncü fıkrası uyarınca, taraflar arasında
+WhatsApp'tan bize yazmayı seçerseniz mesajınız, WhatsApp hizmetini sunan
+Meta Platforms grubu şirketinin yurt dışındaki sistemleri üzerinden iletilir ve
+WhatsApp'ın kendi koşulları ile gizlilik politikasına tabidir. Bu, sizin
+başlattığınız ve yalnızca o yazışmayla sınırlı, arızi bir aktarımdır (KVKK m.
+9/6); WhatsApp ile ayrıca bir sözleşmemiz yoktur. İstemezseniz aynı konularda
+e-postayla yazabilirsiniz.
+
+Yukarıdaki tablodaki aktarımlar KVKK'nın 9. maddesinin üçüncü fıkrası uyarınca, taraflar arasında
 imzalanan ve Kişisel Verileri Koruma Kurumu'na bildirilen **standart sözleşme**
 esas alınarak gerçekleştirilmektedir.
 
@@ -198,6 +213,7 @@ esas alınarak gerçekleştirilmektedir.
 |---|---|
 | Hesap verileri (kimlik, iletişim, profil) | Hesap açık kaldığı sürece. Silme talebiniz üzerine 30 gün sonra anonimleştirilir. |
 | İletişim formu mesajları | Sitede kalıcı olarak saklanmaz: gönderim kuyruğunda iletilene kadar bekler, iletildiği anda silinir. Derginin e-posta kutusunda, talebiniz karşılandıktan sonra en geç 1 yıl içinde silinir. |
+| WhatsApp yazışmaları | Sitede tutulmaz. Yöneticinin WhatsApp hesabında, talebiniz karşılandıktan sonra en geç 1 yıl içinde silinir. |
 | E-posta içeriği (gönderim kuyruğunda) | Gönderilene kadar; gönderildiği anda silinir. Doğrulama, e-posta değişikliği ve şifre sıfırlama e-postalarının içeriği kesin olarak gönderilemediğinde veya bağlantının süresi dolduğunda da hemen silinir; diğer e-postalar gönderilemezse yeniden gönderilebilmesi için en çok 30 gün tutulur. |
 | E-posta gönderim kayıtları (alıcı, konu, tür, durum, zamanlar) | Gönderim tamamlandıktan veya kesin olarak başarısız olduktan sonra 30 gün |
 | Profil ve kapak fotoğrafı | Siz kaldırana kadar. Yenisini yüklediğinizde eskisi hemen silinir; hesabınız silindiğinde dosyalar da silinir. |
