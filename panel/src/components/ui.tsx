@@ -9,6 +9,7 @@ import type { ComponentProps, ReactNode } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { profileHref, type Person } from "@/lib/profile-link";
+import { PageHelpLink } from "./guide-help-button";
 
 /* ------------------------------------------------------------------ */
 /* Button                                                              */
@@ -120,7 +121,11 @@ export function PageHeader({
         <h1 className="font-serif text-2xl text-ink">{title}</h1>
         {description && <p className="mt-1 text-sm text-muted">{description}</p>}
       </div>
-      {actions && <div className="flex gap-2">{actions}</div>}
+      {/* Every panel page links to the guide section that explains it (D-386); hidden outside the panels */}
+      <div className="flex flex-wrap items-center gap-2">
+        <PageHelpLink />
+        {actions}
+      </div>
     </header>
   );
 }

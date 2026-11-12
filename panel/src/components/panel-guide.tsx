@@ -195,7 +195,7 @@ export function PanelGuideView({ guide, related }: { guide: PanelGuide; related?
       </Card>
 
       {guide.sections.map((section, index) => (
-        <Card key={section.id} id={section.id} className="mb-6 scroll-mt-6">
+        <Card key={section.id} id={section.id} className="mb-6 scroll-mt-6 target:ring-2 target:ring-accent/40">
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="font-serif text-lg">
               {index + 1}. {section.title}

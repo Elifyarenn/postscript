@@ -15164,3 +15164,31 @@ yayınla** ile yayımlanınca yürürlüğe girer; esaslı değişiklik sayılma
 kanalı anlattığını denetler.
 
 Migration yok.
+
+## D-386 — Her panel sayfasının başlığında rehberin o bölümüne yardım bağlantısı
+
+**Karar (sahibin isteği):** Panel sayfalarının başlığının yanında "Yardım:
+<bölüm adı>" bağlantısı var; rehberin o sayfayı anlatan bölümünü açar
+(ör. Eser Onayları sayfasında "Yardım: Eser Onayları"). Rehberde açılan bölüm
+çerçeveyle vurgulanır (`:target`), göz hemen bulur.
+
+**Nasıl:** `PageHeader` (`ui.tsx`) bağlantıyı kendisi koyar, yani 47 sayfanın
+hepsi ve bundan sonra eklenecekler ayrıca kod yazmadan alır. Eşleme D-384'ün
+tablosu (`href` + `pages`, en uzun eşleşme); tablo `PanelShell`'den bir
+istemci bağlamıyla (`GuideHelpProvider`) gelir, başlık bağlantısı ve üst
+çubuktaki "Bu sayfanın rehberi" düğmesi aynı yerden okur. Panel dışında
+(ör. Hesabım, başvuru sözleşmesi) bağlam olmadığı için bağlantı görünmez;
+rehber sayfalarında da görünmez (kendine dönerdi). Tabloya bölüm adı eklendi.
+
+Sayfanın değil başka bir bölümün anlattığı kartlara ayrıca kart düğmesi:
+kullanıcı sayfasındaki "Yazarlık süreci" (→ yazar başvuruları) ve yazı
+sayfasındaki "İnceleyen editör" (kategori editörüne "size gönderilen yazılar",
+ana editöre ve yöneticiye ana editör rehberindeki "başka editöre göndermek";
+yönetim rehberinde bu bölüm yok, yönetici ana editör rehberini açabiliyor).
+
+**Sapmaya karşı:** test, kaynaktaki her yazılı rehber bağlantısının
+(`"/…/rehber#bölüm"` ve `guideHref("anahtar", "bölüm")`) var olan bir bölüme
+gittiğini tarar; yazı sayfasının okuyana göre bölüm tablosunu ayrıca denetler.
+Bölüm kimliği değişirse test düşer.
+
+**KVKK:** Yeni veri yok, metin değişmedi. Migration yok.

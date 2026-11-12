@@ -47,8 +47,9 @@ export function helpTargets(key: GuideKey): HelpTarget[] {
     [...(section.href ? [section.href] : []), ...(section.pages ?? [])].map((pattern) => ({
       pattern,
       href: guideHref(key, section.id),
+      title: section.title,
     })),
   );
 }
 
-export { resolveHelpHref, type HelpTarget } from "./help-match";
+export { resolveHelpHref, resolveHelpTarget, type HelpTarget } from "./help-match";

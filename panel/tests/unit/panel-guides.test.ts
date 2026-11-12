@@ -1,8 +1,8 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { ILLUSTRATOR_GUIDE, MAIN_EDITOR_GUIDE, WRITER_GUIDE, type GuideBlock, type PanelGuide } from "@/lib/panel-guides";
-import { GUIDES, GUIDE_PATHS, editorGuideKey, helpTargets, resolveHelpHref, type GuideKey } from "@/lib/panel-guides/help";
+import { GUIDES, GUIDE_PATHS, editorGuideKey, helpTargets, resolveHelpHref, resolveHelpTarget, type GuideKey } from "@/lib/panel-guides/help";
 import { ADMIN_NAV, editorNav, illustratorNav, writerNav, type NavGroup } from "@/components/shell";
 import { MAX_SIGNED_CONTRACT_MB } from "@/services/signed-contracts";
 
@@ -138,5 +138,57 @@ describe("the header's help button", () => {
     expect(resolve("writer", "/writer/rehber")).toBeNull();
     expect(resolve("mainEditor", "/editor/rehber")).toBeNull();
     expect(resolve("mainEditor", "/editor/rehber/ana-editor")).toBeNull();
+  });
+});
+
+describe("help links in the panel pages (D-386)", () => {
+  const SRC = path.resolve(__dirname, "../../src");
+  function sources(dir: string): string[] {
+    return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) return sources(full);
+      return /\.tsx?$/.test(entry.name) ? [full] : [];
+    });
+  }
+  const files = sources(SRC).filter((file) => !file.includes(`${path.sep}panel-guides${path.sep}`));
+  const sectionIds = (key: GuideKey) => new Set(GUIDES[key].sections.map((section) => section.id));
+  const keyByPath = Object.fromEntries(Object.entries(GUIDE_PATHS).map(([key, guidePath]) => [guidePath, key])) as Record<string, GuideKey>;
+
+  it("every written-out guide link opens a section that exists", () => {
+    let seen = 0;
+    for (const file of files) {
+      const text = readFileSync(file, "utf8");
+      for (const match of text.matchAll(/"(\/(?:admin|editor|writer|cizer)\/rehber(?:\/ana-editor)?)#([a-z0-9-]+)"/g)) {
+        const key = keyByPath[match[1]!];
+        expect(key, match[0]).toBeDefined();
+        expect(sectionIds(key!).has(match[2]!), `${path.basename(file)}: ${match[0]}`).toBe(true);
+        seen += 1;
+      }
+      for (const match of text.matchAll(/guideHref\("(admin|mainEditor|editor|writer|illustrator)", "([a-z0-9-]+)"\)/g)) {
+        expect(sectionIds(match[1] as GuideKey).has(match[2]!), `${path.basename(file)}: ${match[0]}`).toBe(true);
+        seen += 1;
+      }
+    }
+    expect(seen).toBeGreaterThanOrEqual(10);
+  });
+
+  it("the editor article page's per-reader sections exist in each reader's guide", () => {
+    const text = readFileSync(path.join(SRC, "app/editor/articles/[id]/page.tsx"), "utf8");
+    const table = text.slice(text.indexOf("const STATUS_SECTION"), text.indexOf("};", text.indexOf("const STATUS_SECTION")));
+    for (const match of table.matchAll(/(\w+): "([a-z0-9-]+)"/g)) {
+      expect(sectionIds(match[1] as GuideKey).has(match[2]!), match[0]).toBe(true);
+    }
+    for (const key of ["admin", "mainEditor", "editor"] as const) {
+      expect(sectionIds(key).has(key === "admin" ? "yayin-akisi" : "makale")).toBe(true);
+      expect(sectionIds(key).has("medya")).toBe(true);
+    }
+  });
+
+  it("the page-title link names the section it opens", () => {
+    expect(resolveHelpTarget(helpTargets("writer"), GUIDE_PATHS.writer, "/writer/approvals")).toEqual({
+      href: "/writer/rehber#eser-onaylari",
+      title: "Eser Onayları",
+    });
+    expect(resolveHelpTarget(helpTargets("illustrator"), GUIDE_PATHS.illustrator, "/cizer/rehber")).toBeNull();
   });
 });

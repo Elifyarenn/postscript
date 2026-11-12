@@ -184,7 +184,13 @@ export default async function EditorArticleDetailPage({
 
         {(reviewEditor || reassigns) && (
           <Card>
-            <h2 className="mb-1 font-serif text-lg">İnceleyen editör</h2>
+            <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-serif text-lg">İnceleyen editör</h2>
+              {/* Handing over is the main editor's; the admin reads it in the main editor's guide */}
+              <GuideHint href={guideKey === "editor" ? guideHref("editor", "gonderilen") : guideHref("mainEditor", "devretme")}>
+                Yardım: başka editöre göndermek
+              </GuideHint>
+            </div>
             <p className="mb-4 text-sm text-muted">
               {reviewEditor
                 ? `Bu yazı ${reviewEditor.displayName} adlı editöre gönderildi; kategori aşamasını o yürütür, alanın kategori editörü görmez.`

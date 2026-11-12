@@ -1,3 +1,5 @@
+import { guideHref } from "@/lib/panel-guides/help";
+import { GuideHint } from "@/components/panel-guide";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -722,7 +724,10 @@ export default async function AdminUserDetailPage({
 
         {(target.role === "user" || pipeline.latest) && (
           <Card>
-            <h2 className="mb-1 font-serif text-lg">Yazarlık süreci</h2>
+            <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-serif text-lg">Yazarlık süreci</h2>
+              <GuideHint href={guideHref("admin", "basvurular")}>Yardım: yazar başvuruları</GuideHint>
+            </div>
             <p className="mb-4 text-sm text-muted">
               Yazarlık başvuruyla olur: editör incelemesi, yönetim onayı, ardından başvuru
               sahibinin imzalı sözleşmesi. Sözleşme doğrulanınca hesap yazar rolüne geçer.

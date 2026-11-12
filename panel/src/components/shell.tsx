@@ -24,7 +24,7 @@ import type { SessionUser } from "@/lib/auth/session";
 import { KvkkNotice } from "./kvkk-notice";
 import { USER_SEGMENTS, USER_SEGMENT_META } from "@/lib/user-segments";
 import { GUIDE_PATHS, helpTargets, type GuideKey } from "@/lib/panel-guides/help";
-import { GuideHelpButton } from "./guide-help-button";
+import { GuideHelpButton, GuideHelpProvider } from "./guide-help-button";
 import { WhatsAppSupportButton } from "./whatsapp-support-button";
 
 export type NavItem = {
@@ -225,80 +225,82 @@ export async function PanelShell({
   const showSupport = user.role !== "admin";
 
   return (
-    <div className="min-h-screen lg:flex">
-      <PanelSidebar user={user} area={area} groups={groups} csrfToken={csrfToken} />
+    <GuideHelpProvider value={{ targets: helpTargets(guide), guidePath: GUIDE_PATHS[guide] }}>
+      <div className="min-h-screen lg:flex">
+        <PanelSidebar user={user} area={area} groups={groups} csrfToken={csrfToken} />
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-paper px-6 py-3 pl-14 lg:pl-6">
-          <div className="flex items-center gap-3">
-            <span className="hidden font-serif text-sm tracking-[0.2em] text-accent uppercase sm:block">
-              {area}
-            </span>
-            <BackButton />
-            <GuideHelpButton targets={helpTargets(guide)} guidePath={GUIDE_PATHS[guide]} />
-            {/* The sidebar wordmark also leads home, but few people read a logo as a button */}
-            <Link
-              href="/"
-              className="inline-flex min-h-10 items-center gap-1 rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs text-muted transition-colors hover:bg-paper hover:text-ink sm:min-h-0"
-              title="Derginin ana sayfasına git"
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-paper px-6 py-3 pl-14 lg:pl-6">
+            <div className="flex items-center gap-3">
+              <span className="hidden font-serif text-sm tracking-[0.2em] text-accent uppercase sm:block">
+                {area}
+              </span>
+              <BackButton />
+              <GuideHelpButton />
+              {/* The sidebar wordmark also leads home, but few people read a logo as a button */}
+              <Link
+                href="/"
+                className="inline-flex min-h-10 items-center gap-1 rounded-md border border-line bg-surface px-2.5 py-1.5 text-xs text-muted transition-colors hover:bg-paper hover:text-ink sm:min-h-0"
+                title="Derginin ana sayfasına git"
+              >
+                <House className="size-3.5" />
+                Ana sayfa
+              </Link>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-2.5 text-sm">
+              <PanelModeSwitch user={user} />
+              {/* Only a name: the account page is the site's, not the panel's (D-165) */}
+              <span className="font-medium">{user.displayName}</span>
+              {/* Hybrid and main editor tags come from one rule (D-060, D-312) */}
+              {panelRoleBadges(user).map((badge) => (
+                <StatusBadge key={badge} status={badge} />
+              ))}
+              {user.role !== "editor" && user.writerStatus && <StatusBadge status={user.writerStatus} />}
+            </div>
+          </header>
+
+          <KvkkNotice user={user} csrfToken={csrfToken} />
+
+          {/* Room under the last form for the floating WhatsApp button */}
+          <main className={cn("flex-1 px-6 py-8", showSupport && "pb-24")}>
+            <div className={cn("mx-auto", user.role === "admin" ? "max-w-6xl" : "max-w-5xl")}>
+              {children}
+            </div>
+          </main>
+
+          <footer className="border-t border-line px-6 py-4 text-center text-xs text-muted">
+            {/* The statutory pages stay reachable from inside the panel too (D-084) */}
+            <nav
+              className="mb-2 flex flex-wrap justify-center gap-x-4 gap-y-1"
+              aria-label="Yasal sayfalar"
             >
-              <House className="size-3.5" />
-              Ana sayfa
-            </Link>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-end gap-2.5 text-sm">
-            <PanelModeSwitch user={user} />
-            {/* Only a name: the account page is the site's, not the panel's (D-165) */}
-            <span className="font-medium">{user.displayName}</span>
-            {/* Hybrid and main editor tags come from one rule (D-060, D-312) */}
-            {panelRoleBadges(user).map((badge) => (
-              <StatusBadge key={badge} status={badge} />
-            ))}
-            {user.role !== "editor" && user.writerStatus && <StatusBadge status={user.writerStatus} />}
-          </div>
-        </header>
-
-        <KvkkNotice user={user} csrfToken={csrfToken} />
-
-        {/* Room under the last form for the floating WhatsApp button */}
-        <main className={cn("flex-1 px-6 py-8", showSupport && "pb-24")}>
-          <div className={cn("mx-auto", user.role === "admin" ? "max-w-6xl" : "max-w-5xl")}>
-            {children}
-          </div>
-        </main>
-
-        <footer className="border-t border-line px-6 py-4 text-center text-xs text-muted">
-          {/* The statutory pages stay reachable from inside the panel too (D-084) */}
-          <nav
-            className="mb-2 flex flex-wrap justify-center gap-x-4 gap-y-1"
-            aria-label="Yasal sayfalar"
-          >
-            <Link href="/kunye" className="inline-block py-2 hover:text-ink sm:py-0">
-              Künye
-            </Link>
-            <Link href="/kullanim-sartlari" className="inline-block py-2 hover:text-ink sm:py-0">
-              Kullanım şartları
-            </Link>
-            <Link href="/kvkk" className="inline-block py-2 hover:text-ink sm:py-0">
-              KVKK aydınlatma metni
-            </Link>
-          </nav>
-          <span>
-            Designed by{" "}
-            <a
-            href="https://www.elifyarencekic.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-ink"
-          >
-              Elif Yaren Çekiç
-            </a>{" "}
-            &amp; Tuanna Demir
-          </span>
-        </footer>
+              <Link href="/kunye" className="inline-block py-2 hover:text-ink sm:py-0">
+                Künye
+              </Link>
+              <Link href="/kullanim-sartlari" className="inline-block py-2 hover:text-ink sm:py-0">
+                Kullanım şartları
+              </Link>
+              <Link href="/kvkk" className="inline-block py-2 hover:text-ink sm:py-0">
+                KVKK aydınlatma metni
+              </Link>
+            </nav>
+            <span>
+              Designed by{" "}
+              <a
+              href="https://www.elifyarencekic.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-ink"
+            >
+                Elif Yaren Çekiç
+              </a>{" "}
+              &amp; Tuanna Demir
+            </span>
+          </footer>
+        </div>
+        {showSupport && <WhatsAppSupportButton />}
       </div>
-      {showSupport && <WhatsAppSupportButton />}
-    </div>
+    </GuideHelpProvider>
   );
 }
