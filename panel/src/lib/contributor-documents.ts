@@ -50,6 +50,17 @@ export const ILLUSTRATION_FORM_TEMPLATE_VERSION = "11";
 export const ILLUSTRATION_GROUP_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu-cizim-v12.md";
 export const ILLUSTRATION_GROUP_TEMPLATE_VERSION = "12";
 
+/**
+ * The forms accepted electronically when the work is handed in (D-387):
+ * versions 7 and 11 with section 12 rewritten for the panel's read-to-the-end
+ * acceptance instead of wet signatures, initials and counterparts. One work
+ * per form, since each is accepted at its own submission.
+ */
+export const ELECTRONIC_LICENCE_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu-v13.md";
+export const ELECTRONIC_LICENCE_TEMPLATE_VERSION = "13";
+export const ELECTRONIC_ILLUSTRATION_FORM_FILE = "eser-bazli-kullanim-ruhsati-formu-cizim-v14.md";
+export const ELECTRONIC_ILLUSTRATION_TEMPLATE_VERSION = "14";
+
 /** "PNG, 2480 × 3508 piksel, 3,2 MB": what section 1 says of an uploaded drawing's file. */
 export function illustrationFileDescription(file: {
   mime: string;

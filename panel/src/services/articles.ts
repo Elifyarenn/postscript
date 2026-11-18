@@ -56,6 +56,7 @@ import { slugify, uniqueSlug } from "@/lib/slug";
 import * as templates from "@emails/templates";
 import { allMediaLicensed } from "./media";
 import { hasAcceptedCurrentAgreement } from "./agreements";
+import { recordLicenceAcceptance, verifyLicenceAcceptance } from "./licence-acceptances";
 import { getEditorAssignment, getMainEditor, selectableWriterCategories } from "./editor-categories";
 import { acceptedTopicForNewArticle, assertArticleDeliveryAllowed } from "./topics";
 import { isIssueClosed } from "@/lib/active-issue";
@@ -905,10 +906,12 @@ export async function saveAndSubmitArticleAsWriter(
   articleId: string,
   rawInput: unknown,
   meta: RequestMeta,
+  /** The licence form accepted on screen (D-387): `{ formId, textHash }`. */
+  licence?: unknown,
 ): Promise<Article> {
   await updateArticleAsWriter(actor, articleId, rawInput, meta);
   try {
-    return await transitionArticle(actor, articleId, "in_review", meta, {});
+    return await transitionArticle(actor, articleId, "in_review", meta, { licence });
   } catch (error) {
     if (!isAppError(error)) throw error;
     throw new AppError(
@@ -1185,6 +1188,11 @@ export type TransitionOptions = {
   withdrawnReason?: string;
   scheduledAt?: Date | null;
   note?: string;
+  /**
+   * The licence form the author read and accepted before sending (D-387),
+   * `{ formId, textHash }`; required when an author sends their own work.
+   */
+  licence?: unknown;
 };
 
 /**
@@ -1267,6 +1275,19 @@ export async function transitionArticle(
     }
   }
 
+  // Sending one's own work needs the licence form read and accepted for this
+  // very text (D-387); the admins license nothing to their own magazine (D-305)
+  const authorSends = to === "in_review" && article.authorId === actor.id && !isEditorRevisionRequest(article.status, to);
+  const acceptedLicence =
+    authorSends && needsAuthorAgreement(actor)
+      ? await verifyLicenceAcceptance(actor, options.licence, {
+          kind: "article",
+          articleId: article.id,
+          title: article.title,
+          bodyMarkdown: article.bodyMarkdown,
+        })
+      : null;
+
   const grant = await findLiveApproval(article.id);
   const publishes = to === "scheduled" || to === "published";
 
@@ -1284,8 +1305,11 @@ export async function transitionArticle(
 
   // Sending one's own work to the editors is the licence declaration for that
   // work (D-238). An editor moving the same article along the chain is not.
-  if (to === "in_review" && article.authorId === actor.id && !isEditorRevisionRequest(article.status, to)) {
+  if (authorSends) {
     await recordSubmissionDeclaration(updated, actor, meta);
+  }
+  if (acceptedLicence) {
+    await recordLicenceAcceptance(actor, acceptedLicence, { articleId: article.id, title: article.title }, meta);
   }
 
   // Handed in without an accepted topic: allowed, but the main editor is told (D-338)

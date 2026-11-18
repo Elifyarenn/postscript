@@ -27,7 +27,13 @@ import {
   type Illustration,
 } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
-import { canAccessAdminPanel, canAccessIllustratorPanel, canReviewIllustrations, type Actor } from "@/lib/auth/rbac";
+import {
+  canAccessAdminPanel,
+  canAccessIllustratorPanel,
+  canReviewIllustrations,
+  needsAuthorAgreement,
+  type Actor,
+} from "@/lib/auth/rbac";
 import { notMailed, withoutSignedCopy } from "./contributor-documents";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/errors";
 import { imageSize } from "@/lib/image-size";
@@ -36,6 +42,7 @@ import { MAX_ILLUSTRATION_BYTES, MAX_ILLUSTRATION_MB } from "@/lib/illustration"
 import { trafficCutoff } from "@/lib/traffic";
 import { detectFileType } from "./media";
 import { notify } from "./notifications";
+import { LICENCE_MISSING_MESSAGE, recordLicenceAcceptance, verifyLicenceAcceptance } from "./licence-acceptances";
 import type { RequestMeta } from "./auth";
 
 /** Generous for a çizer's whole run, small enough that a stuck script cannot fill the bucket. */
@@ -60,6 +67,11 @@ async function assertIllustrator(actor: Actor): Promise<{ displayName: string }>
   return { displayName: row.displayName };
 }
 
+/** The çizer mark checked for a caller outside this file, such as the licence preview (D-387). */
+export async function assertIllustratorAccount(actor: Actor): Promise<void> {
+  await assertIllustrator(actor);
+}
+
 /** Whether this person sees the drawings handed in; the page and the service ask the same. */
 export async function mayReviewIllustrations(actor: Actor): Promise<boolean> {
   return canReviewIllustrations(actor);
@@ -79,7 +91,16 @@ export async function listIssuesForIllustrations() {
 
 export async function uploadIllustration(
   actor: Actor,
-  input: { buffer: Buffer; declaredMime: string; fileName: string; fields: unknown },
+  input: {
+    buffer: Buffer;
+    declaredMime: string;
+    fileName: string;
+    fields: unknown;
+    /** The record id the licence form named, chosen when it was shown (D-387). */
+    illustrationId?: string | null;
+    /** The licence form accepted on screen (D-387): `{ formId, textHash }`. */
+    licence?: unknown;
+  },
   meta: RequestMeta,
 ): Promise<Illustration> {
   const illustrator = await assertIllustrator(actor);
@@ -115,6 +136,27 @@ export async function uploadIllustration(
     throw conflict(`En fazla ${MAX_ACTIVE_ILLUSTRATIONS} çizim tutulabilir; eskilerden kaldırıp yeniden deneyin.`);
   }
 
+  // The licence form is read and accepted before the drawing is sent (D-387).
+  // It names this very file by its hash and the record id it was shown with;
+  // the admins license nothing to their own magazine (D-305).
+  const sha256 = createHash("sha256").update(input.buffer).digest("hex");
+  let illustrationId: string | undefined;
+  let acceptedLicence: Awaited<ReturnType<typeof verifyLicenceAcceptance>> | null = null;
+  if (needsAuthorAgreement(actor)) {
+    const parsedId = z.uuid().safeParse(input.illustrationId);
+    if (!parsedId.success) throw conflict(LICENCE_MISSING_MESSAGE);
+    illustrationId = parsedId.data;
+    const [taken] = await db.select({ id: illustrations.id }).from(illustrations).where(eq(illustrations.id, illustrationId)).limit(1);
+    if (taken) throw conflict("Bu ruhsat formu başka bir çizim için kullanıldı. Formu yeniden açıp onaylayın.");
+    acceptedLicence = await verifyLicenceAcceptance(actor, input.licence, {
+      kind: "drawing",
+      illustrationId,
+      sha256,
+      mime: detected.mime,
+      size: input.buffer.length,
+    });
+  }
+
   const storageKey = buildStorageKey("illustrations", input.fileName);
   await getStorage().put({ bucket: "media", key: storageKey, body: input.buffer, mime: detected.mime });
   const size = imageSize(input.buffer, detected.mime);
@@ -122,6 +164,7 @@ export async function uploadIllustration(
   const [row] = await db
     .insert(illustrations)
     .values({
+      ...(illustrationId ? { id: illustrationId } : {}),
       illustratorId: actor.id,
       title: fields.title,
       note: fields.note ?? null,
@@ -131,7 +174,7 @@ export async function uploadIllustration(
       size: input.buffer.length,
       width: size?.width ?? null,
       height: size?.height ?? null,
-      sha256: createHash("sha256").update(input.buffer).digest("hex"),
+      sha256,
     })
     .returning();
 
@@ -144,6 +187,10 @@ export async function uploadIllustration(
     after: { title: row!.title, mime: row!.mime, size: row!.size, sha256: row!.sha256 },
     ip: meta.ip,
   });
+
+  if (acceptedLicence) {
+    await recordLicenceAcceptance(actor, acceptedLicence, { illustrationId: row!.id }, meta);
+  }
 
   await notifyReviewers(row!, actor.id, illustrator.displayName);
   return row!;

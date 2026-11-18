@@ -21,6 +21,9 @@ export const MAIL_SAMPLES: Record<string, Record<string, unknown>[]> = {
   ],
   rightsGrantReminder: [{ displayName: "Ada", articleTitle: "Kış", url: "https://example.com/writer/approvals/1" }],
   rightsGrantSigned: [{ displayName: "Ada", articleTitle: "Kış" }],
+  licenceAccepted: [
+    { displayName: "Ada", workTitle: "Kış", formId: "0f6c5d2e-1111-4222-8333-944455556666", url: "https://example.com/writer/agreement" },
+  ],
   articleStatusChanged: [
     { displayName: "Ada", articleTitle: "Kış", status: "revision_requested", note: "Giriş\nkısalsın.", url: "https://example.com/writer/articles/1" },
     { displayName: "Ada", articleTitle: "Kış", status: "published", url: "https://example.com/writer/articles/1" },
@@ -64,6 +67,7 @@ MAIL_SAMPLES.contributorDocumentsSent = [
   },
 ];
 ADDED_AFTER_LAYOUT.add("contributorDocumentsSent");
+ADDED_AFTER_LAYOUT.add("licenceAccepted");
 
 MAIL_SAMPLES.contributorUploadReminder = [
   {

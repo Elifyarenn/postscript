@@ -37,6 +37,7 @@ import {
   illustrations,
   issueQuizzes,
   issues,
+  licenceAcceptances,
   mailJobs,
   rightsGrants,
   signedContracts,
@@ -64,6 +65,10 @@ import {
   CONTRIBUTOR_AGREEMENT_FILE,
   contributionRoleLabel,
   DOCUMENT_KIND_LABELS,
+  ELECTRONIC_ILLUSTRATION_FORM_FILE,
+  ELECTRONIC_ILLUSTRATION_TEMPLATE_VERSION,
+  ELECTRONIC_LICENCE_FORM_FILE,
+  ELECTRONIC_LICENCE_TEMPLATE_VERSION,
   ILLUSTRATION_FORM_FILE,
   ILLUSTRATION_FORM_TEMPLATE_VERSION,
   ILLUSTRATION_GROUP_FORM_FILE,
@@ -374,6 +379,7 @@ async function licenceValues(
   bylineChoice: "real_name" | "pen_name" | null,
   formId: string,
   now: Date,
+  template: { file: string; version: string } = licenceTemplate(Boolean(work.file), false),
 ) {
   const { words, contentHash, technical } = workFacts(work);
 
@@ -387,7 +393,7 @@ async function licenceValues(
     "eser.content_hash": contentHash,
     "eser.id": work.id,
     "form.id": formId,
-    "form.template_version": licenceTemplate(Boolean(work.file), false).version,
+    "form.template_version": template.version,
     "form.created_at": formatContractDate(now),
     ...licenceFormValues({
       terms,
@@ -399,6 +405,84 @@ async function licenceValues(
     "form.text_hash": "{{form.text_hash}}",
   };
   return { values, words, contentHash };
+}
+
+/** The work an electronic licence form is for (D-387), as it will be handed in. */
+export type ElectronicLicenceWork =
+  | { kind: "article"; articleId: string; title: string; bodyMarkdown: string }
+  | { kind: "drawing"; illustrationId: string; sha256: string; mime: string; size: number };
+
+export type ElectronicLicence = {
+  /** The form's text, placeholders filled and the form hash written in. */
+  markdown: string;
+  /** The hash of the text with `form.text_hash` unfilled, as every form here. */
+  textHash: string;
+  contentHash: string;
+  templateVersion: string;
+};
+
+/**
+ * The single licence form the author reads and accepts when handing a work in
+ * (D-387). The same values the prepared forms use, from the electronic
+ * templates. Rendering the same inputs on the same day gives the same text,
+ * which is how the submit checks that what was accepted is what is sent.
+ * Throws a 409 naming what the records do not say, since nobody may accept a
+ * form with gaps in it.
+ */
+export async function renderElectronicLicence(
+  work: ElectronicLicenceWork,
+  author: User,
+  formId: string,
+  now: Date,
+): Promise<ElectronicLicence> {
+  const version = await getCurrentAgreement();
+  if (!version) throw conflict("Yayınlanmış bir sözleşme sürümü yok; ruhsat formu hazırlanamıyor.");
+  const terms = await currentLicenceTerms();
+
+  const drawing = work.kind === "drawing";
+  const template = drawing
+    ? { file: ELECTRONIC_ILLUSTRATION_FORM_FILE, version: ELECTRONIC_ILLUSTRATION_TEMPLATE_VERSION }
+    : { file: ELECTRONIC_LICENCE_FORM_FILE, version: ELECTRONIC_LICENCE_TEMPLATE_VERSION };
+  const licensed: LicensedWork =
+    work.kind === "drawing"
+      ? {
+          id: work.illustrationId,
+          title: illustrationFormTitle(work.illustrationId),
+          body: "",
+          typeLabel: "Çizim (görsel)",
+          describe: () => "",
+          // No pixel size: the browser and the server read rotated pictures differently,
+          // and the file's own hash already names the file exactly
+          file: { sha256: work.sha256, description: illustrationFileDescription({ ...work, width: null, height: null }) },
+        }
+      : {
+          id: work.articleId,
+          title: work.title,
+          body: work.bodyMarkdown,
+          typeLabel: "Yazı (metin)",
+          describe: (words) => `Panel kaydındaki metin, ${words} kelime`,
+        };
+  // The declaration's own rule for the byline (D-238): the profile's pen name, if any
+  const bylineChoice = drawing ? null : author.penName ? "pen_name" : "real_name";
+
+  const { values, words, contentHash } = await licenceValues(version, terms, licensed, author, bylineChoice, formId, now, template);
+  if (!drawing && words === 0) throw conflict("Yazının metni boş; boş bir metin için ruhsat verilemez.");
+  if (!contentHash) throw conflict("Eserin özeti hesaplanamadı.");
+
+  let filled: { markdown: string };
+  try {
+    filled = fillTemplate(readContract(template.file), values);
+  } catch (error) {
+    const reasons = [...new Set(reasonsOf(error))];
+    throw conflict(`Ruhsat formu şu bilgiler eksik olduğu için hazırlanamıyor: ${reasons.join("; ")}.`);
+  }
+  const textHash = hashDocument(filled.markdown);
+  return {
+    markdown: filled.markdown.replace("{{form.text_hash}}", textHash),
+    textHash,
+    contentHash,
+    templateVersion: template.version,
+  };
 }
 
 /** One work of an issue form (D-339), with the byline its author chose for it. */
@@ -807,7 +891,17 @@ export async function prepareContributorDocuments(
   // A drawing handed in before the issue was asked for has none: it keeps a single form
   type Candidate = { work: GroupWork; author: User; issueId: string | null };
   const candidates: Candidate[] = [];
+  // A work whose form was read and accepted at its submission needs no paper form (D-387)
+  const accepted = await db
+    .select({ articleId: licenceAcceptances.articleId, illustrationId: licenceAcceptances.illustrationId })
+    .from(licenceAcceptances);
+  const acceptedWorks = new Set(accepted.flatMap((row) => [row.articleId, row.illustrationId]).filter(Boolean));
+  const ACCEPTED_SKIP = "Ruhsat formu gönderimde panelde elektronik olarak onaylandı";
   for (const work of works) {
+    if (acceptedWorks.has(work.id)) {
+      skip(ACCEPTED_SKIP);
+      continue;
+    }
     const author = work.authorId ? byId.get(work.authorId) : undefined;
     if (!author) {
       skip("Eserin sahibi (yazarı) kayıtlı değil: ruhsat hiçbir hesaba bağlanamadı");
@@ -850,6 +944,10 @@ export async function prepareContributorDocuments(
     candidates.push({ work: { ...codeWork(entry), ...noIds, workKey: entry.key }, author, issueId });
   }
   for (const drawing of drawings) {
+    if (acceptedWorks.has(drawing.id)) {
+      skip(ACCEPTED_SKIP);
+      continue;
+    }
     const author = byId.get(drawing.illustratorId);
     if (!author || author.deletedAt) {
       skip("Çizimin sahibinin hesabı silinmiş: ruhsat hazırlanmadı");

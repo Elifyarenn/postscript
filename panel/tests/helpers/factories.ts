@@ -193,3 +193,39 @@ export async function testIssueId(): Promise<string> {
     .returning({ id: issues.id });
   return row!.id;
 }
+
+/**
+ * The licence box's part of a submit (D-387): the form for the article's
+ * saved title and text, read and accepted. Pass the result as the
+ * transition's options, e.g. `transitionArticle(a, id, "in_review", noMeta, await acceptedLicence(a, id))`.
+ */
+export async function acceptedLicence<T extends Record<string, unknown>>(
+  actor: Actor,
+  articleId: string,
+  extra: T = {} as T,
+  onScreen?: { title: string; bodyMarkdown: string },
+): Promise<T & { licence?: { formId: string; textHash: string } }> {
+  const { articles } = await import("@/db/schema");
+  const { previewArticleLicence } = await import("@/services/licence-acceptances");
+  const [article] = await db.select().from(articles).where(eq(articles.id, articleId)).limit(1);
+  // Only the author of an unsent draft has a form to accept; anyone else's move carries none
+  if (!article || article.authorId !== actor.id || !["draft", "revision_requested"].includes(article.status)) return extra;
+  const preview = await previewArticleLicence(actor, article, onScreen ?? { title: article.title, bodyMarkdown: article.bodyMarkdown });
+  return { ...extra, licence: { formId: preview.formId, textHash: preview.textHash } };
+}
+
+/** The same for a drawing about to be uploaded: the record id and the accepted form (D-387). */
+export async function acceptedDrawingLicence(
+  actor: Actor,
+  buffer: Buffer,
+  mime: string,
+): Promise<{ illustrationId: string; licence: { formId: string; textHash: string } }> {
+  const { createHash } = await import("node:crypto");
+  const { previewDrawingLicence } = await import("@/services/licence-acceptances");
+  const preview = await previewDrawingLicence(actor, {
+    sha256: createHash("sha256").update(buffer).digest("hex"),
+    mime,
+    size: buffer.length,
+  });
+  return { illustrationId: preview.illustrationId!, licence: { formId: preview.formId, textHash: preview.textHash } };
+}

@@ -34,7 +34,7 @@ import {
   setupTestDatabase,
   teardownTestDatabase,
 } from "../helpers/db";
-import { actorOf, createUser, noMeta, testIssueId } from "../helpers/factories";
+import { actorOf, createUser, noMeta, testIssueId, acceptedLicence } from "../helpers/factories";
 import { acceptCurrentContract, publishContract } from "../helpers/factories";
 
 let database: Database;
@@ -266,7 +266,7 @@ describe("the staged review chain", () => {
     expect(draft.status).toBe("draft");
     expect(draft.authorId).toBe(writer.id);
 
-    await transitionArticle(actorOf(writer), draft.id, "in_review", noMeta);
+    await transitionArticle(actorOf(writer), draft.id, "in_review", noMeta, await acceptedLicence(actorOf(writer), draft.id));
 
     // Stage 2 — the category editor of "Sanat & Edebiyat" approves
     const stage2 = await transitionArticle(actorOf(categoryEditor), draft.id, "pending_admin_approval", noMeta);
@@ -296,7 +296,7 @@ describe("the staged review chain", () => {
       { issueId: await testIssueId(), title: "Reddedilecek Deneme", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
       noMeta,
     );
-    await transitionArticle(actorOf(writer), draft.id, "in_review", noMeta);
+    await transitionArticle(actorOf(writer), draft.id, "in_review", noMeta, await acceptedLicence(actorOf(writer), draft.id));
     await transitionArticle(actorOf(categoryEditor), draft.id, "pending_admin_approval", noMeta);
     mailbox.clear();
 
@@ -385,7 +385,7 @@ describe("the staged review chain", () => {
       { issueId: await testIssueId(), title: "Alan Dışı", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
       noMeta,
     );
-    await transitionArticle(actorOf(writer), draft.id, "in_review", noMeta);
+    await transitionArticle(actorOf(writer), draft.id, "in_review", noMeta, await acceptedLicence(actorOf(writer), draft.id));
 
     // The "Bilim & Teknoloji" editor has no say over this article
     const denied = await captureError(
@@ -449,7 +449,7 @@ describe("the staged review chain", () => {
       { issueId, title: "Gönderilecek Yazı", bodyMarkdown: "Gövde.", category: "Sanat & Edebiyat" },
       noMeta,
     );
-    await transitionArticle(actorOf(writer), draft.id, "in_review", noMeta);
+    await transitionArticle(actorOf(writer), draft.id, "in_review", noMeta, await acceptedLicence(actorOf(writer), draft.id));
     const before = (await db.select().from(articles).where(eq(articles.id, draft.id)))[0]!;
 
     // Only an admin or the main editor sends it
@@ -733,7 +733,7 @@ describe("the category editor without limits (D-357)", () => {
       .update(issues)
       .set({ submissionOpensAt: new Date(closesAt - 14 * DAY), submissionClosesAt: new Date(closesAt) })
       .where(eq(issues.id, issueId));
-    await transitionArticle(actorOf(admin), article.id, "in_review", noMeta);
+    await transitionArticle(actorOf(admin), article.id, "in_review", noMeta, await acceptedLicence(actorOf(admin), article.id));
 
     const long = Array.from({ length: 2000 }, () => "kelime").join(" ");
     const updated = await updateArticle(actorOf(editor), article.id, { title: "Geç Düzeltme", bodyMarkdown: long }, noMeta);

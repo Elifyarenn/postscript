@@ -10,6 +10,8 @@ import {
   type DocumentMailState,
 } from "@/services/contributor-documents";
 import { listUnlicensedFormerWriterWorks } from "@/services/unlicensed-works";
+import { listLicenceAcceptances } from "@/services/licence-acceptances";
+import { AcceptedLicencesCard } from "@/components/licence-acceptances";
 import { DOCUMENT_KIND_LABELS, DOCUMENT_STATUS_LABELS } from "@/lib/contributor-documents";
 import { documentPdfHref } from "@/components/contributor-documents";
 import { getSiteSettings, PLACEHOLDER_BY_KEY, SETTING_LABELS } from "@/services/site-settings";
@@ -80,7 +82,7 @@ export default async function AdminAgreementsPage() {
   const csrfToken = (await readCsrfToken()) ?? "";
 
   // Independent reads, side by side: one after another they were seven round trips (D-368)
-  const [versions, report, signed, documents, unlicensed, licenceScopes, commercialUse] = await Promise.all([
+  const [versions, report, signed, documents, unlicensed, licenceScopes, commercialUse, acceptedLicences] = await Promise.all([
     listAgreementVersions(actor),
     acceptanceReport(actor),
     listSignedContracts(actor),
@@ -88,6 +90,7 @@ export default async function AdminAgreementsPage() {
     listUnlicensedFormerWriterWorks(actor),
     listLicenceScopeOptions(actor),
     licenceCommercialUse(),
+    listLicenceAcceptances(actor),
   ]);
   const reviewCount = documents.filter((row) => row.status === "needs_review").length;
   // Mailed documents are their owners' now: listed apart, never sent or cleared again (D-314)
@@ -216,6 +219,9 @@ export default async function AdminAgreementsPage() {
           doğrulanmış imzalı sözleşmeler yeni sürümü kapsamaz; üyeler yeni sürümü imzalayıp
           yükler (D-275).
         </Alert>
+
+        {/* Works handed in since D-387 carry their own accepted form; no paper form is drawn for them */}
+        <AcceptedLicencesCard items={acceptedLicences} showPerson />
 
         <Card>
           <h2 className="mb-4 font-serif text-lg">Şablon</h2>

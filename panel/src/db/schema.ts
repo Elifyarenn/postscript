@@ -2299,6 +2299,44 @@ export const illustrations = pgTable(
 );
 
 /* ------------------------------------------------------------------ */
+/* licence_acceptances                                                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A licence form accepted in the panel when the work was handed in (D-387).
+ * The row is the evidence: the form exactly as it was shown, its hash, the
+ * work's hash and who accepted it from where. Only inserted, never changed;
+ * the PDF is a readable copy made before the insert.
+ */
+export const licenceAcceptances = pgTable(
+  "licence_acceptances",
+  {
+    /** The form number printed in the text, chosen when the form was shown. */
+    id: uuid("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    articleId: uuid("article_id").references(() => articles.id, { onDelete: "set null" }),
+    illustrationId: uuid("illustration_id").references(() => illustrations.id, { onDelete: "set null" }),
+    /** What section 1 names, kept apart from the work's row, which may change. */
+    workTitle: text("work_title").notNull(),
+    templateVersion: text("template_version").notNull(),
+    renderedMarkdown: text("rendered_markdown").notNull(),
+    textHash: text("text_hash").notNull(),
+    contentHash: text("content_hash").notNull(),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }).notNull().defaultNow(),
+    ip: text("ip"),
+    userAgent: text("user_agent"),
+    pdfMediaId: uuid("pdf_media_id").references(() => media.id, { onDelete: "set null" }),
+  },
+  (t) => [
+    index("licence_acceptances_user_idx").on(t.userId, t.acceptedAt),
+    index("licence_acceptances_article_idx").on(t.articleId),
+    index("licence_acceptances_illustration_idx").on(t.illustrationId),
+  ],
+);
+
+/* ------------------------------------------------------------------ */
 /* Inferred types                                                      */
 /* ------------------------------------------------------------------ */
 
@@ -2312,6 +2350,7 @@ export type RightsGrant = typeof rightsGrants.$inferSelect;
 export type WriterApplication = typeof writerApplications.$inferSelect;
 export type MediaRow = typeof media.$inferSelect;
 export type Illustration = typeof illustrations.$inferSelect;
+export type LicenceAcceptance = typeof licenceAcceptances.$inferSelect;
 export type CommunityComment = typeof communityComments.$inferSelect;
 export type CommunityMessage = typeof communityMessages.$inferSelect;
 export type BannedWord = typeof bannedWords.$inferSelect;

@@ -13,6 +13,7 @@ import { selectableWriterCategories } from "@/services/editor-categories";
 import { readCsrfToken } from "@/lib/csrf";
 import { renderMarkdown } from "@/lib/markdown";
 import { PanelForm } from "@/components/form";
+import { ArticleLicenceConsent } from "@/components/licence-consent";
 import { ArticleBodyTextarea } from "@/components/article-body-textarea";
 import { countWords, formatWordCount } from "@/lib/word-count";
 import { categoryBudgetForForm } from "@/services/category-budget";
@@ -102,7 +103,8 @@ export default async function WriterArticleDetailPage({
                 csrfToken={csrfToken}
                 submitLabel="Taslağı kaydet"
                 submitVariant="secondary"
-                secondarySubmit={{ label: "İncelemeye gönder", intent: "submit" }}
+                // Shut until the licence form is read and accepted (D-387); admins have none (D-305)
+                secondarySubmit={{ label: "İncelemeye gönder", intent: "submit", gated: needsAuthorAgreement(user) }}
                 warnUnsaved
               >
                 <>
@@ -190,17 +192,21 @@ export default async function WriterArticleDetailPage({
                       editörüne düşer; editör onayladıktan sonra ana editör, son olarak
                       yönetici inceleyecektir.
                     </p>
-                    {/* The declaration itself, so it has to be visible before the click (D-238);
-                        an admin has no contract to point at (D-305) */}
+                    {/* The licence is accepted here, for the text on screen, before the
+                        button opens (D-387); an admin has no licence to give (D-305) */}
                     {needsAuthorAgreement(user) ? (
-                      <p className="text-sm">
-                        Göndererek bu yazının{" "}
-                        <Link href="/writer/agreement" className="text-accent underline">
-                          yazar sözleşmesindeki
-                        </Link>{" "}
-                        koşullarla yayımlanmasına izin verirsiniz. İzin, derginin yazıyı
-                        yayımlama taahhüdü değildir.
-                      </p>
+                      <>
+                        <p className="text-sm">
+                          Göndermeden önce bu yazının ruhsat formunu sonuna kadar okuyup onaylamanız
+                          gerekir. Form,{" "}
+                          <Link href="/writer/agreement" className="text-accent underline">
+                            yazar sözleşmenize
+                          </Link>{" "}
+                          dayanır; ruhsat derginin yazıyı yayımlama taahhüdü değildir. Metni onaydan
+                          sonra değiştirirseniz formu yeniden onaylamanız gerekir.
+                        </p>
+                        <ArticleLicenceConsent csrfToken={csrfToken} articleId={article.id} />
+                      </>
                     ) : (
                       <p className="text-sm">Göndererek bu yazının dergide yayımlanmasına izin verirsiniz.</p>
                     )}

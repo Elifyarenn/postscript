@@ -21,7 +21,7 @@ import { anonymiseUser, exportUserData } from "@/services/users";
 import { isAppError } from "@/lib/errors";
 import { MemoryStorageAdapter, setStorageAdapter } from "@/lib/storage";
 import { resetTables, setupTestDatabase, teardownTestDatabase } from "../helpers/db";
-import { actorOf, createUser, noMeta, testIssueId } from "../helpers/factories";
+import { acceptedDrawingLicence, actorOf, createUser, noMeta, publishContract, testIssueId } from "../helpers/factories";
 import type { User } from "@/db/schema";
 
 let database: Database;
@@ -39,6 +39,11 @@ afterAll(async () => {
 beforeEach(async () => {
   await resetTables(database);
   storage.clear();
+  // The licence form accepted before each upload rests on a published contract (D-387)
+  const publisher = await createUser({ role: "admin", displayName: "Ayşe Admin" });
+  await publishContract(actorOf(publisher));
+  // Gone afterwards, so the admins each test makes are the only ones notified
+  await db.update(users).set({ deletedAt: new Date() }).where(eq(users.id, publisher.id));
 });
 
 async function captureError(promise: Promise<unknown>) {
@@ -69,10 +74,14 @@ async function illustrator(overrides: Parameters<typeof createUser>[0] = {}): Pr
 }
 
 async function upload(user: User, options: { buffer?: Buffer; mime?: string; title?: string; issueId?: string | null } = {}) {
+  const buffer = options.buffer ?? png(1200, 800);
+  // The licence form read and accepted for this file before sending (D-387)
+  const licence = await acceptedDrawingLicence(actorOf(user), buffer, options.mime ?? "image/png").catch(() => ({}));
   return uploadIllustration(
     actorOf(user),
     {
-      buffer: options.buffer ?? png(1200, 800),
+      ...licence,
+      buffer,
       declaredMime: options.mime ?? "image/png",
       fileName: "kapak.png",
       fields: {

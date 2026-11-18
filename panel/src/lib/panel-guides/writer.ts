@@ -194,13 +194,14 @@ export const WRITER_GUIDE: PanelGuide = {
           kind: "list",
           items: [
             "Doğrulanmış imzalı yazar sözleşmeniz olmalı.",
+            "Gönder düğmesinin üstündeki **ruhsat formu kutusunu** işaretleyin: yazının Eser Bazlı Kullanım Ruhsatı Formu açılır. Formu son satırına kadar kaydırın; **Okudum, onaylıyorum** düğmesi ancak o zaman açılır. Onayladığınızda **İncelemeye gönder** düğmesi açılır.",
             "İlk teslim yalnızca sayının **Yazı kabul** dönemi açıkken yapılır. Revizyondan sonra yeniden gönderim dönem dışında da olur.",
             "Yayımlanmış bir sayıya yazı gönderilemez.",
           ],
         },
         {
           kind: "note",
-          text: "Göndererek o metnin yazar sözleşmesindeki koşullarla yayımlanmasına izin vermiş olursunuz; bu, derginin yazıyı yayımlama taahhüdü değildir. İzin yalnızca gönderdiğiniz metni kapsar: metin sonradan değişirse yeni onay istenir.",
+          text: "Ruhsat formunu onaylayıp göndererek o metnin formdaki koşullarla yayımlanmasına izin vermiş olursunuz; ıslak imza ya da imzalı kopya yüklemek gerekmez. Onayladığınız formun PDF kopyası e-postanıza ve **Sözleşmem ve belgelerim** sayfasına gelir. Ruhsat derginin yazıyı yayımlama taahhüdü değildir ve yalnızca gönderdiğiniz metni kapsar: onaydan sonra başlığı ya da metni değiştirirseniz kutu boşalır, formu yeniden onaylarsınız.",
         },
         {
           kind: "p",

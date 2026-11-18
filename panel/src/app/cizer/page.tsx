@@ -5,6 +5,8 @@ import { guardIllustratorPanel } from "@/lib/auth/guard";
 import { getCurrentAgreement, renderAgreementForWriter } from "@/services/agreements";
 import { listOwnSignedContracts, MAX_SIGNED_CONTRACT_MB, VERIFIED_MESSAGE } from "@/services/signed-contracts";
 import { listOwnContributorDocuments } from "@/services/contributor-documents";
+import { listOwnLicenceAcceptances } from "@/services/licence-acceptances";
+import { AcceptedLicencesCard } from "@/components/licence-acceptances";
 import { OwnDocumentsCard } from "@/components/contributor-documents";
 import { AgreementRenderError } from "@/lib/agreement/render";
 import { contributionRoleLabel } from "@/lib/contributor-documents";
@@ -29,11 +31,12 @@ export default async function IllustratorPage() {
   const { user } = await guardIllustratorPanel();
   const csrfToken = (await readCsrfToken()) ?? "";
 
-  const [profileRows, current, uploads, documents] = await Promise.all([
+  const [profileRows, current, uploads, documents, acceptedLicences] = await Promise.all([
     db.select().from(users).where(eq(users.id, user.id)).limit(1),
     getCurrentAgreement(),
     listOwnSignedContracts({ ...user }),
     listOwnContributorDocuments({ ...user }),
+    listOwnLicenceAcceptances({ ...user }),
   ]);
   const profile = profileRows[0]!;
 
@@ -135,6 +138,8 @@ export default async function IllustratorPage() {
             )}
           </Card>
         )}
+
+        <AcceptedLicencesCard items={acceptedLicences} />
 
         <OwnDocumentsCard items={documents} uploads={uploads} upload={upload} guideHref="/cizer/rehber#imza-ve-tarama" />
 

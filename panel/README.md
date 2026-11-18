@@ -235,6 +235,14 @@ işlemlerle sınırlı), dört mecra, dünya geneli, süresiz, bedelsiz, ticari
 kullanım hariç. Yazar onaylarken kabul edilen metnin özetini, sözleşme sürümünü
 ve adının nasıl görüneceğini görür.
 
+D-387'den beri yazı ve çizim gönderilirken o eserin Eser Bazlı Kullanım Ruhsatı
+Formu (şablon v13 / çizim v14) panelde onaylanır: gönder düğmesinin üstündeki
+kutu formu açar, form sonuna kadar kaydırılmadan "Okudum, onaylıyorum", o
+basılmadan gönder düğmesi açılmaz. Sunucu formu gönderilen metinden/dosyadan
+yeniden çizip hash'i karşılaştırır; kayıt `licence_acceptances`'ta (tam metin,
+özetler, IP, tarayıcı, PDF) durur, PDF yazara e-postayla gider. Bu eserlere kâğıt
+form hazırlanmaz.
+
 Editör kaydederken değişikliğin türünü seçer: **düzeltme** onayı korur,
 **içerik değişikliği** onayı iptal eder ve yeni onay ister. Yayımlanmış bir
 eserin içeriği yerinde değiştirilemez; önce geri çekilmesi gerekir (D-030).

@@ -25,8 +25,7 @@ import {
   noMeta,
   publishContract,
   reloadUser,
-  testIssueId,
-} from "../helpers/factories";
+  testIssueId, acceptedLicence } from "../helpers/factories";
 
 let database: Database;
 
@@ -148,7 +147,7 @@ describe("saving from a page drawn before the last change (D-361)", () => {
   it("treats a status change as a change", async () => {
     const { writer, editor, articleId } = await scenario();
 
-    await transitionArticle(writer, articleId, "in_review", noMeta, {});
+    await transitionArticle(writer, articleId, "in_review", noMeta, await acceptedLicence(writer, articleId));
     await transitionArticle(editor, articleId, "revision_requested", noMeta, { note: "Girişi kısaltın." });
 
     const error = await captureError(

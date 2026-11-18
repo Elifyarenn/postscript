@@ -52,7 +52,7 @@ import {
   createUser,
   noMeta,
   publishContract,
-  reloadUser, testIssueId } from "../helpers/factories";
+  reloadUser, testIssueId, acceptedLicence } from "../helpers/factories";
 
 /* ------------------------------------------------------------------ */
 /* A request context without Next: a cookie jar and request headers    */
@@ -327,7 +327,7 @@ describe("work approvals follow the text and the author", () => {
       { issueId: await testIssueId(), title: "Onay Zinciri", bodyMarkdown: "İlk gövde.", category: "Sanat & Edebiyat" },
       noMeta,
     );
-    await transitionArticle(actorOf(author), draft.id, "in_review", noMeta, {});
+    await transitionArticle(actorOf(author), draft.id, "in_review", noMeta, await acceptedLicence(actorOf(author), draft.id));
     return { admin: actorOf(admin), author, draftId: draft.id };
   }
 
@@ -347,7 +347,7 @@ describe("work approvals follow the text and the author", () => {
     expect(await findLiveApproval(draftId)).toBeNull();
 
     // Moved on by the reviewers without a resubmit: acceptance asks the author again
-    await transitionArticle(admin, draftId, "in_review", noMeta, {});
+    await transitionArticle(admin, draftId, "in_review", noMeta, await acceptedLicence(admin, draftId));
     await transitionArticle(admin, draftId, "pending_admin_approval", noMeta, {});
     await transitionArticle(admin, draftId, "ready_for_publishing", noMeta, {});
     await transitionArticle(admin, draftId, "accepted", noMeta, {});

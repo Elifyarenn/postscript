@@ -213,7 +213,7 @@ export const ADMIN_GUIDE: PanelGuide = {
             "Çizerlerin gönderdiği çizimler çizere göre gruplanır; üstteki sekmeler kategoriye göre süzer. Bu sayfayı yalnızca yöneticiler görür. Her yeni çizimde yöneticilere panel bildirimi gelir.",
             "Her çizimde bir yazı alanı seçip **Kategoriyi kaydet**e basın. Kategori ruhsat formuna yazılmaz.",
             "**Kaldır:** dosya silinir, çizer de göremez; gönderilmemiş ruhsat formu da silinir. Geri alınamaz.",
-            "Ruhsat formu, **Sözleşme sürümleri** sayfasındaki **Bir sayının ruhsat formlarını hazırla** ile hazırlanır: bir çizerin bir sayıdaki çizimleri için tek form.",
+            "Bugünden sonra gönderilen her çizimin ruhsat formu, çizer yüklerken panelde okunup onaylanır (D-387); bu çizimler için kâğıt form hazırlanmaz. Eskiden yüklenmiş çizimler için **Sözleşme sürümleri** sayfasındaki **Bir sayının ruhsat formlarını hazırla** kullanılır.",
           ],
         },
       ],
@@ -406,7 +406,8 @@ export const ADMIN_GUIDE: PanelGuide = {
           kind: "list",
           items: [
             "**Şablon** kartı: **Şablondan sürüm oluştur**, ardından **Bu sürümü yayınla**. Yeni sürüm yayınlanınca aktif yazarlar yeni sürümü imzalayıp yükleyene kadar \"sözleşme bekliyor\" durumuna geçer. Yayıncı bilgileri eksikse ya da şablonda tanımsız yer tutucu varsa yayın engellenir.",
-            "**Ruhsat formlarında ticari kullanım:** Hariç / Dahil seçip **Kaydet**. Seçim yalnızca bundan sonra hazırlanan formlara uygulanır; ruhsat her durumda bedelsizdir.",
+            "**Elektronik onaylı ruhsat formları** kartı: yazı ve çizim gönderilirken panelde okunup onaylanan formlar, onay zamanı ve PDF'iyle (D-387). Bu eserler için kâğıt ruhsat formu hazırlanmaz.",
+            "**Ruhsat formlarında ticari kullanım:** Hariç / Dahil seçip **Kaydet**. Seçim bundan sonra hazırlanan ve onaylanan formlara uygulanır; ruhsat her durumda bedelsizdir.",
             "**Bir sayının ruhsat formlarını hazırla:** sayıyı (ve isterseniz tek kişiyi) seçip **Ruhsat formlarını hazırla**ya basın. O sayının ruhsat formları ve yazarlarının eksik genel sözleşmesi hazırlanır; e-posta gitmez. Bir kişinin aynı sayıdaki eserleri tek formda toplanır.",
             "**Belgeleri hazırla (e-posta gönderilmez):** bütün eksik belgeleri hazırlar. Kayıtlarda eksik ya da şüpheli bilgi varsa belge \"İnceleme gerekiyor\" olarak bekler; adına tıklayıp nedenini görün.",
             "**Gönderilmemiş hazır belgeleri mail kuyruğuna al**, ya da kişi başına **Belgelerini mail gönder**. Gönderim **E-posta kuyruğu**ndaki **Kuyruğu şimdi işle** ile yapılır.",

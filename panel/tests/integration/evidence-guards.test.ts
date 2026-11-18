@@ -30,8 +30,7 @@ import {
   noMeta,
   publishContract,
   testIssueId,
-  tinyPdf,
-} from "../helpers/factories";
+  tinyPdf, acceptedLicence } from "../helpers/factories";
 
 let database: Database;
 const storage = new MemoryStorageAdapter();
@@ -73,7 +72,7 @@ async function declaredGrant() {
     { issueId: await testIssueId(), title: "Kanıt", summary: "Özet.", bodyMarkdown: "Gövde metni.", authorId: writer.id },
     noMeta,
   );
-  await transitionArticle(author, article.id, "in_review", noMeta);
+  await transitionArticle(author, article.id, "in_review", noMeta, await acceptedLicence(author, article.id));
   const [grant] = await db.select().from(rightsGrants).where(eq(rightsGrants.articleId, article.id));
   return { writer, article, grant: grant! };
 }

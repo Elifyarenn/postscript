@@ -14,6 +14,7 @@ import { uploadSignedContract } from "@/services/signed-contracts";
 import {
   createArticleAsWriter,
   declineWorkAndReturnForRevision,
+  findArticleById,
   saveAndSubmitArticleAsWriter,
   updateArticleAsWriter,
   updateArticleReferencesAsWriter,
@@ -21,7 +22,9 @@ import {
 import { approveWork, confirmUncoveredSubmissions } from "@/services/rights";
 import { requestMetadata, requireAuth, requireRole } from "@/lib/auth/session";
 import { badRequest } from "@/lib/errors";
-import { assertCsrfFromForm } from "@/lib/csrf";
+import { assertCsrf, assertCsrfFromForm } from "@/lib/csrf";
+import { licencePreviewFailure, type LicencePreviewResult } from "@/lib/licence-preview";
+import { previewArticleLicence } from "@/services/licence-acceptances";
 import { checkbox, numberField, optionalText, runAction, text, type ActionState } from "@/lib/action";
 import { reviseTopicProposal, submitTopicProposal } from "@/services/topics";
 
@@ -200,7 +203,7 @@ export async function updateArticleAsWriterAction(
     // Both buttons post the same form, so a submit carries the text on screen (D-360)
     if (text(formData, "intent") === "submit") {
       try {
-        await saveAndSubmitArticleAsWriter({ ...user }, articleId, input, meta);
+        await saveAndSubmitArticleAsWriter({ ...user }, articleId, input, meta, licenceFromForm(formData));
       } finally {
         // A refused submit has still saved, and the page has to show that version
         revalidatePath(`/writer/articles/${articleId}`);
@@ -222,6 +225,38 @@ export async function updateArticleAsWriterAction(
           : "Yazı kaydedildi.",
     };
   });
+}
+
+/** The accepted form's fields the licence box writes into the form (D-387); absent when not accepted. */
+function licenceFromForm(formData: FormData): { formId: string; textHash: string } | undefined {
+  const formId = optionalText(formData, "licenceFormId");
+  const textHash = optionalText(formData, "licenceTextHash");
+  return formId && textHash ? { formId, textHash } : undefined;
+}
+
+/**
+ * The licence form for the text on the author's screen (D-387), opened by the
+ * box above the submit button. Called directly, not through a form, so the
+ * CSRF token comes as an argument.
+ */
+export async function previewArticleLicenceAction(input: {
+  csrfToken: string;
+  articleId: string;
+  title: string;
+  bodyMarkdown: string;
+}): Promise<LicencePreviewResult> {
+  try {
+    await assertCsrf(input.csrfToken);
+    const { user } = await requireRole("writer");
+    const article = await findArticleById(String(input.articleId));
+    const preview = await previewArticleLicence({ ...user }, article, {
+      title: String(input.title ?? ""),
+      bodyMarkdown: String(input.bodyMarkdown ?? ""),
+    });
+    return { ok: true, ...preview };
+  } catch (error) {
+    return licencePreviewFailure(error);
+  }
 }
 
 /** The source list of an article that has already left the author's hands (D-380). */

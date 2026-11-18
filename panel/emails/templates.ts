@@ -296,6 +296,31 @@ export function rightsGrantSigned(input: {
   });
 }
 
+/** The copy of a licence form accepted in the panel (D-387); the PDF is attached. */
+export function licenceAccepted(input: {
+  displayName: string;
+  workTitle: string;
+  formId: string;
+  url: string;
+}): Template {
+  return renderMail({
+    kind: "licence_accepted",
+    subject: `postscript · Ruhsat formunu onayladınız: ${input.workTitle}`,
+    heading: "Ruhsat formunuz kaydedildi",
+    greeting: `Merhaba ${input.displayName},`,
+    blocks: [
+      {
+        type: "paragraph",
+        text:
+          `"${input.workTitle}" için Eser Bazlı Kullanım Ruhsatı Formu'nu (form no ${input.formId}) panelde ` +
+          "okuyup onayladınız. Onayladığınız metnin PDF kopyası, onay bilgileriyle birlikte bu iletiye eklendi; " +
+          "kayıtlarınız için saklayın. Islak imza ya da imzalı kopya yüklemeniz gerekmez.",
+      },
+      { type: "action", lead: "Onaylarınız panelde de durur:", url: input.url, label: "Belgelerimi aç" },
+    ],
+  });
+}
+
 export function articleStatusChanged(input: {
   displayName: string;
   articleTitle: string;

@@ -7,9 +7,11 @@
 import { revalidatePath } from "next/cache";
 import { requestMetadata, requireAuth } from "@/lib/auth/session";
 import { badRequest } from "@/lib/errors";
-import { assertCsrfFromForm } from "@/lib/csrf";
+import { assertCsrf, assertCsrfFromForm } from "@/lib/csrf";
+import { licencePreviewFailure, type LicencePreviewResult } from "@/lib/licence-preview";
+import { previewDrawingLicence } from "@/services/licence-acceptances";
 import { optionalText, runAction, text, type ActionState } from "@/lib/action";
-import { removeIllustration, uploadIllustration } from "@/services/illustrations";
+import { assertIllustratorAccount, removeIllustration, uploadIllustration } from "@/services/illustrations";
 
 export async function uploadIllustrationAction(
   _state: ActionState,
@@ -28,6 +30,8 @@ export async function uploadIllustrationAction(
         buffer: Buffer.from(await file.arrayBuffer()),
         declaredMime: file.type,
         fileName: file.name,
+        illustrationId: optionalText(formData, "illustrationId"),
+        licence: licenceFromForm(formData),
         fields: {
           title: text(formData, "title"),
           note: optionalText(formData, "note"),
@@ -39,8 +43,40 @@ export async function uploadIllustrationAction(
 
     revalidatePath("/cizer/cizimler");
     revalidatePath("/admin/cizimler");
-    return { success: "Çiziminiz yüklendi ve yöneticiye iletildi. Ruhsat formu hazırlanınca e-postanıza ve Belgelerim'e gelir." };
+    return {
+      success:
+        "Çiziminiz yüklendi ve yöneticiye iletildi. Onayladığınız ruhsat formunun PDF kopyası e-postanıza ve Belgelerim'e gelir.",
+    };
   });
+}
+
+/** The accepted form's fields the licence box writes into the form (D-387). */
+function licenceFromForm(formData: FormData): { formId: string; textHash: string } | undefined {
+  const formId = optionalText(formData, "licenceFormId");
+  const textHash = optionalText(formData, "licenceTextHash");
+  return formId && textHash ? { formId, textHash } : undefined;
+}
+
+/**
+ * The licence form for the drawing chosen on screen (D-387): the browser
+ * sends the file's hash, type and size, not the file, and the upload checks
+ * them against the file that arrives.
+ */
+export async function previewDrawingLicenceAction(input: {
+  csrfToken: string;
+  sha256: string;
+  mime: string;
+  size: number;
+}): Promise<LicencePreviewResult> {
+  try {
+    await assertCsrf(input.csrfToken);
+    const { user } = await requireAuth();
+    await assertIllustratorAccount({ ...user });
+    const preview = await previewDrawingLicence({ ...user }, { sha256: input.sha256, mime: input.mime, size: input.size });
+    return { ok: true, ...preview };
+  } catch (error) {
+    return licencePreviewFailure(error);
+  }
 }
 
 export async function removeIllustrationAction(

@@ -16,17 +16,17 @@ export const ILLUSTRATOR_GUIDE: PanelGuide = {
           items: [
             "**Sözleşmem ve belgelerim** sayfasında Genel Katkı Sağlayan Sözleşmesi'ni okuyup imzalayın ve PDF olarak yükleyin.",
             "Çizimlerinizi **Çizimlerim** sayfasından, hangi sayı için olduğunu seçerek gönderin.",
-            "Yönetim, sayı başına bir ruhsat formu hazırlar; form e-postanıza ve **Belgelerim**e gelir. İmzalayıp yükleyin.",
+            "Göndermeden önce o çizimin ruhsat formunu panelde sonuna kadar okuyup onaylarsınız; PDF kopyası e-postanıza ve **Belgelerim**e gelir. İmza gerekmez.",
           ],
         },
         {
           kind: "flow",
-          steps: ["Sözleşmeyi imzala, yükle", "Çizimi gönder", "Yönetim ruhsat formunu hazırlar", "Formu imzala, yükle", "Çizim yayımlanabilir"],
+          steps: ["Sözleşmeyi imzala, yükle", "Dosyayı seç", "Ruhsat formunu oku, onayla", "Çizimi gönder", "Çizim yayımlanabilir"],
           caption: "Çiziminizin panelden geçtiği yol.",
         },
         {
           kind: "note",
-          text: "Çizimi yüklemek yayın izni değildir. Ruhsat formunu imzalamadan çiziminiz yayımlanmaz ve haklar sizde kalır. Her sayfanın üst çubuğundaki **Bu sayfanın rehberi** düğmesi o sayfayı anlatan bölümü açar.",
+          text: "Ruhsat formunu onaylamadan çizim gönderilemez. Ruhsat basit ruhsattır, haklar sizde kalır. Her sayfanın üst çubuğundaki **Bu sayfanın rehberi** düğmesi o sayfayı anlatan bölümü açar.",
         },
       ],
     },
@@ -46,7 +46,7 @@ export const ILLUSTRATOR_GUIDE: PanelGuide = {
         },
         {
           kind: "p",
-          text: "**Belgelerim** tablosunda size hazırlanan belgeler durur: sözleşme ve çizimleriniz için Eser Bazlı Kullanım Ruhsatı Formları. Her satırda **İndir** ile belgeyi alır, her sayfasını parafe edip imzalar, bütün sayfalarını tarar ve **İmzalı PDF** alanından yüklersiniz. Ruhsat formu iki tarafın imzasıyla yürürlüğe girer; yüklediğiniz kopya kabul edilmezse satırda \"yeniden yükleyin\" yazar.",
+          text: "**Belgelerim** tablosunda size hazırlanan belgeler durur: sözleşme ve çizimleriniz için Eser Bazlı Kullanım Ruhsatı Formları. Her satırda **İndir** ile belgeyi alır, her sayfasını parafe edip imzalar, bütün sayfalarını tarar ve **İmzalı PDF** alanından yüklersiniz. Bu kâğıt formlar eskiden yüklenmiş çizimler içindir. Yeni gönderdiğiniz çizimlerin panelde onayladığınız formları **Elektronik onaylı ruhsat formları** kartında PDF'iyle durur; onları imzalayıp yüklemeniz gerekmez.",
         },
         {
           kind: "p",
@@ -70,7 +70,9 @@ export const ILLUSTRATOR_GUIDE: PanelGuide = {
             "**Çizim gönder** kartında **Dosya**yı seçin: JPG, PNG ya da WEBP, en çok 4 MB. Dosya türü içeriğinden doğrulanır.",
             "**Çizimin adı**nı yazın (zorunlu).",
             "**Hangi sayı için?** alanından sayıyı seçin (zorunlu; yayımlanmış sayılar da listelenir).",
-            "İsterseniz **Not** ekleyin ve **Gönder**e basın.",
+            "İsterseniz **Not** ekleyin.",
+            "**Ruhsat formu kutusunu** işaretleyin: seçtiğiniz dosyanın ruhsat formu açılır. Son satırına kadar kaydırıp **Okudum, onaylıyorum**a basın; **Gönder** düğmesi açılır. Onaydan sonra dosyayı değiştirirseniz formu yeniden onaylarsınız.",
+            "**Gönder**e basın. Onayladığınız formun PDF kopyası e-postanıza gelir.",
           ],
         },
         {

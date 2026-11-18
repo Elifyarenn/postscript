@@ -42,7 +42,7 @@ import {
   actorOf,
   createUser,
   noMeta,
-  publishContract, testIssueId } from "../helpers/factories";
+  publishContract, testIssueId, acceptedLicence } from "../helpers/factories";
 import type { Actor } from "@/lib/auth/rbac";
 
 let database: Database;
@@ -123,7 +123,7 @@ describe("the licence declared by submitting", () => {
     );
     expect(await findLiveApproval(draft.id)).toBeNull();
 
-    await transitionArticle(writerActor, draft.id, "in_review", noMeta, {});
+    await transitionArticle(writerActor, draft.id, "in_review", noMeta, await acceptedLicence(writerActor, draft.id));
 
     const grant = await findLiveApproval(draft.id);
     expect(grant?.status).toBe("signed");
@@ -140,7 +140,7 @@ describe("the licence declared by submitting", () => {
     const draft = await draftOf(writerActor, "Sözleşmesiz");
 
     const error = await captureError(
-      transitionArticle(writerActor, draft.id, "in_review", noMeta, {}),
+      transitionArticle(writerActor, draft.id, "in_review", noMeta, await acceptedLicence(writerActor, draft.id)),
     );
     expect(error?.status).toBe(409);
     expect(error?.message).toContain("yazar sözleşmesini kabul");
@@ -155,7 +155,7 @@ describe("the licence declared by submitting", () => {
     expect(await hasAcceptedCurrentAgreement(adminActor.id)).toBe(false);
     const draft = await draftOf(adminActor, "Kurucunun Yazısı");
 
-    const sent = await transitionArticle(adminActor, draft.id, "in_review", noMeta, {});
+    const sent = await transitionArticle(adminActor, draft.id, "in_review", noMeta, await acceptedLicence(adminActor, draft.id));
     expect(sent.status).toBe("in_review");
     const grant = await findLiveApproval(draft.id);
     expect(grant?.status).toBe("signed");
@@ -170,7 +170,7 @@ describe("the licence declared by submitting", () => {
       { issueId: await testIssueId(), title: "Editörün Gönderdiği", bodyMarkdown: "Gövde.", authorId: writer.id },
       noMeta,
     );
-    await transitionArticle(adminActor, article.id, "in_review", noMeta, {});
+    await transitionArticle(adminActor, article.id, "in_review", noMeta, await acceptedLicence(adminActor, article.id));
 
     expect(await findLiveApproval(article.id)).toBeNull();
   });
@@ -179,7 +179,7 @@ describe("the licence declared by submitting", () => {
     const { adminActor, writerActor } = await scenario();
     const draft = await draftOf(writerActor, "Yeniden Gönderim");
 
-    await transitionArticle(writerActor, draft.id, "in_review", noMeta, {});
+    await transitionArticle(writerActor, draft.id, "in_review", noMeta, await acceptedLicence(writerActor, draft.id));
     const first = await findLiveApproval(draft.id);
 
     await transitionArticle(adminActor, draft.id, "revision_requested", noMeta, {
@@ -191,7 +191,7 @@ describe("the licence declared by submitting", () => {
       { title: "Yeniden Gönderim", bodyMarkdown: "İkinci gövde.", category: "Sanat & Edebiyat" },
       noMeta,
     );
-    await transitionArticle(writerActor, draft.id, "in_review", noMeta, {});
+    await transitionArticle(writerActor, draft.id, "in_review", noMeta, await acceptedLicence(writerActor, draft.id));
 
     const second = await findLiveApproval(draft.id);
     expect(second!.id).not.toBe(first!.id);
@@ -207,7 +207,7 @@ describe("the licence declared by submitting", () => {
     const { adminActor, writerActor } = await scenario();
     const draft = await draftOf(writerActor, "Zincir");
 
-    await transitionArticle(writerActor, draft.id, "in_review", noMeta, {});
+    await transitionArticle(writerActor, draft.id, "in_review", noMeta, await acceptedLicence(writerActor, draft.id));
     await transitionArticle(adminActor, draft.id, "pending_admin_approval", noMeta, {});
     await transitionArticle(adminActor, draft.id, "ready_for_publishing", noMeta, {});
     const accepted = await transitionArticle(adminActor, draft.id, "accepted", noMeta, {});
@@ -267,8 +267,8 @@ describe("works submitted before the contract was accepted", () => {
       { issueId: await testIssueId(), title: "Eski İki", bodyMarkdown: "İki.", authorId: writer.id },
       noMeta,
     );
-    await transitionArticle(adminActor, first.id, "in_review", noMeta, {});
-    await transitionArticle(adminActor, second.id, "in_review", noMeta, {});
+    await transitionArticle(adminActor, first.id, "in_review", noMeta, await acceptedLicence(adminActor, first.id));
+    await transitionArticle(adminActor, second.id, "in_review", noMeta, await acceptedLicence(adminActor, second.id));
     const stillDraft = await draftOf(writerActor, "Taslak Kalan");
 
     // Accepting the contract on its own covers none of them
@@ -296,7 +296,7 @@ describe("works submitted before the contract was accepted", () => {
       { issueId: await testIssueId(), title: "Teyitsiz", bodyMarkdown: "Gövde.", authorId: writer.id },
       noMeta,
     );
-    await transitionArticle(adminActor, article.id, "in_review", noMeta, {});
+    await transitionArticle(adminActor, article.id, "in_review", noMeta, await acceptedLicence(adminActor, article.id));
 
     const error = await captureError(
       confirmUncoveredSubmissions(actorOf({ ...writer, writerStatus: "active" }), noMeta),
@@ -311,11 +311,14 @@ describe("submitting from the edit form (D-360)", () => {
     const { writerActor } = await scenario();
     const draft = await draftOf(writerActor, "Kaydetmeden Gönderim", "Kayıtlı gövde.");
 
+    // The licence box draws its form from the text on screen, not the stored one (D-387)
+    const { licence } = await acceptedLicence(writerActor, draft.id, {}, { title: "Kaydetmeden Gönderim", bodyMarkdown: "Ekrandaki gövde." });
     const sent = await saveAndSubmitArticleAsWriter(
       writerActor,
       draft.id,
       { title: "Kaydetmeden Gönderim", bodyMarkdown: "Ekrandaki gövde.", category: "Sanat & Edebiyat" },
       noMeta,
+      licence,
     );
 
     expect(sent.status).toBe("in_review");

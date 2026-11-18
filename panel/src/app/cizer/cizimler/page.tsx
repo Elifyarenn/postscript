@@ -4,6 +4,8 @@ import { readCsrfToken } from "@/lib/csrf";
 import { MAX_ILLUSTRATION_MB } from "@/lib/illustration";
 import { listIssuesForIllustrations, listOwnIllustrations } from "@/services/illustrations";
 import { ActionButton, PanelForm } from "@/components/form";
+import { DrawingLicenceConsent } from "@/components/licence-consent";
+import { needsAuthorAgreement } from "@/lib/auth/rbac";
 import { ImageFileInput } from "@/components/image-file-input";
 import { IllustrationCard } from "@/components/illustrations";
 import { Alert, Card, EmptyState, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
@@ -38,14 +40,21 @@ export default async function IllustrationsPage() {
           </p>
 
           {/* Said before the upload, as the writers' declaration is (D-238) */}
-          <Alert tone="info" title="Yüklemek yayın izni değildir">
+          <Alert tone="info" title="Göndermeden önce ruhsat formunu onaylarsınız">
             Çiziminizi seçtiğiniz sayı için yöneticiye iletirsiniz; yalnızca yöneticiler görür, sitede yayımlanmaz.
-            Yönetici bu sayıdaki çizimleriniz için tek bir ruhsat formu (çizim) hazırlar; form e-postanıza ve
-            Belgelerim&apos;e gelir, siz imzalamadan çiziminiz yayımlanmaz. Haklarınız sizde kalır.
+            Dosyayı seçtikten sonra kutuyu işaretleyin: bu çizimin ruhsat formu açılır, sonuna kadar okuyup
+            &quot;Okudum, onaylıyorum&quot;a bastığınızda Gönder düğmesi açılır. Islak imza gerekmez; onayladığınız
+            formun PDF kopyası e-postanıza ve Belgelerim&apos;e gelir. Haklarınız sizde kalır.
           </Alert>
 
           <div className="mt-4">
-            <PanelForm action={uploadIllustrationAction} csrfToken={csrfToken} submitLabel="Gönder">
+            {/* Shut until the licence form is read and accepted (D-387); admins have none (D-305) */}
+            <PanelForm
+              action={uploadIllustrationAction}
+              csrfToken={csrfToken}
+              submitLabel="Gönder"
+              submitGated={needsAuthorAgreement(user)}
+            >
               <Field label="Dosya" htmlFor="file">
                 <ImageFileInput id="file" maxMb={MAX_ILLUSTRATION_MB} />
               </Field>
@@ -71,6 +80,7 @@ export default async function IllustrationsPage() {
               >
                 <Textarea id="note" name="note" rows={3} maxLength={1000} />
               </Field>
+              {needsAuthorAgreement(user) && <DrawingLicenceConsent csrfToken={csrfToken} />}
             </PanelForm>
           </div>
         </Card>

@@ -36,8 +36,7 @@ import {
   createUser,
   noMeta,
   publishContract,
-  testIssueId,
-} from "../helpers/factories";
+  testIssueId, acceptedLicence } from "../helpers/factories";
 
 let database: Database;
 const mailbox = new MemoryMailAdapter();
@@ -456,7 +455,7 @@ describe("the article for a topic", () => {
 
   it("cannot start before the topic is accepted, and starts once only", async () => {
     const { writer, mainEditor, proposal } = await acceptedTopic();
-    const input = { title: "Takıntının anatomisi", category: "Sanat & Edebiyat", topicProposalId: proposal.id };
+    const input = { title: "Takıntının anatomisi", category: "Sanat & Edebiyat", topicProposalId: proposal.id, bodyMarkdown: "Gövde." };
 
     await expectStatus(createArticleAsWriter(actorOf(writer), input, noMeta), 409);
 
@@ -473,7 +472,7 @@ describe("the article for a topic", () => {
     await expectStatus(
       createArticleAsWriter(
         actorOf(otherWriter),
-        { title: "Başkasının konusu", category: "Sanat & Edebiyat", topicProposalId: proposal.id },
+        { title: "Başkasının konusu", category: "Sanat & Edebiyat", topicProposalId: proposal.id, bodyMarkdown: "Gövde." },
         noMeta,
       ),
       403,
@@ -485,7 +484,7 @@ describe("the article for a topic", () => {
     await decideTopicProposal(actorOf(mainEditor), proposal.id, { decision: "accept", expectedVersion: 1 }, noMeta);
     const article = await createArticleAsWriter(
       actorOf(writer),
-      { title: "Takıntının anatomisi", category: "Sanat & Edebiyat", topicProposalId: proposal.id },
+      { title: "Takıntının anatomisi", category: "Sanat & Edebiyat", topicProposalId: proposal.id, bodyMarkdown: "Gövde." },
       noMeta,
     );
 
@@ -495,19 +494,19 @@ describe("the article for a topic", () => {
       .update(issues)
       .set({ submissionOpensAt: new Date(now + 86_400_000), submissionClosesAt: new Date(now + 2 * 86_400_000) })
       .where(eq(issues.id, proposal.issueId));
-    await expectStatus(transitionArticle(actorOf(writer), article.id, "in_review", noMeta), 409);
+    await expectStatus(transitionArticle(actorOf(writer), article.id, "in_review", noMeta, await acceptedLicence(actorOf(writer), article.id)), 409);
 
     await db
       .update(issues)
       .set({ submissionOpensAt: new Date(now - 2 * 86_400_000), submissionClosesAt: new Date(now - 86_400_000) })
       .where(eq(issues.id, proposal.issueId));
-    await expectStatus(transitionArticle(actorOf(writer), article.id, "in_review", noMeta), 409);
+    await expectStatus(transitionArticle(actorOf(writer), article.id, "in_review", noMeta, await acceptedLicence(actorOf(writer), article.id)), 409);
 
     await db
       .update(issues)
       .set({ submissionOpensAt: new Date(now - 86_400_000), submissionClosesAt: new Date(now + 86_400_000) })
       .where(eq(issues.id, proposal.issueId));
-    const handedIn = await transitionArticle(actorOf(writer), article.id, "in_review", noMeta);
+    const handedIn = await transitionArticle(actorOf(writer), article.id, "in_review", noMeta, await acceptedLicence(actorOf(writer), article.id));
     expect(handedIn.status).toBe("in_review");
   });
 
@@ -528,7 +527,7 @@ describe("the article for a topic", () => {
     expect(draft.issueId).toBe(issue.id);
     expect(await isArticleWithoutTopic(draft)).toBe(true);
 
-    const handedIn = await transitionArticle(actorOf(writer), draft.id, "in_review", noMeta);
+    const handedIn = await transitionArticle(actorOf(writer), draft.id, "in_review", noMeta, await acceptedLicence(actorOf(writer), draft.id));
     expect(handedIn.status).toBe("in_review");
 
     const told = await db.select().from(notifications).where(eq(notifications.kind, "article.submitted_without_topic"));
@@ -542,10 +541,10 @@ describe("the article for a topic", () => {
       .where(eq(issues.id, issue.id));
     const late = await createArticleAsWriter(
       actorOf(writer),
-      { title: "Geç", category: "Sanat & Edebiyat", issueId: issue.id },
+      { title: "Geç", category: "Sanat & Edebiyat", issueId: issue.id, bodyMarkdown: "Gövde." },
       noMeta,
     );
-    await expectStatus(transitionArticle(actorOf(writer), late.id, "in_review", noMeta), 409);
+    await expectStatus(transitionArticle(actorOf(writer), late.id, "in_review", noMeta, await acceptedLicence(actorOf(writer), late.id)), 409);
   });
 
   it("does not tell the main editor about an article written for an accepted topic", async () => {
@@ -553,7 +552,7 @@ describe("the article for a topic", () => {
     await decideTopicProposal(actorOf(mainEditor), proposal.id, { decision: "accept", expectedVersion: 1 }, noMeta);
     const article = await createArticleAsWriter(
       actorOf(writer),
-      { title: "Takıntının anatomisi", category: "Sanat & Edebiyat", topicProposalId: proposal.id },
+      { title: "Takıntının anatomisi", category: "Sanat & Edebiyat", topicProposalId: proposal.id, bodyMarkdown: "Gövde." },
       noMeta,
     );
     expect(await isArticleWithoutTopic(article)).toBe(false);
@@ -562,7 +561,7 @@ describe("the article for a topic", () => {
       .update(issues)
       .set({ submissionOpensAt: new Date(now - 86_400_000), submissionClosesAt: new Date(now + 86_400_000) })
       .where(eq(issues.id, proposal.issueId));
-    await transitionArticle(actorOf(writer), article.id, "in_review", noMeta);
+    await transitionArticle(actorOf(writer), article.id, "in_review", noMeta, await acceptedLicence(actorOf(writer), article.id));
     expect(await db.select().from(notifications).where(eq(notifications.kind, "article.submitted_without_topic"))).toEqual([]);
   });
 
@@ -572,10 +571,10 @@ describe("the article for a topic", () => {
     await setActiveIssue(actorOf(admin), await testIssueId(), noMeta);
     const article = await createArticleAsWriter(
       actorOf(writer),
-      { title: "Eski akış", category: "Sanat & Edebiyat", issueId: await testIssueId() },
+      { title: "Eski akış", category: "Sanat & Edebiyat", issueId: await testIssueId(), bodyMarkdown: "Gövde." },
       noMeta,
     );
-    const handedIn = await transitionArticle(actorOf(writer), article.id, "in_review", noMeta);
+    const handedIn = await transitionArticle(actorOf(writer), article.id, "in_review", noMeta, await acceptedLicence(actorOf(writer), article.id));
     expect(handedIn.status).toBe("in_review");
   });
 
@@ -584,7 +583,7 @@ describe("the article for a topic", () => {
     await decideTopicProposal(actorOf(mainEditor), proposal.id, { decision: "accept", expectedVersion: 1 }, noMeta);
     const article = await createArticleAsWriter(
       actorOf(writer),
-      { title: "Yerinde kalır", category: "Sanat & Edebiyat", topicProposalId: proposal.id },
+      { title: "Yerinde kalır", category: "Sanat & Edebiyat", topicProposalId: proposal.id, bodyMarkdown: "Gövde." },
       noMeta,
     );
     const { updateArticle } = await import("@/services/articles");

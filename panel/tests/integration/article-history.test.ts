@@ -20,7 +20,7 @@ import {
   actorOf,
   createUser,
   noMeta,
-  publishContract, testIssueId } from "../helpers/factories";
+  publishContract, testIssueId, acceptedLicence } from "../helpers/factories";
 
 let database: Database;
 
@@ -71,11 +71,11 @@ async function reviewedArticle() {
     { issueId: await testIssueId(), title: "Süreç Geçmişi Denemesi", bodyMarkdown: "Gövde metni.", authorId: writer.id },
     noMeta,
   );
-  await transitionArticle(editorActor, article.id, "in_review", noMeta);
+  await transitionArticle(editorActor, article.id, "in_review", noMeta, await acceptedLicence(editorActor, article.id));
   await transitionArticle(editorActor, article.id, "revision_requested", noMeta, {
     note: "Girişi kısaltın.",
   });
-  await transitionArticle(writerActor, article.id, "in_review", noMeta);
+  await transitionArticle(writerActor, article.id, "in_review", noMeta, await acceptedLicence(writerActor, article.id));
   await setPlagiarismStatus(editorActor, article.id, "clean", "Benzerlik bulunmadı.", noMeta);
   await transitionArticle(editorActor, article.id, "pending_admin_approval", noMeta, {
     note: "Giriş paragrafı güçlü.",

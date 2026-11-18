@@ -15192,3 +15192,66 @@ gittiğini tarar; yazı sayfasının okuyana göre bölüm tablosunu ayrıca den
 Bölüm kimliği değişirse test düşer.
 
 **KVKK:** Yeni veri yok, metin değişmedi. Migration yok.
+
+## D-387 — Ruhsat formu gönderimde elektronik olarak onaylanır (yazı ve çizim)
+
+**Karar (sahibin isteği, 2026-11-18):** "Sözleşme sistemini değiştiriyoruz, elektronik
+onaya geçiyoruz." Bundan sonra gönderilen her yazı ve çizim için Eser Bazlı Kullanım
+Ruhsatı Formu gönderim anında panelde onaylanır: gönder düğmesinin üstünde onay kutusu
+var; kutu formu açar, form son satırına kadar kaydırılmadan "Okudum, onaylıyorum"
+açılmaz, ona basılmadan "İncelemeye gönder" (yazı) / "Gönder" (çizim) açılmaz.
+
+**Metin:** Yeni şablonlar `eser-bazli-kullanim-ruhsati-formu-v13.md` (yazı) ve
+`…-cizim-v14.md` (çizim). v7 / cizim v11 ile kelimesi kelimesine aynı; yalnızca
+giriş cümlesi, m. 10'daki "imzalandıktan" → "onaylandıktan" ve m. 12 + imza bloğu
+değişti. Yeni m. 12: Dergi'nin formu panelde sunması icap/kabul; ruhsat yazarın
+onayı ve eserin gönderilmesiyle yürürlüğe girer; onay kaydı (tam metin, form ve eser
+özeti, hesap, tarih-saat, IP, tarayıcı) değiştirilmez ve delil olarak kullanılabilir;
+PDF kopyası e-postayla gider; metin/dosya değişirse yeni form onaylanır; ıslak imza,
+paraf, imzalı kopya gerekmez. Eski v7'nin 12.5'i ("tıklama imzanın yerine geçmez")
+bu yüzden yeni şablonda yok. Tek eser = tek form; sayı formu (v8/v12) e-onayda yok.
+
+**Risk (bir kez, açıkça):** FSEK m. 52 mali haklara ilişkin sözleşmelerde yazılı
+şekil arar; TBK m. 14–15'e göre yazılı şekil imza ister ve imzanın yerini yalnızca
+güvenli elektronik imza tutar. Panel onayı güvenli e-imza değildir; bir uyuşmazlıkta
+ruhsatın şekil yönünden geçersiz sayılması ihtimali var. Azaltanlar: tam metin + hash
++ IP/tarayıcı kaydı, PDF'in yazara e-postayla gitmesi, yazarın eseri kendisinin
+göndermesi. Sahip elektronik onayı seçti; ileride güvenli e-imzaya geçmek gerekirse
+yöntem yalnızca kutunun yerini alır, kayıt modeli aynı kalır.
+
+**Nasıl:**
+- `licence_acceptances` tablosu (migration 0074): form no (PK, formda yazan numara),
+  hesap, `article_id` / `illustration_id`, eser adı, şablon sürümü, tam metin,
+  `text_hash`, `content_hash`, zaman, IP, tarayıcı, PDF. Yalnızca eklenir; güncelleme
+  ve silme kodu yok.
+- Form iki kez çizilir (`renderElectronicLicence`, hazırlanan formlarla aynı
+  değerler): bir kez göstermek için, bir kez gönderimde gönderilen şeyden. İki
+  hash aynı değilse gönderim 409. Yazıda başlık ve metin ekrandan alınır (gönder
+  önce kaydeder); onaydan sonra başlık/metin değişirse kutu boşalır. Çizimde dosyanın
+  SHA-256'sı, türü ve boyutu tarayıcıda okunur, yükleme gerçek dosyadan yeniden
+  hesaplar; çizim kaydı formun adlandırdığı kimlikle açılır. Piksel ölçüsü e-formda
+  yok (tarayıcı ve sunucu döndürülmüş fotoğrafı farklı okuyor; dosyayı hash zaten
+  tek anlamlı tanımlıyor). Form tarihi gün düzeyinde (UTC); gece yarısını geçen
+  onay yeniden istenir.
+- Kontrol `transitionArticle`'da (yazarın kendi `in_review` gönderimi) ve
+  `uploadIllustration`'da; adminler muaf (D-305). Bir form numarası bir kez kullanılır.
+- Kayıt: PDF (`contracts/` önekli medya) + satır + denetim `licence.accepted_electronically`
+  + yazara PDF ekli `licence_accepted` e-postası. Belgelerim'de (yazar `/writer/agreement`,
+  çizer `/cizer`) ve `/admin/agreements`'ta "Elektronik onaylı ruhsat formları" kartı;
+  PDF `/api/licence-acceptances/:id/pdf` (sahibi ve sözleşme yöneticisi).
+- "Belgeleri hazırla" e-onaylı eserler için kâğıt form hazırlamaz.
+- Boş metinli yazı artık gönderilemez (boş metne ruhsat verilemez).
+
+**Değişmeyenler:** Genel Katkı Sağlayan Sözleşmesi hâlâ ıslak imzalı yükleme +
+doğrulama ile; gönderim için doğrulanmış sözleşme şartı (D-238) duruyor. Gönderimdeki
+`rights_grants` beyanı ve yayın kapısı (D-347) aynen çalışıyor. Bugüne kadar hazırlanmış
+kâğıt formlar ve yüklenmiş imzalı kopyalar olduğu gibi kalır; revizyondan sonra yeniden
+gönderilen eski bir yazının hazır kâğıt formu listelerde durmaya devam eder (yönetici
+silebilir).
+
+**KVKK:** Aydınlatma metni güncellendi (yayın izni satırı, amaçlar, saklama tablosu:
+elektronik onay kaydı, tarayıcıda hesaplanan dosya özeti, PDF'in e-postayla
+gönderilmesi). Yeni veri kalemi var → yönetici yeni KVKK sürümünü yayımlamalı.
+Rehberler (yazar, çizer, yönetim) yeni akışa göre güncellendi.
+
+**Migration:** 0074 — üretime push'tan ÖNCE uygulanmalı (gönderim yolu tabloyu okur).

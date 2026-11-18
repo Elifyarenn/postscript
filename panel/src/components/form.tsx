@@ -242,6 +242,18 @@ function SubmitButton({
   );
 }
 
+/**
+ * A button kept shut until something inside the form opens it, such as the
+ * licence box that has to be read and accepted first (D-387). The opener also
+ * sees the form's last result, so it can start over after a submit.
+ */
+type SubmitGate = { setOpen: (open: boolean) => void; result: ActionState };
+const SubmitGateContext = createContext<SubmitGate | null>(null);
+
+export function useSubmitGate(): SubmitGate | null {
+  return useContext(SubmitGateContext);
+}
+
 export function PanelForm({
   action,
   csrfToken,
@@ -251,6 +263,7 @@ export function PanelForm({
   submitClassName,
   submitContent,
   secondarySubmit,
+  submitGated = false,
   warnUnsaved = false,
   children,
 }: {
@@ -276,7 +289,15 @@ export function PanelForm({
    * `intent=<intent>`. The main button stays first, so Enter in a field keeps
    * pressing it rather than this one (D-360).
    */
-  secondarySubmit?: { label: string; intent: string; variant?: "primary" | "secondary" | "danger" };
+  secondarySubmit?: {
+    label: string;
+    intent: string;
+    variant?: "primary" | "secondary" | "danger";
+    /** Shut until a child opens it through `useSubmitGate` (D-387). */
+    gated?: boolean;
+  };
+  /** The main button shut until a child opens it through `useSubmitGate` (D-387). */
+  submitGated?: boolean;
   /** Asks before the tab is closed or reloaded while typed changes are unsaved. */
   warnUnsaved?: boolean;
   children?: ReactNode;
@@ -284,6 +305,7 @@ export function PanelForm({
   const form = useActionForm(action);
   const { state } = form;
   const [valid, setValid] = useState(!requireValid);
+  const [gateOpen, setGateOpen] = useState(false);
   const dirty = useRef(false);
 
   // A success has saved what was typed; a failure keeps the fields, so it stays unsaved
@@ -330,19 +352,23 @@ export function PanelForm({
 
       {state?.fieldErrors && <FieldErrors fieldErrors={state.fieldErrors} />}
 
-      {children}
+      <SubmitGateContext.Provider value={{ setOpen: setGateOpen, result: state }}>{children}</SubmitGateContext.Provider>
 
       <div className="flex items-center gap-3 pt-1">
         <SubmitButton
           variant={submitVariant}
-          disabled={requireValid && !valid}
+          disabled={(requireValid && !valid) || (submitGated && !gateOpen)}
           className={submitClassName}
           ariaLabel={submitContent ? submitLabel : undefined}
         >
           {submitContent ?? submitLabel}
         </SubmitButton>
         {secondarySubmit && (
-          <SubmitButton variant={secondarySubmit.variant ?? "primary"} intent={secondarySubmit.intent}>
+          <SubmitButton
+            variant={secondarySubmit.variant ?? "primary"}
+            intent={secondarySubmit.intent}
+            disabled={secondarySubmit.gated && !gateOpen}
+          >
             {secondarySubmit.label}
           </SubmitButton>
         )}
